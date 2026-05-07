@@ -1,0 +1,43 @@
+import { notFound } from "next/navigation";
+
+import { auth } from "@/auth";
+import { CourseSeoForm } from "@/components/features/instructor/course-seo-form";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { getInstructorCourse } from "@/server/queries/instructor";
+
+interface PageProps {
+  params: Promise<{ id: string }>;
+}
+
+export default async function CourseSeoPage({ params }: PageProps) {
+  const { id } = await params;
+  const session = await auth();
+  if (!session?.user) notFound();
+
+  const course = await getInstructorCourse(
+    id,
+    session.user.id,
+    session.user.role === "ADMIN",
+  );
+  if (!course) notFound();
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>SEO et objectifs pédagogiques</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <CourseSeoForm
+          courseId={course.id}
+          defaults={{
+            metaTitle: course.metaTitle ?? "",
+            metaDescription: course.metaDescription ?? "",
+            whatYouWillLearn: course.whatYouWillLearn.join("\n"),
+            requirements: course.requirements.join("\n"),
+            targetAudience: course.targetAudience.join("\n"),
+          }}
+        />
+      </CardContent>
+    </Card>
+  );
+}

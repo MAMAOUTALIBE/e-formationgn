@@ -1,0 +1,131 @@
+"use client";
+
+import { useActionState } from "react";
+
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { FormField } from "@/components/ui/form-field";
+import { Input } from "@/components/ui/input";
+import { Select } from "@/components/ui/select";
+import { SubmitButton } from "@/components/ui/submit-button";
+import { Textarea } from "@/components/ui/textarea";
+import { COURSE_LEVEL_LABELS } from "@/lib/format/labels";
+import { COURSE_LEVELS } from "@/lib/validators/courses";
+import { updateCourseGeneral } from "@/server/actions/instructor";
+import type { ActionResult } from "@/server/actions/auth";
+
+const initialState: ActionResult = { success: false };
+
+interface CourseGeneralFormProps {
+  courseId: string;
+  defaults: {
+    title: string;
+    subtitle: string;
+    description: string;
+    categoryId: string;
+    level: (typeof COURSE_LEVELS)[number];
+    thumbnailUrl: string;
+  };
+  categories: Array<{ id: string; name: string }>;
+}
+
+export function CourseGeneralForm({
+  courseId,
+  defaults,
+  categories,
+}: CourseGeneralFormProps) {
+  const action = updateCourseGeneral.bind(null, courseId);
+  const [state, formAction] = useActionState(action, initialState);
+  const errors = state.fieldErrors ?? {};
+
+  return (
+    <form action={formAction} className="space-y-6">
+      {state.success && state.message ? (
+        <Alert variant="success">
+          <AlertDescription>{state.message}</AlertDescription>
+        </Alert>
+      ) : null}
+      {state.message && !state.success ? (
+        <Alert variant="destructive">
+          <AlertDescription>{state.message}</AlertDescription>
+        </Alert>
+      ) : null}
+
+      <FormField id="title" label="Titre" required error={errors.title?.[0]}>
+        <Input id="title" name="title" defaultValue={defaults.title} required maxLength={120} />
+      </FormField>
+
+      <FormField
+        id="subtitle"
+        label="Sous-titre"
+        error={errors.subtitle?.[0]}
+        hint="Une accroche brève qui apparaîtra sous le titre."
+      >
+        <Input
+          id="subtitle"
+          name="subtitle"
+          defaultValue={defaults.subtitle}
+          maxLength={200}
+        />
+      </FormField>
+
+      <FormField
+        id="description"
+        label="Description"
+        required
+        error={errors.description?.[0]}
+        hint="Présentez le cours, son contenu, ses bénéfices. Markdown léger supporté."
+      >
+        <Textarea
+          id="description"
+          name="description"
+          rows={10}
+          defaultValue={defaults.description}
+          required
+          minLength={50}
+          maxLength={8000}
+        />
+      </FormField>
+
+      <div className="grid gap-4 sm:grid-cols-2">
+        <FormField id="categoryId" label="Catégorie" required error={errors.categoryId?.[0]}>
+          <Select id="categoryId" name="categoryId" defaultValue={defaults.categoryId} required>
+            {categories.map((cat) => (
+              <option key={cat.id} value={cat.id}>
+                {cat.name}
+              </option>
+            ))}
+          </Select>
+        </FormField>
+
+        <FormField id="level" label="Niveau" required error={errors.level?.[0]}>
+          <Select id="level" name="level" defaultValue={defaults.level} required>
+            {COURSE_LEVELS.map((level) => (
+              <option key={level} value={level}>
+                {COURSE_LEVEL_LABELS[level]}
+              </option>
+            ))}
+          </Select>
+        </FormField>
+      </div>
+
+      <FormField
+        id="thumbnailUrl"
+        label="URL de l'image de couverture"
+        error={errors.thumbnailUrl?.[0]}
+        hint="Format 16:9, idéalement ≥ 1280×720. L'upload direct arrivera en Phase 8."
+      >
+        <Input
+          id="thumbnailUrl"
+          name="thumbnailUrl"
+          type="url"
+          defaultValue={defaults.thumbnailUrl}
+          placeholder="https://"
+        />
+      </FormField>
+
+      <div className="flex justify-end">
+        <SubmitButton>Enregistrer</SubmitButton>
+      </div>
+    </form>
+  );
+}

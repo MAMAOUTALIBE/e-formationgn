@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96" role="img" aria-label="E-FormationGN">
+  <title>E-FormationGN</title>
+  <defs>
+    <linearGradient id="efg-mark" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#1E3A8A"/>
+      <stop offset="60%" stop-color="#2563EB"/>
+      <stop offset="100%" stop-color="#0EA5E9"/>
+    </linearGradient>
+  </defs>
+  <rect x="6" y="6" width="84" height="84" rx="18" fill="url(#efg-mark)"/>
+  <path d="M22 30 C 32 25, 44 25, 48 30 L 48 70 C 44 65, 32 65, 22 70 Z"
+        fill="#FFFFFF" opacity="0.95"/>
+  <path d="M74 30 C 64 25, 52 25, 48 30 L 48 70 C 52 65, 64 65, 74 70 Z"
+        fill="#FFFFFF" opacity="0.78"/>
+  <path d="M40 42 L 60 50 L 40 58 Z" fill="#1E3A8A"/>
+</svg>

@@ -1,26 +1,143 @@
 @import "tailwindcss";
 
+/* ==========================================================================
+   E-FormationGN — Design tokens (Tailwind v4 CSS-first config)
+   Palette corporate bleue, sobre et professionnelle (LinkedIn Learning style).
+   ========================================================================== */
+
 :root {
+  /* Couleurs de marque */
+  --brand-primary: #1e3a8a;        /* Bleu marine corporate (titres, header) */
+  --brand-secondary: #2563eb;      /* Bleu vif (CTA, liens) */
+  --brand-accent: #0ea5e9;         /* Bleu ciel (highlights) */
+  --brand-violet: #7c3aed;         /* Violet — réservé landing publique */
+  --brand-violet-deep: #5b21b6;    /* Violet sombre — gradients, dark blocks */
+  --brand-mint: #92f6a1;           /* Vert menthe — accent CTA, highlights */
+  --brand-mint-deep: #6ce382;      /* Vert menthe foncé — hover */
+  --brand-success: #059669;        /* Vert sobre */
+  --brand-danger: #dc2626;         /* Rouge sobre */
+  --brand-warning: #d97706;        /* Orange sobre */
+
+  /* Neutres */
+  --neutral-900: #0f172a;          /* Texte principal */
+  --neutral-700: #334155;
+  --neutral-600: #475569;          /* Texte secondaire */
+  --neutral-500: #64748b;
+  --neutral-400: #94a3b8;
+  --neutral-300: #cbd5e1;
+  --neutral-200: #e2e8f0;
+  --neutral-100: #f1f5f9;
+  --neutral-50: #f8fafc;           /* Fond clair */
+
+  /* Surfaces (mode clair) */
   --background: #ffffff;
-  --foreground: #171717;
+  --foreground: var(--neutral-900);
+  --muted: var(--neutral-100);
+  --muted-foreground: var(--neutral-600);
+  --card: #ffffff;
+  --card-foreground: var(--neutral-900);
+  --border: var(--neutral-200);
+  --input: var(--neutral-200);
+  --ring: var(--brand-secondary);
+  --primary: var(--brand-primary);
+  --primary-foreground: #ffffff;
+  --secondary: var(--neutral-100);
+  --secondary-foreground: var(--neutral-900);
+  --accent: var(--brand-accent);
+  --accent-foreground: #ffffff;
+  --destructive: var(--brand-danger);
+  --destructive-foreground: #ffffff;
+
+  --radius: 0.5rem;
 }
 
+/* Mode sombre — activé via classe .dark sur <html> (toggle utilisateur) */
+.dark {
+  --background: #0b1220;
+  --foreground: #e2e8f0;
+  --muted: #111a2e;
+  --muted-foreground: #94a3b8;
+  --card: #0f172a;
+  --card-foreground: #e2e8f0;
+  --border: #1e293b;
+  --input: #1e293b;
+  --ring: var(--brand-accent);
+  --primary: #3b82f6;
+  --primary-foreground: #ffffff;
+  --secondary: #111a2e;
+  --secondary-foreground: #e2e8f0;
+  --accent: var(--brand-accent);
+  --accent-foreground: #0b1220;
+  --destructive: #ef4444;
+  --destructive-foreground: #ffffff;
+}
+
+/* Theme inline pour Tailwind v4 — expose les tokens en utilitaires */
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+
+  --color-brand-primary: var(--brand-primary);
+  --color-brand-secondary: var(--brand-secondary);
+  --color-brand-accent: var(--brand-accent);
+  --color-brand-violet: var(--brand-violet);
+  --color-brand-violet-deep: var(--brand-violet-deep);
+  --color-brand-mint: var(--brand-mint);
+  --color-brand-mint-deep: var(--brand-mint-deep);
+  --color-brand-success: var(--brand-success);
+  --color-brand-danger: var(--brand-danger);
+  --color-brand-warning: var(--brand-warning);
+
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, -apple-system,
+    "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+* {
+  border-color: var(--border);
+}
+
+html {
+  color-scheme: light;
+}
+
+html.dark {
+  color-scheme: dark;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+::selection {
+  background: var(--brand-accent);
+  color: #ffffff;
+}
+
+:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
 }

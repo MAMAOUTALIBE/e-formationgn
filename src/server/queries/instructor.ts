@@ -1,0 +1,128 @@
+// Queries serveur — espace formateur.
+// Toutes les méthodes acceptent un `instructorId` et filtrent dessus, sauf
+// les helpers admin (à venir en Phase 7).
+
+import type { Prisma } from "@/generated/prisma/client";
+import { prisma } from "@/lib/prisma";
+
+const INSTRUCTOR_COURSE_INCLUDE = {
+  category: { select: { id: true, slug: true, name: true } },
+  _count: {
+    select: {
+      enrollments: true,
+      reviews: true,
+      sections: true,
+    },
+  },
+} satisfies Prisma.CourseInclude;
+
+export type InstructorCourseListItem = Prisma.CourseGetPayload<{
+  include: typeof INSTRUCTOR_COURSE_INCLUDE;
+}>;
+
+export async function listInstructorCourses(
+  instructorId: string,
+): Promise<InstructorCourseListItem[]> {
+  const courses = await prisma.course.findMany({
+    where: { instructorId },
+    include: INSTRUCTOR_COURSE_INCLUDE,
+    orderBy: [{ updatedAt: "desc" }],
+  });
+  return courses as InstructorCourseListItem[];
+}
+
+const INSTRUCTOR_COURSE_DETAIL_INCLUDE = {
+  category: { select: { id: true, slug: true, name: true } },
+  sections: {
+    orderBy: { displayOrder: "asc" },
+    include: {
+      lessons: {
+        orderBy: { displayOrder: "asc" },
+      },
+    },
+  },
+  _count: { select: { enrollments: true, reviews: true } },
+} satisfies Prisma.CourseInclude;
+
+export type InstructorCourseDetail = Prisma.CourseGetPayload<{
+  include: typeof INSTRUCTOR_COURSE_DETAIL_INCLUDE;
+}>;
+
+export async function getInstructorCourse(
+  courseId: string,
+  instructorId: string,
+  isAdmin = false,
+): Promise<InstructorCourseDetail | null> {
+  const course = await prisma.course.findUnique({
+    where: { id: courseId },
+    include: INSTRUCTOR_COURSE_DETAIL_INCLUDE,
+  });
+  if (!course) return null;
+  if (!isAdmin && course.instructorId !== instructorId) return null;
+  return course as InstructorCourseDetail;
+}
+
+export interface InstructorDashboardStats {
+  totalCourses: number;
+  publishedCourses: number;
+  pendingReviewCourses: number;
+  draftCourses: number;
+  totalEnrollments: number;
+  averageRating: number | null;
+  totalReviews: number;
+}
+
+export async function getInstructorDashboardStats(
+  instructorId: string,
+): Promise<InstructorDashboardStats> {
+  const [byStatus, ratingStats] = await Promise.all([
+    prisma.course.groupBy({
+      by: ["status"],
+      where: { instructorId },
+      _count: { _all: true },
+      _sum: { totalEnrollments: true, totalRatings: true },
+    }),
+    prisma.course.aggregate({
+      where: { instructorId, status: "PUBLISHED", totalRatings: { gt: 0 } },
+      _avg: { averageRating: true },
+      _sum: { totalRatings: true },
+    }),
+  ]);
+
+  const stats: InstructorDashboardStats = {
+    totalCourses: 0,
+    publishedCourses: 0,
+    pendingReviewCourses: 0,
+    draftCourses: 0,
+    totalEnrollments: 0,
+    averageRating: ratingStats._avg.averageRating ?? null,
+    totalReviews: ratingStats._sum.totalRatings ?? 0,
+  };
+
+  for (const group of byStatus) {
+    stats.totalCourses += group._count._all;
+    stats.totalEnrollments += group._sum.totalEnrollments ?? 0;
+    if (group.status === "PUBLISHED") stats.publishedCourses = group._count._all;
+    if (group.status === "PENDING_REVIEW") stats.pendingReviewCourses = group._count._all;
+    if (group.status === "DRAFT") stats.draftCourses = group._count._all;
+  }
+  return stats;
+}
+
+export async function getLessonForInstructor(
+  lessonId: string,
+  instructorId: string,
+  isAdmin = false,
+) {
+  const lesson = await prisma.lesson.findUnique({
+    where: { id: lessonId },
+    include: {
+      section: {
+        include: { course: { select: { id: true, instructorId: true, slug: true } } },
+      },
+    },
+  });
+  if (!lesson) return null;
+  if (!isAdmin && lesson.section.course.instructorId !== instructorId) return null;
+  return lesson;
+}
