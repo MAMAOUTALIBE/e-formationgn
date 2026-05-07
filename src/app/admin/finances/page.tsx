@@ -4,7 +4,8 @@ import { AlertCircle, Coins, RefreshCw, Send, Wallet } from "lucide-react";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DateRangePicker } from "@/components/ui/date-range-picker";
-import { parsePeriodParam, periodToRange } from "@/lib/admin/period";
+import { periodToRange } from "@/lib/admin/period";
+import { readPeriod } from "@/lib/admin/period-server";
 import { KpiCard } from "@/components/ui/kpi-card";
 import { getFinancesKpis } from "@/server/queries/admin-finances";
 
@@ -20,7 +21,7 @@ interface PageProps {
 
 export default async function AdminFinancesPage({ searchParams }: PageProps) {
   const params = await searchParams;
-  const range = periodToRange(parsePeriodParam(params.period ?? null));
+  const range = periodToRange(await readPeriod(params.period ?? null));
   const kpis = await getFinancesKpis(range);
 
   return (

@@ -1,9 +1,10 @@
-// Helpers de période partagés entre Server Components et Client Components.
-// Volontairement isolés du composant client `<DateRangePicker>` pour qu'un
-// Server Component puisse appeler `parsePeriodParam` / `periodToRange` sans
-// franchir la frontière client/serveur.
+// Helpers de période — pure data, importable depuis client ET server.
+// Pas d'imports `next/headers` ici (sinon le client crashe).
+// La lecture du cookie `admin_period` est isolée dans period-server.ts.
 
 export type PeriodPreset = "today" | "7d" | "30d" | "90d" | "12m" | "custom";
+
+export const PERIOD_COOKIE_NAME = "admin_period";
 
 export interface PeriodValue {
   preset: PeriodPreset;

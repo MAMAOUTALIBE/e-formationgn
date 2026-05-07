@@ -3,7 +3,8 @@ import Link from "next/link";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DateRangePicker } from "@/components/ui/date-range-picker";
-import { parsePeriodParam, periodToRange } from "@/lib/admin/period";
+import { periodToRange } from "@/lib/admin/period";
+import { readPeriod } from "@/lib/admin/period-server";
 import { KpiCard } from "@/components/ui/kpi-card";
 import {
   getConversionFunnel,
@@ -22,7 +23,7 @@ interface PageProps {
 
 export default async function AdminAnalyticsPage({ searchParams }: PageProps) {
   const params = await searchParams;
-  const range = periodToRange(parsePeriodParam(params.period ?? null));
+  const range = periodToRange(await readPeriod(params.period ?? null));
 
   const [funnel, bySource, performers, utm] = await Promise.all([
     getConversionFunnel(range),

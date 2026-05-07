@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 
-import { Badge } from "@/components/ui/badge";
+import { SortableCategories } from "@/components/features/admin/sortable-categories";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { FormField } from "@/components/ui/form-field";
@@ -31,47 +31,25 @@ export default async function AdminCategoriesPage() {
         <Card>
           <CardHeader>
             <CardTitle className="text-base">Liste</CardTitle>
+            <p className="text-xs text-muted-foreground">
+              Glissez-déposez pour réorganiser. L&apos;ordre est utilisé sur la
+              page publique des catégories.
+            </p>
           </CardHeader>
           <CardContent>
-            {categories.length === 0 ? (
-              <p className="text-sm text-muted-foreground">Aucune catégorie.</p>
-            ) : (
-              <ul className="space-y-2">
-                {categories.map((cat) => (
-                  <li
-                    key={cat.id}
-                    className="flex items-center justify-between gap-3 rounded-md border border-border p-3"
-                  >
-                    <div className="min-w-0 flex-1">
-                      <p className="text-sm font-medium text-foreground">
-                        {cat.name}{" "}
-                        {!cat.isActive ? (
-                          <Badge variant="outline">Inactive</Badge>
-                        ) : null}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        /{cat.slug} · {cat._count.courses} cours
-                      </p>
-                    </div>
-                    <form
-                      action={async () => {
-                        "use server";
-                        await deleteCategory(cat.id);
-                      }}
-                    >
-                      <Button
-                        type="submit"
-                        variant="outline"
-                        size="sm"
-                        disabled={cat._count.courses > 0}
-                      >
-                        Supprimer
-                      </Button>
-                    </form>
-                  </li>
-                ))}
-              </ul>
-            )}
+            <SortableCategories
+              initial={categories.map((c) => ({
+                id: c.id,
+                name: c.name,
+                slug: c.slug,
+                isActive: c.isActive,
+                coursesCount: c._count.courses,
+              }))}
+              onDelete={async (id) => {
+                "use server";
+                await deleteCategory(id);
+              }}
+            />
           </CardContent>
         </Card>
 

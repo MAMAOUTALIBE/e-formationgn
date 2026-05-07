@@ -7,6 +7,8 @@ import { ImpersonationBanner } from "@/components/features/admin/impersonation-b
 import { PageViewTracker } from "@/components/features/analytics/page-view-tracker";
 import { CookieBanner } from "@/components/features/cookie-consent/cookie-banner";
 import { SitewideBanner } from "@/components/features/marketing/sitewide-banner";
+import { ThemeProvider } from "@/components/features/theme/theme-provider";
+import { Toaster } from "@/components/ui/toaster";
 
 import "./globals.css";
 
@@ -79,20 +81,23 @@ export default function RootLayout({
       suppressHydrationWarning
     >
       <body className="min-h-full bg-background text-foreground flex flex-col">
-        <Suspense fallback={null}>
-          <ImpersonationBanner />
-        </Suspense>
-        <Suspense fallback={null}>
-          <SitewideBanner />
-        </Suspense>
-        <Suspense fallback={null}>
-          <AffiliateTracker />
-        </Suspense>
-        <Suspense fallback={null}>
-          <PageViewTracker />
-        </Suspense>
-        {children}
-        <CookieBanner />
+        <ThemeProvider>
+          <Suspense fallback={null}>
+            <ImpersonationBanner />
+          </Suspense>
+          <Suspense fallback={null}>
+            <SitewideBanner />
+          </Suspense>
+          <Suspense fallback={null}>
+            <AffiliateTracker />
+          </Suspense>
+          <Suspense fallback={null}>
+            <PageViewTracker />
+          </Suspense>
+          {children}
+          <Toaster />
+          <CookieBanner />
+        </ThemeProvider>
       </body>
     </html>
   );

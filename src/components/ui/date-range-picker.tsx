@@ -6,12 +6,20 @@ import { useEffect, useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import {
+  PERIOD_COOKIE_NAME,
   parsePeriodParam,
   PRESET_LABELS,
   type PeriodPreset,
   type PeriodValue,
 } from "@/lib/admin/period";
 import { cn } from "@/lib/utils";
+
+const COOKIE_MAX_AGE = 60 * 60 * 24 * 30;
+
+function persistPeriodCookie(serialized: string) {
+  if (typeof document === "undefined") return;
+  document.cookie = `${PERIOD_COOKIE_NAME}=${encodeURIComponent(serialized)}; Path=/; Max-Age=${COOKIE_MAX_AGE}; SameSite=Lax`;
+}
 
 export function DateRangePicker({ paramName = "period" }: { paramName?: string }) {
   const router = useRouter();
@@ -51,6 +59,7 @@ export function DateRangePicker({ paramName = "period" }: { paramName?: string }
         ? `custom|${p.from}|${p.to}`
         : p.preset;
     params.set(paramName, value);
+    persistPeriodCookie(value);
     router.push(`?${params.toString()}`);
   }
 

@@ -13,9 +13,11 @@ import {
 
 import { CategoryDonut } from "@/components/features/admin/charts/category-donut";
 import { RevenueChart } from "@/components/features/admin/charts/revenue-chart";
+import { Sparkline } from "@/components/features/admin/charts/sparkline";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DateRangePicker } from "@/components/ui/date-range-picker";
-import { parsePeriodParam, periodToRange } from "@/lib/admin/period";
+import { periodToRange } from "@/lib/admin/period";
+import { readPeriod } from "@/lib/admin/period-server";
 import { KpiCard } from "@/components/ui/kpi-card";
 import { StatusBadge } from "@/components/ui/status-badge";
 import {
@@ -40,7 +42,7 @@ interface PageProps {
 
 export default async function AdminOverviewPage({ searchParams }: PageProps) {
   const params = await searchParams;
-  const period = parsePeriodParam(params.period ?? null);
+  const period = await readPeriod(params.period ?? null);
   const range = periodToRange(period);
 
   const [kpis, timeseries, topCourses, topInstructors, byCategory, alerts, activity] =
@@ -111,6 +113,7 @@ export default async function AdminOverviewPage({ searchParams }: PageProps) {
           delta={revenueDeltaEur}
           icon={<Coins className="h-4 w-4" />}
           hint="Période sélectionnée"
+          sparkline={<Sparkline data={timeseries.map((p) => p.EUR)} color="#1E3A8A" />}
         />
         <KpiCard
           label="Revenus USD"
@@ -118,6 +121,7 @@ export default async function AdminOverviewPage({ searchParams }: PageProps) {
           delta={revenueDeltaUsd}
           icon={<Coins className="h-4 w-4" />}
           hint="Période sélectionnée"
+          sparkline={<Sparkline data={timeseries.map((p) => p.USD)} color="#0EA5E9" />}
         />
         <KpiCard
           label="Commandes"

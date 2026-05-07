@@ -5,7 +5,10 @@ import { auth } from "@/auth";
 import { Logo } from "@/components/branding/logo";
 import { UserMenu } from "@/components/features/auth/user-menu";
 import { AdminCommandMenu } from "@/components/features/admin/admin-command-menu";
+import { AdminKeyboardShortcuts } from "@/components/features/admin/admin-keyboard-shortcuts";
+import { AdminNotificationsBell } from "@/components/features/admin/admin-notifications-bell";
 import { AdminSidebar } from "@/components/features/admin/admin-sidebar";
+import { ThemeToggle } from "@/components/features/theme/theme-toggle";
 import { getAdminSidebarBadges } from "@/server/queries/admin-sidebar";
 
 const ADMIN_ROLES = ["ADMIN", "MODERATOR", "SUPPORT", "FINANCE"] as const;
@@ -24,6 +27,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
 
   return (
     <div className="flex min-h-screen flex-col bg-muted/30">
+      <AdminKeyboardShortcuts />
       <header className="sticky top-0 z-30 border-b border-border bg-background">
         <div className="flex h-14 items-center justify-between gap-4 px-4 lg:px-6">
           <div className="flex items-center gap-3">
@@ -39,6 +43,8 @@ export default async function AdminLayout({ children }: { children: React.ReactN
             <div className="flex-1 max-w-md">
               <AdminCommandMenu />
             </div>
+            <ThemeToggle className="hidden md:inline-flex" />
+            <AdminNotificationsBell badges={badges} />
             <UserMenu
               user={{
                 name: session.user.name,

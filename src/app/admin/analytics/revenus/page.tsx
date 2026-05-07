@@ -4,7 +4,8 @@ import { CategoryDonut } from "@/components/features/admin/charts/category-donut
 import { RevenueChart } from "@/components/features/admin/charts/revenue-chart";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DateRangePicker } from "@/components/ui/date-range-picker";
-import { parsePeriodParam, periodToRange } from "@/lib/admin/period";
+import { periodToRange } from "@/lib/admin/period";
+import { readPeriod } from "@/lib/admin/period-server";
 import {
   getRevenueByCategory,
   getRevenueTimeseries,
@@ -20,7 +21,7 @@ interface PageProps {
 
 export default async function RevenueDetailsPage({ searchParams }: PageProps) {
   const params = await searchParams;
-  const range = periodToRange(parsePeriodParam(params.period ?? null));
+  const range = periodToRange(await readPeriod(params.period ?? null));
   const [series, byCategory] = await Promise.all([
     getRevenueTimeseries(range),
     getRevenueByCategory(range),
