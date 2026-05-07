@@ -6,6 +6,7 @@ import { revalidatePath } from "next/cache";
 
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
+import { sendEmailCampaign } from "@/server/services/email-campaign";
 
 import type { ActionResult } from "./auth";
 
@@ -50,6 +51,26 @@ export async function deleteEmailTemplate(id: string): Promise<ActionResult> {
   await audit(admin.id, "email-template.delete", "EmailTemplate", id);
   revalidatePath("/admin/marketing/campagnes-email");
   return { success: true };
+}
+
+export async function dispatchEmailCampaign(
+  campaignId: string,
+): Promise<ActionResult> {
+  const admin = await requireAdmin();
+  try {
+    const result = await sendEmailCampaign(campaignId);
+    await audit(admin.id, "email-campaign.send", "EmailCampaign", campaignId);
+    revalidatePath("/admin/marketing/campagnes-email");
+    return {
+      success: true,
+      message: `Envoyé à ${result.delivered} destinataire(s) sur ${result.total} (${result.failed} échec(s)).`,
+    };
+  } catch (error) {
+    return {
+      success: false,
+      message: error instanceof Error ? error.message : "Échec de l'envoi.",
+    };
+  }
 }
 
 export async function createEmailCampaign(formData: FormData): Promise<ActionResult> {

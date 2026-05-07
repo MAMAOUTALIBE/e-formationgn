@@ -11,6 +11,7 @@ import {
   createEmailCampaign,
   createEmailTemplate,
   deleteEmailTemplate,
+  dispatchEmailCampaign,
 } from "@/server/actions/admin-marketing";
 import { prisma } from "@/lib/prisma";
 
@@ -135,14 +136,38 @@ export default async function EmailCampaignsPage() {
             <ul className="divide-y divide-border text-sm">
               {campaigns.map((c) => (
                 <li key={c.id} className="py-2">
-                  <div className="flex items-center justify-between gap-2">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
                     <p className="font-medium">{c.name}</p>
-                    <StatusBadge tone={c.status === "SENT" ? "success" : c.status === "FAILED" ? "danger" : "neutral"}>
-                      {c.status}
-                    </StatusBadge>
+                    <div className="flex items-center gap-2">
+                      <StatusBadge
+                        tone={
+                          c.status === "SENT"
+                            ? "success"
+                            : c.status === "FAILED"
+                              ? "danger"
+                              : c.status === "SENDING"
+                                ? "info"
+                                : "neutral"
+                        }
+                      >
+                        {c.status}
+                      </StatusBadge>
+                      {c.status === "DRAFT" || c.status === "SCHEDULED" ? (
+                        <form
+                          action={async () => {
+                            "use server";
+                            await dispatchEmailCampaign(c.id);
+                          }}
+                        >
+                          <Button type="submit" size="sm">
+                            Envoyer
+                          </Button>
+                        </form>
+                      ) : null}
+                    </div>
                   </div>
                   <p className="text-xs text-muted-foreground">
-                    Template : {c.template.name} · {c.totalDelivered} délivrés ·{" "}
+                    Template : {c.template.name} · {c.totalDelivered}/{c.totalRecipients} délivrés ·{" "}
                     {c.totalOpened} ouverts ({c.totalRecipients > 0 ? Math.round((c.totalOpened / c.totalRecipients) * 100) : 0} %)
                   </p>
                 </li>

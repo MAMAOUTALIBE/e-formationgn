@@ -2,7 +2,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { DateRangePicker, parsePeriodParam, periodToRange } from "@/components/ui/date-range-picker";
+import { DateRangePicker } from "@/components/ui/date-range-picker";
+import { parsePeriodParam, periodToRange } from "@/lib/admin/period";
 import { KpiCard } from "@/components/ui/kpi-card";
 import {
   getConversionFunnel,

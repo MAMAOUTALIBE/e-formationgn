@@ -3,7 +3,10 @@ import { Inter } from "next/font/google";
 import { Suspense } from "react";
 
 import { AffiliateTracker } from "@/components/features/affiliate/affiliate-tracker";
+import { ImpersonationBanner } from "@/components/features/admin/impersonation-banner";
+import { PageViewTracker } from "@/components/features/analytics/page-view-tracker";
 import { CookieBanner } from "@/components/features/cookie-consent/cookie-banner";
+import { SitewideBanner } from "@/components/features/marketing/sitewide-banner";
 
 import "./globals.css";
 
@@ -77,7 +80,16 @@ export default function RootLayout({
     >
       <body className="min-h-full bg-background text-foreground flex flex-col">
         <Suspense fallback={null}>
+          <ImpersonationBanner />
+        </Suspense>
+        <Suspense fallback={null}>
+          <SitewideBanner />
+        </Suspense>
+        <Suspense fallback={null}>
           <AffiliateTracker />
+        </Suspense>
+        <Suspense fallback={null}>
+          <PageViewTracker />
         </Suspense>
         {children}
         <CookieBanner />

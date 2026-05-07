@@ -127,6 +127,9 @@ export const authConfig = {
       // Healthcheck pour les sondes d'hébergeur — toujours public.
       if (pathname === "/api/health") return true;
 
+      // Tracking page-view (analytics) — toujours accessible (auth optionnelle).
+      if (pathname === "/api/track") return true;
+
       // Sitemap, robots et certificats publics — toujours accessibles.
       if (
         pathname === "/sitemap.xml" ||

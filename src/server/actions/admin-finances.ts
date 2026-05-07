@@ -48,7 +48,19 @@ export async function refundOrder(
   }
   const order = await prisma.order.findUnique({
     where: { id: orderId },
-    select: { stripePaymentIntentId: true, totalCents: true, status: true },
+    select: {
+      stripePaymentIntentId: true,
+      totalCents: true,
+      status: true,
+      items: {
+        select: {
+          id: true,
+          totalCents: true,
+          instructorPayoutCents: true,
+          stripeTransferId: true,
+        },
+      },
+    },
   });
   if (!order) return { success: false, message: "Commande introuvable." };
   if (!order.stripePaymentIntentId) {
@@ -62,12 +74,41 @@ export async function refundOrder(
   }
 
   const stripe = getStripeClient();
+  // 1) Refund au client
   const refund = await stripe.refunds.create({
     payment_intent: order.stripePaymentIntentId,
     amount: amountCents,
     reason: "requested_by_customer",
     metadata: { orderId, adminId: admin.id, ...(reason ? { reason } : {}) },
   });
+
+  // 2) Reverse transfer côté formateur — pro rata par ligne et par transfer
+  // Pour chaque OrderItem ayant un stripeTransferId, on calcule la part
+  // correspondant à la portion remboursée et on crée un TransferReversal.
+  const ratio = amountCents / order.totalCents;
+  const reversals: Array<{ transferId: string; reversedCents: number; itemId: string }> = [];
+  for (const item of order.items) {
+    if (!item.stripeTransferId) continue;
+    const reverseAmount = Math.round(item.instructorPayoutCents * ratio);
+    if (reverseAmount <= 0) continue;
+    try {
+      const reversal = await stripe.transfers.createReversal(item.stripeTransferId, {
+        amount: reverseAmount,
+        metadata: { orderId, itemId: item.id, refundId: refund.id },
+      });
+      reversals.push({
+        transferId: item.stripeTransferId,
+        reversedCents: reverseAmount,
+        itemId: item.id,
+      });
+      // Note : on ne décrémente pas instructorPayoutCents pour préserver
+      // l'historique. Le reverse transfer est tracé dans Stripe et l'audit.
+      void reversal;
+    } catch (error) {
+      // On loggue mais on ne fait pas échouer le refund (déjà initié côté client).
+      console.error("[refund] reverse transfer failed", item.stripeTransferId, error);
+    }
+  }
 
   await prisma.refund.create({
     data: {
@@ -87,11 +128,18 @@ export async function refundOrder(
   await audit(admin.id, "order.refund", "Order", orderId, {
     amountCents,
     refundId: refund.id,
+    reversals,
   });
 
   revalidatePath("/admin/finances/transactions");
   revalidatePath("/admin/finances/remboursements");
-  return { success: true, message: "Remboursement Stripe initié." };
+  return {
+    success: true,
+    message:
+      reversals.length > 0
+        ? `Remboursement initié, ${reversals.length} reverse transfer(s) côté formateur.`
+        : "Remboursement Stripe initié (aucun transfer formateur à inverser).",
+  };
 }
 
 export async function markPayoutPaid(payoutId: string): Promise<ActionResult> {

@@ -64,8 +64,29 @@ export async function POST(request: Request) {
         await handlePaymentFailed(event.data.object as Stripe.PaymentIntent);
         break;
 
+      case "payment_intent.canceled":
+        await handlePaymentCanceled(event.data.object as Stripe.PaymentIntent);
+        break;
+
       case "charge.refunded":
         await handleChargeRefunded(event.data.object as Stripe.Charge);
+        break;
+
+      case "charge.dispute.created":
+      case "charge.dispute.updated":
+      case "charge.dispute.closed":
+        await handleDispute(event);
+        break;
+
+      // Stripe Connect : statut du compte formateur
+      case "account.updated":
+        await handleAccountUpdated(event.data.object as Stripe.Account);
+        break;
+
+      // Payouts Stripe Connect
+      case "payout.paid":
+      case "payout.failed":
+        await handlePayoutEvent(event);
         break;
 
       default:
@@ -304,5 +325,128 @@ async function handleChargeRefunded(charge: Stripe.Charge) {
   await prisma.order.update({
     where: { id: order.id },
     data: { status },
+  });
+}
+
+// ---------------------------------------------------------------------------
+// payment_intent.canceled
+// ---------------------------------------------------------------------------
+
+async function handlePaymentCanceled(intent: Stripe.PaymentIntent) {
+  const orderId = intent.metadata?.orderId;
+  if (!orderId) return;
+  await prisma.order.updateMany({
+    where: { id: orderId, status: { in: ["PENDING", "PROCESSING"] } },
+    data: { status: "CANCELLED", stripePaymentIntentId: intent.id },
+  });
+}
+
+// ---------------------------------------------------------------------------
+// charge.dispute.* — un client conteste un paiement (Dispute Stripe)
+// ---------------------------------------------------------------------------
+
+async function handleDispute(event: Stripe.Event) {
+  const dispute = event.data.object as Stripe.Dispute;
+  const chargeId =
+    typeof dispute.charge === "string" ? dispute.charge : dispute.charge.id;
+  if (!chargeId) return;
+
+  // Retrouve l'order via la charge → PaymentIntent
+  const charge = await getStripeClient().charges.retrieve(chargeId);
+  const piId =
+    typeof charge.payment_intent === "string"
+      ? charge.payment_intent
+      : (charge.payment_intent?.id ?? null);
+  if (!piId) return;
+
+  const order = await prisma.order.findUnique({
+    where: { stripePaymentIntentId: piId },
+    select: { id: true, userId: true },
+  });
+  if (!order) return;
+
+  // Mappe le status Stripe → DisputeStatus interne
+  const isClosed = event.type === "charge.dispute.closed";
+  const status =
+    dispute.status === "won"
+      ? "RESOLVED_NO_REFUND"
+      : dispute.status === "lost"
+        ? "RESOLVED_REFUND"
+        : isClosed
+          ? "RESOLVED_NO_REFUND"
+          : "OPEN";
+
+  await prisma.dispute.upsert({
+    where: { id: dispute.id },
+    update: {
+      status,
+      resolution: dispute.reason ?? null,
+      resolvedAt: isClosed ? new Date() : null,
+    },
+    create: {
+      id: dispute.id,
+      orderId: order.id,
+      reason: `Stripe dispute · ${dispute.reason ?? "unknown"}`,
+      status,
+    },
+  });
+
+  // Notifie l'admin via AuditLog
+  await prisma.auditLog.create({
+    data: {
+      action: `stripe.dispute.${event.type.split(".").pop()}`,
+      targetType: "Dispute",
+      targetId: dispute.id,
+      metadata: { orderId: order.id, amount: dispute.amount, reason: dispute.reason },
+    },
+  });
+}
+
+// ---------------------------------------------------------------------------
+// account.updated — Stripe Connect onboarding du formateur
+// ---------------------------------------------------------------------------
+
+async function handleAccountUpdated(account: Stripe.Account) {
+  const accountId = account.id;
+  if (!accountId) return;
+
+  const onboardingDone =
+    account.details_submitted === true &&
+    account.charges_enabled === true &&
+    account.payouts_enabled === true;
+
+  await prisma.user.updateMany({
+    where: { stripeAccountId: accountId },
+    data: {
+      stripeAccountStatus: onboardingDone ? "active" : (account.requirements?.disabled_reason ?? "pending"),
+      stripeOnboardingDone: onboardingDone,
+    },
+  });
+}
+
+// ---------------------------------------------------------------------------
+// payout.paid / payout.failed — sur compte Connect formateur
+// ---------------------------------------------------------------------------
+
+async function handlePayoutEvent(event: Stripe.Event) {
+  const payout = event.data.object as Stripe.Payout;
+  if (!payout.id) return;
+
+  const status = event.type === "payout.paid" ? "PAID" : "FAILED";
+  await prisma.payout.updateMany({
+    where: { stripePayoutId: payout.id },
+    data: {
+      status,
+      paidAt: status === "PAID" ? new Date() : null,
+    },
+  });
+
+  await prisma.auditLog.create({
+    data: {
+      action: `stripe.${event.type}`,
+      targetType: "Payout",
+      targetId: payout.id,
+      metadata: { amount: payout.amount, currency: payout.currency },
+    },
   });
 }

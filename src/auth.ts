@@ -16,6 +16,7 @@ import Credentials from "next-auth/providers/credentials";
 import { PrismaAdapter } from "@auth/prisma-adapter";
 
 import { authConfig } from "@/auth.config";
+import { readImpersonation } from "@/lib/admin/impersonation";
 import { verifyPassword } from "@/lib/auth/password";
 import { prisma } from "@/lib/prisma";
 import { loginSchema } from "@/lib/validators/auth";
@@ -140,6 +141,45 @@ export const {
         session.user.emailVerified = token.emailVerified;
         session.user.preferredCurrency = token.preferredCurrency ?? "EUR";
       }
+
+      // Impersonation : si l'admin a un cookie actif, on swap la session vers
+      // l'utilisateur ciblé. La session conserve une trace de l'admin réel
+      // dans `session.impersonation` pour que l'UI puisse afficher la bannière.
+      if (session.user && token.role === "ADMIN") {
+        const cookie = await readImpersonation().catch(() => null);
+        if (cookie && cookie.targetUserId !== token.id) {
+          const target = await prisma.user.findUnique({
+            where: { id: cookie.targetUserId },
+            select: {
+              id: true,
+              email: true,
+              name: true,
+              image: true,
+              role: true,
+              emailVerified: true,
+              preferredCurrency: true,
+              status: true,
+            },
+          });
+          if (target && target.status !== "DELETED") {
+            const realAdminId = session.user.id;
+            const realAdminEmail = session.user.email;
+            session.user.id = target.id;
+            session.user.email = target.email;
+            session.user.name = target.name;
+            session.user.image = target.image;
+            session.user.role = target.role;
+            session.user.emailVerified = target.emailVerified;
+            session.user.preferredCurrency = target.preferredCurrency;
+            (session as { impersonation?: unknown }).impersonation = {
+              adminId: realAdminId,
+              adminEmail: realAdminEmail,
+              sessionRecordId: cookie.sessionId,
+            };
+          }
+        }
+      }
+
       return session as typeof session & { user: DefaultSession["user"] };
     },
   },
