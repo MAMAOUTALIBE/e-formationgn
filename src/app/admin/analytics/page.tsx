@@ -194,6 +194,12 @@ export default async function AdminAnalyticsPage({ searchParams }: PageProps) {
                 <p className="text-xs text-muted-foreground">Comparaison période précédente, breakdown.</p>
               </Link>
             </li>
+            <li>
+              <Link href="/admin/analytics/apprentissage" className="block rounded-md border border-border p-3 hover:bg-muted/50">
+                <p className="font-medium">Apprentissage</p>
+                <p className="text-xs text-muted-foreground">Quiz, certificats, taux de complétion.</p>
+              </Link>
+            </li>
           </ul>
         </CardContent>
       </Card>

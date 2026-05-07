@@ -11,6 +11,7 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
+import { checkRateLimit, clientKey } from "@/lib/rate-limit";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -44,6 +45,14 @@ export async function POST(request: NextRequest) {
   if (BOT_PATTERN.test(userAgent)) {
     return new NextResponse(null, { status: 204 });
   }
+
+  // Rate limit : 120 hits/min par IP — anti-flood léger
+  const rl = checkRateLimit({
+    key: clientKey(request.headers, "track"),
+    windowMs: 60_000,
+    max: 120,
+  });
+  if (!rl.ok) return new NextResponse(null, { status: 429 });
 
   let payload: unknown;
   try {

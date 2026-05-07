@@ -1,0 +1,31 @@
+{
+  "name": "E-FormationGN",
+  "short_name": "E-Formation",
+  "description": "Plateforme francophone de formation en ligne",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#1E3A8A",
+  "orientation": "portrait-primary",
+  "lang": "fr",
+  "icons": [
+    {
+      "src": "/logo-mark.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Catalogue",
+      "url": "/cours",
+      "description": "Explorer le catalogue de cours"
+    },
+    {
+      "name": "Mon apprentissage",
+      "url": "/apprentissage",
+      "description": "Reprendre mes cours"
+    }
+  ]
+}

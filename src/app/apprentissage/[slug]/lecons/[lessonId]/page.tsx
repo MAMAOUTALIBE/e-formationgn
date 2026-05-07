@@ -8,6 +8,7 @@ import { LessonCompletionToggle } from "@/components/features/learning/lesson-co
 import { LessonNotes } from "@/components/features/learning/lesson-notes";
 import { LessonPlayer } from "@/components/features/learning/lesson-player";
 import { LessonSidebar } from "@/components/features/learning/lesson-sidebar";
+import { LessonTutor } from "@/components/features/learning/lesson-tutor";
 import { QuizAttempt } from "@/components/features/learning/quiz-attempt";
 import { SiteFooter } from "@/components/layout/site-footer";
 import { SiteHeader } from "@/components/layout/site-header";
@@ -221,6 +222,9 @@ export default async function LessonViewerPage({ params }: PageProps) {
                 <LessonNotes lessonId={lesson.id} initialNotes={notes} />
               </CardContent>
             </Card>
+
+            {/* Tuteur IA */}
+            <LessonTutor lessonId={lesson.id} />
           </div>
         </Container>
       </main>

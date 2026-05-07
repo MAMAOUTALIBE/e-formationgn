@@ -130,6 +130,9 @@ export const authConfig = {
       // Tracking page-view (analytics) — toujours accessible (auth optionnelle).
       if (pathname === "/api/track") return true;
 
+      // Vercel Cron — auth via Bearer token côté route.
+      if (pathname.startsWith("/api/cron/")) return true;
+
       // Sitemap, robots et certificats publics — toujours accessibles.
       if (
         pathname === "/sitemap.xml" ||

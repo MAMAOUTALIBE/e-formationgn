@@ -6,6 +6,7 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
+import { checkRateLimit, clientKey } from "@/lib/rate-limit";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -22,6 +23,24 @@ export async function GET(request: NextRequest) {
   const session = await auth();
   if (!session?.user || !isAdminRole(session.user.role)) {
     return NextResponse.json({ hits: [] }, { status: 403 });
+  }
+
+  // Rate limit : 60 req/min par admin (IP + userId)
+  const rl = checkRateLimit({
+    key: `${clientKey(request.headers, "admin-search")}:${session.user.id}`,
+    windowMs: 60_000,
+    max: 60,
+  });
+  if (!rl.ok) {
+    return NextResponse.json(
+      { hits: [], error: "rate_limited" },
+      {
+        status: 429,
+        headers: {
+          "Retry-After": Math.ceil((rl.resetAt - Date.now()) / 1000).toString(),
+        },
+      },
+    );
   }
 
   const q = request.nextUrl.searchParams.get("q")?.trim() ?? "";

@@ -7,6 +7,7 @@ import { ImpersonationBanner } from "@/components/features/admin/impersonation-b
 import { PageViewTracker } from "@/components/features/analytics/page-view-tracker";
 import { CookieBanner } from "@/components/features/cookie-consent/cookie-banner";
 import { SitewideBanner } from "@/components/features/marketing/sitewide-banner";
+import { ServiceWorkerRegister } from "@/components/features/pwa/sw-register";
 import { ThemeProvider } from "@/components/features/theme/theme-provider";
 import { Toaster } from "@/components/ui/toaster";
 
@@ -54,6 +55,7 @@ export const metadata: Metadata = {
   icons: {
     icon: "/favicon.ico",
   },
+  manifest: "/manifest.webmanifest",
   robots: {
     index: true,
     follow: true,
@@ -94,6 +96,7 @@ export default function RootLayout({
           <Suspense fallback={null}>
             <PageViewTracker />
           </Suspense>
+          <ServiceWorkerRegister />
           {children}
           <Toaster />
           <CookieBanner />
