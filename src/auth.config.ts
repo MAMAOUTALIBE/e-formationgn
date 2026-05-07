@@ -158,7 +158,7 @@ export const authConfig = {
         return true;
       }
 
-      // Routes admin : login + rôle ADMIN
+      // Routes admin : login + rôle ADMIN ou sous-rôles administratifs
       if (pathname.startsWith("/admin")) {
         if (!isLoggedIn) {
           const callbackUrl = encodeURIComponent(pathname + nextUrl.search);
@@ -166,7 +166,8 @@ export const authConfig = {
             new URL(`/connexion?callbackUrl=${callbackUrl}`, nextUrl),
           );
         }
-        if (role !== "ADMIN") {
+        const adminRoles = ["ADMIN", "MODERATOR", "SUPPORT", "FINANCE"];
+        if (!role || !adminRoles.includes(role)) {
           return Response.redirect(new URL("/", nextUrl));
         }
         return true;

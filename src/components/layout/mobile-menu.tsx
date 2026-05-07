@@ -11,7 +11,7 @@ import { cn } from "@/lib/utils";
 
 interface MobileMenuProps {
   isLoggedIn: boolean;
-  role?: "STUDENT" | "INSTRUCTOR" | "ADMIN";
+  role?: "STUDENT" | "INSTRUCTOR" | "ADMIN" | "MODERATOR" | "SUPPORT" | "FINANCE";
 }
 
 export function MobileMenu({ isLoggedIn, role }: MobileMenuProps) {
@@ -143,15 +143,16 @@ export function MobileMenu({ isLoggedIn, role }: MobileMenuProps) {
                         Espace formateur
                       </DrawerLink>
                     )}
-                    {role === "ADMIN" && (
-                      <DrawerLink
-                        href="/admin"
-                        active={pathname.startsWith("/admin")}
-                        onClick={close}
-                      >
-                        Administration
-                      </DrawerLink>
-                    )}
+                    {role &&
+                      ["ADMIN", "MODERATOR", "SUPPORT", "FINANCE"].includes(role) && (
+                        <DrawerLink
+                          href="/admin"
+                          active={pathname.startsWith("/admin")}
+                          onClick={close}
+                        >
+                          Administration
+                        </DrawerLink>
+                      )}
                   </>
                 ) : null}
               </nav>

@@ -25,6 +25,11 @@ enum UserRole {
   STUDENT
   INSTRUCTOR
   ADMIN
+  // Sous-rôles administratifs (granularité CRM) — droits hérités d'ADMIN
+  // limités au scope de chaque rôle (vérifications côté Server Action).
+  MODERATOR
+  SUPPORT
+  FINANCE
 }
 
 enum AccountStatus {
@@ -66,6 +71,13 @@ model User {
   preferredCurrency Currency @default(EUR)
   preferredLocale   Locale   @default(FR)
 
+  // Métadonnées CRM
+  country        String?
+  lastLoginAt    DateTime?
+  bannedAt       DateTime?
+  bannedReason   String?   @db.Text
+  internalNotes  String?   @db.Text
+
   // Stripe Connect (formateurs)
   stripeAccountId      String? @unique
   stripeAccountStatus  String?
@@ -104,6 +116,19 @@ model User {
   notifications   Notification[]
   auditLogs       AuditLog[]
   promoCodes      PromoCode[]      @relation("InstructorPromoCodes")
+  // CRM
+  supportTicketsRequested SupportTicket[] @relation("TicketRequester")
+  supportTicketsAssigned  SupportTicket[] @relation("TicketAssignee")
+  ticketMessages          TicketMessage[]
+  reportsFiled            Report[]        @relation("Reporter")
+  bannedIPs               BannedIP[]      @relation("BannedByAdmin")
+  gdprRequests            GdprRequest[]
+  adminNotesAuthored      AdminNote[]
+  emailCampaignRecipients EmailCampaignRecipient[]
+  userSegments            UserSegment[]   @relation("SegmentAuthor")
+  impersonationsAsAdmin   ImpersonationSession[] @relation("ImpersonationAdmin")
+  impersonationsAsTarget  ImpersonationSession[] @relation("ImpersonationTarget")
+  loginAttempts           LoginAttempt[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -250,6 +275,11 @@ model Course {
   averageRating    Float @default(0)
   totalRatings     Int   @default(0)
   totalEnrollments Int   @default(0)
+
+  // Curation admin
+  isFeatured     Boolean  @default(false)
+  featuredOrder  Int?
+  internalNotes  String?  @db.Text
 
   // Relations
   instructorId    String
@@ -851,4 +881,358 @@ model AuditLog {
   @@index([actorId])
   @@index([targetType, targetId])
   @@index([createdAt])
+}
+
+// ===========================================================================
+// CRM ADMIN — Modules Analytics, Support, Modération, Marketing, Sécurité
+// ===========================================================================
+
+// --- Analytics --------------------------------------------------------------
+
+model PageView {
+  id         String   @id @default(cuid())
+  path       String
+  userId     String?
+  sessionId  String
+  referrer   String?
+  utmSource  String?
+  utmMedium  String?
+  utmCampaign String?
+  country    String?
+  createdAt  DateTime @default(now())
+
+  @@index([path, createdAt])
+  @@index([userId])
+  @@index([createdAt])
+}
+
+// --- Support ----------------------------------------------------------------
+
+enum TicketStatus {
+  OPEN
+  IN_PROGRESS
+  WAITING_USER
+  RESOLVED
+  CLOSED
+}
+
+enum TicketPriority {
+  LOW
+  NORMAL
+  HIGH
+  URGENT
+}
+
+enum TicketCategory {
+  TECHNICAL
+  BILLING
+  CONTENT
+  ACCOUNT
+  OTHER
+}
+
+model SupportTicket {
+  id           String          @id @default(cuid())
+  subject      String
+  status       TicketStatus    @default(OPEN)
+  priority     TicketPriority  @default(NORMAL)
+  category     TicketCategory  @default(OTHER)
+  requesterId  String
+  requester    User            @relation("TicketRequester", fields: [requesterId], references: [id], onDelete: Cascade)
+  assigneeId   String?
+  assignee     User?           @relation("TicketAssignee", fields: [assigneeId], references: [id], onDelete: SetNull)
+  slaDueAt     DateTime?
+  closedAt     DateTime?
+  messages     TicketMessage[]
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([status])
+  @@index([priority])
+  @@index([requesterId])
+  @@index([assigneeId])
+}
+
+model TicketMessage {
+  id        String   @id @default(cuid())
+  ticketId  String
+  ticket    SupportTicket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  authorId  String
+  author    User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  body      String   @db.Text
+  isInternalNote Boolean @default(false)
+  attachments Json?
+  createdAt DateTime @default(now())
+
+  @@index([ticketId, createdAt])
+}
+
+enum DisputeStatus {
+  OPEN
+  IN_REVIEW
+  RESOLVED_REFUND
+  RESOLVED_NO_REFUND
+  ESCALATED
+}
+
+model Dispute {
+  id           String        @id @default(cuid())
+  orderId      String
+  reason       String        @db.Text
+  status       DisputeStatus @default(OPEN)
+  resolution   String?       @db.Text
+  resolvedAt   DateTime?
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  @@index([orderId])
+  @@index([status])
+}
+
+// --- Modération -------------------------------------------------------------
+
+enum ReportTargetType {
+  REVIEW
+  QUESTION
+  ANSWER
+  USER
+  COURSE
+}
+
+enum ReportReason {
+  SPAM
+  HARASSMENT
+  COPYRIGHT
+  INAPPROPRIATE
+  OTHER
+}
+
+enum ReportStatus {
+  PENDING
+  REVIEWING
+  RESOLVED_HIDDEN
+  RESOLVED_DELETED
+  DISMISSED
+}
+
+model Report {
+  id          String           @id @default(cuid())
+  reporterId  String
+  reporter    User             @relation("Reporter", fields: [reporterId], references: [id], onDelete: Cascade)
+  targetType  ReportTargetType
+  targetId    String
+  reason      ReportReason
+  description String?          @db.Text
+  status      ReportStatus     @default(PENDING)
+  resolvedAt  DateTime?
+  notes       String?          @db.Text
+  createdAt   DateTime         @default(now())
+
+  @@index([targetType, targetId])
+  @@index([status])
+  @@index([reporterId])
+}
+
+enum ModerationRuleKind {
+  KEYWORD
+  REGEX
+}
+
+enum ModerationRuleAction {
+  FLAG
+  HIDE
+  BLOCK
+}
+
+model ModerationRule {
+  id        String               @id @default(cuid())
+  name      String
+  kind      ModerationRuleKind   @default(KEYWORD)
+  pattern   String
+  action    ModerationRuleAction @default(FLAG)
+  isActive  Boolean              @default(true)
+  createdAt DateTime             @default(now())
+  updatedAt DateTime              @updatedAt
+
+  @@index([isActive])
+}
+
+// --- Sécurité ---------------------------------------------------------------
+
+model LoginAttempt {
+  id         String   @id @default(cuid())
+  email      String
+  userId     String?
+  user       User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  ipHash     String
+  userAgent  String?
+  success    Boolean  @default(false)
+  createdAt  DateTime @default(now())
+
+  @@index([email, createdAt])
+  @@index([ipHash, createdAt])
+}
+
+model BannedIP {
+  id          String   @id @default(cuid())
+  ipHash      String   @unique
+  reason      String?  @db.Text
+  bannedById  String
+  bannedBy    User     @relation("BannedByAdmin", fields: [bannedById], references: [id], onDelete: Cascade)
+  expiresAt   DateTime?
+  createdAt   DateTime @default(now())
+}
+
+enum GdprRequestKind {
+  EXPORT
+  DELETE
+}
+
+enum GdprRequestStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+  REJECTED
+}
+
+model GdprRequest {
+  id          String            @id @default(cuid())
+  userId      String
+  user        User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  kind        GdprRequestKind
+  status      GdprRequestStatus @default(PENDING)
+  metadata    Json?
+  requestedAt DateTime          @default(now())
+  completedAt DateTime?
+
+  @@index([userId])
+  @@index([status])
+}
+
+model ImpersonationSession {
+  id            String    @id @default(cuid())
+  adminId       String
+  admin         User      @relation("ImpersonationAdmin", fields: [adminId], references: [id], onDelete: Cascade)
+  targetUserId  String
+  targetUser    User      @relation("ImpersonationTarget", fields: [targetUserId], references: [id], onDelete: Cascade)
+  reason        String?
+  startedAt     DateTime  @default(now())
+  endedAt       DateTime?
+
+  @@index([adminId])
+  @@index([targetUserId])
+}
+
+// --- Marketing --------------------------------------------------------------
+
+model EmailTemplate {
+  id          String   @id @default(cuid())
+  slug        String   @unique
+  name        String
+  subject     String
+  bodyHtml    String   @db.Text
+  bodyText    String   @db.Text
+  variables   Json?
+  campaigns   EmailCampaign[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+enum EmailCampaignStatus {
+  DRAFT
+  SCHEDULED
+  SENDING
+  SENT
+  CANCELED
+  FAILED
+}
+
+model EmailCampaign {
+  id                 String              @id @default(cuid())
+  name               String
+  templateId         String
+  template           EmailTemplate       @relation(fields: [templateId], references: [id], onDelete: Restrict)
+  segmentDefinition  Json
+  status             EmailCampaignStatus @default(DRAFT)
+  scheduledFor       DateTime?
+  sentAt             DateTime?
+  totalRecipients    Int                 @default(0)
+  totalDelivered     Int                 @default(0)
+  totalOpened        Int                 @default(0)
+  totalClicked       Int                 @default(0)
+  recipients         EmailCampaignRecipient[]
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+
+  @@index([status])
+  @@index([scheduledFor])
+}
+
+model EmailCampaignRecipient {
+  id          String   @id @default(cuid())
+  campaignId  String
+  campaign    EmailCampaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  sentAt      DateTime?
+  openedAt    DateTime?
+  clickedAt   DateTime?
+  bouncedAt   DateTime?
+
+  @@unique([campaignId, userId])
+  @@index([userId])
+}
+
+model UserSegment {
+  id           String   @id @default(cuid())
+  name         String
+  description  String?  @db.Text
+  definition   Json
+  createdById  String
+  createdBy    User     @relation("SegmentAuthor", fields: [createdById], references: [id], onDelete: Cascade)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+enum BannerKind {
+  INFO
+  PROMO
+  WARNING
+}
+
+model SitewideBanner {
+  id        String     @id @default(cuid())
+  message   String
+  ctaLabel  String?
+  ctaUrl    String?
+  kind      BannerKind @default(INFO)
+  startsAt  DateTime?
+  endsAt    DateTime?
+  isActive  Boolean    @default(false)
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+
+  @@index([isActive, startsAt, endsAt])
+}
+
+// --- Notes admin ------------------------------------------------------------
+
+enum AdminNoteTargetType {
+  USER
+  COURSE
+  ORDER
+  TICKET
+}
+
+model AdminNote {
+  id         String              @id @default(cuid())
+  targetType AdminNoteTargetType
+  targetId   String
+  body       String              @db.Text
+  authorId   String
+  author     User                @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  createdAt  DateTime            @default(now())
+  updatedAt  DateTime            @updatedAt
+
+  @@index([targetType, targetId])
 }

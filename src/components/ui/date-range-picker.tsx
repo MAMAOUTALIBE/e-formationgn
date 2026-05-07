@@ -1,0 +1,171 @@
+"use client";
+
+import { Calendar } from "lucide-react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useEffect, useRef, useState } from "react";
+
+import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
+
+export type PeriodPreset = "today" | "7d" | "30d" | "90d" | "12m" | "custom";
+
+export interface PeriodValue {
+  preset: PeriodPreset;
+  from?: string; // ISO date YYYY-MM-DD (uniquement si preset === custom)
+  to?: string;
+}
+
+const PRESET_LABELS: Record<PeriodPreset, string> = {
+  today: "Aujourd'hui",
+  "7d": "7 derniers jours",
+  "30d": "30 derniers jours",
+  "90d": "90 derniers jours",
+  "12m": "12 derniers mois",
+  custom: "Personnalisé",
+};
+
+export function periodToRange(period: PeriodValue): { from: Date; to: Date } {
+  const now = new Date();
+  const to = new Date(now);
+  let from = new Date(now);
+  switch (period.preset) {
+    case "today":
+      from.setHours(0, 0, 0, 0);
+      break;
+    case "7d":
+      from.setDate(from.getDate() - 7);
+      break;
+    case "30d":
+      from.setDate(from.getDate() - 30);
+      break;
+    case "90d":
+      from.setDate(from.getDate() - 90);
+      break;
+    case "12m":
+      from.setMonth(from.getMonth() - 12);
+      break;
+    case "custom":
+      if (period.from) from = new Date(period.from);
+      if (period.to) to.setTime(new Date(period.to).getTime());
+      break;
+  }
+  return { from, to };
+}
+
+export function parsePeriodParam(value: string | null): PeriodValue {
+  if (!value) return { preset: "30d" };
+  const [preset, from, to] = value.split("|") as [PeriodPreset, string?, string?];
+  return { preset, from, to };
+}
+
+export function DateRangePicker({ paramName = "period" }: { paramName?: string }) {
+  const router = useRouter();
+  const search = useSearchParams();
+  const initial = parsePeriodParam(search.get(paramName));
+  const [open, setOpen] = useState(false);
+  const [period, setPeriod] = useState<PeriodValue>(initial);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, []);
+
+  function applyPreset(preset: PeriodPreset) {
+    const next: PeriodValue = { preset };
+    setPeriod(next);
+    pushUrl(next);
+    if (preset !== "custom") setOpen(false);
+  }
+
+  function applyCustom() {
+    if (!period.from || !period.to) return;
+    pushUrl(period);
+    setOpen(false);
+  }
+
+  function pushUrl(p: PeriodValue) {
+    const params = new URLSearchParams(search.toString());
+    const value =
+      p.preset === "custom" && p.from && p.to
+        ? `custom|${p.from}|${p.to}`
+        : p.preset;
+    params.set(paramName, value);
+    router.push(`?${params.toString()}`);
+  }
+
+  return (
+    <div ref={containerRef} className="relative">
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={() => setOpen((v) => !v)}
+        className="gap-2"
+      >
+        <Calendar className="h-4 w-4" aria-hidden />
+        {PRESET_LABELS[period.preset]}
+        {period.preset === "custom" && period.from && period.to
+          ? ` · ${period.from} → ${period.to}`
+          : ""}
+      </Button>
+
+      {open ? (
+        <div className="absolute right-0 top-full z-30 mt-2 w-72 rounded-md border border-border bg-popover p-2 shadow-lg">
+          <div className="grid gap-1">
+            {(Object.keys(PRESET_LABELS) as PeriodPreset[])
+              .filter((p) => p !== "custom")
+              .map((p) => (
+                <button
+                  key={p}
+                  type="button"
+                  onClick={() => applyPreset(p)}
+                  className={cn(
+                    "rounded-md px-3 py-1.5 text-left text-sm hover:bg-muted",
+                    period.preset === p && "bg-muted font-medium",
+                  )}
+                >
+                  {PRESET_LABELS[p]}
+                </button>
+              ))}
+          </div>
+          <div className="mt-3 border-t border-border pt-3">
+            <p className="px-1 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+              Personnalisé
+            </p>
+            <div className="mt-2 grid grid-cols-2 gap-2">
+              <input
+                type="date"
+                value={period.from ?? ""}
+                onChange={(e) =>
+                  setPeriod({ preset: "custom", from: e.target.value, to: period.to })
+                }
+                className="rounded-md border border-border bg-background px-2 py-1 text-sm"
+              />
+              <input
+                type="date"
+                value={period.to ?? ""}
+                onChange={(e) =>
+                  setPeriod({ preset: "custom", from: period.from, to: e.target.value })
+                }
+                className="rounded-md border border-border bg-background px-2 py-1 text-sm"
+              />
+            </div>
+            <Button
+              size="sm"
+              onClick={applyCustom}
+              disabled={!period.from || !period.to}
+              className="mt-2 w-full"
+            >
+              Appliquer
+            </Button>
+          </div>
+        </div>
+      ) : null}
+    </div>
+  );
+}

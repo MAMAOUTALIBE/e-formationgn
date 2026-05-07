@@ -8,6 +8,10 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatDurationFromSeconds } from "@/lib/format/duration";
 import { formatPrice } from "@/lib/money";
+import {
+  setInternalNotesOnCourse,
+  toggleFeaturedCourse,
+} from "@/server/actions/admin-courses";
 import { getAdminCourse } from "@/server/queries/admin";
 
 export const metadata: Metadata = {
@@ -125,7 +129,7 @@ export default async function AdminCourseReviewPage({ params }: PageProps) {
           </Card>
         </div>
 
-        <aside className="lg:sticky lg:top-24 lg:self-start">
+        <aside className="space-y-4 lg:sticky lg:top-24 lg:self-start">
           <Card>
             <CardHeader>
               <CardTitle className="text-base">Décision de modération</CardTitle>
@@ -134,8 +138,89 @@ export default async function AdminCourseReviewPage({ params }: PageProps) {
               <ModerationForm courseId={course.id} />
             </CardContent>
           </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Curation</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <FeaturedToggle
+                courseId={course.id}
+                isFeatured={course.isFeatured ?? false}
+              />
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Notes internes</CardTitle>
+              <CardDescription>
+                Visibles uniquement par l&apos;équipe admin.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <InternalNotesForm
+                courseId={course.id}
+                value={course.internalNotes ?? ""}
+              />
+            </CardContent>
+          </Card>
         </aside>
       </div>
     </div>
+  );
+}
+
+function FeaturedToggle({
+  courseId,
+  isFeatured,
+}: {
+  courseId: string;
+  isFeatured: boolean;
+}) {
+  return (
+    <form
+      action={async () => {
+        "use server";
+        await toggleFeaturedCourse(courseId, !isFeatured);
+      }}
+      className="flex items-center justify-between gap-2"
+    >
+      <span className="text-sm">
+        {isFeatured ? "En vedette" : "Pas en vedette"}
+      </span>
+      <Button type="submit" size="sm" variant="outline">
+        {isFeatured ? "Retirer" : "Mettre en avant"}
+      </Button>
+    </form>
+  );
+}
+
+function InternalNotesForm({
+  courseId,
+  value,
+}: {
+  courseId: string;
+  value: string;
+}) {
+  return (
+    <form
+      action={async (formData: FormData) => {
+        "use server";
+        await setInternalNotesOnCourse(courseId, String(formData.get("notes") ?? ""));
+      }}
+      className="flex flex-col gap-2"
+    >
+      <textarea
+        name="notes"
+        rows={4}
+        defaultValue={value}
+        placeholder="Notes internes…"
+        className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
+      />
+      <Button type="submit" size="sm" className="self-end">
+        Enregistrer
+      </Button>
+    </form>
   );
 }
