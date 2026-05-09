@@ -46,49 +46,72 @@ export const updateCourseGeneralSchema = z
   .strict();
 export type UpdateCourseGeneralInput = z.infer<typeof updateCourseGeneralSchema>;
 
+// Helpers de validation des prix
+//   - EUR / USD : 2 décimales, plafonnées à 9 999 (limite raisonnable)
+//   - GNF : entier ≥ 0, plafonné à 99 999 999 (≈ 10 000 € au taux actuel)
+//   - XOF : entier ≥ 0, plafonné à 9 999 999 (≈ 15 000 € au taux fixe)
+
+const decimalPrice = (label: string) =>
+  z.coerce
+    .number({ error: `${label} requis.` })
+    .min(0, "Le prix ne peut pas être négatif.")
+    .max(9999, "Prix trop élevé.");
+
+const integerPrice = (label: string, max: number) =>
+  z.coerce
+    .number({ error: `${label} requis.` })
+    .int("Doit être un entier.")
+    .min(0, "Le prix ne peut pas être négatif.")
+    .max(max, "Prix trop élevé.");
+
+const optionalDecimal = z
+  .union([z.coerce.number().min(0).max(9999), z.literal(""), z.null()])
+  .optional();
+const optionalIntegerGnf = z
+  .union([z.coerce.number().int().min(0).max(99_999_999), z.literal(""), z.null()])
+  .optional();
+const optionalIntegerXof = z
+  .union([z.coerce.number().int().min(0).max(9_999_999), z.literal(""), z.null()])
+  .optional();
+
 export const updateCoursePricingSchema = z
   .object({
-    priceEUR: z.coerce
-      .number({ error: "Prix EUR requis." })
-      .min(0, "Le prix ne peut pas être négatif.")
-      .max(9999, "Prix trop élevé."),
-    priceUSD: z.coerce
-      .number({ error: "Prix USD requis." })
-      .min(0, "Le prix ne peut pas être négatif.")
-      .max(9999, "Prix trop élevé."),
-    discountPriceEUR: z
-      .union([z.coerce.number().min(0).max(9999), z.literal(""), z.null()])
-      .optional(),
-    discountPriceUSD: z
-      .union([z.coerce.number().min(0).max(9999), z.literal(""), z.null()])
-      .optional(),
+    priceEUR: decimalPrice("Prix EUR"),
+    priceUSD: decimalPrice("Prix USD"),
+    priceGNF: integerPrice("Prix GNF", 99_999_999),
+    priceXOF: integerPrice("Prix XOF", 9_999_999),
+    discountPriceEUR: optionalDecimal,
+    discountPriceUSD: optionalDecimal,
+    discountPriceGNF: optionalIntegerGnf,
+    discountPriceXOF: optionalIntegerXof,
     discountEndsAt: z
       .union([z.string().datetime(), z.literal("")])
       .optional(),
   })
   .strict()
-  .refine(
-    (data) =>
-      data.discountPriceEUR === undefined ||
-      data.discountPriceEUR === "" ||
-      data.discountPriceEUR === null ||
-      Number(data.discountPriceEUR) < data.priceEUR,
-    {
-      message: "Le prix promotionnel EUR doit être inférieur au prix normal.",
-      path: ["discountPriceEUR"],
-    },
-  )
-  .refine(
-    (data) =>
-      data.discountPriceUSD === undefined ||
-      data.discountPriceUSD === "" ||
-      data.discountPriceUSD === null ||
-      Number(data.discountPriceUSD) < data.priceUSD,
-    {
-      message: "Le prix promotionnel USD doit être inférieur au prix normal.",
-      path: ["discountPriceUSD"],
-    },
-  );
+  .superRefine((data, ctx) => {
+    const checks: Array<[
+      string,
+      number | string | null | undefined,
+      number,
+      string,
+    ]> = [
+      ["discountPriceEUR", data.discountPriceEUR, data.priceEUR, "EUR"],
+      ["discountPriceUSD", data.discountPriceUSD, data.priceUSD, "USD"],
+      ["discountPriceGNF", data.discountPriceGNF, data.priceGNF, "GNF"],
+      ["discountPriceXOF", data.discountPriceXOF, data.priceXOF, "XOF"],
+    ];
+    for (const [path, discount, full, label] of checks) {
+      if (discount === undefined || discount === "" || discount === null) continue;
+      if (Number(discount) >= full) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: [path],
+          message: `Le prix promotionnel ${label} doit être inférieur au prix normal.`,
+        });
+      }
+    }
+  });
 export type UpdateCoursePricingInput = z.infer<typeof updateCoursePricingSchema>;
 
 export const stringList = z

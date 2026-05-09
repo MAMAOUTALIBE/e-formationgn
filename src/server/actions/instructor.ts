@@ -203,8 +203,12 @@ export async function updateCoursePricing(
   const parsed = updateCoursePricingSchema.safeParse({
     priceEUR: formData.get("priceEUR"),
     priceUSD: formData.get("priceUSD"),
+    priceGNF: formData.get("priceGNF") ?? 0,
+    priceXOF: formData.get("priceXOF") ?? 0,
     discountPriceEUR: formData.get("discountPriceEUR"),
     discountPriceUSD: formData.get("discountPriceUSD"),
+    discountPriceGNF: formData.get("discountPriceGNF"),
+    discountPriceXOF: formData.get("discountPriceXOF"),
     discountEndsAt: formData.get("discountEndsAt") ?? "",
   });
   if (!parsed.success) {
@@ -215,28 +219,25 @@ export async function updateCoursePricing(
     };
   }
 
-  const { priceEUR, priceUSD, discountPriceEUR, discountPriceUSD, discountEndsAt } =
-    parsed.data;
-
-  const discountEUR =
-    discountPriceEUR === undefined || discountPriceEUR === "" || discountPriceEUR === null
-      ? null
-      : Number(discountPriceEUR);
-  const discountUSD =
-    discountPriceUSD === undefined || discountPriceUSD === "" || discountPriceUSD === null
-      ? null
-      : Number(discountPriceUSD);
+  const data = parsed.data;
+  // Helper : "" / null / undefined → null, sinon Number
+  const optNum = (v: number | string | null | undefined): number | null =>
+    v === undefined || v === "" || v === null ? null : Number(v);
 
   await prisma.course.update({
     where: { id: courseId },
     data: {
-      priceEUR,
-      priceUSD,
-      discountPriceEUR: discountEUR,
-      discountPriceUSD: discountUSD,
+      priceEUR: data.priceEUR,
+      priceUSD: data.priceUSD,
+      priceGNF: data.priceGNF,
+      priceXOF: data.priceXOF,
+      discountPriceEUR: optNum(data.discountPriceEUR),
+      discountPriceUSD: optNum(data.discountPriceUSD),
+      discountPriceGNF: optNum(data.discountPriceGNF),
+      discountPriceXOF: optNum(data.discountPriceXOF),
       discountEndsAt:
-        discountEndsAt && discountEndsAt !== ""
-          ? new Date(discountEndsAt)
+        data.discountEndsAt && data.discountEndsAt !== ""
+          ? new Date(data.discountEndsAt)
           : null,
     },
   });

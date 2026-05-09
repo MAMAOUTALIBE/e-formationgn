@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { CheckCircle2, ExternalLink } from "lucide-react";
 
 import { auth } from "@/auth";
+import { ConfirmationPoll } from "@/components/features/orders/confirmation-poll";
 import { SiteFooter } from "@/components/layout/site-footer";
 import { SiteHeader } from "@/components/layout/site-header";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -48,6 +49,7 @@ export default async function OrderConfirmationPage({ params }: PageProps) {
   return (
     <>
       <SiteHeader />
+      <ConfirmationPoll status={order.status} />
 
       <main className="flex-1 bg-muted/20 py-12">
         <Container className="max-w-3xl space-y-6">

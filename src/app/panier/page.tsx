@@ -15,6 +15,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Container } from "@/components/ui/container";
 import { readAffiliateCode } from "@/lib/affiliate";
 import { getCurrentCurrency } from "@/lib/currency";
+import { isCinetPayConfigured } from "@/lib/payments/cinetpay";
+import { isStripeConfigured } from "@/lib/stripe";
 import { computeCartLines, listCartItems } from "@/server/queries/cart";
 
 export const metadata: Metadata = {
@@ -145,6 +147,8 @@ export default async function CartPage({ searchParams }: PageProps) {
                       subtotalCents={subtotalCents}
                       currency={currency}
                       affiliateActive={Boolean(affiliateCode)}
+                      stripeAvailable={isStripeConfigured()}
+                      cinetpayAvailable={isCinetPayConfigured()}
                     />
                   </CardContent>
                 </Card>

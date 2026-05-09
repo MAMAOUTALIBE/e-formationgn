@@ -37,10 +37,16 @@ export default async function CoursePricingPage({ params }: PageProps) {
           defaults={{
             priceEUR: Number(course.priceEUR),
             priceUSD: Number(course.priceUSD),
+            priceGNF: Number(course.priceGNF),
+            priceXOF: Number(course.priceXOF),
             discountPriceEUR:
               course.discountPriceEUR != null ? Number(course.discountPriceEUR) : null,
             discountPriceUSD:
               course.discountPriceUSD != null ? Number(course.discountPriceUSD) : null,
+            discountPriceGNF:
+              course.discountPriceGNF != null ? Number(course.discountPriceGNF) : null,
+            discountPriceXOF:
+              course.discountPriceXOF != null ? Number(course.discountPriceXOF) : null,
             discountEndsAt,
           }}
         />

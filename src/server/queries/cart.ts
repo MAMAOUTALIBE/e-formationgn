@@ -16,8 +16,12 @@ const CART_ITEM_INCLUDE = {
       thumbnailUrl: true,
       priceEUR: true,
       priceUSD: true,
+      priceGNF: true,
+      priceXOF: true,
       discountPriceEUR: true,
       discountPriceUSD: true,
+      discountPriceGNF: true,
+      discountPriceXOF: true,
       discountEndsAt: true,
       status: true,
       instructorId: true,
@@ -75,9 +79,28 @@ export function computeCartLines({
     if (!course) continue;
     if (course.status !== "PUBLISHED") continue;
 
-    const fullPrice = currency === "USD" ? Number(course.priceUSD) : Number(course.priceEUR);
-    const discount =
-      currency === "USD" ? course.discountPriceUSD : course.discountPriceEUR;
+    // Sélectionne la paire de prix correspondant à la devise du panier.
+    let fullPrice: number;
+    let discount: Prisma.Decimal | null;
+    switch (currency) {
+      case "USD":
+        fullPrice = Number(course.priceUSD);
+        discount = course.discountPriceUSD;
+        break;
+      case "GNF":
+        fullPrice = Number(course.priceGNF);
+        discount = course.discountPriceGNF;
+        break;
+      case "XOF":
+        fullPrice = Number(course.priceXOF);
+        discount = course.discountPriceXOF;
+        break;
+      case "EUR":
+      default:
+        fullPrice = Number(course.priceEUR);
+        discount = course.discountPriceEUR;
+        break;
+    }
 
     const discountActive =
       discount !== null &&
@@ -87,8 +110,10 @@ export function computeCartLines({
         course.discountEndsAt === undefined ||
         course.discountEndsAt.getTime() > now);
 
-    const unitCents = amountToCents(fullPrice);
-    const discountCents = discountActive ? unitCents - amountToCents(Number(discount)) : 0;
+    const unitCents = amountToCents(fullPrice, currency);
+    const discountCents = discountActive
+      ? unitCents - amountToCents(Number(discount), currency)
+      : 0;
     const totalCents = unitCents - discountCents;
 
     const isInstructorDriven =
