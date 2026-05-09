@@ -118,6 +118,10 @@
 
 html {
   color-scheme: light;
+  /* +12,5 % par rapport au défaut 16 px : tous les utilitaires Tailwind
+     (text-sm, text-base, text-lg…) sont en rem et bénéficient du bump
+     uniformément, sans casser les hiérarchies. */
+  font-size: 18px;
 }
 
 html.dark {
