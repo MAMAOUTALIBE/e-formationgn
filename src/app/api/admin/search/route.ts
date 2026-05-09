@@ -5,6 +5,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { auth } from "@/auth";
+import { isAdminRole } from "@/lib/constants";
 import { prisma } from "@/lib/prisma";
 import { checkRateLimit, clientKey } from "@/lib/rate-limit";
 
@@ -140,8 +141,4 @@ export async function GET(request: NextRequest) {
     { hits },
     { headers: { "Cache-Control": PRIVATE_NO_STORE } },
   );
-}
-
-function isAdminRole(role: string): boolean {
-  return ["ADMIN", "MODERATOR", "SUPPORT", "FINANCE"].includes(role);
 }

@@ -7,6 +7,7 @@
 import type { NextAuthConfig } from "next-auth";
 import Google from "next-auth/providers/google";
 
+import { ADMIN_ROLES } from "@/lib/constants";
 import type { Currency, UserRole } from "@/generated/prisma/enums";
 
 // On étend les types NextAuth pour exposer le rôle dans la session/token.
@@ -180,8 +181,7 @@ export const authConfig = {
             new URL(`/connexion?callbackUrl=${callbackUrl}`, nextUrl),
           );
         }
-        const adminRoles = ["ADMIN", "MODERATOR", "SUPPORT", "FINANCE"];
-        if (!role || !adminRoles.includes(role)) {
+        if (!role || !(ADMIN_ROLES as readonly string[]).includes(role)) {
           return Response.redirect(new URL("/", nextUrl));
         }
         return true;

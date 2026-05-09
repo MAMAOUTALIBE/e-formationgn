@@ -6,15 +6,14 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 import { auth } from "@/auth";
-import { logWarning } from "@/lib/logger";
 import {
   createDirectUpload,
-  deleteAsset,
   getAsset,
   getUpload,
   isMuxConfigured,
 } from "@/lib/mux";
 import { prisma } from "@/lib/prisma";
+import { safeDeleteMuxAsset } from "@/server/services/mux-service";
 import {
   lessonSchema,
   reorderItemsSchema,
@@ -283,17 +282,11 @@ export async function updateLesson(
 export async function deleteLesson(lessonId: string): Promise<ActionResult> {
   const { lesson } = await requireLessonOwnership(lessonId);
 
-  // Supprime l'asset Mux associé (best-effort) avant la leçon.
-  if (lesson.muxAssetId && isMuxConfigured()) {
-    try {
-      await deleteAsset(lesson.muxAssetId);
-    } catch (error) {
-      logWarning("mux", "Échec de suppression de l'asset (delete lesson)", {
-        assetId: lesson.muxAssetId,
-        lessonId,
-        error: String(error),
-      });
-    }
+  // Supprime l'asset Mux associé (best-effort, retry borné via service).
+  if (lesson.muxAssetId) {
+    await safeDeleteMuxAsset(lesson.muxAssetId, {
+      context: { operation: "delete-lesson", lessonId },
+    });
   }
 
   const courseId = lesson.section.course.id;
@@ -349,16 +342,11 @@ export async function createMuxUploadForLesson(
 
   const { lesson } = await requireLessonOwnership(lessonId);
 
-  // Si une vidéo précédente existait, on la supprime côté Mux.
+  // Si une vidéo précédente existait, on la supprime côté Mux (retry borné).
   if (lesson.muxAssetId) {
-    try {
-      await deleteAsset(lesson.muxAssetId);
-    } catch (error) {
-      logWarning("mux", "Échec de suppression de l'ancien asset (replace)", {
-        assetId: lesson.muxAssetId,
-        error: String(error),
-      });
-    }
+    await safeDeleteMuxAsset(lesson.muxAssetId, {
+      context: { operation: "replace-asset", lessonId },
+    });
   }
 
   const corsOrigin =
@@ -442,16 +430,10 @@ export async function confirmMuxUploadForLesson(
 export async function detachMuxFromLesson(lessonId: string): Promise<ActionResult> {
   const { lesson } = await requireLessonOwnership(lessonId);
 
-  if (lesson.muxAssetId && isMuxConfigured()) {
-    try {
-      await deleteAsset(lesson.muxAssetId);
-    } catch (error) {
-      logWarning("mux", "Échec de suppression de l'asset (clear video)", {
-        assetId: lesson.muxAssetId,
-        lessonId,
-        error: String(error),
-      });
-    }
+  if (lesson.muxAssetId) {
+    await safeDeleteMuxAsset(lesson.muxAssetId, {
+      context: { operation: "clear-video", lessonId },
+    });
   }
 
   await prisma.lesson.update({
