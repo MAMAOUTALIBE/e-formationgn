@@ -62,6 +62,11 @@ export const metadata: Metadata = {
   },
 };
 
+// Toutes les pages dépendent de la session (auth) ou de Prisma → on force le
+// rendu dynamique. Évite l'échec du prerender de /_not-found au build Docker
+// (qui n'a pas accès à Postgres avec l'URL placeholder).
+export const dynamic = "force-dynamic";
+
 export const viewport: Viewport = {
   themeColor: [
     { media: "(prefers-color-scheme: light)", color: "#ffffff" },
