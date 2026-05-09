@@ -16,6 +16,7 @@ import type Stripe from "stripe";
 
 import { sendTransactionalEmail } from "@/lib/email/client";
 import { renderBrandedEmail } from "@/lib/email/templates";
+import { logError, logWarning } from "@/lib/logger";
 import { formatPriceFromCents } from "@/lib/money";
 import { prisma } from "@/lib/prisma";
 import {
@@ -50,7 +51,7 @@ export async function POST(request: Request) {
       STRIPE_WEBHOOK_SECRET,
     );
   } catch (error) {
-    console.warn("[stripe-webhook] signature invalide", error);
+    logWarning("stripe-webhook", "signature invalide", { error: String(error) });
     return NextResponse.json({ error: "invalid_signature" }, { status: 400 });
   }
 
@@ -94,7 +95,7 @@ export async function POST(request: Request) {
         break;
     }
   } catch (error) {
-    console.error("[stripe-webhook] traitement échoué", error);
+    logError("stripe-webhook", error, { eventType: event.type, eventId: event.id });
     return NextResponse.json({ error: "handler_error" }, { status: 500 });
   }
 
@@ -108,7 +109,9 @@ export async function POST(request: Request) {
 async function handleCheckoutCompleted(stripe: Stripe, session: Stripe.Checkout.Session) {
   const orderId = session.metadata?.orderId;
   if (!orderId) {
-    console.warn("[stripe-webhook] checkout.session.completed sans orderId");
+    logWarning("stripe-webhook", "checkout.session.completed sans orderId", {
+      sessionId: session.id,
+    });
     return;
   }
 
@@ -126,7 +129,7 @@ async function handleCheckoutCompleted(stripe: Stripe, session: Stripe.Checkout.
     },
   });
   if (!order) {
-    console.warn("[stripe-webhook] order introuvable", orderId);
+    logWarning("stripe-webhook", "order introuvable", { orderId });
     return;
   }
 
@@ -212,8 +215,10 @@ async function handleCheckoutCompleted(stripe: Stripe, session: Stripe.Checkout.
       select: { stripeAccountId: true, stripeOnboardingDone: true },
     });
     if (!instructor?.stripeAccountId || !instructor.stripeOnboardingDone) {
-      console.warn(
-        `[stripe-webhook] formateur ${instructorId} sans compte Connect prêt — transfer reporté`,
+      logWarning(
+        "stripe-webhook",
+        "formateur sans compte Connect prêt — transfer reporté",
+        { instructorId, orderId: order.id, amountCents },
       );
       continue;
     }
@@ -242,10 +247,12 @@ async function handleCheckoutCompleted(stripe: Stripe, session: Stripe.Checkout.
         });
       }
     } catch (error) {
-      console.error(
-        `[stripe-webhook] transfer échoué pour formateur ${instructorId}`,
-        error,
-      );
+      logError("stripe-webhook", error, {
+        operation: "transfer",
+        instructorId,
+        orderId: order.id,
+        amountCents,
+      });
     }
   }
 
@@ -314,10 +321,22 @@ async function handleChargeRefunded(charge: Stripe.Charge) {
   });
   if (!order) return;
 
-  const refundedTotal = (charge.refunds?.data ?? []).reduce(
-    (acc, refund) => acc + refund.amount,
-    0,
-  );
+  // Stripe API moderne : `charge.refunds` n'est plus expand par défaut.
+  // On utilise `amount_refunded` qui est toujours présent sur le Charge,
+  // sinon fallback sur `refunds.list` côté API.
+  let refundedTotal = charge.amount_refunded ?? 0;
+  if (!refundedTotal) {
+    try {
+      const refunds = await getStripeClient().refunds.list({ charge: charge.id, limit: 100 });
+      refundedTotal = refunds.data.reduce((acc, r) => acc + r.amount, 0);
+    } catch (error) {
+      logError("stripe-webhook", error, {
+        operation: "refunds.list",
+        chargeId: charge.id,
+        orderId: order.id,
+      });
+    }
+  }
 
   const status =
     refundedTotal >= order.totalCents ? "REFUNDED" : "PARTIALLY_REFUNDED";

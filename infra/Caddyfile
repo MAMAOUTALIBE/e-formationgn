@@ -1,0 +1,41 @@
+# Reverse proxy pour E-FormationGN.
+# DOMAIN et ACME_EMAIL sont fournis par docker-compose via env.
+# HTTPS automatique via Let's Encrypt.
+
+{
+    email {$ACME_EMAIL}
+}
+
+{$DOMAIN} {
+    encode zstd gzip
+
+    # En-têtes de sécurité côté edge (en complément de ceux ajoutés par Next).
+    header {
+        Strict-Transport-Security "max-age=63072000; includeSubDomains; preload"
+        X-Content-Type-Options "nosniff"
+        X-Frame-Options "DENY"
+        Referrer-Policy "strict-origin-when-cross-origin"
+        Permissions-Policy "camera=(), microphone=(), geolocation=(), payment=(self), interest-cohort=()"
+        -Server
+    }
+
+    # Le service worker doit pouvoir contrôler tout l'origin → no-cache pour lui.
+    @sw path /sw.js
+    header @sw Cache-Control "no-cache, no-store, must-revalidate"
+
+    # Assets statiques Next : cache long, immutable.
+    @next path /_next/static/*
+    header @next Cache-Control "public, max-age=31536000, immutable"
+
+    reverse_proxy app:3000 {
+        header_up X-Forwarded-Proto {scheme}
+        header_up X-Forwarded-For {remote_host}
+        header_up X-Real-IP {remote_host}
+        header_up Host {host}
+    }
+
+    log {
+        output stdout
+        format json
+    }
+}

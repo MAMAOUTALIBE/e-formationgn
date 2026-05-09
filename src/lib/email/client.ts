@@ -4,6 +4,8 @@
 
 import { Resend } from "resend";
 
+import { logError } from "@/lib/logger";
+
 interface SendEmailParams {
   to: string;
   subject: string;
@@ -48,13 +50,13 @@ export async function sendTransactionalEmail(
       text: params.text,
     });
     if (result.error) {
-      console.error("[email] Resend error:", result.error);
+      logError("email", result.error, { to: params.to, subject: params.subject });
       return { ok: false, error: result.error.message };
     }
     return { ok: true };
   } catch (error) {
     const message = error instanceof Error ? error.message : "Erreur inconnue";
-    console.error("[email] Exception:", error);
+    logError("email", error, { to: params.to, subject: params.subject });
     return { ok: false, error: message };
   }
 }

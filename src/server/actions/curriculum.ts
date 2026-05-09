@@ -6,6 +6,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 import { auth } from "@/auth";
+import { logWarning } from "@/lib/logger";
 import {
   createDirectUpload,
   deleteAsset,
@@ -287,7 +288,11 @@ export async function deleteLesson(lessonId: string): Promise<ActionResult> {
     try {
       await deleteAsset(lesson.muxAssetId);
     } catch (error) {
-      console.warn("[mux] Échec de suppression de l'asset", error);
+      logWarning("mux", "Échec de suppression de l'asset (delete lesson)", {
+        assetId: lesson.muxAssetId,
+        lessonId,
+        error: String(error),
+      });
     }
   }
 
@@ -349,7 +354,10 @@ export async function createMuxUploadForLesson(
     try {
       await deleteAsset(lesson.muxAssetId);
     } catch (error) {
-      console.warn("[mux] Échec de suppression de l'ancien asset", error);
+      logWarning("mux", "Échec de suppression de l'ancien asset (replace)", {
+        assetId: lesson.muxAssetId,
+        error: String(error),
+      });
     }
   }
 
@@ -438,7 +446,11 @@ export async function detachMuxFromLesson(lessonId: string): Promise<ActionResul
     try {
       await deleteAsset(lesson.muxAssetId);
     } catch (error) {
-      console.warn("[mux] Échec de suppression de l'asset", error);
+      logWarning("mux", "Échec de suppression de l'asset (clear video)", {
+        assetId: lesson.muxAssetId,
+        lessonId,
+        error: String(error),
+      });
     }
   }
 

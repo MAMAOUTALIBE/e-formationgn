@@ -1,9 +1,27 @@
 import type { NextConfig } from "next";
 
 // En-têtes de sécurité appliqués à toutes les réponses HTML.
-// CSP volontairement omis : Next.js injecte des scripts inline pour l'hydratation
-// et un CSP strict sans nonce pré-calculé bloque le rendu. À ajouter plus tard
-// (mode report-only) si besoin de durcir.
+// CSP en mode `report-only` : les violations sont signalées (console navigateur)
+// mais rien n'est bloqué. Permet de durcir progressivement sans casser le rendu.
+const cspReportOnly = [
+  "default-src 'self'",
+  // 'unsafe-inline' nécessaire pour Next.js (hydration scripts) — à durcir avec
+  // un nonce dans une étape ultérieure (cf. Next.js 16 + nonce headers).
+  "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://*.stripe.com https://*.mux.com https://*.sentry.io",
+  "style-src 'self' 'unsafe-inline'",
+  "img-src 'self' data: blob: https:",
+  "font-src 'self' data:",
+  // Mux + Stripe + Sentry + R2/S3 : sources externes attendues
+  "connect-src 'self' https://*.stripe.com https://*.mux.com https://*.sentry.io https://*.r2.cloudflarestorage.com",
+  "frame-src 'self' https://*.stripe.com https://*.mux.com",
+  "media-src 'self' https://*.mux.com blob:",
+  "object-src 'none'",
+  "base-uri 'self'",
+  "form-action 'self'",
+  "frame-ancestors 'none'",
+  "upgrade-insecure-requests",
+].join("; ");
+
 const securityHeaders = [
   { key: "X-Frame-Options", value: "DENY" },
   { key: "X-Content-Type-Options", value: "nosniff" },
@@ -19,11 +37,18 @@ const securityHeaders = [
     key: "Strict-Transport-Security",
     value: "max-age=63072000; includeSubDomains; preload",
   },
+  // CSP en report-only. Bascule en `Content-Security-Policy` (sans -Report-Only)
+  // une fois validé en prod (zéro violation pendant 24-48h).
+  { key: "Content-Security-Policy-Report-Only", value: cspReportOnly },
 ];
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
+
+  // Build standalone : produit /.next/standalone avec un mini server.js
+  // autonome, indispensable pour l'image Docker minimale.
+  output: "standalone",
 
   // Les vignettes peuvent venir de n'importe quelle URL fournie par les
   // formateurs (Mux, Cloudinary, R2, Supabase, etc.). On désactive

@@ -12,6 +12,10 @@ import { AuthError } from "next-auth";
 import { signIn } from "@/auth";
 import { hashPassword } from "@/lib/auth/password";
 import {
+  checkIpRateLimit,
+  rateLimitMessage,
+} from "@/lib/auth/rate-limit-ip";
+import {
   emailVerificationExpiry,
   generateToken,
   passwordResetExpiry,
@@ -46,6 +50,13 @@ export async function registerUser(
   _prevState: ActionResult | undefined,
   formData: FormData,
 ): Promise<ActionResult> {
+  const rl = await checkIpRateLimit({
+    prefix: "auth:register",
+    windowMs: 60 * 60 * 1000,
+    max: 5,
+  });
+  if (!rl.ok) return { success: false, message: rateLimitMessage(rl.resetAt) };
+
   const raw = {
     firstName: formData.get("firstName"),
     lastName: formData.get("lastName"),
@@ -187,6 +198,13 @@ export async function loginWithCredentials(
   _prevState: ActionResult | undefined,
   formData: FormData,
 ): Promise<ActionResult> {
+  const rl = await checkIpRateLimit({
+    prefix: "auth:login",
+    windowMs: 15 * 60 * 1000,
+    max: 10,
+  });
+  if (!rl.ok) return { success: false, message: rateLimitMessage(rl.resetAt) };
+
   const raw = {
     email: formData.get("email"),
     password: formData.get("password"),
@@ -275,6 +293,13 @@ export async function requestPasswordReset(
   _prevState: ActionResult | undefined,
   formData: FormData,
 ): Promise<ActionResult> {
+  const rl = await checkIpRateLimit({
+    prefix: "auth:reset-request",
+    windowMs: 60 * 60 * 1000,
+    max: 5,
+  });
+  if (!rl.ok) return { success: false, message: rateLimitMessage(rl.resetAt) };
+
   const raw = { email: formData.get("email") };
   const parsed = requestPasswordResetSchema.safeParse(raw);
 
@@ -326,6 +351,13 @@ export async function resetPassword(
   _prevState: ActionResult | undefined,
   formData: FormData,
 ): Promise<ActionResult> {
+  const rl = await checkIpRateLimit({
+    prefix: "auth:reset-confirm",
+    windowMs: 15 * 60 * 1000,
+    max: 10,
+  });
+  if (!rl.ok) return { success: false, message: rateLimitMessage(rl.resetAt) };
+
   const raw = {
     token: formData.get("token"),
     password: formData.get("password"),
@@ -381,6 +413,13 @@ export async function resetPassword(
 // ---------------------------------------------------------------------------
 
 export async function resendVerificationEmail(email: string): Promise<ActionResult> {
+  const rl = await checkIpRateLimit({
+    prefix: "auth:resend-verify",
+    windowMs: 60 * 60 * 1000,
+    max: 5,
+  });
+  if (!rl.ok) return { success: false, message: rateLimitMessage(rl.resetAt) };
+
   const trimmed = String(email).trim().toLowerCase();
   if (!trimmed) return { success: false, message: "Adresse email invalide." };
 

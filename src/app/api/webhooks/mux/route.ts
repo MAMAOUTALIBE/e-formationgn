@@ -11,6 +11,7 @@
 
 import { NextResponse } from "next/server";
 
+import { logWarning } from "@/lib/logger";
 import { getMuxClient, isMuxConfigured } from "@/lib/mux";
 import { prisma } from "@/lib/prisma";
 
@@ -29,7 +30,7 @@ export async function POST(request: Request) {
       data?: unknown;
     };
   } catch (error) {
-    console.warn("[mux-webhook] Signature invalide", error);
+    logWarning("mux-webhook", "Signature invalide", { error: String(error) });
     return NextResponse.json({ error: "invalid_signature" }, { status: 400 });
   }
 

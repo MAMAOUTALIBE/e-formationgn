@@ -50,6 +50,19 @@ const serverSchema = z.object({
   R2_ACCESS_KEY_ID: z.string().optional(),
   R2_SECRET_ACCESS_KEY: z.string().optional(),
   R2_BUCKET: z.string().optional(),
+  R2_PUBLIC_URL: z.string().url().optional(),
+
+  // Sentry (monitoring)
+  SENTRY_DSN: z.string().url().optional(),
+
+  // Anthropic (tuteur IA)
+  ANTHROPIC_API_KEY: z.string().optional(),
+
+  // Cron job (Vercel Cron ou crontab système). Obligatoire en prod
+  // (la route /api/cron/cleanup refuse l'accès si CRON_SECRET est absent).
+  CRON_SECRET: isProduction
+    ? z.string().min(16, "CRON_SECRET requis en production (≥16 chars)")
+    : z.string().min(16).optional(),
 
   // Plateforme
   PLATFORM_DEFAULT_CURRENCY: z.enum(["EUR", "USD"]).default("EUR"),
@@ -67,6 +80,7 @@ const clientSchema = z.object({
       "NEXT_PUBLIC_APP_URL doit être une URL HTTPS publique en production",
     ),
   NEXT_PUBLIC_APP_NAME: z.string().default("E-FormationGN"),
+  NEXT_PUBLIC_SENTRY_DSN: z.string().url().optional(),
 });
 
 function parseEnv() {
@@ -74,6 +88,7 @@ function parseEnv() {
   const client = clientSchema.safeParse({
     NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL,
     NEXT_PUBLIC_APP_NAME: process.env.NEXT_PUBLIC_APP_NAME,
+    NEXT_PUBLIC_SENTRY_DSN: process.env.NEXT_PUBLIC_SENTRY_DSN,
   });
 
   if (!server.success || !client.success) {

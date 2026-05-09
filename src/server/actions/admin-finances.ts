@@ -5,6 +5,7 @@
 import { revalidatePath } from "next/cache";
 
 import { auth } from "@/auth";
+import { logError } from "@/lib/logger";
 import { prisma } from "@/lib/prisma";
 import { getStripeClient, isStripeConfigured } from "@/lib/stripe";
 
@@ -105,8 +106,11 @@ export async function refundOrder(
       // l'historique. Le reverse transfer est tracé dans Stripe et l'audit.
       void reversal;
     } catch (error) {
-      // On loggue mais on ne fait pas échouer le refund (déjà initié côté client).
-      console.error("[refund] reverse transfer failed", item.stripeTransferId, error);
+      logError("refund", error, {
+        operation: "reverse_transfer",
+        transferId: item.stripeTransferId,
+        itemId: item.id,
+      });
     }
   }
 

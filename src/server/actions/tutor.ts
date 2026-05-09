@@ -6,6 +6,7 @@
 
 import { auth } from "@/auth";
 import { askTutor, isTutorConfigured } from "@/lib/ai/tutor";
+import { logError } from "@/lib/logger";
 import { prisma } from "@/lib/prisma";
 import { checkRateLimit } from "@/lib/rate-limit";
 
@@ -98,7 +99,7 @@ export async function askLessonTutor(
     );
     return { ok: true, answer: result.text };
   } catch (error) {
-    console.error("[tutor] erreur Anthropic", error);
+    logError("tutor", error, { lessonId, userId: session.user.id });
     return {
       ok: false,
       message:

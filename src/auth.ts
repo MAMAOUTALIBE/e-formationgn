@@ -17,6 +17,7 @@ import { PrismaAdapter } from "@auth/prisma-adapter";
 
 import { authConfig } from "@/auth.config";
 import { readImpersonation } from "@/lib/admin/impersonation";
+import { recordLoginAttempt } from "@/lib/auth/login-attempts";
 import { verifyPassword } from "@/lib/auth/password";
 import { prisma } from "@/lib/prisma";
 import { loginSchema } from "@/lib/validators/auth";
@@ -67,18 +68,51 @@ export const {
         const user = await prisma.user.findUnique({
           where: { email: parsed.data.email },
         });
-        if (!user || !user.hashedPassword) return null;
+
+        if (!user || !user.hashedPassword) {
+          await recordLoginAttempt({
+            email: parsed.data.email,
+            userId: null,
+            success: false,
+          });
+          return null;
+        }
 
         const isValid = await verifyPassword(parsed.data.password, user.hashedPassword);
-        if (!isValid) return null;
+        if (!isValid) {
+          await recordLoginAttempt({
+            email: parsed.data.email,
+            userId: user.id,
+            success: false,
+          });
+          return null;
+        }
 
-        if (user.status === "SUSPENDED" || user.status === "DELETED") return null;
+        if (user.status === "SUSPENDED" || user.status === "DELETED") {
+          await recordLoginAttempt({
+            email: parsed.data.email,
+            userId: user.id,
+            success: false,
+          });
+          return null;
+        }
 
         // Si l'email n'est pas vérifié, on bloque la connexion.
         // Le formulaire affichera un message dédié grâce au throw.
         if (!user.emailVerified) {
+          await recordLoginAttempt({
+            email: parsed.data.email,
+            userId: user.id,
+            success: false,
+          });
           throw new Error("EMAIL_NOT_VERIFIED");
         }
+
+        await recordLoginAttempt({
+          email: parsed.data.email,
+          userId: user.id,
+          success: true,
+        });
 
         return {
           id: user.id,
