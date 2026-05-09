@@ -76,7 +76,11 @@ export default async function LessonViewerPage({ params }: PageProps) {
       <SiteHeader />
       <main className="flex-1 bg-muted/20">
         <Container className="grid gap-6 py-6 lg:grid-cols-[280px_1fr]">
-          <aside className="rounded-lg border border-border bg-card p-4 lg:sticky lg:top-20 lg:self-start">
+          {/* Sur mobile/tablette < lg, l'aside (programme) passe SOUS le
+              contenu principal pour que le player vidéo soit immédiatement
+              visible. Sur desktop ≥ lg, l'aside reprend sa place à gauche
+              en sticky. */}
+          <aside className="order-2 rounded-lg border border-border bg-card p-4 lg:order-1 lg:sticky lg:top-20 lg:self-start">
             <h2 className="mb-3 text-sm font-semibold text-foreground">{course.title}</h2>
             <LessonSidebar
               courseSlug={course.slug}
@@ -95,7 +99,7 @@ export default async function LessonViewerPage({ params }: PageProps) {
             />
           </aside>
 
-          <div className="space-y-6">
+          <div className="order-1 space-y-6 lg:order-2">
             <Breadcrumbs
               items={[
                 { label: "Mon apprentissage", href: "/apprentissage" },

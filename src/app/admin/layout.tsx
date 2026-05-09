@@ -6,6 +6,7 @@ import { Logo } from "@/components/branding/logo";
 import { UserMenu } from "@/components/features/auth/user-menu";
 import { AdminCommandMenu } from "@/components/features/admin/admin-command-menu";
 import { AdminKeyboardShortcuts } from "@/components/features/admin/admin-keyboard-shortcuts";
+import { AdminMobileSidebar } from "@/components/features/admin/admin-mobile-sidebar";
 import { AdminNotificationsBell } from "@/components/features/admin/admin-notifications-bell";
 import { AdminSidebar } from "@/components/features/admin/admin-sidebar";
 import { ThemeToggle } from "@/components/features/theme/theme-toggle";
@@ -30,7 +31,8 @@ export default async function AdminLayout({ children }: { children: React.ReactN
       <AdminKeyboardShortcuts />
       <header className="sticky top-0 z-30 border-b border-border bg-background">
         <div className="flex h-14 items-center justify-between gap-4 px-4 lg:px-6">
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
+            <AdminMobileSidebar badges={badges} />
             <Link href="/" aria-label="Retour à l'accueil" className="hidden sm:block">
               <Logo width={140} priority />
             </Link>
@@ -58,7 +60,9 @@ export default async function AdminLayout({ children }: { children: React.ReactN
       </header>
 
       <div className="flex flex-1 flex-col lg:flex-row">
-        <aside className="border-b border-border bg-background lg:w-60 lg:border-b-0 lg:border-r">
+        {/* Sidebar visible uniquement à partir de lg. Sur mobile/tablette,
+            on utilise AdminMobileSidebar (drawer) déclenché depuis le header. */}
+        <aside className="hidden bg-background lg:block lg:w-60 lg:border-r lg:border-border">
           <AdminSidebar badges={badges} />
         </aside>
 
