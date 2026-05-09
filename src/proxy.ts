@@ -10,11 +10,11 @@ import { authConfig } from "@/auth.config";
 
 export const { auth: proxy } = NextAuth(authConfig);
 
-// Matcher Next.js : on évite les assets statiques et les routes API d'auth
-// (gérées par le route handler dédié).
+// Matcher Next.js : on évite les assets statiques, les routes API d'auth,
+// le manifest PWA et le service worker (servis statiquement depuis /public).
 export const config = {
   matcher: [
-    "/((?!api/auth|_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)",
+    "/((?!api/auth|_next/static|_next/image|favicon.ico|manifest.webmanifest|sw.js|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)",
   ],
 };
 

@@ -16,6 +16,7 @@ import { SiteHeader } from "@/components/layout/site-header";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Container } from "@/components/ui/container";
+import { getDictionary } from "@/lib/i18n/server";
 import { listFeaturedCategories } from "@/server/queries/categories";
 import {
   listCoursesByCategorySlug,
@@ -27,6 +28,7 @@ import { getPublicStats } from "@/server/queries/stats";
 export default async function HomePage() {
   const session = await auth();
   const currency = session?.user ? "EUR" : "EUR";
+  const { locale, t } = await getDictionary();
 
   const [featuredCategories, featuredCourses, latestCourses, stats] =
     await Promise.all([
@@ -80,18 +82,16 @@ export default async function HomePage() {
                     className="mb-4 bg-[color:var(--brand-violet)]/10 text-[color:var(--brand-violet-deep)] hover:bg-[color:var(--brand-violet)]/15"
                   >
                     <Sparkles className="mr-1 h-3 w-3" aria-hidden />
-                    Plateforme N°1 de formation en Guinée
+                    {t.hero.badge}
                   </Badge>
                   <h1 className="text-2xl font-bold leading-[1.1] tracking-tight text-[color:var(--neutral-900)] sm:text-3xl md:text-4xl">
-                    Développez des compétences{" "}
+                    {t.hero.headline1}{" "}
                     <span className="text-[color:var(--brand-violet-deep)]">
-                      recherchées
+                      {t.hero.headline2}
                     </span>
                   </h1>
                   <p className="mt-4 text-sm leading-6 text-muted-foreground">
-                    Accédez à des centaines de cours dispensés par des
-                    formateurs francophones confirmés. Apprenez à votre rythme
-                    et obtenez votre certification.
+                    {t.hero.description}
                   </p>
 
                   <div className="mt-5 flex flex-wrap items-center gap-3">
@@ -99,10 +99,10 @@ export default async function HomePage() {
                       asChild
                       className="bg-[color:var(--brand-mint)] text-[color:var(--neutral-900)] shadow-md hover:bg-[color:var(--brand-mint-deep)]"
                     >
-                      <Link href="/cours">Commencer maintenant</Link>
+                      <Link href="/cours">{t.hero.ctaPrimary}</Link>
                     </Button>
                     <Button asChild variant="outline">
-                      <Link href="/devenir-formateur">Devenir formateur</Link>
+                      <Link href="/devenir-formateur">{t.hero.ctaSecondary}</Link>
                     </Button>
                   </div>
                 </div>
@@ -165,10 +165,10 @@ export default async function HomePage() {
                 </div>
                 <div>
                   <p className="text-base font-bold leading-none text-[color:var(--neutral-900)]">
-                    {stats.totalStudents.toLocaleString("fr-FR")}+
+                    {stats.totalStudents.toLocaleString(locale === "en" ? "en-US" : "fr-FR")}+
                   </p>
                   <p className="mt-0.5 text-xs text-muted-foreground">
-                    élèves actifs
+                    {t.hero.activeStudents}
                   </p>
                 </div>
               </div>

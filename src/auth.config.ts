@@ -133,15 +133,23 @@ export const authConfig = {
       // Vercel Cron — auth via Bearer token côté route.
       if (pathname.startsWith("/api/cron/")) return true;
 
-      // Sitemap, robots et certificats publics — toujours accessibles.
+      // Sitemap, robots, manifest PWA, service worker, certificats publics —
+      // toujours accessibles (sinon la PWA et l'indexation cassent).
       if (
         pathname === "/sitemap.xml" ||
         pathname === "/robots.txt" ||
+        pathname === "/manifest.webmanifest" ||
+        pathname === "/sw.js" ||
+        pathname === "/favicon.ico" ||
         pathname.startsWith("/certificat/") ||
         pathname.startsWith("/api/certificats/")
       ) {
         return true;
       }
+
+      // API admin : la route handler fait sa propre vérification d'auth + rôle.
+      // On laisse passer pour qu'elle puisse répondre 401/403/429 plutôt que 302.
+      if (pathname.startsWith("/api/admin/")) return true;
 
       if (AUTH_ROUTES.includes(pathname)) {
         if (isLoggedIn) {

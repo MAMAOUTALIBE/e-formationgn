@@ -5,17 +5,20 @@ import { Logo } from "@/components/branding/logo";
 import { UserMenu } from "@/components/features/auth/user-menu";
 import { CartIcon } from "@/components/features/cart/cart-icon";
 import { HeaderSearch } from "@/components/features/courses/header-search";
+import { LocaleToggle } from "@/components/features/i18n/locale-toggle";
 import { NotificationBell } from "@/components/features/notifications/notification-bell";
 import { MobileMenu } from "@/components/layout/mobile-menu";
 import { NavLink } from "@/components/layout/nav-link";
 import { Button } from "@/components/ui/button";
 import { Container } from "@/components/ui/container";
+import { getDictionary } from "@/lib/i18n/server";
 import { prisma } from "@/lib/prisma";
 import { countCartItems } from "@/server/queries/cart";
 
 export async function SiteHeader() {
   const session = await auth();
   const user = session?.user;
+  const { locale, t } = await getDictionary();
 
   const [cartCount, unreadNotifs] = user
     ? await Promise.all([
@@ -47,12 +50,12 @@ export async function SiteHeader() {
           className="hidden items-center gap-6 md:flex"
           aria-label="Navigation principale"
         >
-          <NavLink href="/cours">Catalogue</NavLink>
-          <NavLink href="/categories">Catégories</NavLink>
+          <NavLink href="/cours">{t.common.catalog}</NavLink>
+          <NavLink href="/categories">{t.common.categories}</NavLink>
           {user ? (
-            <NavLink href="/apprentissage">Mon apprentissage</NavLink>
+            <NavLink href="/apprentissage">{t.common.myLearning}</NavLink>
           ) : (
-            <NavLink href="/devenir-formateur">Devenir formateur</NavLink>
+            <NavLink href="/devenir-formateur">{t.common.becomeInstructor}</NavLink>
           )}
         </nav>
 
@@ -61,6 +64,7 @@ export async function SiteHeader() {
         </div>
 
         <div className="flex items-center gap-1 md:gap-2">
+          <LocaleToggle current={locale} className="hidden lg:inline-flex" />
           {user ? (
             <>
               <NotificationBell unreadCount={unreadNotifs} />
@@ -77,13 +81,13 @@ export async function SiteHeader() {
           ) : (
             <>
               <Button variant="ghost" asChild className="hidden md:inline-flex">
-                <Link href="/connexion">Connexion</Link>
+                <Link href="/connexion">{t.common.login}</Link>
               </Button>
               <Button
                 asChild
                 className="hidden bg-[color:var(--brand-mint)] text-[color:var(--neutral-900)] shadow-sm hover:bg-[color:var(--brand-mint-deep)] sm:inline-flex"
               >
-                <Link href="/inscription">S&apos;inscrire</Link>
+                <Link href="/inscription">{t.common.register}</Link>
               </Button>
             </>
           )}
