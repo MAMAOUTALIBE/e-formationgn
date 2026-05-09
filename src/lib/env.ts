@@ -40,6 +40,9 @@ const serverSchema = z.object({
   CINETPAY_API_KEY: z.string().optional(),
   CINETPAY_SITE_ID: z.string().optional(),
   CINETPAY_SECRET_KEY: z.string().optional(),
+  // Mode CinetPay : "test" (sandbox) ou "live" (production). Par défaut live.
+  // Affiche le banner mode test en haut du site quand "test".
+  CINETPAY_MODE: z.enum(["test", "live"]).optional(),
 
   // Mux
   MUX_TOKEN_ID: z.string().optional(),
