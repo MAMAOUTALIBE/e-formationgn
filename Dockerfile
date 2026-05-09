@@ -2,16 +2,26 @@
 # E-FormationGN — image Docker production (Next.js 16 standalone + Prisma 7)
 # Multi-stage : deps → builder → runner. Image finale ~180 MB.
 
-# ---------- 1. deps : installation des dépendances npm ----------
+# ---------- 1. deps : toutes les dépendances (dev + prod) pour le build ----------
 FROM node:20-alpine AS deps
 WORKDIR /app
 RUN apk add --no-cache libc6-compat openssl
-COPY package.json package-lock.json prisma ./
-# `npm ci` lance postinstall → prisma generate → besoin du schema
+COPY package.json package-lock.json ./
 COPY prisma ./prisma
 RUN npm ci --no-audit --no-fund
 
-# ---------- 2. builder : build Next.js ----------
+# ---------- 2. prod-deps : production-only, pour le runtime + Prisma CLI ----------
+# Contient prisma + @prisma/config + transitive deps (effect, c12, etc.) que
+# `prisma migrate deploy` exige au démarrage. Le standalone Next.js ne curate
+# que ce que l'app importe directement, donc on ne peut pas s'y fier ici.
+FROM node:20-alpine AS prod-deps
+WORKDIR /app
+RUN apk add --no-cache libc6-compat openssl
+COPY package.json package-lock.json ./
+COPY prisma ./prisma
+RUN npm ci --omit=dev --no-audit --no-fund
+
+# ---------- 3. builder : build Next.js ----------
 FROM node:20-alpine AS builder
 WORKDIR /app
 RUN apk add --no-cache libc6-compat openssl
@@ -31,7 +41,7 @@ ENV NEXT_PUBLIC_APP_URL="https://placeholder.local"
 RUN npx prisma generate
 RUN npm run build
 
-# ---------- 3. runner : image finale minimale ----------
+# ---------- 4. runner : image finale ----------
 FROM node:20-alpine AS runner
 WORKDIR /app
 
@@ -44,16 +54,19 @@ ENV NEXT_TELEMETRY_DISABLED=1
 ENV PORT=3000
 ENV HOSTNAME=0.0.0.0
 
-# Sortie standalone : server.js + node_modules minimaux
+# Sortie standalone : server.js + node_modules curatés pour le runtime
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 COPY --from=builder --chown=nextjs:nodejs /app/public ./public
 
-# Prisma : on a besoin du schema + migrations + engines pour `migrate deploy`
+# node_modules production complet — écrase le node_modules du standalone par
+# un superset qui contient prisma CLI + toutes ses transitive deps (effect…).
+# Indispensable pour `prisma migrate deploy` au démarrage.
+COPY --from=prod-deps --chown=nextjs:nodejs /app/node_modules ./node_modules
+
+# Schema + migrations Prisma
 COPY --from=builder --chown=nextjs:nodejs /app/prisma ./prisma
 COPY --from=builder --chown=nextjs:nodejs /app/prisma.config.ts ./prisma.config.ts
-COPY --from=builder --chown=nextjs:nodejs /app/node_modules/prisma ./node_modules/prisma
-COPY --from=builder --chown=nextjs:nodejs /app/node_modules/@prisma ./node_modules/@prisma
 
 # Entrypoint : lance migrate deploy puis le serveur
 COPY --chown=nextjs:nodejs scripts/docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
