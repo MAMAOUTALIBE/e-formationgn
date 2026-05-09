@@ -118,10 +118,9 @@
 
 html {
   color-scheme: light;
-  /* +12,5 % par rapport au défaut 16 px : tous les utilitaires Tailwind
-     (text-sm, text-base, text-lg…) sont en rem et bénéficient du bump
-     uniformément, sans casser les hiérarchies. */
-  font-size: 18px;
+  /* 16 px = défaut navigateur, aligné sur Udemy / Coursera / LinkedIn
+     Learning. L'échelle Tailwind (text-xs 12px, text-sm 14px, text-base
+     16px, text-lg 18px, text-3xl 30px) reste la référence du marché. */
 }
 
 html.dark {
