@@ -51,3 +51,26 @@ export function rateLimitMessage(resetAt: number): string {
   const minutes = Math.ceil(seconds / 60);
   return `Trop d'essais. Réessayez dans ${minutes} min.`;
 }
+
+export interface UserRateLimitOptions {
+  /** Préfixe d'identification (ex: "cart:add"). */
+  prefix: string;
+  /** Identifiant utilisateur (déjà authentifié). */
+  userId: string;
+  /** Suffixe optionnel (ex: courseId pour limiter par cours). */
+  suffix?: string;
+  windowMs: number;
+  max: number;
+}
+
+/**
+ * Rate-limit pour Server Actions authentifiées (panier, Q&A, reviews, etc.).
+ * Clé : prefix:userId(:suffix). Plus précis que IP-based (un user n'est pas
+ * pénalisé par un autre derrière le même NAT).
+ */
+export function checkUserRateLimit(opts: UserRateLimitOptions): RateLimitResult {
+  const key = opts.suffix
+    ? `${opts.prefix}:${opts.userId}:${opts.suffix}`
+    : `${opts.prefix}:${opts.userId}`;
+  return checkRateLimit({ key, windowMs: opts.windowMs, max: opts.max });
+}

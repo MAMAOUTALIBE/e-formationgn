@@ -18,7 +18,7 @@ import { PrismaAdapter } from "@auth/prisma-adapter";
 import { authConfig } from "@/auth.config";
 import { readImpersonation } from "@/lib/admin/impersonation";
 import { recordLoginAttempt } from "@/lib/auth/login-attempts";
-import { verifyPassword } from "@/lib/auth/password";
+import { fakeVerifyPassword, verifyPassword } from "@/lib/auth/password";
 import { prisma } from "@/lib/prisma";
 import { loginSchema } from "@/lib/validators/auth";
 
@@ -70,6 +70,9 @@ export const {
         });
 
         if (!user || !user.hashedPassword) {
+          // Burn CPU pour égaliser le timing avec un email valide. Empêche
+          // l'énumération d'emails par mesure de latence.
+          await fakeVerifyPassword(parsed.data.password);
           await recordLoginAttempt({
             email: parsed.data.email,
             userId: null,

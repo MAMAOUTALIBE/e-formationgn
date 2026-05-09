@@ -59,6 +59,13 @@ export async function getInstructorCourse(
   });
   if (!course) return null;
   if (!isAdmin && course.instructorId !== instructorId) return null;
+
+  // internalNotes est un champ admin-only (notes de modération privées) —
+  // jamais exposé au formateur propriétaire pour éviter une fuite côté client.
+  if (!isAdmin) {
+    course.internalNotes = null;
+  }
+
   return course as InstructorCourseDetail;
 }
 

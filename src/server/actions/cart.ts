@@ -7,6 +7,10 @@
 import { revalidatePath } from "next/cache";
 
 import { auth } from "@/auth";
+import {
+  checkUserRateLimit,
+  rateLimitMessage,
+} from "@/lib/auth/rate-limit-ip";
 import { writeCurrencyCookie } from "@/lib/currency";
 import { prisma } from "@/lib/prisma";
 import { setCurrencySchema } from "@/lib/validators/checkout";
@@ -30,6 +34,14 @@ export async function addCourseToCart(courseId: string): Promise<ActionResult> {
       message: "Vous devez être connecté pour ajouter un cours au panier.",
     };
   }
+
+  const rl = checkUserRateLimit({
+    prefix: "cart:add",
+    userId: session.user.id,
+    windowMs: 60_000,
+    max: 60,
+  });
+  if (!rl.ok) return { success: false, message: rateLimitMessage(rl.resetAt) };
 
   // Empêche d'acheter un cours déjà possédé.
   if (await isUserEnrolledIn(session.user.id, courseId)) {

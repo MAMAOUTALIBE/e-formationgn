@@ -11,6 +11,10 @@ import { checkRateLimit, clientKey } from "@/lib/rate-limit";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
+// Données très sensibles (emails users, IDs commandes, tickets) : jamais en
+// cache navigateur ni CDN.
+const PRIVATE_NO_STORE = "private, no-store, max-age=0, must-revalidate";
+
 type Hit = {
   type: "user" | "course" | "order" | "ticket";
   id: string;
@@ -22,7 +26,10 @@ type Hit = {
 export async function GET(request: NextRequest) {
   const session = await auth();
   if (!session?.user || !isAdminRole(session.user.role)) {
-    return NextResponse.json({ hits: [] }, { status: 403 });
+    return NextResponse.json(
+      { hits: [] },
+      { status: 403, headers: { "Cache-Control": PRIVATE_NO_STORE } },
+    );
   }
 
   // Rate limit : 60 req/min par admin (IP + userId)
@@ -38,6 +45,7 @@ export async function GET(request: NextRequest) {
         status: 429,
         headers: {
           "Retry-After": Math.ceil((rl.resetAt - Date.now()) / 1000).toString(),
+          "Cache-Control": PRIVATE_NO_STORE,
         },
       },
     );
@@ -45,7 +53,10 @@ export async function GET(request: NextRequest) {
 
   const q = request.nextUrl.searchParams.get("q")?.trim() ?? "";
   if (q.length < 2) {
-    return NextResponse.json({ hits: [] satisfies Hit[] });
+    return NextResponse.json(
+      { hits: [] satisfies Hit[] },
+      { headers: { "Cache-Control": PRIVATE_NO_STORE } },
+    );
   }
 
   const [users, courses, orders, tickets] = await Promise.all([
@@ -125,7 +136,10 @@ export async function GET(request: NextRequest) {
     })),
   ];
 
-  return NextResponse.json({ hits });
+  return NextResponse.json(
+    { hits },
+    { headers: { "Cache-Control": PRIVATE_NO_STORE } },
+  );
 }
 
 function isAdminRole(role: string): boolean {

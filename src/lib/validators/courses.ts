@@ -67,8 +67,9 @@ export const courseFiltersSchema = z.object({
     if (!value) return 1;
     const parsed = Number(value);
     if (Number.isNaN(parsed) || parsed < 1) return 1;
-    return Math.floor(parsed);
+    // Pagination plafonnée à 500 pour éviter le DoS via OFFSET énorme.
+    return Math.min(500, Math.floor(parsed));
   }),
-});
+}).strict();
 
 export type CourseFilters = z.output<typeof courseFiltersSchema>;

@@ -10,11 +10,12 @@ import { redirect } from "next/navigation";
 import { AuthError } from "next-auth";
 
 import { signIn } from "@/auth";
-import { hashPassword } from "@/lib/auth/password";
+import { fakeVerifyPassword, hashPassword } from "@/lib/auth/password";
 import {
   checkIpRateLimit,
   rateLimitMessage,
 } from "@/lib/auth/rate-limit-ip";
+import { safeCallbackUrl } from "@/lib/auth/safe-redirect";
 import {
   emailVerificationExpiry,
   generateToken,
@@ -219,7 +220,7 @@ export async function loginWithCredentials(
     };
   }
 
-  const callbackUrl = (formData.get("callbackUrl") as string | null) ?? "/";
+  const callbackUrl = safeCallbackUrl(formData.get("callbackUrl"));
 
   try {
     await signIn("credentials", {
@@ -281,7 +282,7 @@ export async function loginWithCredentials(
 export async function loginWithGoogle(callbackUrl?: string): Promise<void> {
   await signIn("google", {
     redirect: true,
-    redirectTo: callbackUrl ?? "/",
+    redirectTo: safeCallbackUrl(callbackUrl),
   });
 }
 
@@ -314,7 +315,9 @@ export async function requestPasswordReset(
     where: { email: parsed.data.email },
   });
 
-  // Anti-énumération : on répond toujours pareil même si l'email n'existe pas.
+  // Anti-énumération : on répond toujours pareil même si l'email n'existe pas,
+  // ET on burn ~250 ms de CPU côté serveur quand l'utilisateur n'existe pas
+  // pour égaliser le timing avec un envoi email réel (anti timing-leak).
   if (user && user.hashedPassword) {
     const token = generateToken();
     await prisma.passwordResetToken.create({
@@ -334,6 +337,8 @@ export async function requestPasswordReset(
       html,
       text,
     });
+  } else {
+    await fakeVerifyPassword(parsed.data.email);
   }
 
   return {

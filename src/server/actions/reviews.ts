@@ -3,6 +3,10 @@
 import { revalidatePath } from "next/cache";
 
 import { auth } from "@/auth";
+import {
+  checkUserRateLimit,
+  rateLimitMessage,
+} from "@/lib/auth/rate-limit-ip";
 import { prisma } from "@/lib/prisma";
 import { reviewSchema } from "@/lib/validators/engagement";
 
@@ -28,6 +32,16 @@ export async function upsertReview(formData: FormData): Promise<ActionResult> {
   if (!session?.user) {
     return { success: false, message: "Connectez-vous pour noter ce cours." };
   }
+
+  // Limite par couple user×course pour permettre la modification d'un avis
+  // existant (upsert) sans pénaliser, mais bloquer le spam multi-cours.
+  const rl = checkUserRateLimit({
+    prefix: "review:upsert",
+    userId: session.user.id,
+    windowMs: 24 * 60 * 60 * 1000,
+    max: 30,
+  });
+  if (!rl.ok) return { success: false, message: rateLimitMessage(rl.resetAt) };
 
   const parsed = reviewSchema.safeParse({
     courseId: formData.get("courseId"),

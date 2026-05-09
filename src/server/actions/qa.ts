@@ -3,6 +3,10 @@
 import { revalidatePath } from "next/cache";
 
 import { auth } from "@/auth";
+import {
+  checkUserRateLimit,
+  rateLimitMessage,
+} from "@/lib/auth/rate-limit-ip";
 import { prisma } from "@/lib/prisma";
 import { answerSchema, questionSchema } from "@/lib/validators/engagement";
 
@@ -11,6 +15,14 @@ import type { ActionResult } from "./auth";
 export async function createQuestion(formData: FormData): Promise<ActionResult> {
   const session = await auth();
   if (!session?.user) return { success: false, message: "Connectez-vous." };
+
+  const rl = checkUserRateLimit({
+    prefix: "qa:question",
+    userId: session.user.id,
+    windowMs: 60 * 60 * 1000,
+    max: 20,
+  });
+  if (!rl.ok) return { success: false, message: rateLimitMessage(rl.resetAt) };
 
   const parsed = questionSchema.safeParse({
     courseId: formData.get("courseId"),
@@ -65,6 +77,14 @@ export async function createQuestion(formData: FormData): Promise<ActionResult> 
 export async function answerQuestion(formData: FormData): Promise<ActionResult> {
   const session = await auth();
   if (!session?.user) return { success: false, message: "Connectez-vous." };
+
+  const rl = checkUserRateLimit({
+    prefix: "qa:answer",
+    userId: session.user.id,
+    windowMs: 60 * 60 * 1000,
+    max: 60,
+  });
+  if (!rl.ok) return { success: false, message: rateLimitMessage(rl.resetAt) };
 
   const parsed = answerSchema.safeParse({
     questionId: formData.get("questionId"),

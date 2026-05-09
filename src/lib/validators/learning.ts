@@ -25,10 +25,12 @@ export const quizQuestionSchema = z
     points: z.coerce.number().int().min(1).max(10).default(1),
     options: z
       .array(
-        z.object({
-          label: z.string().trim().min(1).max(300),
-          isCorrect: z.coerce.boolean(),
-        }),
+        z
+          .object({
+            label: z.string().trim().min(1).max(300),
+            isCorrect: z.coerce.boolean(),
+          })
+          .strict(),
       )
       .min(2, "Au moins 2 options.")
       .max(8, "8 options maximum."),
@@ -55,10 +57,12 @@ export const quizAttemptSubmitSchema = z
   .object({
     answers: z
       .array(
-        z.object({
-          questionId: z.string().min(1),
-          optionIds: z.array(z.string().min(1)).max(8),
-        }),
+        z
+          .object({
+            questionId: z.string().min(1),
+            optionIds: z.array(z.string().min(1)).max(8),
+          })
+          .strict(),
       )
       .min(1),
   })

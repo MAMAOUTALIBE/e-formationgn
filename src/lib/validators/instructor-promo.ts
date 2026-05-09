@@ -23,6 +23,7 @@ export const instructorPromoCreateSchema = z
     endsAt: z.string().optional().or(z.literal("")),
     isActive: z.coerce.boolean().default(true),
   })
+  .strict()
   .superRefine((data, ctx) => {
     if (data.kind === "PERCENTAGE" && data.value > 9_999) {
       ctx.addIssue({
