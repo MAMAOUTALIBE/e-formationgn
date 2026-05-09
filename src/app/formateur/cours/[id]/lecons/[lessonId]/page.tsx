@@ -4,10 +4,12 @@ import { ArrowLeft, Trash2 } from "lucide-react";
 
 import { auth } from "@/auth";
 import { ConfirmAction } from "@/components/features/instructor/confirm-action";
+import { LessonAiTools } from "@/components/features/instructor/lesson-ai-tools";
 import { LessonEditForm } from "@/components/features/instructor/lesson-edit-form";
 import { MuxUploader } from "@/components/features/instructor/mux-uploader";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { isLessonSummaryConfigured } from "@/lib/ai/lesson-summary";
 import { isMuxConfigured } from "@/lib/mux";
 import { deleteLesson } from "@/server/actions/curriculum";
 import { getLessonForInstructor } from "@/server/queries/instructor";
@@ -101,6 +103,25 @@ export default async function LessonEditPage({ params }: PageProps) {
           </Card>
         ) : null}
       </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Outils IA</CardTitle>
+          <CardDescription>
+            Génération automatique de résumé pédagogique et de questions de
+            quiz à partir du contenu de la leçon.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <LessonAiTools
+            lessonId={lesson.id}
+            courseId={id}
+            initialSummary={lesson.aiSummary}
+            initialUpdatedAt={lesson.aiSummaryUpdatedAt}
+            aiAvailable={isLessonSummaryConfigured()}
+          />
+        </CardContent>
+      </Card>
     </div>
   );
 }

@@ -116,6 +116,22 @@ export default async function LessonViewerPage({ params }: PageProps) {
               ) : null}
             </div>
 
+            {lesson.aiSummary ? (
+              <Card className="border-[color:var(--brand-secondary)]/30 bg-[color:var(--brand-secondary)]/5">
+                <CardContent className="p-5">
+                  <div className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-[color:var(--brand-secondary)]">
+                    <span>Résumé pédagogique</span>
+                    <span className="rounded bg-background/50 px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
+                      IA
+                    </span>
+                  </div>
+                  <div className="prose prose-sm max-w-none whitespace-pre-line text-foreground">
+                    {lesson.aiSummary}
+                  </div>
+                </CardContent>
+              </Card>
+            ) : null}
+
             {/* Contenu selon le type */}
             {lesson.type === "VIDEO" ? (
               lesson.muxPlaybackId ? (

@@ -353,6 +353,11 @@ model Lesson {
 
   transcript String? @db.Text
 
+  // Résumé pédagogique généré par IA. Régénéré à la demande du formateur ;
+  // affiché aux élèves au-dessus de la leçon pour préparer le visionnage.
+  aiSummary          String?   @db.Text
+  aiSummaryUpdatedAt DateTime?
+
   resources LessonResource[]
   quiz      Quiz?
   progress  LessonProgress[]
