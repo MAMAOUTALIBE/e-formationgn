@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { auth } from "@/auth";
 import { CourseSeoForm } from "@/components/features/instructor/course-seo-form";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { isSeoAiConfigured } from "@/lib/ai/seo-suggestions";
 import { getInstructorCourse } from "@/server/queries/instructor";
 
 interface PageProps {
@@ -29,6 +30,7 @@ export default async function CourseSeoPage({ params }: PageProps) {
       <CardContent>
         <CourseSeoForm
           courseId={course.id}
+          aiAvailable={isSeoAiConfigured()}
           defaults={{
             metaTitle: course.metaTitle ?? "",
             metaDescription: course.metaDescription ?? "",

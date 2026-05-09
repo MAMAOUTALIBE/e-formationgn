@@ -12,6 +12,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Container } from "@/components/ui/container";
 import { pluralize } from "@/lib/format/labels";
 import { prisma } from "@/lib/prisma";
+import { getRecommendedCourses } from "@/server/queries/recommendations";
 
 export const metadata: Metadata = {
   title: "Mon apprentissage",
@@ -31,25 +32,28 @@ export default async function LearningPage() {
     redirect("/connexion?callbackUrl=/apprentissage");
   }
 
-  const enrollments = await prisma.enrollment.findMany({
-    where: { userId: session.user.id },
-    include: {
-      course: {
-        select: {
-          id: true,
-          slug: true,
-          title: true,
-          subtitle: true,
-          thumbnailUrl: true,
-          durationSeconds: true,
-          instructor: {
-            select: { id: true, name: true, firstName: true, lastName: true },
+  const [enrollments, recommendations] = await Promise.all([
+    prisma.enrollment.findMany({
+      where: { userId: session.user.id },
+      include: {
+        course: {
+          select: {
+            id: true,
+            slug: true,
+            title: true,
+            subtitle: true,
+            thumbnailUrl: true,
+            durationSeconds: true,
+            instructor: {
+              select: { id: true, name: true, firstName: true, lastName: true },
+            },
           },
         },
       },
-    },
-    orderBy: [{ enrolledAt: "desc" }],
-  });
+      orderBy: [{ enrolledAt: "desc" }],
+    }),
+    getRecommendedCourses({ userId: session.user.id, limit: 6 }),
+  ]);
 
   return (
     <>
@@ -150,6 +154,80 @@ export default async function LearningPage() {
               })}
             </div>
           )}
+
+          {recommendations.length > 0 ? (
+            <section
+              aria-labelledby="recos-heading"
+              className="space-y-4 rounded-xl border border-border bg-card p-5"
+            >
+              <header>
+                <h2
+                  id="recos-heading"
+                  className="text-lg font-semibold tracking-tight text-foreground"
+                >
+                  Recommandés pour vous
+                </h2>
+                <p className="text-xs text-muted-foreground">
+                  Cours sélectionnés selon vos centres d&apos;intérêt et votre
+                  apprentissage en cours.
+                </p>
+              </header>
+
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                {recommendations.map((course) => {
+                  const instructorName =
+                    course.instructor.name ??
+                    ([
+                      course.instructor.firstName,
+                      course.instructor.lastName,
+                    ]
+                      .filter(Boolean)
+                      .join(" ") ||
+                      "Formateur");
+                  return (
+                    <Card key={course.id} className="overflow-hidden">
+                      <Link
+                        href={`/cours/${course.slug}`}
+                        className="block aspect-video overflow-hidden bg-muted"
+                      >
+                        {course.thumbnailUrl ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img
+                            src={course.thumbnailUrl}
+                            alt=""
+                            className="h-full w-full object-cover"
+                          />
+                        ) : null}
+                      </Link>
+                      <CardContent className="space-y-2 p-4">
+                        <Badge variant="secondary" className="text-[10px]">
+                          {course.reason}
+                        </Badge>
+                        <Link
+                          href={`/cours/${course.slug}`}
+                          className="line-clamp-2 text-sm font-semibold text-foreground hover:underline"
+                        >
+                          {course.title}
+                        </Link>
+                        <p className="text-xs text-muted-foreground">
+                          Par {instructorName}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {course._count.enrollments.toLocaleString("fr-FR")}{" "}
+                          {pluralize(
+                            course._count.enrollments,
+                            "élève",
+                            "élèves",
+                          )}{" "}
+                          · {course.averageRating.toFixed(1)}/5
+                        </p>
+                      </CardContent>
+                    </Card>
+                  );
+                })}
+              </div>
+            </section>
+          ) : null}
         </Container>
       </main>
 

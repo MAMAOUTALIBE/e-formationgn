@@ -1,12 +1,18 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { after } from "next/server";
 
 import { auth } from "@/auth";
 import {
   checkUserRateLimit,
   rateLimitMessage,
 } from "@/lib/auth/rate-limit-ip";
+import {
+  classifyReviewContent,
+  isReviewModerationConfigured,
+} from "@/lib/ai/review-moderation";
+import { logError } from "@/lib/logger";
 import { prisma } from "@/lib/prisma";
 import { reviewSchema } from "@/lib/validators/engagement";
 
@@ -67,7 +73,7 @@ export async function upsertReview(formData: FormData): Promise<ActionResult> {
     };
   }
 
-  await prisma.review.upsert({
+  const review = await prisma.review.upsert({
     where: {
       userId_courseId: { userId: session.user.id, courseId: parsed.data.courseId },
     },
@@ -75,6 +81,8 @@ export async function upsertReview(formData: FormData): Promise<ActionResult> {
       rating: parsed.data.rating,
       title: parsed.data.title ? parsed.data.title : null,
       comment: parsed.data.comment ? parsed.data.comment : null,
+      // Une nouvelle édition repasse l'avis en attente de modération auto.
+      isPublished: true,
     },
     create: {
       userId: session.user.id,
@@ -86,6 +94,45 @@ export async function upsertReview(formData: FormData): Promise<ActionResult> {
   });
 
   await recomputeCourseRating(parsed.data.courseId);
+
+  // Modération automatique en post-réponse : si le commentaire est jugé
+  // suspect, on dépublie l'avis (admin peut réhabiliter via /admin/moderation).
+  // Tournée via `after()` pour ne pas bloquer la réponse utilisateur.
+  const commentToCheck = parsed.data.comment?.trim();
+  if (
+    commentToCheck &&
+    commentToCheck.length >= 10 &&
+    isReviewModerationConfigured()
+  ) {
+    after(async () => {
+      try {
+        const verdict = await classifyReviewContent(commentToCheck);
+        if (verdict.flagged) {
+          await prisma.review.update({
+            where: { id: review.id },
+            data: { isPublished: false },
+          });
+          // Recalcule le rating moyen sans cet avis.
+          await recomputeCourseRating(parsed.data.courseId);
+          // Trace dans l'audit log pour suivi admin.
+          await prisma.auditLog.create({
+            data: {
+              action: "review.auto_unpublished",
+              targetType: "Review",
+              targetId: review.id,
+              metadata: {
+                category: verdict.category,
+                reason: verdict.reason ?? null,
+                courseId: parsed.data.courseId,
+              },
+            },
+          });
+        }
+      } catch (error) {
+        logError("review-moderation", error, { reviewId: review.id });
+      }
+    });
+  }
 
   const course = await prisma.course.findUnique({
     where: { id: parsed.data.courseId },

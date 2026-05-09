@@ -1,12 +1,14 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useRef, useState, useTransition } from "react";
 
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
 import { FormField } from "@/components/ui/form-field";
 import { Input } from "@/components/ui/input";
 import { SubmitButton } from "@/components/ui/submit-button";
 import { Textarea } from "@/components/ui/textarea";
+import { suggestSeoForCourse } from "@/server/actions/ai-seo";
 import { updateCourseSeo } from "@/server/actions/instructor";
 import type { ActionResult } from "@/server/actions/auth";
 
@@ -21,15 +23,90 @@ interface CourseSeoFormProps {
     requirements: string;
     targetAudience: string;
   };
+  /** Si vrai, le bouton « Suggestions IA » est affiché. */
+  aiAvailable: boolean;
 }
 
-export function CourseSeoForm({ courseId, defaults }: CourseSeoFormProps) {
+export function CourseSeoForm({
+  courseId,
+  defaults,
+  aiAvailable,
+}: CourseSeoFormProps) {
   const action = updateCourseSeo.bind(null, courseId);
   const [state, formAction] = useActionState(action, initialState);
   const errors = state.fieldErrors ?? {};
 
+  const metaTitleRef = useRef<HTMLInputElement>(null);
+  const metaDescRef = useRef<HTMLTextAreaElement>(null);
+  const whatYouWillLearnRef = useRef<HTMLTextAreaElement>(null);
+
+  const [aiPending, startAi] = useTransition();
+  const [aiNotice, setAiNotice] = useState<{
+    kind: "success" | "error";
+    message: string;
+  } | null>(null);
+
+  function handleAiSuggest() {
+    setAiNotice(null);
+    startAi(async () => {
+      const result = await suggestSeoForCourse(courseId);
+      if (!result.ok || !result.suggestion) {
+        setAiNotice({
+          kind: "error",
+          message: result.message ?? "Échec de la génération.",
+        });
+        return;
+      }
+      // Remplit les champs côté client (l'utilisateur peut éditer puis
+      // « Enregistrer » pour persister).
+      if (metaTitleRef.current) {
+        metaTitleRef.current.value = result.suggestion.metaTitle;
+      }
+      if (metaDescRef.current) {
+        metaDescRef.current.value = result.suggestion.metaDescription;
+      }
+      if (whatYouWillLearnRef.current) {
+        whatYouWillLearnRef.current.value =
+          result.suggestion.whatYouWillLearn.join("\n");
+      }
+      setAiNotice({
+        kind: "success",
+        message:
+          "Suggestions générées. Relisez et ajustez avant d'enregistrer.",
+      });
+    });
+  }
+
   return (
     <form action={formAction} className="space-y-6">
+      {aiAvailable ? (
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-dashed border-border bg-muted/40 p-3">
+          <div>
+            <p className="text-sm font-medium text-foreground">
+              Suggestions automatiques
+            </p>
+            <p className="text-xs text-muted-foreground">
+              Génère des champs SEO à partir du titre et de la description du cours.
+              5 utilisations / heure.
+            </p>
+          </div>
+          <Button
+            type="button"
+            variant="secondary"
+            onClick={handleAiSuggest}
+            disabled={aiPending}
+          >
+            {aiPending ? "Génération…" : "Générer avec l'IA"}
+          </Button>
+        </div>
+      ) : null}
+
+      {aiNotice ? (
+        <Alert variant={aiNotice.kind === "success" ? "success" : "destructive"}>
+          <AlertDescription>{aiNotice.message}</AlertDescription>
+        </Alert>
+      ) : null}
+
       {state.success && state.message ? (
         <Alert variant="success">
           <AlertDescription>{state.message}</AlertDescription>
@@ -48,6 +125,7 @@ export function CourseSeoForm({ courseId, defaults }: CourseSeoFormProps) {
         hint="Apparaît dans les résultats de recherche. 60 caractères max recommandés."
       >
         <Input
+          ref={metaTitleRef}
           id="metaTitle"
           name="metaTitle"
           maxLength={120}
@@ -62,6 +140,7 @@ export function CourseSeoForm({ courseId, defaults }: CourseSeoFormProps) {
         hint="160 caractères max recommandés."
       >
         <Textarea
+          ref={metaDescRef}
           id="metaDescription"
           name="metaDescription"
           rows={3}
@@ -77,6 +156,7 @@ export function CourseSeoForm({ courseId, defaults }: CourseSeoFormProps) {
         hint="Une bénéfice par ligne (jusqu'à 20)."
       >
         <Textarea
+          ref={whatYouWillLearnRef}
           id="whatYouWillLearn"
           name="whatYouWillLearn"
           rows={6}
