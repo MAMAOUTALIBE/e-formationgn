@@ -10,7 +10,12 @@ import { redirect } from "next/navigation";
 import { AuthError } from "next-auth";
 
 import { signIn } from "@/auth";
+import {
+  getEmailLockoutState,
+  lockoutMessage,
+} from "@/lib/auth/login-attempts";
 import { fakeVerifyPassword, hashPassword } from "@/lib/auth/password";
+import { checkPasswordPwned } from "@/lib/auth/pwned-passwords";
 import {
   checkIpRateLimit,
   rateLimitMessage,
@@ -76,6 +81,23 @@ export async function registerUser(
   }
 
   const { firstName, lastName, email, password } = parsed.data;
+
+  // Vérification HaveIBeenPwned : on bloque les mots de passe connus dans
+  // des fuites publiques (k-anonymity → password jamais transmis en clair).
+  // Dégrade gracieusement si l'API est injoignable (n'oblige pas l'attente).
+  const pwned = await checkPasswordPwned(password);
+  if (pwned.ok && pwned.shouldReject) {
+    return {
+      success: false,
+      fieldErrors: {
+        password: [
+          `Ce mot de passe a été compromis dans une fuite publique (vu ${pwned.count.toLocaleString("fr-FR")} fois). Choisissez-en un autre.`,
+        ],
+      },
+      message:
+        "Veuillez choisir un mot de passe qui n'a pas été compromis dans une fuite publique.",
+    };
+  }
 
   const existing = await prisma.user.findUnique({ where: { email } });
   if (existing) {
@@ -218,6 +240,14 @@ export async function loginWithCredentials(
       fieldErrors: parsed.error.flatten().fieldErrors,
       message: "Veuillez corriger les erreurs ci-dessous.",
     };
+  }
+
+  // Account lockout : 5 échecs sur 15 min sur le même email → blocage temporaire
+  // (en plus du rate-limit IP global, qui protège contre la distribution
+  // des essais sur plusieurs comptes).
+  const lockout = await getEmailLockoutState(parsed.data.email);
+  if (lockout.locked) {
+    return { success: false, message: lockoutMessage(lockout.unlockAt) };
   }
 
   const callbackUrl = safeCallbackUrl(formData.get("callbackUrl"));
@@ -389,21 +419,40 @@ export async function resetPassword(
     };
   }
 
+  // Même contrôle HIBP qu'à l'inscription : on n'autorise pas le reset vers
+  // un mot de passe compromis.
+  const pwned = await checkPasswordPwned(parsed.data.password);
+  if (pwned.ok && pwned.shouldReject) {
+    return {
+      success: false,
+      fieldErrors: {
+        password: [
+          "Ce mot de passe a été compromis dans une fuite publique. Choisissez-en un autre.",
+        ],
+      },
+      message:
+        "Veuillez choisir un mot de passe qui n'a pas été compromis.",
+    };
+  }
+
   const hashedPassword = await hashPassword(parsed.data.password);
+  const now = new Date();
 
   await prisma.$transaction([
     prisma.user.update({
       where: { id: record.userId },
-      data: { hashedPassword },
+      // passwordChangedAt révoque toutes les sessions JWT antérieures
+      // (cf. JWT callback dans src/auth.ts qui vérifie token.iat).
+      data: { hashedPassword, passwordChangedAt: now },
     }),
     prisma.passwordResetToken.update({
       where: { id: record.id },
-      data: { usedAt: new Date() },
+      data: { usedAt: now },
     }),
     // Invalide les autres jetons en attente pour le même utilisateur.
     prisma.passwordResetToken.updateMany({
       where: { userId: record.userId, usedAt: null },
-      data: { usedAt: new Date() },
+      data: { usedAt: now },
     }),
   ]);
 

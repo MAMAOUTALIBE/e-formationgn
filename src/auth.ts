@@ -143,9 +143,13 @@ export const {
             .preferredCurrency ?? "EUR";
       }
 
-      // Sur "update" (côté client : useSession().update()) ou si infos manquantes
-      // → on relit la base pour rester cohérent.
-      if (trigger === "update" || (!token.role && token.sub)) {
+      // Sécurité + sync : un seul SELECT par appel JWT couvre :
+      //   - révocation du token si le mot de passe a été changé après son
+      //     émission (passwordChangedAt > token.iat)
+      //   - révocation si le compte est SUSPENDED ou DELETED
+      //   - rafraîchissement des champs métier (rôle, emailVerified, devise)
+      //     après un trigger "update" client ou si manquants dans le token
+      if (token.sub) {
         const dbUser = (await prisma.user.findUnique({
           where: { id: token.sub },
           select: {
@@ -153,15 +157,31 @@ export const {
             role: true,
             emailVerified: true,
             preferredCurrency: true,
+            status: true,
+            passwordChangedAt: true,
           },
         })) as {
           id: string;
           role: import("@/generated/prisma/enums").UserRole;
           emailVerified: Date | null;
           preferredCurrency: import("@/generated/prisma/enums").Currency;
+          status: import("@/generated/prisma/enums").AccountStatus;
+          passwordChangedAt: Date | null;
         } | null;
 
-        if (dbUser) {
+        if (!dbUser) return null;
+        if (dbUser.status === "DELETED" || dbUser.status === "SUSPENDED") {
+          return null;
+        }
+        if (
+          dbUser.passwordChangedAt &&
+          typeof token.iat === "number" &&
+          dbUser.passwordChangedAt.getTime() > token.iat * 1000
+        ) {
+          return null;
+        }
+
+        if (trigger === "update" || !token.role) {
           token.id = dbUser.id;
           token.role = dbUser.role;
           token.emailVerified = dbUser.emailVerified;

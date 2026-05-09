@@ -49,10 +49,14 @@ enum Locale {
 }
 
 model User {
-  id             String    @id @default(cuid())
-  email          String    @unique
-  emailVerified  DateTime?
-  hashedPassword String?
+  id                  String    @id @default(cuid())
+  email               String    @unique
+  emailVerified       DateTime?
+  hashedPassword      String?
+  // Timestamp du dernier changement de mot de passe. Lu par le JWT
+  // callback : tout token émis AVANT cette date est considéré invalide
+  // (force la déconnexion globale après reset password).
+  passwordChangedAt   DateTime?
   name           String?
   firstName      String?
   lastName       String?
