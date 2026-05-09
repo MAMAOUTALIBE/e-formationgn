@@ -39,7 +39,7 @@ export interface TutorAnswer {
   cacheReadTokens: number;
 }
 
-const SYSTEM_PROMPT_BASE = `Tu es un tuteur pédagogique francophone pour la plateforme E-FormationGN.
+const SYSTEM_PROMPT_BASE = `Tu es un tuteur pédagogique francophone pour la plateforme Gandal.
 
 RÈGLES :
 - Réponds UNIQUEMENT en français.

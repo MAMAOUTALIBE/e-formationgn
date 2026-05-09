@@ -262,7 +262,7 @@ async function handleCheckoutCompleted(stripe: Stripe, session: Stripe.Checkout.
       .map((i) => `• ${i.course.title}`)
       .join("<br />");
     const { html, text } = renderBrandedEmail({
-      preview: "Confirmation de votre commande E-FormationGN",
+      preview: "Confirmation de votre commande Gandal",
       heading: "Merci pour votre commande",
       body: `<p style="margin:0 0 12px 0;">Bonjour ${order.user.firstName ?? ""},</p>
              <p style="margin:0 0 12px 0;">Votre paiement de <strong>${formatPriceFromCents(order.totalCents, order.currency)}</strong> a bien été enregistré.</p>
@@ -273,7 +273,7 @@ async function handleCheckoutCompleted(stripe: Stripe, session: Stripe.Checkout.
     });
     await sendTransactionalEmail({
       to: order.user.email,
-      subject: "Confirmation de commande — E-FormationGN",
+      subject: "Confirmation de commande — Gandal",
       html,
       text,
     });

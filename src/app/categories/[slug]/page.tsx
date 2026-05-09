@@ -28,7 +28,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     title: category.name,
     description:
       category.description ??
-      `Tous les cours de la catégorie ${category.name} sur E-FormationGN.`,
+      `Tous les cours de la catégorie ${category.name} sur Gandal.`,
   };
 }
 

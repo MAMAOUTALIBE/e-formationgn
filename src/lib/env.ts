@@ -84,7 +84,7 @@ const clientSchema = z.object({
       (url) => !isProduction || (noLocalhost(url) && httpsOnly(url)),
       "NEXT_PUBLIC_APP_URL doit être une URL HTTPS publique en production",
     ),
-  NEXT_PUBLIC_APP_NAME: z.string().default("E-FormationGN"),
+  NEXT_PUBLIC_APP_NAME: z.string().default("Gandal"),
   NEXT_PUBLIC_SENTRY_DSN: z.string().url().optional(),
 });
 

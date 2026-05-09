@@ -11,10 +11,10 @@ interface DefaultCmsPage {
 const FALLBACK_CONTENT: Record<string, DefaultCmsPage> = {
   cgv: {
     title: "Conditions générales de vente",
-    body: `Les présentes conditions régissent les achats effectués sur E-FormationGN.
+    body: `Les présentes conditions régissent les achats effectués sur Gandal.
 
 1. Identité du vendeur
-E-FormationGN, SAS au capital de — €. Siège social : —. SIREN —. Contact : contact@e-formationgn.com.
+Gandal, SAS au capital de — €. Siège social : —. SIREN —. Contact : contact@gandal.gn.
 
 2. Produits
 La plateforme propose l'accès à des cours en ligne créés par des formateurs indépendants. L'accès est nominatif et non transférable.
@@ -23,13 +23,13 @@ La plateforme propose l'accès à des cours en ligne créés par des formateurs 
 Les prix sont indiqués TTC en euros (EUR) ou en dollars américains (USD) selon la devise sélectionnée. La TVA est facturée selon la législation applicable au pays de l'acheteur.
 
 4. Paiement
-Les paiements sont traités par Stripe. E-FormationGN ne stocke aucune donnée bancaire.
+Les paiements sont traités par Stripe. Gandal ne stocke aucune donnée bancaire.
 
 5. Droit de rétractation
 Conformément à l'article L221-28 du Code de la consommation, l'accès immédiat au contenu numérique entraîne la perte du droit de rétractation. Une politique de remboursement commerciale de 14 jours s'applique néanmoins, sous réserve de moins de 25 % du cours consulté.
 
 6. Garanties
-Les cours sont fournis « en l'état ». E-FormationGN s'engage à un effort raisonnable de qualité et de disponibilité.
+Les cours sont fournis « en l'état ». Gandal s'engage à un effort raisonnable de qualité et de disponibilité.
 
 7. Données personnelles
 Voir notre politique de confidentialité.
@@ -41,24 +41,24 @@ Droit français. Tribunaux français compétents en cas de litige.
   },
   "mentions-legales": {
     title: "Mentions légales",
-    body: `Éditeur : E-FormationGN — SAS — RCS — — SIREN —.
+    body: `Éditeur : Gandal — SAS — RCS — — SIREN —.
 Directeur de la publication : —.
 Hébergeur : Vercel Inc., 340 S Lemon Ave #4133, Walnut CA 91789, États-Unis.
 Base de données : Supabase (Union européenne).
 
-Contact : contact@e-formationgn.com
+Contact : contact@gandal.gn
 
 (À personnaliser via /admin/cms.)`,
   },
   confidentialite: {
     title: "Politique de confidentialité",
-    body: `Responsable de traitement : E-FormationGN.
+    body: `Responsable de traitement : Gandal.
 
 Données collectées :
 - identification (nom, email)
 - comptes OAuth (Google, le cas échéant)
 - progression et notes pédagogiques
-- données de paiement (uniquement via Stripe ; E-FormationGN ne stocke aucune carte bancaire)
+- données de paiement (uniquement via Stripe ; Gandal ne stocke aucune carte bancaire)
 - cookies fonctionnels (devise, affiliation, session)
 
 Finalités :
@@ -70,7 +70,7 @@ Bases légales : exécution contractuelle, intérêt légitime, consentement.
 
 Durée de conservation : la durée nécessaire à la fourniture du service, puis conformément aux obligations légales (factures : 10 ans).
 
-Droits RGPD : accès, rectification, effacement, portabilité, opposition. Adressez votre demande à contact@e-formationgn.com.
+Droits RGPD : accès, rectification, effacement, portabilité, opposition. Adressez votre demande à contact@gandal.gn.
 
 Sous-traitants principaux : Supabase (base de données, UE), Stripe (paiements, irlande/UE), Mux (hébergement vidéo, US/UE), Resend (emails, US/UE).
 
@@ -78,7 +78,7 @@ Sous-traitants principaux : Supabase (base de données, UE), Stripe (paiements, 
   },
   cookies: {
     title: "Politique cookies",
-    body: `E-FormationGN utilise les cookies suivants :
+    body: `Gandal utilise les cookies suivants :
 
 - Strictement nécessaires : session d'authentification, panier, devise, code d'affiliation. Sans ces cookies, le service ne peut pas fonctionner.
 - Préférences : choix de devise EUR/USD.
@@ -89,16 +89,16 @@ Vous pouvez supprimer les cookies à tout moment depuis votre navigateur.
 (À personnaliser via /admin/cms.)`,
   },
   "a-propos": {
-    title: "À propos d'E-FormationGN",
-    body: `E-FormationGN est la marketplace francophone de formation en ligne. Notre mission : rendre l'éducation accessible à tous, partout, et offrir aux experts un canal pour partager leur savoir tout en étant rémunérés équitablement.
+    title: "À propos d'Gandal",
+    body: `Gandal est la marketplace francophone de formation en ligne. Notre mission : rendre l'éducation accessible à tous, partout, et offrir aux experts un canal pour partager leur savoir tout en étant rémunérés équitablement.
 
 (À personnaliser via /admin/cms.)`,
   },
   contact: {
     title: "Contact",
-    body: `Pour toute question, écrivez-nous à contact@e-formationgn.com.
+    body: `Pour toute question, écrivez-nous à contact@gandal.gn.
 
-Pour les questions de modération, support@e-formationgn.com.
+Pour les questions de modération, support@gandal.gn.
 
 (À personnaliser via /admin/cms.)`,
   },

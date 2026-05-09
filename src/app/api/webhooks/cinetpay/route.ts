@@ -172,7 +172,7 @@ async function handleAccepted(orderId: string) {
   if (order.user.email) {
     const itemsList = order.items.map((i) => `• ${i.course.title}`).join("<br />");
     const { html, text } = renderBrandedEmail({
-      preview: "Confirmation de votre paiement E-FormationGN",
+      preview: "Confirmation de votre paiement Gandal",
       heading: "Merci pour votre paiement",
       body: `<p style="margin:0 0 12px 0;">Bonjour ${order.user.firstName ?? ""},</p>
              <p style="margin:0 0 12px 0;">Votre paiement de <strong>${formatMinor(order.totalCents, order.currency)}</strong> via Mobile Money / carte locale a bien été enregistré.</p>
@@ -183,7 +183,7 @@ async function handleAccepted(orderId: string) {
     });
     await sendTransactionalEmail({
       to: order.user.email,
-      subject: "Confirmation de paiement — E-FormationGN",
+      subject: "Confirmation de paiement — Gandal",
       html,
       text,
     });

@@ -1,7 +1,7 @@
 {
-  "name": "E-FormationGN",
-  "short_name": "E-Formation",
-  "description": "Plateforme francophone de formation en ligne",
+  "name": "Gandal",
+  "short_name": "Gandal",
+  "description": "Plateforme francophone de formation en ligne — savoir en peul",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#ffffff",

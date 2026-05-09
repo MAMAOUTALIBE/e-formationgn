@@ -9,7 +9,7 @@ import { Container } from "@/components/ui/container";
 export const metadata: Metadata = {
   title: "Crédits et licences",
   description:
-    "Attribution des contenus tiers utilisés en environnement de démonstration sur E-FormationGN.",
+    "Attribution des contenus tiers utilisés en environnement de démonstration sur Gandal.",
   robots: { index: false, follow: false },
 };
 
@@ -28,7 +28,7 @@ export default function CreditsPage() {
               Crédits et licences
             </h1>
             <p className="text-sm text-muted-foreground">
-              Cette page liste les contenus tiers utilisés sur E-FormationGN
+              Cette page liste les contenus tiers utilisés sur Gandal
               dans un cadre de démonstration. Aucun de ces contenus n&apos;est
               vendu ; ils servent uniquement à animer la plateforme pendant la
               phase de tests.
@@ -173,7 +173,7 @@ export default function CreditsPage() {
               Pour les formateurs
             </h2>
             <p className="text-sm text-muted-foreground">
-              En téléversant un cours sur E-FormationGN, vous garantissez
+              En téléversant un cours sur Gandal, vous garantissez
               détenir les droits sur les contenus diffusés (vidéos, images,
               textes) ou utiliser des œuvres sous licence permettant cette
               diffusion. Les contenus de démonstration ci-dessus ne sont pas

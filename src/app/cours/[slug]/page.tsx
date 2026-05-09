@@ -181,7 +181,7 @@ export default async function CourseDetailPage({ params }: PageProps) {
                   />
                 ) : (
                   <div className="flex aspect-video w-full items-center justify-center bg-gradient-to-br from-[color:var(--brand-primary)]/10 via-muted to-[color:var(--brand-accent)]/10 text-xs uppercase tracking-wide text-muted-foreground">
-                    E-FormationGN
+                    Gandal
                   </div>
                 )}
                 <div className="p-5">

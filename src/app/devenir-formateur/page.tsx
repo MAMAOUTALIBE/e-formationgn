@@ -20,7 +20,7 @@ import { becomeInstructor } from "@/server/actions/instructor";
 export const metadata: Metadata = {
   title: "Devenir formateur",
   description:
-    "Partagez votre savoir auprès de la communauté E-FormationGN et bénéficiez d'un taux préférentiel à 15% sur les ventes que vous générez vous-même.",
+    "Partagez votre savoir auprès de la communauté Gandal et bénéficiez d'un taux préférentiel à 15% sur les ventes que vous générez vous-même.",
 };
 
 export default async function BecomeInstructorPage() {

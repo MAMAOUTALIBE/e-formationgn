@@ -92,7 +92,7 @@ export default async function VerifyCertificatePage({ params }: PageProps) {
                 </div>
               </dl>
               <p className="rounded-md bg-[color:var(--brand-success)]/10 p-3 text-xs text-foreground">
-                Ce certificat a été émis par E-FormationGN. Il atteste que la
+                Ce certificat a été émis par Gandal. Il atteste que la
                 personne mentionnée a suivi avec succès l&apos;intégralité du
                 cours indiqué.
               </p>

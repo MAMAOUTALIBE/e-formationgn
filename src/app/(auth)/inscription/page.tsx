@@ -8,7 +8,7 @@ import { Separator } from "@/components/ui/separator";
 
 export const metadata: Metadata = {
   title: "Inscription",
-  description: "Créez votre compte E-FormationGN gratuitement.",
+  description: "Créez votre compte Gandal gratuitement.",
 };
 
 const hasGoogleProvider = Boolean(
@@ -21,7 +21,7 @@ export default function InscriptionPage() {
       <CardHeader className="text-center">
         <CardTitle className="text-2xl">Créer un compte</CardTitle>
         <CardDescription>
-          Rejoignez E-FormationGN gratuitement. C&apos;est rapide.
+          Rejoignez Gandal gratuitement. C&apos;est rapide.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">

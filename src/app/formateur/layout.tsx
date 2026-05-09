@@ -25,7 +25,7 @@ export default async function InstructorLayout({
       <header className="border-b border-border bg-background">
         <Container className="flex h-16 items-center justify-between gap-6">
           <div className="flex items-center gap-8">
-            <Link href="/" aria-label="Accueil E-FormationGN">
+            <Link href="/" aria-label="Accueil Gandal">
               <Logo width={170} priority />
             </Link>
             <span className="hidden text-xs font-medium uppercase tracking-wide text-muted-foreground sm:inline">

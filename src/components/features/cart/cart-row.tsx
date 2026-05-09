@@ -56,7 +56,7 @@ export function CartRow({
           <img src={thumbnailUrl} alt="" className="h-full w-full object-cover" />
         ) : (
           <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-[color:var(--brand-primary)]/10 via-muted to-[color:var(--brand-accent)]/10 text-[10px] uppercase tracking-wide text-muted-foreground">
-            E-FormationGN
+            Gandal
           </div>
         )}
       </Link>

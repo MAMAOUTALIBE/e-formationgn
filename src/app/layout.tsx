@@ -20,15 +20,15 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://e-formationgn.com"),
+  metadataBase: new URL("https://gandal.gn"),
   title: {
-    default: "E-FormationGN — Plateforme de formation en ligne",
-    template: "%s · E-FormationGN",
+    default: "Gandal — Plateforme de formation en ligne",
+    template: "%s · Gandal",
   },
   description:
-    "E-FormationGN est la marketplace francophone de formations en ligne. Apprenez à votre rythme avec des formateurs experts, ou partagez votre savoir.",
-  applicationName: "E-FormationGN",
-  authors: [{ name: "E-FormationGN" }],
+    "Gandal est la marketplace francophone de formations en ligne. Apprenez à votre rythme avec des formateurs experts, ou partagez votre savoir.",
+  applicationName: "Gandal",
+  authors: [{ name: "Gandal" }],
   keywords: [
     "formation en ligne",
     "e-learning",
@@ -39,18 +39,18 @@ export const metadata: Metadata = {
   openGraph: {
     type: "website",
     locale: "fr_FR",
-    url: "https://e-formationgn.com",
-    siteName: "E-FormationGN",
-    title: "E-FormationGN — Plateforme de formation en ligne",
+    url: "https://gandal.gn",
+    siteName: "Gandal",
+    title: "Gandal — Plateforme de formation en ligne",
     description:
-      "Apprenez à votre rythme avec des formateurs experts ou partagez votre savoir sur E-FormationGN.",
-    images: [{ url: "/logo.svg", width: 512, height: 512, alt: "E-FormationGN" }],
+      "Apprenez à votre rythme avec des formateurs experts ou partagez votre savoir sur Gandal.",
+    images: [{ url: "/logo-mark.svg", width: 64, height: 64, alt: "Gandal" }],
   },
   twitter: {
     card: "summary_large_image",
-    title: "E-FormationGN — Plateforme de formation en ligne",
+    title: "Gandal — Plateforme de formation en ligne",
     description:
-      "Apprenez à votre rythme avec des formateurs experts ou partagez votre savoir sur E-FormationGN.",
+      "Apprenez à votre rythme avec des formateurs experts ou partagez votre savoir sur Gandal.",
   },
   icons: {
     icon: "/favicon.ico",

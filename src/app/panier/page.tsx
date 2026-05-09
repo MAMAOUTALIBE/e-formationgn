@@ -52,7 +52,7 @@ export default async function CartPage({ searchParams }: PageProps) {
     const instructorName =
       item.course.instructor.name ??
       item.course.instructor.firstName ??
-      "Formateur E-FormationGN";
+      "Formateur Gandal";
     return {
       courseId: item.course.id,
       slug: item.course.slug,

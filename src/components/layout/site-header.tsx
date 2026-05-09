@@ -41,7 +41,7 @@ export async function SiteHeader() {
         <Link
           href="/"
           className="flex shrink-0 items-center"
-          aria-label="Accueil E-FormationGN"
+          aria-label="Accueil Gandal"
         >
           <Logo width={140} priority className="w-[140px] md:w-[170px]" />
         </Link>

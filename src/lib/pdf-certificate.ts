@@ -1,4 +1,4 @@
-// Génère un certificat PDF brandé E-FormationGN avec pdf-lib.
+// Génère un certificat PDF brandé Gandal avec pdf-lib.
 // Format A4 paysage, palette corporate. Pas d'image hébergée externe pour
 // éviter les dépendances réseau au moment de la génération.
 
@@ -29,10 +29,10 @@ export async function generateCertificatePdf(
   params: CertificateParams,
 ): Promise<Uint8Array> {
   const pdf = await PDFDocument.create();
-  pdf.setTitle(`Certificat E-FormationGN — ${params.courseTitle}`);
-  pdf.setAuthor("E-FormationGN");
-  pdf.setProducer("E-FormationGN");
-  pdf.setCreator("E-FormationGN");
+  pdf.setTitle(`Certificat Gandal — ${params.courseTitle}`);
+  pdf.setAuthor("Gandal");
+  pdf.setProducer("Gandal");
+  pdf.setCreator("Gandal");
 
   // A4 paysage : 842 × 595 pt
   const page = pdf.addPage([842, 595]);
@@ -69,7 +69,7 @@ export async function generateCertificatePdf(
     color: BRAND_PRIMARY,
   });
 
-  page.drawText("E-FormationGN", {
+  page.drawText("Gandal", {
     x: 56,
     y: height - 80,
     size: 22,
@@ -188,14 +188,14 @@ export async function generateCertificatePdf(
     thickness: 0.7,
     color: MUTED,
   });
-  page.drawText("Signature de l'équipe E-FormationGN", {
+  page.drawText("Signature de l'équipe Gandal", {
     x: 80,
     y: 115,
     size: 9,
     font: helvetica,
     color: MUTED,
   });
-  page.drawText("E-FormationGN — Marketplace de formation francophone", {
+  page.drawText("Gandal — Marketplace de formation francophone", {
     x: 80,
     y: 100,
     size: 9,
@@ -204,7 +204,7 @@ export async function generateCertificatePdf(
   });
 
   page.drawText(
-    `Vérifiez l'authenticité : ${process.env.NEXT_PUBLIC_APP_URL ?? "https://e-formationgn.com"}/certificat/${params.serialNumber}`,
+    `Vérifiez l'authenticité : ${process.env.NEXT_PUBLIC_APP_URL ?? "https://gandal.gn"}/certificat/${params.serialNumber}`,
     {
       x: width - 460,
       y: 100,

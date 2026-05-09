@@ -156,7 +156,7 @@ async function issueVerificationEmail(
 
   await sendTransactionalEmail({
     to: email,
-    subject: "Confirmez votre adresse email — E-FormationGN",
+    subject: "Confirmez votre adresse email — Gandal",
     html,
     text,
   });
@@ -205,7 +205,7 @@ export async function verifyEmailToken(token: string): Promise<VerifyEmailOutcom
   const { html, text } = buildWelcomeMessage(user.firstName);
   await sendTransactionalEmail({
     to: user.email,
-    subject: "Bienvenue sur E-FormationGN",
+    subject: "Bienvenue sur Gandal",
     html,
     text,
   });
@@ -363,7 +363,7 @@ export async function requestPasswordReset(
 
     await sendTransactionalEmail({
       to: user.email,
-      subject: "Réinitialisation de votre mot de passe — E-FormationGN",
+      subject: "Réinitialisation de votre mot de passe — Gandal",
       html,
       text,
     });

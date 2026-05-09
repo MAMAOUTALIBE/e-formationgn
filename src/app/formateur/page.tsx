@@ -138,7 +138,7 @@ export default async function InstructorDashboardPage() {
           <CardContent className="space-y-3">
             {currentUser?.affiliateCode ? (
               <code className="block break-all rounded-md border border-border bg-muted px-3 py-2 text-xs">
-                {process.env.NEXT_PUBLIC_APP_URL ?? "https://e-formationgn.com"}
+                {process.env.NEXT_PUBLIC_APP_URL ?? "https://gandal.gn"}
                 ?ref={currentUser.affiliateCode}
               </code>
             ) : (

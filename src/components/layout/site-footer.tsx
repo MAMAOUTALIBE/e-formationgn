@@ -26,7 +26,7 @@ export async function SiteFooter() {
         <div>
           <h3 className="text-sm font-semibold text-foreground">{t.footer.about}</h3>
           <ul className="mt-3 space-y-2 text-sm text-muted-foreground">
-            <li><Link href="/a-propos" className="hover:text-foreground">E-FormationGN</Link></li>
+            <li><Link href="/a-propos" className="hover:text-foreground">Gandal</Link></li>
             <li><Link href="/contact" className="hover:text-foreground">{t.footer.contact}</Link></li>
             <li><Link href="/blog" className="hover:text-foreground">{t.footer.blog}</Link></li>
           </ul>
@@ -45,7 +45,7 @@ export async function SiteFooter() {
 
       <div className="border-t border-border">
         <Container className="flex flex-col items-center justify-between gap-2 py-6 text-xs text-muted-foreground sm:flex-row">
-          <p>© {new Date().getFullYear()} E-FormationGN. {t.footer.rights}</p>
+          <p>© {new Date().getFullYear()} Gandal. {t.footer.rights}</p>
           <p>{t.footer.rgpd}</p>
         </Container>
       </div>

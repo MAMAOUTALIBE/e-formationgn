@@ -20,7 +20,7 @@ import {
 export const metadata: Metadata = {
   title: "Catalogue des cours",
   description:
-    "Parcourez tout le catalogue de formations E-FormationGN : développement, design, business, langues, et bien plus.",
+    "Parcourez tout le catalogue de formations Gandal : développement, design, business, langues, et bien plus.",
 };
 
 interface PageProps {

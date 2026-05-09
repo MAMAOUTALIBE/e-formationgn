@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 
+import { Logo } from "@/components/branding/logo";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 export const metadata: Metadata = { title: "Branding" };
@@ -20,24 +21,35 @@ export default function BrandingSettingsPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Logo</CardTitle>
+          <CardTitle className="text-base">Wordmark Gandal</CardTitle>
         </CardHeader>
-        <CardContent>
-          <p className="text-sm">Trois variantes disponibles dans <code>/public</code> :</p>
-          <ul className="mt-2 grid gap-2 sm:grid-cols-3">
-            <li className="rounded-md border border-border p-3 text-center text-sm">
-              logo.svg
-            </li>
-            <li className="rounded-md border border-border p-3 text-center text-sm">
-              logo-white.svg
-            </li>
-            <li className="rounded-md border border-border p-3 text-center text-sm">
-              logo-mark.svg
-            </li>
-          </ul>
-          <p className="mt-3 text-xs text-muted-foreground">
-            Pour modifier : remplacer les fichiers SVG dans le dossier{" "}
-            <code>/public</code> et redéployer.
+        <CardContent className="space-y-4">
+          <p className="text-sm text-muted-foreground">
+            Le logo est un wordmark texte (style Udemy) défini dans{" "}
+            <code>src/components/branding/logo.tsx</code>. Pour modifier la
+            graisse, l&apos;italique ou le point coloré, éditer ce fichier.
+          </p>
+
+          <div className="grid gap-4 sm:grid-cols-3">
+            <div className="rounded-md border border-border bg-card p-6 text-center">
+              <Logo width={160} />
+              <p className="mt-3 text-xs text-muted-foreground">default</p>
+            </div>
+            <div className="rounded-md border border-border bg-[color:var(--brand-primary)] p-6 text-center">
+              <Logo width={160} variant="light" />
+              <p className="mt-3 text-xs text-white/70">light (fond sombre)</p>
+            </div>
+            <div className="rounded-md border border-border bg-card p-6 text-center">
+              <Logo width={160} variant="mark" />
+              <p className="mt-3 text-xs text-muted-foreground">
+                mark (favicon / mobile étroit)
+              </p>
+            </div>
+          </div>
+
+          <p className="text-xs text-muted-foreground">
+            Le favicon SVG (<code>/public/logo-mark.svg</code>) est utilisé
+            par le manifest PWA pour l&apos;icône d&apos;app installée.
           </p>
         </CardContent>
       </Card>
