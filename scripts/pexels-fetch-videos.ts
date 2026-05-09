@@ -104,11 +104,34 @@ function bestFile(
   files: PexelsVideoFile[],
   quality: "hd" | "sd",
 ): string | null {
-  return (
-    files.find(
-      (f) => f.quality === quality && f.file_type.startsWith("video/"),
-    )?.link ?? null
+  // 1) Match exact sur la qualité demandée
+  const exact = files.find(
+    (f) => f.quality === quality && f.file_type.startsWith("video/"),
   );
+  if (exact) return exact.link;
+
+  // 2) Fallback : pour HD on accepte uhd/4k aussi ; pour SD on prend le plus
+  //    petit fichier vidéo (hors HLS).
+  const videos = files.filter(
+    (f) => f.file_type.startsWith("video/") && f.quality !== "hls",
+  );
+  if (videos.length === 0) return null;
+
+  if (quality === "hd") {
+    const uhd = videos.find((f) => f.quality === "uhd" || f.quality === "4k");
+    if (uhd) return uhd.link;
+    // Sinon le plus gros par hauteur
+    const sorted = [...videos].sort(
+      (a, b) => (b.height ?? 0) - (a.height ?? 0),
+    );
+    return sorted[0]?.link ?? null;
+  }
+
+  // sd : prend le plus petit
+  const sorted = [...videos].sort(
+    (a, b) => (a.height ?? 9999) - (b.height ?? 9999),
+  );
+  return sorted[0]?.link ?? null;
 }
 
 async function main() {

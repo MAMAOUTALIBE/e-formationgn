@@ -449,6 +449,262 @@ const COURSES: CourseSeed[] = [
       },
     ],
   },
+  // ===========================================================================
+  // Cours démo « Productivité & Management » — vidéos Pexels (business)
+  // ===========================================================================
+  {
+    slug: "demo-productivite-management",
+    title: "Productivité & management d'équipe — démo",
+    subtitle:
+      "Cinq saynètes de la vie de bureau pour explorer le player et illustrer les modules de management.",
+    description:
+      "Cours de démonstration construit avec des extraits vidéo Pexels couvrant la réunion d'équipe, le travail à distance, la prise de parole, la visioconférence et la lecture de tableaux de bord. Idéal pour tester le lecteur en environnement de démo et donner aux formateurs un avant-goût des supports possibles.",
+    categorySlug: "business",
+    level: "BEGINNER",
+    priceEUR: 0,
+    priceUSD: 0,
+    durationSeconds: 35 + 10 + 20 + 10 + 11,
+    averageRating: 4.4,
+    totalRatings: 18,
+    totalEnrollments: 120,
+    whatYouWillLearn: [
+      "Reconnaître les codes d'une réunion d'équipe productive.",
+      "Identifier les bonnes pratiques de visioconférence.",
+      "Lire un tableau de bord financier de base.",
+      "Structurer une présentation orale courte.",
+    ],
+    requirements: ["Aucun pré-requis."],
+    targetAudience: ["Curieux du management.", "Étudiants en école de commerce."],
+    licenseAttribution:
+      "Vidéos fournies par Pexels (cottonbro studio, Pavel Danilyuk, Vanessa Garcia, RDNE Stock project) sous Pexels License. Voir /credits.",
+    sections: [
+      {
+        title: "Travailler en équipe",
+        lessons: [
+          {
+            title: "La réunion d'équipe (cottonbro studio)",
+            durationSeconds: 35,
+            isFreePreview: true,
+            externalVideoUrl:
+              "https://videos.pexels.com/video-files/5971784/5971784-hd_720_1366_25fps.mp4",
+          },
+          {
+            title: "La visioconférence avec un collègue (Vanessa Garcia)",
+            durationSeconds: 10,
+            externalVideoUrl:
+              "https://videos.pexels.com/video-files/6325284/6325284-hd_720_1280_24fps.mp4",
+          },
+        ],
+      },
+      {
+        title: "Travailler en autonomie",
+        lessons: [
+          {
+            title: "Travailler sur ordinateur portable (Pavel Danilyuk)",
+            durationSeconds: 10,
+            externalVideoUrl:
+              "https://videos.pexels.com/video-files/5303248/5303248-hd_1280_720_30fps.mp4",
+          },
+          {
+            title: "Présenter un projet à l'oral (Pavel Danilyuk)",
+            durationSeconds: 20,
+            externalVideoUrl:
+              "https://videos.pexels.com/video-files/7812402/7812402-hd_1080_1920_25fps.mp4",
+          },
+        ],
+      },
+      {
+        title: "Mesurer la performance",
+        lessons: [
+          {
+            title: "Lire un tableau de bord (RDNE Stock project)",
+            durationSeconds: 11,
+            externalVideoUrl:
+              "https://videos.pexels.com/video-files/7947420/7947420-hd_1280_720_30fps.mp4",
+          },
+        ],
+      },
+    ],
+  },
+  // ===========================================================================
+  // Cours démo « Tech & Code » — vidéos Pexels (tech)
+  // ===========================================================================
+  {
+    slug: "demo-tech-code",
+    title: "Tech & code — démo",
+    subtitle:
+      "Quatre clips d'ambiance pour illustrer la programmation, la cybersécurité et l'intelligence artificielle.",
+    description:
+      "Cours de démonstration construit avec des extraits Pexels du monde tech : code en cours d'écriture, développeur au travail, esthétique cybersécurité et abstractions IA. Utile pour tester le lecteur et donner une intuition visuelle aux formateurs qui rédigeront leurs propres modules.",
+    categorySlug: "developpement",
+    level: "ALL_LEVELS",
+    priceEUR: 0,
+    priceUSD: 0,
+    durationSeconds: 17 + 15 + 10 + 10,
+    averageRating: 4.5,
+    totalRatings: 22,
+    totalEnrollments: 180,
+    whatYouWillLearn: [
+      "Reconnaître l'environnement quotidien du développeur.",
+      "Identifier les codes visuels de la cybersécurité.",
+      "Saisir l'esthétique associée aux modèles d'IA.",
+      "Évaluer la qualité d'une vidéo d'illustration tech.",
+    ],
+    requirements: ["Aucun pré-requis."],
+    targetAudience: ["Curieux du métier de développeur.", "Étudiants en informatique."],
+    licenseAttribution:
+      "Vidéos Pexels par cottonbro studio, Jakub Zerdzicki et Nicola Narracci sous Pexels License. Voir /credits.",
+    sections: [
+      {
+        title: "Quotidien du développeur",
+        lessons: [
+          {
+            title: "Code en cours d'écriture (cottonbro studio)",
+            durationSeconds: 17,
+            isFreePreview: true,
+            externalVideoUrl:
+              "https://videos.pexels.com/video-files/6804121/6804121-hd_2048_1080_25fps.mp4",
+          },
+          {
+            title: "Développeur au travail (Jakub Zerdzicki)",
+            durationSeconds: 15,
+            externalVideoUrl:
+              "https://videos.pexels.com/video-files/36328473/15406850_1920_1080_25fps.mp4",
+          },
+        ],
+      },
+      {
+        title: "Sécurité & IA",
+        lessons: [
+          {
+            title: "Cybersécurité — ambiance Matrix (Nicola Narracci)",
+            durationSeconds: 10,
+            externalVideoUrl:
+              "https://videos.pexels.com/video-files/33503696/14250431_1920_1080_30fps.mp4",
+          },
+          {
+            title: "Réseau de neurones — abstraction (Nicola Narracci)",
+            durationSeconds: 10,
+            externalVideoUrl:
+              "https://videos.pexels.com/video-files/34994032/14825727_1920_1080_30fps.mp4",
+          },
+        ],
+      },
+    ],
+  },
+  // ===========================================================================
+  // Cours démo « Design en pratique » — vidéos Pexels (design)
+  // ===========================================================================
+  {
+    slug: "demo-design-pratique",
+    title: "Design en pratique — démo",
+    subtitle:
+      "Trois extraits pour explorer l'illustration digitale, la photo studio et la conception d'interfaces.",
+    description:
+      "Cours de démonstration regroupant trois facettes du métier de designer : tablette graphique, photographie professionnelle et conception UI/UX. Pratique pour tester le lecteur et donner une vibe à la catégorie Design.",
+    categorySlug: "design",
+    level: "BEGINNER",
+    priceEUR: 0,
+    priceUSD: 0,
+    durationSeconds: 10 + 5 + 10,
+    averageRating: 4.6,
+    totalRatings: 12,
+    totalEnrollments: 95,
+    whatYouWillLearn: [
+      "Saisir les outils du designer numérique.",
+      "Repérer les codes visuels de la photo studio.",
+      "Identifier l'environnement de conception UI/UX.",
+    ],
+    requirements: ["Aucun pré-requis."],
+    targetAudience: ["Étudiants en design.", "Reconvertis en quête d'orientation."],
+    licenseAttribution:
+      "Vidéos Pexels par Luna Lovegood, Amar Preciado et Jakub Zerdzicki sous Pexels License. Voir /credits.",
+    sections: [
+      {
+        title: "Trois métiers du design",
+        lessons: [
+          {
+            title: "Illustration sur tablette graphique (Luna Lovegood)",
+            durationSeconds: 10,
+            isFreePreview: true,
+            externalVideoUrl:
+              "https://videos.pexels.com/video-files/4465903/4465903-hd_1280_720_50fps.mp4",
+          },
+          {
+            title: "Photographie en studio (Amar Preciado)",
+            durationSeconds: 5,
+            externalVideoUrl:
+              "https://videos.pexels.com/video-files/28599142/12429723_1080_1920_30fps.mp4",
+          },
+          {
+            title: "Conception UI/UX (Jakub Zerdzicki)",
+            durationSeconds: 10,
+            externalVideoUrl:
+              "https://videos.pexels.com/video-files/33222598/14157413_3840_2160_25fps.mp4",
+          },
+        ],
+      },
+    ],
+  },
+  // ===========================================================================
+  // Cours démo « Marketing digital » — vidéos Pexels (marketing + general)
+  // ===========================================================================
+  {
+    slug: "demo-marketing-digital",
+    title: "Marketing digital — démo",
+    subtitle:
+      "Trois extraits pour explorer les réseaux sociaux, l'idéation marketing et l'apprentissage continu.",
+    description:
+      "Cours de démonstration centré sur le marketing digital : usage du smartphone et des réseaux sociaux, brainstorming d'équipe et apprentissage continu. Sert de toile pour tester le lecteur et illustrer la catégorie Marketing.",
+    categorySlug: "marketing",
+    level: "BEGINNER",
+    priceEUR: 0,
+    priceUSD: 0,
+    durationSeconds: 17 + 16 + 18,
+    averageRating: 4.3,
+    totalRatings: 9,
+    totalEnrollments: 60,
+    whatYouWillLearn: [
+      "Comprendre les codes des réseaux sociaux mobiles.",
+      "Identifier les rituels d'une session de brainstorming.",
+      "Saisir l'importance de l'apprentissage continu.",
+    ],
+    requirements: ["Aucun pré-requis."],
+    targetAudience: ["Curieux du marketing digital.", "Community managers en formation."],
+    licenseAttribution:
+      "Vidéos Pexels par Joshua Malic, Mikael Blomkvist et olia danilevich sous Pexels License. Voir /credits.",
+    sections: [
+      {
+        title: "Marketing digital",
+        lessons: [
+          {
+            title: "Réseaux sociaux sur mobile (Joshua Malic)",
+            durationSeconds: 17,
+            isFreePreview: true,
+            externalVideoUrl:
+              "https://videos.pexels.com/video-files/6756650/6756650-hd_1920_1080_24fps.mp4",
+          },
+          {
+            title: "Brainstorming d'équipe (Mikael Blomkvist)",
+            durationSeconds: 16,
+            externalVideoUrl:
+              "https://videos.pexels.com/video-files/6557707/6557707-hd_720_1280_25fps.mp4",
+          },
+        ],
+      },
+      {
+        title: "Bonus — apprendre en continu",
+        lessons: [
+          {
+            title: "Étudiante en train d'apprendre (olia danilevich)",
+            durationSeconds: 18,
+            externalVideoUrl:
+              "https://videos.pexels.com/video-files/4487962/4487962-hd_1280_720_25fps.mp4",
+          },
+        ],
+      },
+    ],
+  },
 ];
 
 async function ensureCourses(instructorId: string) {
