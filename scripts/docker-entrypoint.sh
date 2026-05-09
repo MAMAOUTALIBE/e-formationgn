@@ -28,8 +28,10 @@ done
 echo "[entrypoint] Base joignable."
 
 # Applique les migrations en attente. Idempotent.
+# Appel direct via node : le shim node_modules/.bin/prisma n'est pas inclus
+# dans la sortie Next.js standalone, donc `npx prisma` ne trouve pas le binaire.
 echo "[entrypoint] Application des migrations Prisma..."
-npx --no-install prisma migrate deploy
+node /app/node_modules/prisma/build/index.js migrate deploy
 
 echo "[entrypoint] Démarrage de Next.js : $*"
 exec "$@"
