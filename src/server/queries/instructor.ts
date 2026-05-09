@@ -53,18 +53,17 @@ export async function getInstructorCourse(
   instructorId: string,
   isAdmin = false,
 ): Promise<InstructorCourseDetail | null> {
+  // internalNotes : champ admin-only (notes privées de modération). On l'omet
+  // côté query si le viewer n'est pas admin, plutôt que de le set à null
+  // post-fetch — défense en profondeur, le champ ne quitte jamais la base
+  // pour un formateur propriétaire.
   const course = await prisma.course.findUnique({
     where: { id: courseId },
     include: INSTRUCTOR_COURSE_DETAIL_INCLUDE,
+    omit: isAdmin ? undefined : { internalNotes: true },
   });
   if (!course) return null;
   if (!isAdmin && course.instructorId !== instructorId) return null;
-
-  // internalNotes est un champ admin-only (notes de modération privées) —
-  // jamais exposé au formateur propriétaire pour éviter une fuite côté client.
-  if (!isAdmin) {
-    course.internalNotes = null;
-  }
 
   return course as InstructorCourseDetail;
 }

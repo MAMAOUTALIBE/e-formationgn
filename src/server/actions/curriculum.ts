@@ -6,6 +6,8 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 import { auth } from "@/auth";
+import { AuthorizationError } from "@/lib/auth/authorization";
+import { isAdminRole, isInstructorOrAdmin } from "@/lib/constants";
 import {
   createDirectUpload,
   getAsset,
@@ -23,48 +25,72 @@ import {
 import type { ActionResult } from "./auth";
 
 // ---------------------------------------------------------------------------
-// Authorization helpers
+// Authorization helpers (locaux — shapes spécifiques aux callers de ce fichier).
+// Délèguent aux primitives `lib/constants` pour les rôles et lèvent des
+// `AuthorizationError` typées (codes UNAUTHENTICATED / FORBIDDEN / NOT_FOUND).
 // ---------------------------------------------------------------------------
 
 async function requireOwnership(courseId: string) {
   const session = await auth();
-  if (!session?.user) throw new Error("Vous devez être connecté.");
-  const isAdmin = session.user.role === "ADMIN";
-  if (session.user.role !== "INSTRUCTOR" && !isAdmin) {
-    throw new Error("Vous n'avez pas les droits.");
+  if (!session?.user) {
+    throw new AuthorizationError(
+      "UNAUTHENTICATED",
+      "Vous devez être connecté.",
+    );
+  }
+  const isAdmin = isAdminRole(session.user.role);
+  if (!isInstructorOrAdmin(session.user.role)) {
+    throw new AuthorizationError("FORBIDDEN", "Vous n'avez pas les droits.");
   }
 
   const course = await prisma.course.findUnique({
     where: { id: courseId },
     select: { id: true, instructorId: true },
   });
-  if (!course) throw new Error("Cours introuvable.");
+  if (!course) {
+    throw new AuthorizationError("NOT_FOUND", "Cours introuvable.");
+  }
   if (!isAdmin && course.instructorId !== session.user.id) {
-    throw new Error("Vous n'êtes pas le propriétaire de ce cours.");
+    throw new AuthorizationError(
+      "FORBIDDEN",
+      "Vous n'êtes pas le propriétaire de ce cours.",
+    );
   }
   return { course, userId: session.user.id, isAdmin };
 }
 
 async function requireSectionOwnership(sectionId: string) {
   const session = await auth();
-  if (!session?.user) throw new Error("Vous devez être connecté.");
-  const isAdmin = session.user.role === "ADMIN";
+  if (!session?.user) {
+    throw new AuthorizationError(
+      "UNAUTHENTICATED",
+      "Vous devez être connecté.",
+    );
+  }
+  const isAdmin = isAdminRole(session.user.role);
 
   const section = await prisma.section.findUnique({
     where: { id: sectionId },
     include: { course: { select: { id: true, instructorId: true } } },
   });
-  if (!section) throw new Error("Section introuvable.");
+  if (!section) {
+    throw new AuthorizationError("NOT_FOUND", "Section introuvable.");
+  }
   if (!isAdmin && section.course.instructorId !== session.user.id) {
-    throw new Error("Action non autorisée.");
+    throw new AuthorizationError("FORBIDDEN", "Action non autorisée.");
   }
   return { section, userId: session.user.id, isAdmin };
 }
 
 async function requireLessonOwnership(lessonId: string) {
   const session = await auth();
-  if (!session?.user) throw new Error("Vous devez être connecté.");
-  const isAdmin = session.user.role === "ADMIN";
+  if (!session?.user) {
+    throw new AuthorizationError(
+      "UNAUTHENTICATED",
+      "Vous devez être connecté.",
+    );
+  }
+  const isAdmin = isAdminRole(session.user.role);
 
   const lesson = await prisma.lesson.findUnique({
     where: { id: lessonId },
@@ -74,9 +100,11 @@ async function requireLessonOwnership(lessonId: string) {
       },
     },
   });
-  if (!lesson) throw new Error("Leçon introuvable.");
+  if (!lesson) {
+    throw new AuthorizationError("NOT_FOUND", "Leçon introuvable.");
+  }
   if (!isAdmin && lesson.section.course.instructorId !== session.user.id) {
-    throw new Error("Action non autorisée.");
+    throw new AuthorizationError("FORBIDDEN", "Action non autorisée.");
   }
   return { lesson, userId: session.user.id, isAdmin };
 }
