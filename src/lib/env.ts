@@ -31,10 +31,15 @@ const serverSchema = z.object({
   GOOGLE_CLIENT_ID: z.string().optional(),
   GOOGLE_CLIENT_SECRET: z.string().optional(),
 
-  // Stripe
+  // Stripe (cartes internationales — diaspora)
   STRIPE_SECRET_KEY: z.string().optional(),
   STRIPE_WEBHOOK_SECRET: z.string().optional(),
   STRIPE_CONNECT_CLIENT_ID: z.string().optional(),
+
+  // CinetPay (Mobile Money + cartes locales — Guinée / Afrique de l'Ouest)
+  CINETPAY_API_KEY: z.string().optional(),
+  CINETPAY_SITE_ID: z.string().optional(),
+  CINETPAY_SECRET_KEY: z.string().optional(),
 
   // Mux
   MUX_TOKEN_ID: z.string().optional(),
@@ -65,7 +70,7 @@ const serverSchema = z.object({
     : z.string().min(16).optional(),
 
   // Plateforme
-  PLATFORM_DEFAULT_CURRENCY: z.enum(["EUR", "USD"]).default("EUR"),
+  PLATFORM_DEFAULT_CURRENCY: z.enum(["EUR", "USD", "GNF", "XOF"]).default("EUR"),
   PLATFORM_COMMISSION_INSTRUCTOR_BPS: z.coerce.number().default(1500),
   PLATFORM_COMMISSION_PLATFORM_BPS: z.coerce.number().default(3000),
 });

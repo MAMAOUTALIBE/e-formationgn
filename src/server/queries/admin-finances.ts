@@ -44,15 +44,15 @@ export async function getFinancesKpis(range: {
     }),
   ]);
 
-  const grossByCurrency: Record<Currency, number> = { EUR: 0, USD: 0 };
-  const platformFeeByCurrency: Record<Currency, number> = { EUR: 0, USD: 0 };
-  const payoutsToInstructorsByCurrency: Record<Currency, number> = { EUR: 0, USD: 0 };
+  const grossByCurrency: Record<Currency, number> = { EUR: 0, USD: 0, GNF: 0, XOF: 0 };
+  const platformFeeByCurrency: Record<Currency, number> = { EUR: 0, USD: 0, GNF: 0, XOF: 0 };
+  const payoutsToInstructorsByCurrency: Record<Currency, number> = { EUR: 0, USD: 0, GNF: 0, XOF: 0 };
   for (const it of orderItems) {
     grossByCurrency[it.currency] += it.totalCents;
     platformFeeByCurrency[it.currency] += it.platformFeeCents;
     payoutsToInstructorsByCurrency[it.currency] += it.instructorPayoutCents;
   }
-  const refundsByCurrency: Record<Currency, number> = { EUR: 0, USD: 0 };
+  const refundsByCurrency: Record<Currency, number> = { EUR: 0, USD: 0, GNF: 0, XOF: 0 };
   for (const r of refunds) {
     refundsByCurrency[r.order.currency] += r.amountCents;
   }

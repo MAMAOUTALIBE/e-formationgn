@@ -255,7 +255,7 @@ async function finalizeFreeCheckout({
 }: {
   userId: string;
   lines: ReturnType<typeof computeCartLines>["lines"];
-  currency: "EUR" | "USD";
+  currency: "EUR" | "USD" | "GNF" | "XOF";
   affiliateCode: string | null;
   promoApplied: {
     promoCodeId: string;
@@ -335,7 +335,7 @@ async function finalizeFreeCheckout({
 export async function previewCartTotal(): Promise<{
   subtotalCents: number;
   totalCents: number;
-  currency: "EUR" | "USD";
+  currency: "EUR" | "USD" | "GNF" | "XOF";
 } | null> {
   const session = await auth();
   if (!session?.user) return null;

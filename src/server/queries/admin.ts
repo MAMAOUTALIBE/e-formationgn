@@ -11,7 +11,10 @@ export interface AdminDashboardStats {
   paidOrders: number;
   grossRevenueCents: number;
   platformFeeCents: number;
-  byCurrency: Record<"EUR" | "USD", { gross: number; platform: number }>;
+  byCurrency: Record<
+    "EUR" | "USD" | "GNF" | "XOF",
+    { gross: number; platform: number }
+  >;
 }
 
 export async function getAdminDashboardStats(): Promise<AdminDashboardStats> {
@@ -57,7 +60,12 @@ export async function getAdminDashboardStats(): Promise<AdminDashboardStats> {
     paidOrders: ordersByStatus.find((o) => o.status === "PAID")?._count._all ?? 0,
     grossRevenueCents: 0,
     platformFeeCents: 0,
-    byCurrency: { EUR: { gross: 0, platform: 0 }, USD: { gross: 0, platform: 0 } },
+    byCurrency: {
+      EUR: { gross: 0, platform: 0 },
+      USD: { gross: 0, platform: 0 },
+      GNF: { gross: 0, platform: 0 },
+      XOF: { gross: 0, platform: 0 },
+    },
   };
 
   for (const row of revenueByCurrency) {

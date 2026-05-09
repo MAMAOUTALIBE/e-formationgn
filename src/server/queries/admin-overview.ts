@@ -69,11 +69,11 @@ export async function getAdminOverviewKpis(
     }),
   ]);
 
-  const revenueByCurrency: Record<Currency, number> = { EUR: 0, USD: 0 };
+  const revenueByCurrency: Record<Currency, number> = { EUR: 0, USD: 0, GNF: 0, XOF: 0 };
   for (const r of revenueAgg) {
     revenueByCurrency[r.currency] = r._sum.totalCents ?? 0;
   }
-  const revenuePreviousByCurrency: Record<Currency, number> = { EUR: 0, USD: 0 };
+  const revenuePreviousByCurrency: Record<Currency, number> = { EUR: 0, USD: 0, GNF: 0, XOF: 0 };
   for (const r of revenuePrev) {
     revenuePreviousByCurrency[r.currency] = r._sum.totalCents ?? 0;
   }
@@ -106,19 +106,22 @@ export async function getRevenueTimeseries(
     select: { paidAt: true, currency: true, totalCents: true },
   });
 
-  const buckets = new Map<string, { EUR: number; USD: number }>();
+  const buckets = new Map<
+    string,
+    { EUR: number; USD: number; GNF: number; XOF: number }
+  >();
   // Initialise toutes les dates de la plage à 0 pour un graphe sans trous.
   for (
     let d = new Date(range.from);
     d <= range.to;
     d.setDate(d.getDate() + 1)
   ) {
-    buckets.set(toIsoDate(d), { EUR: 0, USD: 0 });
+    buckets.set(toIsoDate(d), { EUR: 0, USD: 0, GNF: 0, XOF: 0 });
   }
   for (const o of orders) {
     if (!o.paidAt) continue;
     const key = toIsoDate(o.paidAt);
-    const bucket = buckets.get(key) ?? { EUR: 0, USD: 0 };
+    const bucket = buckets.get(key) ?? { EUR: 0, USD: 0, GNF: 0, XOF: 0 };
     bucket[o.currency] += o.totalCents;
     buckets.set(key, bucket);
   }
@@ -126,6 +129,8 @@ export async function getRevenueTimeseries(
     date,
     EUR: v.EUR,
     USD: v.USD,
+    GNF: v.GNF,
+    XOF: v.XOF,
   }));
 }
 
