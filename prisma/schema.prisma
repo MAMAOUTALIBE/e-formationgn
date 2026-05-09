@@ -344,6 +344,11 @@ model Lesson {
   muxUploadId          String?
   videoDurationSeconds Int     @default(0)
 
+  // URL .mp4 externe : sert de fallback au player quand la leçon n'utilise
+  // pas Mux (ex : démo seed avec Blender CC, ou contenu hébergé ailleurs).
+  // Le player priorise muxPlaybackId si présent.
+  externalVideoUrl String?
+
   // Texte
   textContent String? @db.Text
 

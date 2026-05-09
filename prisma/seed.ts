@@ -181,8 +181,12 @@ interface CourseSeed {
       durationSeconds: number;
       isFreePreview?: boolean;
       type?: "VIDEO" | "TEXT" | "QUIZ" | "RESOURCE";
+      /** URL .mp4 publique (CC). Permet de tester le player sans Mux. */
+      externalVideoUrl?: string;
     }>;
   }>;
+  /** Mention de licence à afficher (cours basé sur contenu CC). */
+  licenseAttribution?: string;
 }
 
 const COURSES: CourseSeed[] = [
@@ -364,6 +368,87 @@ const COURSES: CourseSeed[] = [
       },
     ],
   },
+  // ===========================================================================
+  // Cours démo « Open Movies Blender » — vidéos publiques CC BY 3.0 / 2.5
+  // hébergées sur Google Cloud Storage. Permet de tester le player sans Mux.
+  // À retirer en production réelle (placeholder de démonstration).
+  // ===========================================================================
+  {
+    slug: "blender-open-movies-decouverte",
+    title: "Découverte des Open Movies Blender",
+    subtitle:
+      "Cinq courts-métrages CC BY produits par la Blender Foundation pour explorer le pipeline d'animation 3D libre.",
+    description:
+      "Ce cours de démonstration utilise les Open Movies de la Blender Foundation (Big Buck Bunny, Sintel, Tears of Steel, Elephant's Dream) pour vous faire découvrir les possibilités de l'animation 3D avec des outils libres. Idéal pour tester le lecteur vidéo et avoir une première intuition du pipeline d'un studio open source.",
+    categorySlug: "design",
+    level: "BEGINNER",
+    priceEUR: 0,
+    priceUSD: 0,
+    durationSeconds: 596 + 888 + 734 + 15 + 653,
+    averageRating: 4.8,
+    totalRatings: 42,
+    totalEnrollments: 380,
+    whatYouWillLearn: [
+      "Apprécier les capacités narratives d'un studio 3D open source.",
+      "Reconnaître les styles visuels d'Elephant's Dream à Tears of Steel.",
+      "Identifier les briques d'un pipeline d'animation moderne.",
+      "Naviguer dans la communauté Blender et ses ressources.",
+    ],
+    requirements: [
+      "Une connexion internet capable de lire de la vidéo HD.",
+      "Aucune connaissance préalable nécessaire.",
+    ],
+    targetAudience: [
+      "Curieux de l'animation 3D souhaitant comprendre le pipeline.",
+      "Étudiants en design ou multimédia.",
+    ],
+    licenseAttribution:
+      "Vidéos © Blender Foundation, sous licence Creative Commons (BY 3.0 / BY 2.5). Voir /credits.",
+    sections: [
+      {
+        title: "Films courts (Open Movies)",
+        lessons: [
+          {
+            title: "Big Buck Bunny — le standard de l'industrie",
+            durationSeconds: 596,
+            isFreePreview: true,
+            externalVideoUrl:
+              "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4",
+          },
+          {
+            title: "Sintel — narration et émotion",
+            durationSeconds: 888,
+            externalVideoUrl:
+              "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/Sintel.mp4",
+          },
+          {
+            title: "Tears of Steel — VFX et compositing",
+            durationSeconds: 734,
+            externalVideoUrl:
+              "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/TearsOfSteel.mp4",
+          },
+          {
+            title: "Elephant's Dream — le tout premier",
+            durationSeconds: 653,
+            externalVideoUrl:
+              "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4",
+          },
+        ],
+      },
+      {
+        title: "Bonus court",
+        lessons: [
+          {
+            title: "For Bigger Blazes (extrait court)",
+            durationSeconds: 15,
+            externalVideoUrl:
+              "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4",
+            isFreePreview: true,
+          },
+        ],
+      },
+    ],
+  },
 ];
 
 async function ensureCourses(instructorId: string) {
@@ -434,6 +519,7 @@ async function ensureCourses(instructorId: string) {
               displayOrder: lessonIndex,
               videoDurationSeconds: lesson.durationSeconds,
               isFreePreview: Boolean(lesson.isFreePreview),
+              externalVideoUrl: lesson.externalVideoUrl ?? null,
             })),
           },
         },

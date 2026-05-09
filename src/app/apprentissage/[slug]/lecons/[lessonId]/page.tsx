@@ -134,9 +134,10 @@ export default async function LessonViewerPage({ params }: PageProps) {
 
             {/* Contenu selon le type */}
             {lesson.type === "VIDEO" ? (
-              lesson.muxPlaybackId ? (
+              lesson.muxPlaybackId || lesson.externalVideoUrl ? (
                 <LessonPlayer
                   playbackId={lesson.muxPlaybackId}
+                  externalVideoUrl={lesson.externalVideoUrl}
                   lessonId={lesson.id}
                   initialPositionSeconds={lessonProgress?.lastPositionSeconds ?? 0}
                   durationSeconds={lesson.videoDurationSeconds}
