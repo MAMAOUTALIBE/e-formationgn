@@ -4,6 +4,16 @@ import { cn } from "@/lib/utils";
 
 import { Label } from "./label";
 
+// Helper de lecture des erreurs Zod-flattened renvoyées par les Server Actions
+// (`ActionResult.fieldErrors`). Évite la répétition `state.fieldErrors?.foo?.[0]`
+// dans chaque formulaire `useActionState`.
+export function getFieldError(
+  fieldErrors: Record<string, string[] | undefined> | undefined,
+  field: string,
+): string | undefined {
+  return fieldErrors?.[field]?.[0];
+}
+
 interface FormFieldProps {
   id: string;
   label: string;

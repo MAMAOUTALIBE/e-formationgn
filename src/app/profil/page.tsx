@@ -41,8 +41,8 @@ export default async function ProfilePage() {
     <>
       <SiteHeader />
 
-      <main className="flex-1 bg-muted/40 py-10">
-        <Container className="space-y-8">
+      <main className="flex-1 bg-muted/40 py-8">
+        <Container className="space-y-6">
           <div className="flex flex-col items-start gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-center gap-4">
               <Avatar

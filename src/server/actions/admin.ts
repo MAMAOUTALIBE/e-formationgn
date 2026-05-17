@@ -6,7 +6,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
-import { auth } from "@/auth";
+import { requireAdmin } from "@/lib/auth/authorization";
 import { prisma } from "@/lib/prisma";
 import {
   categorySchema,
@@ -18,15 +18,6 @@ import {
 } from "@/lib/validators/admin";
 
 import type { ActionResult } from "./auth";
-
-async function requireAdmin() {
-  const session = await auth();
-  if (!session?.user) throw new Error("Connectez-vous.");
-  if (session.user.role !== "ADMIN") {
-    throw new Error("Réservé à l'administrateur.");
-  }
-  return session.user;
-}
 
 async function audit(
   actorId: string,
@@ -98,7 +89,7 @@ export async function moderateCourse(formData: FormData): Promise<ActionResult> 
     });
   }
 
-  await audit(admin.id, `course.${parsed.data.action}`, "Course", course.id, {
+  await audit(admin.userId, `course.${parsed.data.action}`, "Course", course.id, {
     reason: parsed.data.reason,
   });
 
@@ -117,7 +108,7 @@ export async function applyUserAction(formData: FormData): Promise<ActionResult>
   });
   if (!parsed.success) return { success: false, message: "Action invalide." };
 
-  if (parsed.data.userId === admin.id) {
+  if (parsed.data.userId === admin.userId) {
     return { success: false, message: "Vous ne pouvez pas modifier votre propre compte." };
   }
 
@@ -148,7 +139,7 @@ export async function applyUserAction(formData: FormData): Promise<ActionResult>
       break;
   }
 
-  await audit(admin.id, `user.${parsed.data.action}`, "User", parsed.data.userId);
+  await audit(admin.userId, `user.${parsed.data.action}`, "User", parsed.data.userId);
   revalidatePath("/admin/utilisateurs");
   return { success: true, message: "Action appliquée." };
 }
@@ -183,7 +174,7 @@ export async function upsertCategory(formData: FormData): Promise<ActionResult> 
         isActive: data.isActive,
       },
     });
-    await audit(admin.id, "category.update", "Category", data.id);
+    await audit(admin.userId, "category.update", "Category", data.id);
   } else {
     const created = await prisma.category.create({
       data: {
@@ -195,7 +186,7 @@ export async function upsertCategory(formData: FormData): Promise<ActionResult> 
         isActive: data.isActive,
       },
     });
-    await audit(admin.id, "category.create", "Category", created.id);
+    await audit(admin.userId, "category.create", "Category", created.id);
   }
   revalidatePath("/admin/categories");
   revalidatePath("/categories");
@@ -213,7 +204,7 @@ export async function deleteCategory(categoryId: string): Promise<ActionResult> 
     };
   }
   await prisma.category.delete({ where: { id: categoryId } });
-  await audit(admin.id, "category.delete", "Category", categoryId);
+  await audit(admin.userId, "category.delete", "Category", categoryId);
   revalidatePath("/admin/categories");
   revalidatePath("/categories");
   return { success: true };
@@ -243,7 +234,7 @@ export async function updateCommissionRate(formData: FormData): Promise<ActionRe
       description: parsed.data.description ? parsed.data.description : null,
     },
   });
-  await audit(admin.id, "commission.update", "CommissionRate", parsed.data.source, {
+  await audit(admin.userId, "commission.update", "CommissionRate", parsed.data.source, {
     rateBps: parsed.data.rateBps,
   });
   revalidatePath("/admin/commissions");
@@ -286,10 +277,10 @@ export async function upsertPromoCode(formData: FormData): Promise<ActionResult>
   };
   if (data.id) {
     await prisma.promoCode.update({ where: { id: data.id }, data: writeData });
-    await audit(admin.id, "promo.update", "PromoCode", data.id);
+    await audit(admin.userId, "promo.update", "PromoCode", data.id);
   } else {
     const created = await prisma.promoCode.create({ data: writeData });
-    await audit(admin.id, "promo.create", "PromoCode", created.id);
+    await audit(admin.userId, "promo.create", "PromoCode", created.id);
   }
   revalidatePath("/admin/codes-promo");
   return { success: true, message: "Code promo enregistré." };
@@ -298,7 +289,7 @@ export async function upsertPromoCode(formData: FormData): Promise<ActionResult>
 export async function deletePromoCode(promoId: string): Promise<ActionResult> {
   const admin = await requireAdmin();
   await prisma.promoCode.delete({ where: { id: promoId } });
-  await audit(admin.id, "promo.delete", "PromoCode", promoId);
+  await audit(admin.userId, "promo.delete", "PromoCode", promoId);
   revalidatePath("/admin/codes-promo");
   return { success: true };
 }
@@ -327,10 +318,10 @@ export async function upsertCmsPage(formData: FormData): Promise<ActionResult> {
   };
   if (data.id) {
     await prisma.cmsPage.update({ where: { id: data.id }, data: writeData });
-    await audit(admin.id, "cms.update", "CmsPage", data.id);
+    await audit(admin.userId, "cms.update", "CmsPage", data.id);
   } else {
     const created = await prisma.cmsPage.create({ data: writeData });
-    await audit(admin.id, "cms.create", "CmsPage", created.id);
+    await audit(admin.userId, "cms.create", "CmsPage", created.id);
   }
   revalidatePath("/admin/cms");
   revalidatePath(`/${data.slug}`);
@@ -340,7 +331,7 @@ export async function upsertCmsPage(formData: FormData): Promise<ActionResult> {
 export async function deleteCmsPage(pageId: string): Promise<ActionResult> {
   const admin = await requireAdmin();
   await prisma.cmsPage.delete({ where: { id: pageId } });
-  await audit(admin.id, "cms.delete", "CmsPage", pageId);
+  await audit(admin.userId, "cms.delete", "CmsPage", pageId);
   revalidatePath("/admin/cms");
   return { success: true };
 }

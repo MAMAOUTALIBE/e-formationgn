@@ -37,21 +37,39 @@ export const metadata: Metadata = {
     "francophone",
     "marketplace formation",
   ],
+  // Hreflang multi-pays francophones : indique à Google que la même URL est
+  // pertinente pour chaque marché (pas de version traduite pour l'instant —
+  // x-default + fr-* pointent tous vers la même langue). Quand un domaine
+  // local sera lancé (gandal.fr, gandal.ci, …), on remplacera ces valeurs.
+  alternates: {
+    canonical: "/",
+    languages: {
+      "fr-FR": "/",
+      "fr-BE": "/",
+      "fr-CA": "/",
+      "fr-CI": "/",
+      "fr-SN": "/",
+      "fr-GN": "/",
+      "x-default": "/",
+    },
+  },
   openGraph: {
     type: "website",
     locale: "fr_FR",
+    alternateLocale: ["fr_BE", "fr_CA", "fr_CI", "fr_SN"],
     url: "https://gandal.gn",
     siteName: "Gandal",
     title: "Gandal — Plateforme de formation en ligne",
     description:
       "Apprenez à votre rythme avec des formateurs experts ou partagez votre savoir sur Gandal.",
-    images: [{ url: "/logo-mark.svg", width: 64, height: 64, alt: "Gandal" }],
+    images: [{ url: "/api/og", width: 1200, height: 630, alt: "Gandal" }],
   },
   twitter: {
     card: "summary_large_image",
     title: "Gandal — Plateforme de formation en ligne",
     description:
       "Apprenez à votre rythme avec des formateurs experts ou partagez votre savoir sur Gandal.",
+    images: ["/api/og"],
   },
   icons: {
     icon: "/favicon.ico",

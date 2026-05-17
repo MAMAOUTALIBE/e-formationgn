@@ -4,7 +4,7 @@
 
 import { revalidatePath } from "next/cache";
 
-import { auth } from "@/auth";
+import { requireAnyAdminRole } from "@/lib/auth/authorization";
 import { prisma } from "@/lib/prisma";
 import type {
   ModerationRuleAction,
@@ -14,17 +14,7 @@ import type {
 
 import type { ActionResult } from "./auth";
 
-async function requireModerator() {
-  const session = await auth();
-  if (!session?.user) throw new Error("Connectez-vous.");
-  if (
-    session.user.role !== "ADMIN" &&
-    session.user.role !== "MODERATOR"
-  ) {
-    throw new Error("Réservé aux admins/modérateurs.");
-  }
-  return session.user;
-}
+const requireModerator = () => requireAnyAdminRole("ADMIN", "MODERATOR");
 
 async function audit(actorId: string, action: string, targetType: string, targetId: string, metadata?: Record<string, unknown>) {
   await prisma.auditLog.create({
@@ -64,7 +54,7 @@ export async function resolveReport(
     await applyTargetAction(report.targetType, report.targetId, resolution);
   }
 
-  await audit(user.id, "report.resolve", "Report", reportId, { resolution });
+  await audit(user.userId, "report.resolve", "Report", reportId, { resolution });
   revalidatePath("/admin/moderation/signalements");
   return { success: true, message: "Signalement traité." };
 }
@@ -105,7 +95,7 @@ export async function createModerationRule(
   const rule = await prisma.moderationRule.create({
     data: { name, kind, pattern, action, isActive: true },
   });
-  await audit(user.id, "moderation-rule.create", "ModerationRule", rule.id);
+  await audit(user.userId, "moderation-rule.create", "ModerationRule", rule.id);
   revalidatePath("/admin/moderation/regles");
   return { success: true, message: "Règle créée." };
 }
@@ -119,7 +109,7 @@ export async function toggleModerationRule(
     where: { id },
     data: { isActive: active },
   });
-  await audit(user.id, "moderation-rule.toggle", "ModerationRule", id);
+  await audit(user.userId, "moderation-rule.toggle", "ModerationRule", id);
   revalidatePath("/admin/moderation/regles");
   return { success: true };
 }
@@ -127,7 +117,7 @@ export async function toggleModerationRule(
 export async function deleteModerationRule(id: string): Promise<ActionResult> {
   const user = await requireModerator();
   await prisma.moderationRule.delete({ where: { id } });
-  await audit(user.id, "moderation-rule.delete", "ModerationRule", id);
+  await audit(user.userId, "moderation-rule.delete", "ModerationRule", id);
   revalidatePath("/admin/moderation/regles");
   return { success: true };
 }

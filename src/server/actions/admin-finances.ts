@@ -4,21 +4,14 @@
 
 import { revalidatePath } from "next/cache";
 
-import { auth } from "@/auth";
+import { requireAnyAdminRole } from "@/lib/auth/authorization";
 import { logError } from "@/lib/logger";
 import { prisma } from "@/lib/prisma";
 import { getStripeClient, isStripeConfigured } from "@/lib/stripe";
 
 import type { ActionResult } from "./auth";
 
-async function requireFinanceRole() {
-  const session = await auth();
-  if (!session?.user) throw new Error("Connectez-vous.");
-  if (session.user.role !== "ADMIN" && session.user.role !== "FINANCE") {
-    throw new Error("Réservé aux admins et au rôle Finance.");
-  }
-  return session.user;
-}
+const requireFinanceRole = () => requireAnyAdminRole("ADMIN", "FINANCE");
 
 async function audit(
   actorId: string,
@@ -80,7 +73,7 @@ export async function refundOrder(
     payment_intent: order.stripePaymentIntentId,
     amount: amountCents,
     reason: "requested_by_customer",
-    metadata: { orderId, adminId: admin.id, ...(reason ? { reason } : {}) },
+    metadata: { orderId, adminId: admin.userId, ...(reason ? { reason } : {}) },
   });
 
   // 2) Reverse transfer côté formateur — pro rata par ligne et par transfer
@@ -129,7 +122,7 @@ export async function refundOrder(
     },
   });
 
-  await audit(admin.id, "order.refund", "Order", orderId, {
+  await audit(admin.userId, "order.refund", "Order", orderId, {
     amountCents,
     refundId: refund.id,
     reversals,
@@ -152,7 +145,7 @@ export async function markPayoutPaid(payoutId: string): Promise<ActionResult> {
     where: { id: payoutId },
     data: { status: "PAID", paidAt: new Date() },
   });
-  await audit(admin.id, "payout.mark-paid", "Payout", payoutId);
+  await audit(admin.userId, "payout.mark-paid", "Payout", payoutId);
   revalidatePath("/admin/finances/payouts");
   return { success: true, message: "Payout marqué comme payé." };
 }

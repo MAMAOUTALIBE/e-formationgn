@@ -5,9 +5,11 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
-import { auth } from "@/auth";
-import { AuthorizationError } from "@/lib/auth/authorization";
-import { isAdminRole, isInstructorOrAdmin } from "@/lib/constants";
+import {
+  AuthorizationError,
+  requireCourseOwnership,
+  requireInstructorOrAdmin,
+} from "@/lib/auth/authorization";
 import {
   createDirectUpload,
   getAsset,
@@ -24,51 +26,15 @@ import {
 
 import type { ActionResult } from "./auth";
 
-// ---------------------------------------------------------------------------
-// Authorization helpers (locaux — shapes spécifiques aux callers de ce fichier).
-// Délèguent aux primitives `lib/constants` pour les rôles et lèvent des
-// `AuthorizationError` typées (codes UNAUTHENTICATED / FORBIDDEN / NOT_FOUND).
-// ---------------------------------------------------------------------------
+// Alias : la sémantique « est-ce que cet utilisateur peut éditer ce cours ? »
+// est centralisée dans `requireCourseOwnership` (lib/auth/authorization).
+const requireOwnership = requireCourseOwnership;
 
-async function requireOwnership(courseId: string) {
-  const session = await auth();
-  if (!session?.user) {
-    throw new AuthorizationError(
-      "UNAUTHENTICATED",
-      "Vous devez être connecté.",
-    );
-  }
-  const isAdmin = isAdminRole(session.user.role);
-  if (!isInstructorOrAdmin(session.user.role)) {
-    throw new AuthorizationError("FORBIDDEN", "Vous n'avez pas les droits.");
-  }
-
-  const course = await prisma.course.findUnique({
-    where: { id: courseId },
-    select: { id: true, instructorId: true },
-  });
-  if (!course) {
-    throw new AuthorizationError("NOT_FOUND", "Cours introuvable.");
-  }
-  if (!isAdmin && course.instructorId !== session.user.id) {
-    throw new AuthorizationError(
-      "FORBIDDEN",
-      "Vous n'êtes pas le propriétaire de ce cours.",
-    );
-  }
-  return { course, userId: session.user.id, isAdmin };
-}
-
+// Helpers locaux qui chargent davantage que la version centrale (la relation
+// `course` complète + tous les champs lesson/section), pour éviter un second
+// findUnique dans les callers. La RBAC reste celle de `requireInstructorOrAdmin`.
 async function requireSectionOwnership(sectionId: string) {
-  const session = await auth();
-  if (!session?.user) {
-    throw new AuthorizationError(
-      "UNAUTHENTICATED",
-      "Vous devez être connecté.",
-    );
-  }
-  const isAdmin = isAdminRole(session.user.role);
-
+  const ctx = await requireInstructorOrAdmin();
   const section = await prisma.section.findUnique({
     where: { id: sectionId },
     include: { course: { select: { id: true, instructorId: true } } },
@@ -76,22 +42,14 @@ async function requireSectionOwnership(sectionId: string) {
   if (!section) {
     throw new AuthorizationError("NOT_FOUND", "Section introuvable.");
   }
-  if (!isAdmin && section.course.instructorId !== session.user.id) {
+  if (!ctx.isAdmin && section.course.instructorId !== ctx.userId) {
     throw new AuthorizationError("FORBIDDEN", "Action non autorisée.");
   }
-  return { section, userId: session.user.id, isAdmin };
+  return { section, userId: ctx.userId, isAdmin: ctx.isAdmin };
 }
 
 async function requireLessonOwnership(lessonId: string) {
-  const session = await auth();
-  if (!session?.user) {
-    throw new AuthorizationError(
-      "UNAUTHENTICATED",
-      "Vous devez être connecté.",
-    );
-  }
-  const isAdmin = isAdminRole(session.user.role);
-
+  const ctx = await requireInstructorOrAdmin();
   const lesson = await prisma.lesson.findUnique({
     where: { id: lessonId },
     include: {
@@ -103,10 +61,10 @@ async function requireLessonOwnership(lessonId: string) {
   if (!lesson) {
     throw new AuthorizationError("NOT_FOUND", "Leçon introuvable.");
   }
-  if (!isAdmin && lesson.section.course.instructorId !== session.user.id) {
+  if (!ctx.isAdmin && lesson.section.course.instructorId !== ctx.userId) {
     throw new AuthorizationError("FORBIDDEN", "Action non autorisée.");
   }
-  return { lesson, userId: session.user.id, isAdmin };
+  return { lesson, userId: ctx.userId, isAdmin: ctx.isAdmin };
 }
 
 // ---------------------------------------------------------------------------
@@ -478,6 +436,135 @@ export async function detachMuxFromLesson(lessonId: string): Promise<ActionResul
 
   revalidatePath(`/formateur/cours/${lesson.section.course.id}/programme`);
   return { success: true, message: "Vidéo détachée." };
+}
+
+// ---------------------------------------------------------------------------
+// Vidéo de présentation (promo) au niveau du cours — utilisée comme
+// preview avant achat. Stockage condensé sur deux colonnes seulement :
+//   - promoVideoMuxId      : uploadId pendant l'upload, puis assetId une fois
+//                            le playback ID disponible.
+//   - promoVideoPlaybackId : null pendant l'upload, set quand l'asset est ready.
+// On ne suit pas la durée (preview = juste un teaser).
+
+export async function createMuxUploadForCoursePromo(
+  courseId: string,
+): Promise<MuxUploadResult> {
+  if (!isMuxConfigured()) {
+    return {
+      ok: false,
+      error:
+        "Mux n'est pas configuré. Renseignez MUX_TOKEN_ID et MUX_TOKEN_SECRET dans .env, puis redémarrez le serveur.",
+    };
+  }
+
+  const { course } = await requireOwnership(courseId);
+
+  // Si une vidéo précédente était prête (assetId stocké), on la supprime côté Mux.
+  const existing = await prisma.course.findUnique({
+    where: { id: course.id },
+    select: { promoVideoMuxId: true, promoVideoPlaybackId: true },
+  });
+  if (existing?.promoVideoMuxId && existing.promoVideoPlaybackId) {
+    await safeDeleteMuxAsset(existing.promoVideoMuxId, {
+      context: { operation: "replace-promo", courseId },
+    });
+  }
+
+  const corsOrigin = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+  const { uploadId, url } = await createDirectUpload(corsOrigin);
+
+  await prisma.course.update({
+    where: { id: course.id },
+    data: {
+      promoVideoMuxId: uploadId,
+      promoVideoPlaybackId: null,
+    },
+  });
+
+  return { ok: true, uploadId, url };
+}
+
+export async function confirmMuxUploadForCoursePromo(
+  courseId: string,
+): Promise<ConfirmMuxUploadResult> {
+  const { course } = await requireOwnership(courseId);
+  if (!isMuxConfigured()) {
+    return { ok: false, status: "errored", message: "Mux non configuré." };
+  }
+
+  const current = await prisma.course.findUnique({
+    where: { id: course.id },
+    select: { promoVideoMuxId: true, promoVideoPlaybackId: true },
+  });
+  if (!current?.promoVideoMuxId) {
+    return { ok: false, status: "errored", message: "Aucun upload en cours." };
+  }
+
+  // Si le playbackId existe déjà, l'asset est ready : pas de re-confirm nécessaire.
+  if (current.promoVideoPlaybackId) {
+    return {
+      ok: true,
+      status: "ready",
+      assetId: current.promoVideoMuxId,
+      playbackId: current.promoVideoPlaybackId,
+    };
+  }
+
+  // Sinon, promoVideoMuxId contient encore l'uploadId : on demande l'asset.
+  const upload = await getUpload(current.promoVideoMuxId);
+  if (!upload.assetId) {
+    return { ok: true, status: "uploaded" };
+  }
+
+  const asset = await getAsset(upload.assetId);
+  if (asset.status !== "ready") {
+    return {
+      ok: true,
+      status: asset.status === "errored" ? "errored" : "processing",
+      assetId: asset.assetId,
+    };
+  }
+
+  await prisma.course.update({
+    where: { id: course.id },
+    data: {
+      promoVideoMuxId: asset.assetId,
+      promoVideoPlaybackId: asset.playbackId,
+    },
+  });
+
+  return {
+    ok: true,
+    status: "ready",
+    assetId: asset.assetId,
+    playbackId: asset.playbackId ?? undefined,
+  };
+}
+
+export async function detachMuxFromCoursePromo(
+  courseId: string,
+): Promise<ActionResult> {
+  const { course } = await requireOwnership(courseId);
+
+  const current = await prisma.course.findUnique({
+    where: { id: course.id },
+    select: { promoVideoMuxId: true, promoVideoPlaybackId: true },
+  });
+
+  // Si l'asset est ready, on le supprime côté Mux (promoVideoMuxId = assetId).
+  if (current?.promoVideoMuxId && current.promoVideoPlaybackId) {
+    await safeDeleteMuxAsset(current.promoVideoMuxId, {
+      context: { operation: "clear-promo", courseId },
+    });
+  }
+
+  await prisma.course.update({
+    where: { id: course.id },
+    data: { promoVideoMuxId: null, promoVideoPlaybackId: null },
+  });
+
+  revalidatePath(`/formateur/cours/${course.id}`);
+  return { success: true, message: "Vidéo de présentation détachée." };
 }
 
 // ---------------------------------------------------------------------------

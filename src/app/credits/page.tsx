@@ -17,8 +17,8 @@ export default function CreditsPage() {
   return (
     <>
       <SiteHeader />
-      <main className="flex-1 bg-background py-10">
-        <Container className="space-y-8">
+      <main className="flex-1 bg-background py-8">
+        <Container className="space-y-6">
           <Breadcrumbs
             items={[{ label: "Accueil", href: "/" }, { label: "Crédits" }]}
           />

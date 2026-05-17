@@ -1,3 +1,4 @@
+import { EmptyState } from "@/components/ui/empty-state";
 import { cn } from "@/lib/utils";
 import type { Currency } from "@/generated/prisma/enums";
 import type { PublicCourseListItem } from "@/server/queries/courses";
@@ -14,16 +15,16 @@ interface CourseGridProps {
 export function CourseGrid({ courses, currency, className, emptyMessage }: CourseGridProps) {
   if (courses.length === 0) {
     return (
-      <div className="rounded-lg border border-dashed border-border bg-muted/40 p-10 text-center text-sm text-muted-foreground">
-        {emptyMessage ?? "Aucun cours ne correspond à votre recherche pour le moment."}
-      </div>
+      <EmptyState
+        title={emptyMessage ?? "Aucun cours ne correspond à votre recherche pour le moment."}
+      />
     );
   }
 
   return (
     <div
       className={cn(
-        "grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4",
+        "grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3",
         className,
       )}
     >

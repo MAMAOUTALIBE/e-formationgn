@@ -144,3 +144,14 @@ body {
   outline: 2px solid var(--ring);
   outline-offset: 2px;
 }
+
+/* Mode focus apprentissage : la classe `learning-focus` est posée sur <body>
+ * par <FocusModeProvider>. La sidebar (aside data-learning-sidebar) se cache,
+ * et la grille passe en une seule colonne pour donner toute la largeur au
+ * player. Voir src/components/features/learning/focus-mode-provider.tsx. */
+body.learning-focus [data-learning-sidebar] {
+  display: none;
+}
+body.learning-focus [data-learning-grid] {
+  grid-template-columns: minmax(0, 1fr);
+}

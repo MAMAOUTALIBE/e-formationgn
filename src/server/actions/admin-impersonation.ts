@@ -6,6 +6,7 @@
 import { revalidatePath } from "next/cache";
 
 import { auth } from "@/auth";
+import { requireAdmin } from "@/lib/auth/authorization";
 import { prisma } from "@/lib/prisma";
 import {
   clearImpersonation,
@@ -15,21 +16,14 @@ import {
 
 import type { ActionResult } from "./auth";
 
-async function requireAdminUser() {
-  const session = await auth();
-  if (!session?.user) throw new Error("Connectez-vous.");
-  if (session.user.role !== "ADMIN") {
-    throw new Error("Réservé à l'administrateur.");
-  }
-  return session.user;
-}
+const requireAdminUser = () => requireAdmin();
 
 export async function startImpersonation(
   targetUserId: string,
   reason?: string,
 ): Promise<ActionResult> {
   const admin = await requireAdminUser();
-  if (admin.id === targetUserId) {
+  if (admin.userId === targetUserId) {
     return { success: false, message: "Impossible de s'impersonner soi-même." };
   }
 
@@ -41,7 +35,7 @@ export async function startImpersonation(
 
   const sessionRecord = await prisma.impersonationSession.create({
     data: {
-      adminId: admin.id,
+      adminId: admin.userId,
       targetUserId: target.id,
       reason: reason ?? null,
     },
@@ -54,7 +48,7 @@ export async function startImpersonation(
 
   await prisma.auditLog.create({
     data: {
-      actorId: admin.id,
+      actorId: admin.userId,
       action: "admin.impersonation.start",
       targetType: "User",
       targetId: target.id,

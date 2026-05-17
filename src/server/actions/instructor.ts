@@ -8,11 +8,12 @@
 // - vérifient le rôle (INSTRUCTOR ou ADMIN) lorsque pertinent,
 // - vérifient la propriété de la ressource avant toute mutation.
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, updateTag } from "next/cache";
 import { redirect } from "next/navigation";
 import { nanoid } from "nanoid";
 
 import { auth } from "@/auth";
+import { requireInstructorOrAdmin } from "@/lib/auth/authorization";
 import { prisma } from "@/lib/prisma";
 import { appendSlugSuffix, slugify } from "@/lib/slug";
 import {
@@ -24,7 +25,9 @@ import {
 import type { ActionResult } from "./auth";
 
 // ---------------------------------------------------------------------------
-// Helper : vérifier session + propriété d'un cours
+// Helpers : RBAC déléguée à `lib/auth/authorization`, on ne garde ici qu'un
+// fetch utilitaire pour récupérer le status du cours (pas exposé par le helper
+// central qui ne renvoie que { id, instructorId }).
 // ---------------------------------------------------------------------------
 
 interface AuthorizedCourseContext {
@@ -32,17 +35,10 @@ interface AuthorizedCourseContext {
   isAdmin: boolean;
 }
 
-async function requireInstructor(): Promise<AuthorizedCourseContext> {
-  const session = await auth();
-  if (!session?.user) {
-    throw new Error("Vous devez être connecté.");
-  }
-  const isAdmin = session.user.role === "ADMIN";
-  if (session.user.role !== "INSTRUCTOR" && !isAdmin) {
-    throw new Error("Vous n'avez pas les droits pour cette action.");
-  }
-  return { userId: session.user.id, isAdmin };
-}
+const requireInstructor = async (): Promise<AuthorizedCourseContext> => {
+  const ctx = await requireInstructorOrAdmin();
+  return { userId: ctx.userId, isAdmin: ctx.isAdmin };
+};
 
 async function ensureCourseOwnership(courseId: string, ctx: AuthorizedCourseContext) {
   const course = await prisma.course.findUnique({
@@ -97,6 +93,7 @@ export async function becomeInstructor(): Promise<void> {
   });
 
   revalidatePath("/", "layout");
+  updateTag("public-stats");
   redirect("/formateur");
 }
 
@@ -113,6 +110,7 @@ export async function createCourse(
   const parsed = createCourseSchema.safeParse({
     title: formData.get("title"),
     categoryId: formData.get("categoryId"),
+    thumbnailUrl: formData.get("thumbnailUrl") ?? "",
   });
   if (!parsed.success) {
     return {
@@ -136,6 +134,7 @@ export async function createCourse(
       instructorId: ctx.userId,
       status: "DRAFT",
       level: "ALL_LEVELS",
+      thumbnailUrl: parsed.data.thumbnailUrl ? parsed.data.thumbnailUrl : null,
     },
   });
 
@@ -153,7 +152,7 @@ export async function updateCourseGeneral(
   formData: FormData,
 ): Promise<ActionResult> {
   const ctx = await requireInstructor();
-  await ensureCourseOwnership(courseId, ctx);
+  const course = await ensureCourseOwnership(courseId, ctx);
 
   const parsed = updateCourseGeneralSchema.safeParse({
     title: formData.get("title"),
@@ -185,6 +184,7 @@ export async function updateCourseGeneral(
   });
 
   revalidatePath(`/formateur/cours/${courseId}`);
+  if (course.status === "PUBLISHED") updateTag("courses");
   return { success: true, message: "Modifications enregistrées." };
 }
 
@@ -198,7 +198,7 @@ export async function updateCoursePricing(
   formData: FormData,
 ): Promise<ActionResult> {
   const ctx = await requireInstructor();
-  await ensureCourseOwnership(courseId, ctx);
+  const course = await ensureCourseOwnership(courseId, ctx);
 
   const parsed = updateCoursePricingSchema.safeParse({
     priceEUR: formData.get("priceEUR"),
@@ -243,6 +243,7 @@ export async function updateCoursePricing(
   });
 
   revalidatePath(`/formateur/cours/${courseId}/tarification`);
+  if (course.status === "PUBLISHED") updateTag("courses");
   return { success: true, message: "Tarification mise à jour." };
 }
 
@@ -377,6 +378,7 @@ export async function unpublishCourse(courseId: string): Promise<ActionResult> {
     data: { status: "ARCHIVED" },
   });
   revalidatePath(`/formateur/cours/${courseId}`);
+  updateTag("courses");
   return { success: true, message: "Cours archivé. Il n'est plus visible publiquement." };
 }
 

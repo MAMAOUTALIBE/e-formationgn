@@ -1,12 +1,40 @@
-// Helpers multi-devises pour les flux paiement.
+// Helpers multi-devises — module **canonique** pour tout ce qui touche aux
+// montants. Le code stocke les montants en "minor units" (Order.totalCents).
+// Pour EUR / USD c'est des centimes (×100). Pour GNF / XOF, ces devises
+// n'ont PAS de subdivision : 1 GNF = 1 unité, on stocke directement la
+// valeur entière. Ce module centralise les conversions pour éviter les
+// bugs d'arrondi croisés.
 //
-// Le code stocke les montants en "minor units" (Order.totalCents). Pour
-// EUR / USD c'est des centimes (×100). Pour GNF / XOF, ces devises n'ont
-// PAS de subdivision : 1 GNF = 1 unité, on stocke directement la valeur
-// entière. Ce module centralise les conversions pour éviter les bugs
-// d'arrondi croisés.
+// Le type `Money` (readonly amount + currency) permet de passer un montant
+// typé d'une couche à l'autre sans risquer de mélanger les devises.
+// L'ancien `lib/money.ts` re-exporte les helpers d'ici pour rétrocompat.
 
 import type { Currency } from "@/generated/prisma/enums";
+
+/**
+ * Représentation immuable d'un montant monétaire. À privilégier dans toute
+ * nouvelle signature de fonction qui prend ou retourne un prix : un seul
+ * paramètre au lieu de deux, le compilateur évite l'inversion.
+ */
+export type Money = Readonly<{ amount: number; currency: Currency }>;
+
+/** Construit une instance Money — protège contre NaN et arrondit à l'ulité. */
+export function money(amount: number, currency: Currency): Money {
+  if (!Number.isFinite(amount)) {
+    throw new TypeError(`Money: amount doit être un nombre fini (reçu ${amount})`);
+  }
+  return Object.freeze({ amount, currency });
+}
+
+/** Construit un Money depuis une valeur en minor units. */
+export function moneyFromMinor(minor: number, currency: Currency): Money {
+  return money(minorToAmount(minor, currency), currency);
+}
+
+/** Retourne la valeur d'un Money en minor units. */
+export function moneyToMinor(value: Money): number {
+  return amountToMinor(value.amount, value.currency);
+}
 
 /**
  * Multiplicateur entre une valeur en unité « affichage » (1 €, 5 GNF) et

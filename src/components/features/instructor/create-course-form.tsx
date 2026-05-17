@@ -10,6 +10,8 @@ import { Select } from "@/components/ui/select";
 import { createCourse } from "@/server/actions/instructor";
 import type { ActionResult } from "@/server/actions/auth";
 
+import { ThumbnailUploader } from "./thumbnail-uploader";
+
 const initialState: ActionResult = { success: false };
 
 interface CreateCourseFormProps {
@@ -62,9 +64,24 @@ export function CreateCourseForm({ categories }: CreateCourseFormProps) {
         </Select>
       </FormField>
 
+      <FormField
+        id="thumbnailUrl"
+        label="Photo de couverture (optionnel)"
+        error={errors.thumbnailUrl?.[0]}
+        hint="Vous pouvez la définir plus tard depuis l'onglet « Général » du cours. Sera demandée avant publication."
+      >
+        <ThumbnailUploader name="thumbnailUrl" disabled={pending} optional />
+      </FormField>
+
       <Button type="submit" className="w-full" disabled={pending}>
         {pending ? "Création…" : "Créer le brouillon"}
       </Button>
+
+      <p className="rounded-md bg-muted/50 p-3 text-xs text-muted-foreground">
+        💡 Après la création, vous pourrez ajouter description, programme, leçons
+        et <strong>vidéos</strong> depuis l&apos;onglet « Programme » du cours,
+        puis cliquer sur chaque leçon pour téléverser sa vidéo.
+      </p>
     </form>
   );
 }

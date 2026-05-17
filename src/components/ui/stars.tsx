@@ -7,6 +7,9 @@ interface StarsProps {
   size?: "sm" | "md" | "lg";
   className?: string;
   showLabel?: boolean;
+  // Si fourni, enrichit l'aria-label : « Noté 4,5 sur 5 par 243 avis ».
+  // Donne au lecteur d'écran le contexte (popularité) plutôt qu'un chiffre nu.
+  totalRatings?: number;
 }
 
 const SIZE_CLASSES = {
@@ -15,16 +18,29 @@ const SIZE_CLASSES = {
   lg: "h-5 w-5",
 } as const;
 
-export function Stars({ rating, size = "md", className, showLabel }: StarsProps) {
+export function Stars({
+  rating,
+  size = "md",
+  className,
+  showLabel,
+  totalRatings,
+}: StarsProps) {
   const clamped = Math.max(0, Math.min(5, rating));
   const rounded = Math.round(clamped * 2) / 2; // demi-étoiles
   const cls = SIZE_CLASSES[size];
+  const ratingFr = clamped.toFixed(1).replace(".", ",");
+  const ariaLabel =
+    totalRatings && totalRatings > 0
+      ? `Noté ${ratingFr} sur 5 par ${totalRatings.toLocaleString("fr-FR")} ${
+          totalRatings > 1 ? "avis" : "avis"
+        }`
+      : `Noté ${ratingFr} sur 5`;
 
   return (
     <span
       className={cn("inline-flex items-center gap-1 text-[color:var(--brand-warning)]", className)}
       role="img"
-      aria-label={`${clamped.toFixed(1)} sur 5`}
+      aria-label={ariaLabel}
     >
       <span className="inline-flex">
         {[0, 1, 2, 3, 4].map((index) => {

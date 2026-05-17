@@ -11,6 +11,7 @@ import { auth } from "@/auth";
 import { CategoryCard } from "@/components/features/courses/category-card";
 import { CategoryTabs } from "@/components/features/courses/category-tabs";
 import { CourseCard } from "@/components/features/courses/course-card";
+import { CourseCarousel } from "@/components/features/courses/course-carousel";
 import { SiteFooter } from "@/components/layout/site-footer";
 import { SiteHeader } from "@/components/layout/site-header";
 import { Badge } from "@/components/ui/badge";
@@ -19,7 +20,7 @@ import { Container } from "@/components/ui/container";
 import { getDictionary } from "@/lib/i18n/server";
 import { listFeaturedCategories } from "@/server/queries/categories";
 import {
-  listCoursesByCategorySlug,
+  listCoursesByCategorySlugs,
   listFeaturedCourses,
   listLatestCourses,
 } from "@/server/queries/courses";
@@ -34,14 +35,16 @@ export default async function HomePage() {
     await Promise.all([
       listFeaturedCategories(8),
       listFeaturedCourses(8),
-      listLatestCourses(4),
+      listLatestCourses(8),
       getPublicStats(),
     ]);
 
   const tabCategories = featuredCategories.slice(0, 5);
-  const coursesByTab = await Promise.all(
-    tabCategories.map((cat) => listCoursesByCategorySlug(cat.slug, 4)),
+  const coursesByCategorySlug = await listCoursesByCategorySlugs(
+    tabCategories.map((cat) => cat.slug),
+    8,
   );
+  const coursesByTab = tabCategories.map((cat) => coursesByCategorySlug[cat.slug] ?? []);
 
   return (
     <>
@@ -192,7 +195,7 @@ export default async function HomePage() {
 
         {/* CATÉGORIES — grille dense */}
         {featuredCategories.length > 0 ? (
-          <section className="bg-muted/30 py-16">
+          <section className="bg-muted/30 py-10">
             <Container>
               <div className="flex items-end justify-between gap-4">
                 <div>
@@ -211,7 +214,7 @@ export default async function HomePage() {
                 </Link>
               </div>
 
-              <div className="mt-8 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+              <div className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
                 {featuredCategories.map((category, index) => (
                   <CategoryCard
                     key={category.id}
@@ -226,18 +229,18 @@ export default async function HomePage() {
 
         {/* COURS POPULAIRES — onglets par catégorie */}
         {tabCategories.length > 0 && coursesByTab.some((c) => c.length > 0) ? (
-          <section className="py-16 md:py-20">
+          <section className="py-8">
             <Container>
-              <div className="mx-auto max-w-2xl text-center">
-                <h2 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
+              <div className="mx-auto max-w-5xl text-center">
+                <h2 className="text-lg font-bold tracking-tight text-foreground sm:whitespace-nowrap sm:text-xl md:text-2xl lg:text-3xl xl:text-[2rem]">
                   Des compétences pour révolutionner votre carrière
                 </h2>
-                <p className="mt-3 text-base text-muted-foreground">
+                <p className="mt-2 text-base text-muted-foreground">
                   Des cours essentiels aux sujets techniques de pointe.
                 </p>
               </div>
 
-              <div className="mt-10">
+              <div className="mt-6">
                 <CategoryTabs
                   tabs={tabCategories
                     .map((cat, index) => {
@@ -247,7 +250,7 @@ export default async function HomePage() {
                         slug: cat.slug,
                         label: cat.name,
                         content: (
-                          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
+                          <CourseCarousel>
                             {courses.map((course) => (
                               <CourseCard
                                 key={course.id}
@@ -255,7 +258,7 @@ export default async function HomePage() {
                                 currency={currency}
                               />
                             ))}
-                          </div>
+                          </CourseCarousel>
                         ),
                       };
                     })
@@ -266,7 +269,7 @@ export default async function HomePage() {
           </section>
         ) : featuredCourses.length > 0 ? (
           /* Fallback si aucune catégorie n'a de cours : on garde la grille populaires */
-          <section className="py-16 md:py-20">
+          <section className="py-10 md:py-14">
             <Container>
               <div className="mx-auto max-w-2xl text-center">
                 <h2 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
@@ -277,21 +280,23 @@ export default async function HomePage() {
                 </p>
               </div>
 
-              <div className="mt-10 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                {featuredCourses.map((course) => (
-                  <CourseCard
-                    key={course.id}
-                    course={course}
-                    currency={currency}
-                  />
-                ))}
+              <div className="mt-6">
+                <CourseCarousel>
+                  {featuredCourses.map((course) => (
+                    <CourseCard
+                      key={course.id}
+                      course={course}
+                      currency={currency}
+                    />
+                  ))}
+                </CourseCarousel>
               </div>
             </Container>
           </section>
         ) : null}
 
         {/* DARK BLOCK — Réinventez votre carrière */}
-        <section className="py-16 md:py-20">
+        <section className="py-10 md:py-14">
           <Container>
             <div className="relative overflow-hidden rounded-2xl bg-[color:var(--neutral-900)] p-8 md:p-12 lg:p-16">
               <div
@@ -303,7 +308,7 @@ export default async function HomePage() {
                 }}
               />
 
-              <div className="relative grid gap-10 md:grid-cols-[1.3fr_1fr] md:items-center">
+              <div className="relative grid gap-8 md:grid-cols-[1.3fr_1fr] md:items-center">
                 <div className="text-white">
                   <Badge
                     variant="secondary"
@@ -320,7 +325,7 @@ export default async function HomePage() {
                     francophones et préparez votre certification.
                   </p>
 
-                  <ul className="mt-8 grid gap-4 sm:grid-cols-2">
+                  <ul className="mt-6 grid gap-3 sm:grid-cols-2">
                     <Bullet
                       icon={<Sparkles className="h-4 w-4" />}
                       label="Apprenez l'IA et bien plus"
@@ -339,7 +344,7 @@ export default async function HomePage() {
                     />
                   </ul>
 
-                  <div className="mt-8 flex flex-wrap items-center gap-3">
+                  <div className="mt-6 flex flex-wrap items-center gap-3">
                     <Button
                       asChild
                       size="lg"
@@ -380,7 +385,7 @@ export default async function HomePage() {
 
         {/* NOUVEAUTÉS */}
         {latestCourses.length > 0 ? (
-          <section className="border-t border-border bg-muted/30 py-16">
+          <section className="border-t border-border bg-muted/30 py-10">
             <Container>
               <div className="flex items-end justify-between gap-4">
                 <div>
@@ -399,21 +404,23 @@ export default async function HomePage() {
                 </Link>
               </div>
 
-              <div className="mt-8 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
-                {latestCourses.map((course) => (
-                  <CourseCard
-                    key={course.id}
-                    course={course}
-                    currency={currency}
-                  />
-                ))}
+              <div className="mt-6">
+                <CourseCarousel>
+                  {latestCourses.map((course) => (
+                    <CourseCard
+                      key={course.id}
+                      course={course}
+                      currency={currency}
+                    />
+                  ))}
+                </CourseCarousel>
               </div>
             </Container>
           </section>
         ) : null}
 
         {/* DEVENIR FORMATEUR */}
-        <section className="border-t border-border bg-gradient-to-br from-[color:var(--brand-primary)] via-[color:var(--brand-violet-deep)] to-[color:var(--brand-violet)] py-16 text-white">
+        <section className="border-t border-border bg-gradient-to-br from-[color:var(--brand-primary)] via-[color:var(--brand-violet-deep)] to-[color:var(--brand-violet)] py-12 text-white">
           <Container className="grid items-center gap-8 md:grid-cols-2">
             <div>
               <h2 className="text-3xl font-bold tracking-tight">

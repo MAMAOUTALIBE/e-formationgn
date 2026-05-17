@@ -5,21 +5,12 @@
 
 import { revalidatePath } from "next/cache";
 
-import { auth } from "@/auth";
+import { requireAdmin } from "@/lib/auth/authorization";
 import { csvResponseHeaders, rowsToCsv } from "@/lib/csv";
 import { prisma } from "@/lib/prisma";
 import { listAdminUsers } from "@/server/queries/admin-users";
 
 import type { ActionResult } from "./auth";
-
-async function requireAdmin() {
-  const session = await auth();
-  if (!session?.user) throw new Error("Connectez-vous.");
-  if (session.user.role !== "ADMIN") {
-    throw new Error("Réservé à l'administrateur.");
-  }
-  return session.user;
-}
 
 async function audit(
   actorId: string,
@@ -44,7 +35,7 @@ export async function suspendUser(userId: string, reason: string): Promise<Actio
     where: { id: userId },
     data: { status: "SUSPENDED" },
   });
-  await audit(admin.id, "user.suspend", userId, { reason });
+  await audit(admin.userId, "user.suspend", userId, { reason });
   revalidatePath(`/admin/utilisateurs/${userId}`);
   return { success: true, message: "Utilisateur suspendu." };
 }
@@ -55,7 +46,7 @@ export async function reactivateUser(userId: string): Promise<ActionResult> {
     where: { id: userId },
     data: { status: "ACTIVE", bannedAt: null, bannedReason: null },
   });
-  await audit(admin.id, "user.reactivate", userId);
+  await audit(admin.userId, "user.reactivate", userId);
   revalidatePath(`/admin/utilisateurs/${userId}`);
   return { success: true, message: "Compte réactivé." };
 }
@@ -70,7 +61,7 @@ export async function banUser(userId: string, reason: string): Promise<ActionRes
       bannedReason: reason,
     },
   });
-  await audit(admin.id, "user.ban", userId, { reason });
+  await audit(admin.userId, "user.ban", userId, { reason });
   revalidatePath(`/admin/utilisateurs/${userId}`);
   return { success: true, message: "Utilisateur banni." };
 }
@@ -84,7 +75,7 @@ export async function forceVerifyEmail(userId: string): Promise<ActionResult> {
       status: "ACTIVE",
     },
   });
-  await audit(admin.id, "user.verify-email", userId);
+  await audit(admin.userId, "user.verify-email", userId);
   revalidatePath(`/admin/utilisateurs/${userId}`);
   return { success: true, message: "Email vérifié." };
 }
@@ -101,7 +92,7 @@ export async function changeUserRole(
       isInstructor: role === "INSTRUCTOR" || role === "ADMIN",
     },
   });
-  await audit(admin.id, "user.role-change", userId, { role });
+  await audit(admin.userId, "user.role-change", userId, { role });
   revalidatePath(`/admin/utilisateurs/${userId}`);
   return { success: true, message: "Rôle modifié." };
 }
@@ -115,9 +106,9 @@ export async function addAdminNoteOnUser(
     return { success: false, message: "Note trop courte." };
   }
   await prisma.adminNote.create({
-    data: { targetType: "USER", targetId: userId, body, authorId: admin.id },
+    data: { targetType: "USER", targetId: userId, body, authorId: admin.userId },
   });
-  await audit(admin.id, "user.note", userId);
+  await audit(admin.userId, "user.note", userId);
   revalidatePath(`/admin/utilisateurs/${userId}`);
   return { success: true, message: "Note enregistrée." };
 }
@@ -170,7 +161,7 @@ export async function exportUserGdprData(userId: string): Promise<ActionResult> 
   await prisma.gdprRequest.create({
     data: { userId, kind: "EXPORT", status: "PENDING" },
   });
-  await audit(admin.id, "user.gdpr-export-request", userId);
+  await audit(admin.userId, "user.gdpr-export-request", userId);
   revalidatePath(`/admin/utilisateurs/${userId}`);
   return { success: true, message: "Demande d'export RGPD enregistrée." };
 }
@@ -186,7 +177,7 @@ export async function deleteUserGdpr(userId: string): Promise<ActionResult> {
     where: { id: userId },
     data: { status: "DELETED" },
   });
-  await audit(admin.id, "user.gdpr-delete-request", userId);
+  await audit(admin.userId, "user.gdpr-delete-request", userId);
   revalidatePath("/admin/utilisateurs");
   return { success: true, message: "Demande de suppression RGPD enregistrée." };
 }

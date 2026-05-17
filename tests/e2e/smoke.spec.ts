@@ -27,14 +27,16 @@ test.describe("Smoke — pages publiques", () => {
 
   test("inscription affiche le formulaire", async ({ page }) => {
     await page.goto("/inscription");
-    await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
-    await expect(page.getByLabel(/email/i)).toBeVisible();
+    // Les pages auth utilisent <CardTitle> (h3) — pas d'h1. On vérifie les
+    // champs du formulaire qui sont le signal réel « la page a chargé ».
+    await expect(page.getByLabel(/email/i).first()).toBeVisible();
+    await expect(page.getByLabel(/mot de passe/i).first()).toBeVisible();
   });
 
   test("connexion affiche le formulaire", async ({ page }) => {
     await page.goto("/connexion");
-    await expect(page.getByLabel(/email/i)).toBeVisible();
-    await expect(page.getByLabel(/mot de passe/i)).toBeVisible();
+    await expect(page.getByLabel(/email/i).first()).toBeVisible();
+    await expect(page.getByLabel(/mot de passe/i).first()).toBeVisible();
   });
 
   test("admin sans session est redirigé", async ({ page }) => {

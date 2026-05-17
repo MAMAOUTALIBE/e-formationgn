@@ -1,5 +1,7 @@
 // Queries serveur — catégories.
 
+import { unstable_cache } from "next/cache";
+
 import type { Prisma } from "@/generated/prisma/client";
 import { prisma } from "@/lib/prisma";
 
@@ -33,14 +35,18 @@ export async function getCategoryBySlug(slug: string): Promise<CategoryWithCount
   return category as CategoryWithCount;
 }
 
-export async function listFeaturedCategories(limit = 8): Promise<CategoryWithCount[]> {
-  // Pour l'instant : les premières catégories par displayOrder.
-  // À terme : pondérer par nombre de cours / popularité.
-  const categories = await prisma.category.findMany({
-    where: { isActive: true, parentId: null },
-    include: CATEGORY_LIST_INCLUDE,
-    orderBy: [{ displayOrder: "asc" }, { name: "asc" }],
-    take: limit,
-  });
-  return categories as CategoryWithCount[];
-}
+export const listFeaturedCategories = unstable_cache(
+  async (limit = 8): Promise<CategoryWithCount[]> => {
+    // Pour l'instant : les premières catégories par displayOrder.
+    // À terme : pondérer par nombre de cours / popularité.
+    const categories = await prisma.category.findMany({
+      where: { isActive: true, parentId: null },
+      include: CATEGORY_LIST_INCLUDE,
+      orderBy: [{ displayOrder: "asc" }, { name: "asc" }],
+      take: limit,
+    });
+    return categories as CategoryWithCount[];
+  },
+  ["featured-categories"],
+  { revalidate: 3600, tags: ["categories", "courses"] },
+);

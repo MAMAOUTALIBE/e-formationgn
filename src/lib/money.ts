@@ -1,26 +1,46 @@
-// Helpers de manipulation des montants.
+// Shim de rétrocompat : les helpers de manipulation de montants vivent
+// désormais dans `lib/payments/currency.ts` (module canonique multi-devises).
+// Ce fichier ne reste que pour éviter de toucher ~30 import sites.
 //
-// Convention : montants stockés en « minor units » (entiers) côté serveur.
-// EUR / USD : centimes. GNF / XOF : pas de subdivision (1 GNF = 1 unité).
-// On ne convertit en flottants qu'à l'affichage.
-//
-// Module historique conservé pour rétrocompat (formatPriceFromCents). Les
-// nouveaux flux paiements (CinetPay) utilisent `lib/payments/currency.ts`
-// qui gère natif les 4 devises.
+// Préférer les nouveaux noms `amountToMinor`/`minorToAmount`/`formatMinor`
+// et le type `Money` (Readonly<{amount, currency}>) dans tout nouveau code.
 
 import type { Currency } from "@/generated/prisma/enums";
 
+import {
+  amountToMinor,
+  formatMinor,
+  minorToAmount,
+} from "@/lib/payments/currency";
+
+export type { Money } from "@/lib/payments/currency";
+export {
+  money,
+  moneyFromMinor,
+  moneyToMinor,
+  amountToMinor,
+  minorToAmount,
+  formatMinor,
+} from "@/lib/payments/currency";
+
 export type SupportedCurrency = "EUR" | "USD" | "GNF" | "XOF";
 
+/** @deprecated Préférer `minorToAmount` (mêmes garanties). */
 export function centsToAmount(cents: number, currency: Currency = "EUR"): number {
-  // EUR / USD = centimes. GNF / XOF = unités entières.
-  const divisor = currency === "GNF" || currency === "XOF" ? 1 : 100;
-  return cents / divisor;
+  return minorToAmount(cents, currency);
 }
 
+/** @deprecated Préférer `amountToMinor`. */
 export function amountToCents(amount: number, currency: Currency = "EUR"): number {
-  const multiplier = currency === "GNF" || currency === "XOF" ? 1 : 100;
-  return Math.round(amount * multiplier);
+  return amountToMinor(amount, currency);
+}
+
+/** @deprecated Préférer `formatMinor`. */
+export function formatPriceFromCents(
+  cents: number,
+  currency: SupportedCurrency | Currency = "EUR",
+): string {
+  return formatMinor(cents, currency as Currency);
 }
 
 const CURRENCY_LOCALES: Record<SupportedCurrency, string> = {
@@ -30,21 +50,11 @@ const CURRENCY_LOCALES: Record<SupportedCurrency, string> = {
   XOF: "fr-FR",
 };
 
-export function formatPriceFromCents(
-  cents: number,
-  currency: SupportedCurrency | Currency = "EUR",
-): string {
-  const isWholeUnitCurrency = currency === "GNF" || currency === "XOF";
-  const fractionDigits = isWholeUnitCurrency ? 0 : 2;
-  const locale = CURRENCY_LOCALES[currency as SupportedCurrency] ?? "fr-FR";
-  return new Intl.NumberFormat(locale, {
-    style: "currency",
-    currency: currency as string,
-    minimumFractionDigits: fractionDigits,
-    maximumFractionDigits: fractionDigits,
-  }).format(centsToAmount(cents, currency as Currency));
-}
-
+/**
+ * Formate un montant déjà en unité d'affichage (€ humain) — distinct de
+ * `formatMinor` qui prend une valeur en minor units. Utilise Intl.NumberFormat
+ * avec le style "currency" (donc symbole localisé `€` / `$` / `FG` / `FCFA`).
+ */
 export function formatPrice(
   amount: number,
   currency: SupportedCurrency = "EUR",

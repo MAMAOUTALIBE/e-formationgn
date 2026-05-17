@@ -1,21 +1,19 @@
 import type { Metadata } from "next";
 
 import { auth } from "@/auth";
-import { CourseFilters } from "@/components/features/courses/course-filters";
+import { CourseEmptyState } from "@/components/features/courses/course-empty-state";
+import { CourseFilterBar } from "@/components/features/courses/course-filter-bar";
 import { CourseGrid } from "@/components/features/courses/course-grid";
+import { CourseMobileFilterBar } from "@/components/features/courses/course-mobile-filter-bar";
 import { CoursePagination } from "@/components/features/courses/course-pagination";
 import { CourseSearchBar } from "@/components/features/courses/course-search-bar";
-import { CourseSort } from "@/components/features/courses/course-sort";
 import { SiteFooter } from "@/components/layout/site-footer";
 import { SiteHeader } from "@/components/layout/site-header";
 import { Breadcrumbs } from "@/components/ui/breadcrumbs";
 import { Container } from "@/components/ui/container";
 import { listCategories } from "@/server/queries/categories";
 import { listPublishedCourses } from "@/server/queries/courses";
-import {
-  COURSES_PER_PAGE,
-  courseFiltersSchema,
-} from "@/lib/validators/courses";
+import { COURSES_PER_PAGE, courseFiltersSchema } from "@/lib/validators/courses";
 
 export const metadata: Metadata = {
   title: "Catalogue des cours",
@@ -42,12 +40,7 @@ export default async function CoursesCatalogPage({ searchParams }: PageProps) {
     listCategories(),
   ]);
 
-  // searchParams plat pour la pagination (string seulement, on retire page)
-  const flatParams: Record<string, string | string[] | undefined> = {};
-  for (const [key, value] of Object.entries(params)) {
-    if (key === "page") continue;
-    flatParams[key] = value;
-  }
+  const categoryOptions = categories.map((c) => ({ slug: c.slug, name: c.name }));
 
   return (
     <>
@@ -70,31 +63,28 @@ export default async function CoursesCatalogPage({ searchParams }: PageProps) {
             <CourseSearchBar />
           </header>
 
-          <div className="grid gap-8 lg:grid-cols-[280px_1fr]">
-            <CourseFilters
-              categories={categories.map((c) => ({ slug: c.slug, name: c.name }))}
-            />
+          <CourseFilterBar
+            categories={categoryOptions}
+            className="hidden sm:flex"
+          />
 
-            <div className="space-y-6">
-              <div className="flex items-center justify-between gap-4">
-                <p className="text-sm text-muted-foreground">
-                  Page {page} sur {pageCount}
-                </p>
-                <CourseSort />
-              </div>
-
+          {items.length === 0 ? (
+            <CourseEmptyState basePath="/cours" />
+          ) : (
+            <>
               <CourseGrid courses={items} currency={currency} />
-
               <CoursePagination
                 currentPage={page}
                 pageCount={pageCount}
-                searchParams={flatParams}
+                searchParams={params}
                 basePath="/cours"
               />
-            </div>
-          </div>
+            </>
+          )}
         </Container>
       </main>
+
+      <CourseMobileFilterBar categories={categoryOptions} />
 
       <SiteFooter />
     </>

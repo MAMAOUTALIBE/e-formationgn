@@ -5,6 +5,11 @@ import { revalidatePath } from "next/cache";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import {
+  markLessonCompleted,
+  recordLessonProgressFields,
+  unmarkLessonCompleted,
+} from "@/server/services/lesson-completion";
+import {
   lessonNoteSchema,
   lessonProgressSchema,
 } from "@/lib/validators/learning";
@@ -29,30 +34,6 @@ async function requireLessonAccess(userId: string, lessonId: string) {
   return { lesson, courseId: lesson.section.courseId };
 }
 
-async function recomputeAndPersistEnrollmentProgress(
-  userId: string,
-  courseId: string,
-) {
-  const [total, completed] = await Promise.all([
-    prisma.lesson.count({ where: { section: { courseId } } }),
-    prisma.lessonProgress.count({
-      where: { userId, isCompleted: true, lesson: { section: { courseId } } },
-    }),
-  ]);
-  const percent = total === 0 ? 0 : Math.round((completed / total) * 100);
-  const completedAt = total > 0 && completed === total ? new Date() : null;
-
-  await prisma.enrollment.update({
-    where: { userId_courseId: { userId, courseId } },
-    data: {
-      progressPercent: percent,
-      lastAccessedAt: new Date(),
-      completedAt: completedAt ?? undefined,
-    },
-  });
-  return { percent, totalLessons: total, completedLessons: completed };
-}
-
 export async function recordLessonProgress(
   input: unknown,
 ): Promise<ActionResult & { progressPercent?: number }> {
@@ -67,37 +48,39 @@ export async function recordLessonProgress(
   const userId = session.user.id;
   const { courseId } = await requireLessonAccess(userId, parsed.data.lessonId);
 
-  const data: {
-    watchedSeconds?: number;
-    lastPositionSeconds?: number;
-    isCompleted?: boolean;
-    completedAt?: Date | null;
-  } = {};
-  if (parsed.data.watchedSeconds !== undefined) data.watchedSeconds = parsed.data.watchedSeconds;
-  if (parsed.data.lastPositionSeconds !== undefined)
-    data.lastPositionSeconds = parsed.data.lastPositionSeconds;
-  if (parsed.data.isCompleted !== undefined) {
-    data.isCompleted = parsed.data.isCompleted;
-    data.completedAt = parsed.data.isCompleted ? new Date() : null;
-  }
-
-  await prisma.lessonProgress.upsert({
-    where: {
-      userId_lessonId: { userId, lessonId: parsed.data.lessonId },
-    },
-    update: data,
-    create: {
+  // Trois cas :
+  // - isCompleted === true   → délègue à markLessonCompleted (transaction +
+  //   recompute Enrollment.progressPercent atomique)
+  // - isCompleted === false  → délègue à unmarkLessonCompleted
+  // - isCompleted undefined  → update partiel des métriques vidéo seulement,
+  //   pas besoin de recompute (le pourcentage ne change pas)
+  if (parsed.data.isCompleted === true) {
+    const result = await markLessonCompleted({
       userId,
       lessonId: parsed.data.lessonId,
-      watchedSeconds: data.watchedSeconds ?? 0,
-      lastPositionSeconds: data.lastPositionSeconds ?? 0,
-      isCompleted: data.isCompleted ?? false,
-      completedAt: data.completedAt ?? null,
-    },
-  });
+      courseId,
+      watchedSeconds: parsed.data.watchedSeconds,
+      lastPositionSeconds: parsed.data.lastPositionSeconds,
+    });
+    return { success: true, progressPercent: result.progressPercent };
+  }
 
-  const stats = await recomputeAndPersistEnrollmentProgress(userId, courseId);
-  return { success: true, progressPercent: stats.percent };
+  if (parsed.data.isCompleted === false) {
+    const result = await unmarkLessonCompleted({
+      userId,
+      lessonId: parsed.data.lessonId,
+      courseId,
+    });
+    return { success: true, progressPercent: result.progressPercent };
+  }
+
+  await recordLessonProgressFields({
+    userId,
+    lessonId: parsed.data.lessonId,
+    watchedSeconds: parsed.data.watchedSeconds,
+    lastPositionSeconds: parsed.data.lastPositionSeconds,
+  });
+  return { success: true };
 }
 
 export async function toggleLessonCompletion(lessonId: string): Promise<ActionResult> {
@@ -113,18 +96,11 @@ export async function toggleLessonCompletion(lessonId: string): Promise<ActionRe
   });
 
   const nextCompleted = !(existing?.isCompleted ?? false);
-  await prisma.lessonProgress.upsert({
-    where: { userId_lessonId: { userId, lessonId } },
-    update: { isCompleted: nextCompleted, completedAt: nextCompleted ? new Date() : null },
-    create: {
-      userId,
-      lessonId,
-      isCompleted: nextCompleted,
-      completedAt: nextCompleted ? new Date() : null,
-    },
-  });
-
-  await recomputeAndPersistEnrollmentProgress(userId, courseId);
+  if (nextCompleted) {
+    await markLessonCompleted({ userId, lessonId, courseId });
+  } else {
+    await unmarkLessonCompleted({ userId, lessonId, courseId });
+  }
 
   const lesson = await prisma.lesson.findUnique({
     where: { id: lessonId },

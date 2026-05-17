@@ -223,6 +223,37 @@ export async function requireLessonOwnership(
   };
 }
 
+export interface EnrollmentContext {
+  enrollment: { id: string; courseId: string; userId: string };
+  userId: string;
+}
+
+/**
+ * Vérifie qu'un utilisateur est inscrit (Enrollment) à un cours donné.
+ * Renvoie l'enrollment + l'userId. Throw FORBIDDEN si pas inscrit, NOT_FOUND
+ * si le cours n'existe pas dans la table Enrollment pour cet utilisateur.
+ *
+ * À utiliser par toutes les Server Actions « réservées aux inscrits » :
+ * tutor.askLessonTutor, qa.createQuestion, reviews.upsertReview,
+ * learning.markLessonComplete, quiz.submitQuizAttempt, certificates.issue, etc.
+ */
+export async function requireCourseEnrollment(
+  courseId: string,
+): Promise<EnrollmentContext> {
+  const { userId } = await requireSession();
+  const enrollment = await prisma.enrollment.findUnique({
+    where: { userId_courseId: { userId, courseId } },
+    select: { id: true, courseId: true, userId: true },
+  });
+  if (!enrollment) {
+    throw new AuthorizationError(
+      "FORBIDDEN",
+      "Vous devez être inscrit à ce cours pour effectuer cette action.",
+    );
+  }
+  return { enrollment, userId };
+}
+
 // ---------------------------------------------------------------------------
 // Conversion Error → ActionResult
 // ---------------------------------------------------------------------------

@@ -6,6 +6,7 @@ import { revalidatePath } from "next/cache";
 
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
+import { markLessonCompleted } from "@/server/services/lesson-completion";
 import {
   quizAttemptSubmitSchema,
   quizMetaSchema,
@@ -247,11 +248,17 @@ export async function submitQuizAttempt(
     totalPoints === 0 ? 0 : Math.round((earnedPoints / totalPoints) * 100);
   const passed = score >= quiz.passingScore;
 
+  // Tout dans une seule transaction : QuizAttempt + QuizAnswers + (si passé)
+  // marquage LessonProgress.isCompleted=true + recompute progressPercent.
+  // Avant cette refonte, le upsert LessonProgress était hors transaction —
+  // un crash entre les deux laissait un attempt enregistré mais la leçon non
+  // complétée (et le pourcentage de progression non recalculé du tout).
+  const userId = session.user.id;
   const attempt = await prisma.$transaction(async (tx) => {
     const created = await tx.quizAttempt.create({
       data: {
         quizId,
-        userId: session.user!.id,
+        userId,
         score,
         passed,
         completedAt: new Date(),
@@ -284,24 +291,19 @@ export async function submitQuizAttempt(
         }
       }
     }
+
+    if (passed) {
+      await markLessonCompleted(
+        {
+          userId,
+          lessonId: quiz.lessonId,
+          courseId: quiz.lesson.section.courseId,
+        },
+        tx,
+      );
+    }
     return created;
   });
-
-  // Mark lesson as complete on pass
-  if (passed) {
-    await prisma.lessonProgress.upsert({
-      where: {
-        userId_lessonId: { userId: session.user.id, lessonId: quiz.lessonId },
-      },
-      update: { isCompleted: true, completedAt: new Date() },
-      create: {
-        userId: session.user.id,
-        lessonId: quiz.lessonId,
-        isCompleted: true,
-        completedAt: new Date(),
-      },
-    });
-  }
 
   revalidatePath(`/apprentissage`);
   return {

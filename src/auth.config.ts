@@ -52,6 +52,7 @@ const PUBLIC_ROUTES = [
   "/mentions-legales",
   "/confidentialite",
   "/cookies",
+  "/credits",
 ];
 
 // Routes d'authentification (un user déjà connecté est redirigé vers la home)
@@ -130,6 +131,10 @@ export const authConfig = {
 
       // Tracking page-view (analytics) — toujours accessible (auth optionnelle).
       if (pathname === "/api/track") return true;
+
+      // OG image dynamique — appelée par les bots sociaux (Twitter, Facebook,
+      // LinkedIn, …). Toujours publique.
+      if (pathname === "/api/og") return true;
 
       // Vercel Cron — auth via Bearer token côté route.
       if (pathname.startsWith("/api/cron/")) return true;

@@ -4,20 +4,11 @@
 
 import { revalidatePath } from "next/cache";
 
-import { auth } from "@/auth";
+import { requireAdmin } from "@/lib/auth/authorization";
 import { prisma } from "@/lib/prisma";
 import { sendEmailCampaign } from "@/server/services/email-campaign";
 
 import type { ActionResult } from "./auth";
-
-async function requireAdmin() {
-  const session = await auth();
-  if (!session?.user) throw new Error("Connectez-vous.");
-  if (session.user.role !== "ADMIN") {
-    throw new Error("Réservé à l'administrateur.");
-  }
-  return session.user;
-}
 
 async function audit(actorId: string, action: string, targetType: string, targetId: string) {
   await prisma.auditLog.create({
@@ -40,7 +31,7 @@ export async function createEmailTemplate(formData: FormData): Promise<ActionRes
   const tpl = await prisma.emailTemplate.create({
     data: { slug, name, subject, bodyText, bodyHtml },
   });
-  await audit(admin.id, "email-template.create", "EmailTemplate", tpl.id);
+  await audit(admin.userId, "email-template.create", "EmailTemplate", tpl.id);
   revalidatePath("/admin/marketing/campagnes-email");
   return { success: true, message: "Template créé." };
 }
@@ -48,7 +39,7 @@ export async function createEmailTemplate(formData: FormData): Promise<ActionRes
 export async function deleteEmailTemplate(id: string): Promise<ActionResult> {
   const admin = await requireAdmin();
   await prisma.emailTemplate.delete({ where: { id } });
-  await audit(admin.id, "email-template.delete", "EmailTemplate", id);
+  await audit(admin.userId, "email-template.delete", "EmailTemplate", id);
   revalidatePath("/admin/marketing/campagnes-email");
   return { success: true };
 }
@@ -59,7 +50,7 @@ export async function dispatchEmailCampaign(
   const admin = await requireAdmin();
   try {
     const result = await sendEmailCampaign(campaignId);
-    await audit(admin.id, "email-campaign.send", "EmailCampaign", campaignId);
+    await audit(admin.userId, "email-campaign.send", "EmailCampaign", campaignId);
     revalidatePath("/admin/marketing/campagnes-email");
     return {
       success: true,
@@ -89,7 +80,7 @@ export async function createEmailCampaign(formData: FormData): Promise<ActionRes
       status: "DRAFT",
     },
   });
-  await audit(admin.id, "email-campaign.create", "EmailCampaign", c.id);
+  await audit(admin.userId, "email-campaign.create", "EmailCampaign", c.id);
   revalidatePath("/admin/marketing/campagnes-email");
   return { success: true, message: "Campagne créée." };
 }
@@ -110,7 +101,7 @@ export async function createBanner(formData: FormData): Promise<ActionResult> {
   const b = await prisma.sitewideBanner.create({
     data: { message, ctaLabel, ctaUrl, kind, isActive },
   });
-  await audit(admin.id, "banner.create", "SitewideBanner", b.id);
+  await audit(admin.userId, "banner.create", "SitewideBanner", b.id);
   revalidatePath("/admin/marketing/promotions");
   return { success: true, message: "Bannière créée." };
 }
@@ -121,7 +112,7 @@ export async function toggleBanner(id: string, active: boolean): Promise<ActionR
     where: { id },
     data: { isActive: active },
   });
-  await audit(admin.id, "banner.toggle", "SitewideBanner", id);
+  await audit(admin.userId, "banner.toggle", "SitewideBanner", id);
   revalidatePath("/admin/marketing/promotions");
   return { success: true };
 }
@@ -129,7 +120,7 @@ export async function toggleBanner(id: string, active: boolean): Promise<ActionR
 export async function deleteBanner(id: string): Promise<ActionResult> {
   const admin = await requireAdmin();
   await prisma.sitewideBanner.delete({ where: { id } });
-  await audit(admin.id, "banner.delete", "SitewideBanner", id);
+  await audit(admin.userId, "banner.delete", "SitewideBanner", id);
   revalidatePath("/admin/marketing/promotions");
   return { success: true };
 }

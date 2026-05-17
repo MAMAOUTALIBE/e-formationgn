@@ -34,24 +34,26 @@ test.describe("Sécurité — recherche publique", () => {
 });
 
 test.describe("Sécurité — open-redirect via callbackUrl", () => {
+  // Le test vérifie que la **page courante** reste sur le domaine local
+  // (host = localhost / 127.0.0.1) après la navigation. Le query string peut
+  // contenir la chaîne malveillante — ce qui compte c'est qu'aucune
+  // redirection externe n'ait eu lieu.
   test("callbackUrl externe ne redirige pas vers un autre site", async ({
     page,
+    baseURL,
   }) => {
-    // L'utilisateur n'est pas connecté : la page connexion s'affiche, mais
-    // le formulaire submit DOIT ignorer une URL externe.
     await page.goto("/connexion?callbackUrl=https://evil.example.com/steal");
-    // On vérifie surtout que l'URL de la page reste sur le domaine local.
+    expect(new URL(page.url()).host).toBe(new URL(baseURL!).host);
     expect(page.url()).toContain("/connexion");
-    expect(page.url()).not.toContain("evil.example.com");
   });
 
   test("callbackUrl protocol-relative (//evil) n'est pas suivi", async ({
     page,
+    baseURL,
   }) => {
     await page.goto("/connexion?callbackUrl=//evil.example.com/x");
+    expect(new URL(page.url()).host).toBe(new URL(baseURL!).host);
     expect(page.url()).toContain("/connexion");
-    // L'attaque //evil ne doit pas remplacer le host courant.
-    expect(page.url()).not.toContain("//evil.example.com");
   });
 });
 
@@ -106,5 +108,53 @@ test.describe("Sécurité — cron endpoint", () => {
       headers: { authorization: "Bearer wrong-token" },
     });
     expect(response.status()).toBe(401);
+  });
+});
+
+test.describe("Sécurité — routes publiques (régression Sprint 1/3)", () => {
+  test("/credits est public (200, pas de redirect vers /connexion)", async ({
+    request,
+  }) => {
+    // Régression Sprint 1 : avait été oubliée dans PUBLIC_ROUTES et tombait en
+    // 302 → /connexion. Les pages de mentions / attributions doivent rester
+    // accessibles sans session.
+    const response = await request.get("/credits", { maxRedirects: 0 });
+    expect(response.status()).toBe(200);
+  });
+
+  test("/api/og est public (le bot social n'a pas de cookies)", async ({
+    request,
+  }) => {
+    // Régression Sprint 3 : sans la whitelist dans auth.config, le crawler
+    // Twitter/LinkedIn se prendrait un 302 et l'image ne serait jamais générée.
+    const response = await request.get("/api/og", { maxRedirects: 0 });
+    expect(response.status()).toBe(200);
+    expect(response.headers()["content-type"]).toContain("image/png");
+  });
+
+  test("/api/track accepte POST (analytics anonymes)", async ({ request }) => {
+    const response = await request.post("/api/track", {
+      data: { path: "/test" },
+      headers: { "content-type": "application/json" },
+    });
+    // 200 ou 204 — l'important c'est qu'on n'ait pas de 401/403/302.
+    expect([200, 204]).toContain(response.status());
+  });
+});
+
+test.describe("Sécurité — en-têtes HTTP globaux", () => {
+  test("la home expose les en-têtes de sécurité critiques", async ({
+    request,
+  }) => {
+    const response = await request.get("/");
+    const headers = response.headers();
+    // Définis dans next.config.ts.
+    expect(headers["x-frame-options"]).toBe("DENY");
+    expect(headers["x-content-type-options"]).toBe("nosniff");
+    expect(headers["strict-transport-security"]).toContain("max-age");
+    expect(headers["referrer-policy"]).toBe("strict-origin-when-cross-origin");
+    expect(headers["permissions-policy"]).toContain("camera=()");
+    // CSP en report-only — surveillé mais pas bloquant.
+    expect(headers["content-security-policy-report-only"]).toBeTruthy();
   });
 });

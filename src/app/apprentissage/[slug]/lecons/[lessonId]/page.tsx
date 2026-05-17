@@ -4,24 +4,34 @@ import { notFound, redirect } from "next/navigation";
 import { ArrowLeft, ArrowRight, Download } from "lucide-react";
 
 import { auth } from "@/auth";
+import { CourseAnnouncements } from "@/components/features/learning/course-announcements";
+import {
+  FocusModeProvider,
+  FocusModeToggle,
+} from "@/components/features/learning/focus-mode-provider";
+import { LearningHeader } from "@/components/features/learning/learning-header";
+import { LearningSidebar } from "@/components/features/learning/learning-sidebar";
+import { LearningTabs } from "@/components/features/learning/learning-tabs";
+import { LessonBookmarkButton } from "@/components/features/learning/lesson-bookmark-button";
 import { LessonCompletionToggle } from "@/components/features/learning/lesson-completion-toggle";
 import { LessonNotes } from "@/components/features/learning/lesson-notes";
 import { LessonPlayer } from "@/components/features/learning/lesson-player";
-import { LessonSidebar } from "@/components/features/learning/lesson-sidebar";
 import { LessonTutor } from "@/components/features/learning/lesson-tutor";
 import { QuizAttempt } from "@/components/features/learning/quiz-attempt";
-import { SiteFooter } from "@/components/layout/site-footer";
-import { SiteHeader } from "@/components/layout/site-header";
+import { CourseReviewsList } from "@/components/features/courses/course-reviews-list";
+import { ReviewForm } from "@/components/features/reviews/review-form";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Breadcrumbs } from "@/components/ui/breadcrumbs";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Container } from "@/components/ui/container";
+import { Card, CardContent } from "@/components/ui/card";
 import {
+  getCourseReviewsForLearner,
   getLearningCourse,
   getLessonNotes,
   getLessonProgress,
+  getMyReviewForCourse,
   getQuizForLearner,
+  isLessonBookmarked,
+  listCourseAnnouncements,
 } from "@/server/queries/learning";
 
 export const metadata: Metadata = {
@@ -43,7 +53,6 @@ export default async function LessonViewerPage({ params }: PageProps) {
   if (!data) redirect(`/cours/${slug}`);
   const { course } = data;
 
-  // Trouve la leçon dans les sections
   const flatLessons = course.sections.flatMap((s) =>
     s.lessons.map((l) => ({ ...l, sectionId: s.id })),
   );
@@ -53,36 +62,270 @@ export default async function LessonViewerPage({ params }: PageProps) {
   const previous = flatLessons[lessonIndex - 1] ?? null;
   const next = flatLessons[lessonIndex + 1] ?? null;
 
-  const [progressList, notes, quiz] = await Promise.all([
+  const [
+    progressList,
+    notes,
+    quiz,
+    bookmarked,
+    announcements,
+    reviewsBundle,
+    myReview,
+  ] = await Promise.all([
     getLessonProgress(session.user.id, course.id),
     getLessonNotes(session.user.id, lessonId),
     lesson.type === "QUIZ"
       ? (async () => {
-          // Trouve le quiz lié
           const quizRecord = await import("@/lib/prisma").then(({ prisma }) =>
             prisma.quiz.findUnique({ where: { lessonId } }),
           );
           return quizRecord ? getQuizForLearner(quizRecord.id) : null;
         })()
       : Promise.resolve(null),
+    isLessonBookmarked(session.user.id, lessonId),
+    listCourseAnnouncements(course.id),
+    getCourseReviewsForLearner(course.id, 20),
+    getMyReviewForCourse(session.user.id, course.id),
   ]);
   const completedIds = new Set(
     progressList.filter((p) => p.isCompleted).map((p) => p.lessonId),
   );
   const lessonProgress = progressList.find((p) => p.lessonId === lessonId);
 
+  const totalLessons = flatLessons.length;
+  const completedLessons = flatLessons.filter((l) => completedIds.has(l.id)).length;
+  const progressPercent =
+    totalLessons === 0 ? 0 : Math.round((completedLessons / totalLessons) * 100);
+
+  // --- Onglets sous le player ------------------------------------------------
+  const presentationContent = (
+    <div className="space-y-6">
+      {lesson.description ? (
+        <div>
+          <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+            À propos de cette leçon
+          </h2>
+          <p className="text-sm text-foreground">{lesson.description}</p>
+        </div>
+      ) : null}
+
+      {lesson.aiSummary ? (
+        <Card className="border-[color:var(--brand-secondary)]/30 bg-[color:var(--brand-secondary)]/5">
+          <CardContent className="p-5">
+            <div className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-[color:var(--brand-secondary)]">
+              <span>Résumé pédagogique</span>
+              <span className="rounded bg-background/50 px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
+                IA
+              </span>
+            </div>
+            <div className="prose prose-sm max-w-none whitespace-pre-line text-foreground">
+              {lesson.aiSummary}
+            </div>
+          </CardContent>
+        </Card>
+      ) : null}
+
+      {lesson.textContent ? (
+        <div className="prose prose-sm max-w-none whitespace-pre-line text-foreground">
+          {lesson.textContent}
+        </div>
+      ) : null}
+
+      {!lesson.description && !lesson.aiSummary && !lesson.textContent ? (
+        <p className="text-sm text-muted-foreground">
+          Pas de description disponible pour cette leçon.
+        </p>
+      ) : null}
+    </div>
+  );
+
+  const notesContent = <LessonNotes lessonId={lesson.id} initialNotes={notes} />;
+  const tutorContent = <LessonTutor lessonId={lesson.id} />;
+  const announcementsContent = <CourseAnnouncements announcements={announcements} />;
+
+  const reviewsContent = (
+    <div className="space-y-8">
+      <CourseReviewsList
+        reviews={reviewsBundle.reviews}
+        averageRating={reviewsBundle.averageRating}
+        totalRatings={reviewsBundle.totalRatings}
+      />
+      <div>
+        <h3 className="mb-2 text-sm font-semibold text-foreground">
+          {myReview ? "Modifier votre avis" : "Donnez votre avis"}
+        </h3>
+        <ReviewForm
+          courseId={course.id}
+          initial={
+            myReview
+              ? {
+                  rating: myReview.rating,
+                  title: myReview.title ?? "",
+                  comment: myReview.comment ?? "",
+                }
+              : undefined
+          }
+        />
+      </div>
+    </div>
+  );
+
+  const resourcesContent = lesson.resourceUrl ? (
+    <div className="space-y-3">
+      <p className="text-sm text-foreground">
+        Cette leçon contient une ressource téléchargeable.
+      </p>
+      <Button asChild>
+        <Link href={lesson.resourceUrl} target="_blank" rel="noopener noreferrer">
+          <Download className="h-4 w-4" />
+          {lesson.resourceFileName ?? "Télécharger"}
+        </Link>
+      </Button>
+    </div>
+  ) : (
+    <p className="text-sm text-muted-foreground">
+      Aucune ressource attachée à cette leçon.
+    </p>
+  );
+
+  const tabs = [
+    { key: "presentation", label: "Présentation", content: presentationContent },
+    { key: "notes", label: "Mes notes", content: notesContent },
+    {
+      key: "announcements",
+      label: "Annonces",
+      badge: announcements.length > 0 ? announcements.length : undefined,
+      content: announcementsContent,
+    },
+    {
+      key: "reviews",
+      label: "Évaluations",
+      badge: reviewsBundle.totalRatings > 0 ? reviewsBundle.totalRatings : undefined,
+      content: reviewsContent,
+    },
+    { key: "tutor", label: "Tuteur IA", content: tutorContent },
+    { key: "resources", label: "Ressources", content: resourcesContent },
+  ];
+
   return (
-    <>
-      <SiteHeader />
+    <FocusModeProvider>
+      <LearningHeader
+        courseSlug={course.slug}
+        courseTitle={course.title}
+        progressPercent={progressPercent}
+        rightSlot={<FocusModeToggle />}
+      />
+
       <main className="flex-1 bg-muted/20">
-        <Container className="grid gap-6 py-6 lg:grid-cols-[280px_1fr]">
-          {/* Sur mobile/tablette < lg, l'aside (programme) passe SOUS le
-              contenu principal pour que le player vidéo soit immédiatement
-              visible. Sur desktop ≥ lg, l'aside reprend sa place à gauche
-              en sticky. */}
-          <aside className="order-2 rounded-lg border border-border bg-card p-4 lg:order-1 lg:sticky lg:top-20 lg:self-start">
-            <h2 className="mb-3 text-sm font-semibold text-foreground">{course.title}</h2>
-            <LessonSidebar
+        <div
+          data-learning-grid
+          className="mx-auto grid w-full max-w-[1600px] gap-0 lg:grid-cols-[minmax(0,1fr)_360px]"
+        >
+          {/* ── Colonne principale : player + tabs ───────────────────── */}
+          <section className="order-1 min-w-0 bg-card">
+            <div className="bg-black">
+              <div className="mx-auto w-full max-w-[1280px]">
+                {lesson.type === "VIDEO" ? (
+                  lesson.muxPlaybackId || lesson.externalVideoUrl ? (
+                    <LessonPlayer
+                      playbackId={lesson.muxPlaybackId}
+                      externalVideoUrl={lesson.externalVideoUrl}
+                      lessonId={lesson.id}
+                      initialPositionSeconds={lessonProgress?.lastPositionSeconds ?? 0}
+                      durationSeconds={lesson.videoDurationSeconds}
+                      title={lesson.title}
+                    />
+                  ) : (
+                    <div className="flex aspect-video items-center justify-center bg-black/90 px-6 text-center text-sm text-muted-foreground">
+                      Cette leçon vidéo n&apos;a pas encore été uploadée par le formateur.
+                    </div>
+                  )
+                ) : null}
+
+                {lesson.type === "QUIZ" ? (
+                  <div className="bg-muted/40 p-6">
+                    {quiz && quiz.questions.length > 0 ? (
+                      <QuizAttempt
+                        quizId={quiz.id}
+                        passingScore={quiz.passingScore}
+                        questions={quiz.questions.map((q) => ({
+                          id: q.id,
+                          prompt: q.prompt,
+                          kind: q.kind,
+                          options: q.options.map((o) => ({ id: o.id, label: o.label })),
+                        }))}
+                      />
+                    ) : (
+                      <Alert variant="info">
+                        <AlertDescription>
+                          Le quiz n&apos;a pas encore de questions.
+                        </AlertDescription>
+                      </Alert>
+                    )}
+                  </div>
+                ) : null}
+
+                {lesson.type === "TEXT" || lesson.type === "RESOURCE" ? (
+                  <div className="flex min-h-[40vh] items-center justify-center bg-card p-6 text-sm text-muted-foreground">
+                    Contenu disponible dans l&apos;onglet « Présentation » ci-dessous.
+                  </div>
+                ) : null}
+              </div>
+            </div>
+
+            {/* Barre titre + nav + bookmark + complétion */}
+            <div className="border-b border-border bg-card px-4 py-4 sm:px-6">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <h1 className="min-w-0 truncate text-base font-semibold text-foreground sm:text-lg">
+                  {lesson.title}
+                </h1>
+                <div className="flex flex-wrap items-center gap-2">
+                  {previous ? (
+                    <Button asChild variant="outline" size="sm">
+                      <Link href={`/apprentissage/${course.slug}/lecons/${previous.id}`}>
+                        <ArrowLeft className="h-4 w-4" />
+                        <span className="hidden sm:inline">Précédente</span>
+                      </Link>
+                    </Button>
+                  ) : null}
+                  {next ? (
+                    <Button asChild variant="outline" size="sm">
+                      <Link href={`/apprentissage/${course.slug}/lecons/${next.id}`}>
+                        <span className="hidden sm:inline">Suivante</span>
+                        <ArrowRight className="h-4 w-4" />
+                      </Link>
+                    </Button>
+                  ) : null}
+                  <LessonBookmarkButton
+                    lessonId={lesson.id}
+                    initialBookmarked={bookmarked}
+                  />
+                  <LessonCompletionToggle
+                    lessonId={lesson.id}
+                    initialCompleted={completedIds.has(lesson.id)}
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="px-4 py-4 sm:px-6">
+              <LearningTabs tabs={tabs} />
+            </div>
+          </section>
+
+          {/* ── Colonne curriculum (cachée en mode focus) ───────────── */}
+          <aside
+            data-learning-sidebar
+            aria-label="Programme du cours"
+            className="order-2 border-l border-border bg-card lg:sticky lg:top-14 lg:max-h-[calc(100vh-3.5rem)] lg:overflow-y-auto"
+          >
+            <div className="border-b border-border bg-muted/40 px-4 py-3">
+              <h2 className="text-sm font-semibold text-foreground">Contenu du cours</h2>
+              <p className="mt-0.5 text-xs text-muted-foreground tabular-nums">
+                {completedLessons} / {totalLessons} leçon
+                {totalLessons > 1 ? "s" : ""} · {progressPercent} %
+              </p>
+            </div>
+            <LearningSidebar
               courseSlug={course.slug}
               sections={course.sections.map((s) => ({
                 id: s.id,
@@ -98,158 +341,8 @@ export default async function LessonViewerPage({ params }: PageProps) {
               currentLessonId={lesson.id}
             />
           </aside>
-
-          <div className="order-1 space-y-6 lg:order-2">
-            <Breadcrumbs
-              items={[
-                { label: "Mon apprentissage", href: "/apprentissage" },
-                {
-                  label: course.title,
-                  href: `/apprentissage/${course.slug}`,
-                },
-                { label: lesson.title },
-              ]}
-            />
-
-            <div>
-              <h1 className="text-2xl font-semibold tracking-tight text-foreground">
-                {lesson.title}
-              </h1>
-              {lesson.description ? (
-                <p className="mt-1 text-sm text-muted-foreground">{lesson.description}</p>
-              ) : null}
-            </div>
-
-            {lesson.aiSummary ? (
-              <Card className="border-[color:var(--brand-secondary)]/30 bg-[color:var(--brand-secondary)]/5">
-                <CardContent className="p-5">
-                  <div className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-[color:var(--brand-secondary)]">
-                    <span>Résumé pédagogique</span>
-                    <span className="rounded bg-background/50 px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
-                      IA
-                    </span>
-                  </div>
-                  <div className="prose prose-sm max-w-none whitespace-pre-line text-foreground">
-                    {lesson.aiSummary}
-                  </div>
-                </CardContent>
-              </Card>
-            ) : null}
-
-            {/* Contenu selon le type */}
-            {lesson.type === "VIDEO" ? (
-              lesson.muxPlaybackId || lesson.externalVideoUrl ? (
-                <LessonPlayer
-                  playbackId={lesson.muxPlaybackId}
-                  externalVideoUrl={lesson.externalVideoUrl}
-                  lessonId={lesson.id}
-                  initialPositionSeconds={lessonProgress?.lastPositionSeconds ?? 0}
-                  durationSeconds={lesson.videoDurationSeconds}
-                  title={lesson.title}
-                />
-              ) : (
-                <Alert variant="info">
-                  <AlertDescription>
-                    Cette leçon vidéo n&apos;a pas encore été uploadée par le formateur.
-                  </AlertDescription>
-                </Alert>
-              )
-            ) : null}
-
-            {lesson.type === "TEXT" ? (
-              <Card>
-                <CardContent className="prose prose-sm max-w-none whitespace-pre-line p-6 text-foreground">
-                  {lesson.textContent ?? "(Aucun contenu)"}
-                </CardContent>
-              </Card>
-            ) : null}
-
-            {lesson.type === "RESOURCE" ? (
-              <Card>
-                <CardContent className="space-y-3 p-6">
-                  {lesson.resourceUrl ? (
-                    <Button asChild>
-                      <Link
-                        href={lesson.resourceUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                      >
-                        <Download className="h-4 w-4" />
-                        {lesson.resourceFileName ?? "Télécharger la ressource"}
-                      </Link>
-                    </Button>
-                  ) : (
-                    <p className="text-sm text-muted-foreground">
-                      Aucune ressource attachée pour le moment.
-                    </p>
-                  )}
-                </CardContent>
-              </Card>
-            ) : null}
-
-            {lesson.type === "QUIZ" ? (
-              quiz && quiz.questions.length > 0 ? (
-                <QuizAttempt
-                  quizId={quiz.id}
-                  passingScore={quiz.passingScore}
-                  questions={quiz.questions.map((q) => ({
-                    id: q.id,
-                    prompt: q.prompt,
-                    kind: q.kind,
-                    options: q.options.map((o) => ({ id: o.id, label: o.label })),
-                  }))}
-                />
-              ) : (
-                <Alert variant="info">
-                  <AlertDescription>
-                    Le quiz n&apos;a pas encore de questions.
-                  </AlertDescription>
-                </Alert>
-              )
-            ) : null}
-
-            {/* Actions de leçon */}
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <div className="flex items-center gap-2">
-                {previous ? (
-                  <Button asChild variant="outline" size="sm">
-                    <Link href={`/apprentissage/${course.slug}/lecons/${previous.id}`}>
-                      <ArrowLeft className="h-4 w-4" />
-                      Précédente
-                    </Link>
-                  </Button>
-                ) : null}
-                {next ? (
-                  <Button asChild variant="outline" size="sm">
-                    <Link href={`/apprentissage/${course.slug}/lecons/${next.id}`}>
-                      Suivante
-                      <ArrowRight className="h-4 w-4" />
-                    </Link>
-                  </Button>
-                ) : null}
-              </div>
-              <LessonCompletionToggle
-                lessonId={lesson.id}
-                initialCompleted={completedIds.has(lesson.id)}
-              />
-            </div>
-
-            {/* Notes */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-base">Mes notes</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <LessonNotes lessonId={lesson.id} initialNotes={notes} />
-              </CardContent>
-            </Card>
-
-            {/* Tuteur IA */}
-            <LessonTutor lessonId={lesson.id} />
-          </div>
-        </Container>
+        </div>
       </main>
-      <SiteFooter />
-    </>
+    </FocusModeProvider>
   );
 }

@@ -4,12 +4,14 @@ import { notFound } from "next/navigation";
 import { CheckCircle2, Clock, Globe2, Layers, Users } from "lucide-react";
 
 import { auth } from "@/auth";
+import { JsonLd } from "@/components/seo/json-ld";
 import { AddToCartButton } from "@/components/features/cart/add-to-cart-button";
 import { CourseCard } from "@/components/features/courses/course-card";
 import { CourseCurriculum } from "@/components/features/courses/course-curriculum";
 import { CourseInstructorCard } from "@/components/features/courses/course-instructor-card";
 import { CoursePrice } from "@/components/features/courses/course-price";
 import { CourseReviewsList } from "@/components/features/courses/course-reviews-list";
+import { PromoVideoPlayer } from "@/components/features/courses/promo-video-player";
 import { ReviewForm } from "@/components/features/reviews/review-form";
 import { WishlistButton } from "@/components/features/wishlist/wishlist-button";
 import { SiteFooter } from "@/components/layout/site-footer";
@@ -22,6 +24,7 @@ import { getCurrentCurrency } from "@/lib/currency";
 import { COURSE_LEVEL_LABELS, pluralize } from "@/lib/format/labels";
 import { formatDurationFromSeconds } from "@/lib/format/duration";
 import { prisma } from "@/lib/prisma";
+import { buildCourseJsonLd } from "@/lib/seo/json-ld";
 import {
   getPublishedCourseBySlug,
   getRelatedCourses,
@@ -37,14 +40,36 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   const course = await getPublishedCourseBySlug(slug);
   if (!course) return { title: "Cours introuvable" };
 
+  const description =
+    course.metaDescription ?? course.subtitle ?? course.description.slice(0, 160);
+
+  // OG image dynamique 1200×630 — montre titre + rating sur fond brandé.
+  // Le bot social récupère cette image au moment du partage (cachée 1h CDN).
+  const ogQs = new URLSearchParams({
+    kind: "course",
+    title: course.title,
+    subtitle: course.subtitle ?? "",
+    rating: course.averageRating.toFixed(1),
+    totalRatings: String(course.totalRatings),
+  });
+  const ogImage = `/api/og?${ogQs.toString()}`;
+
   return {
     title: course.metaTitle ?? course.title,
-    description: course.metaDescription ?? course.subtitle ?? course.description.slice(0, 160),
+    description,
+    alternates: { canonical: `/cours/${course.slug}` },
     openGraph: {
       title: course.title,
-      description: course.subtitle ?? course.description.slice(0, 160),
-      images: course.thumbnailUrl ? [{ url: course.thumbnailUrl }] : undefined,
+      description,
       type: "website",
+      url: `/cours/${course.slug}`,
+      images: [{ url: ogImage, width: 1200, height: 630, alt: course.title }],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: course.title,
+      description,
+      images: [ogImage],
     },
   };
 }
@@ -100,12 +125,13 @@ export default async function CourseDetailPage({ params }: PageProps) {
 
   return (
     <>
+      <JsonLd id="course-jsonld" data={buildCourseJsonLd(course)} />
       <SiteHeader />
 
       <main className="flex-1">
         {/* Hero */}
-        <section className="border-b border-border bg-[color:var(--brand-primary)] py-10 text-primary-foreground">
-          <Container className="grid gap-10 lg:grid-cols-[1fr_360px]">
+        <section className="border-b border-border bg-[color:var(--brand-primary)] py-8 text-primary-foreground">
+          <Container className="grid gap-8 lg:grid-cols-[1fr_360px]">
             <div>
               <Breadcrumbs
                 items={[
@@ -172,7 +198,14 @@ export default async function CourseDetailPage({ params }: PageProps) {
             {/* Sidebar achat — sticky desktop */}
             <aside className="lg:sticky lg:top-24 lg:self-start">
               <div className="overflow-hidden rounded-lg border border-border bg-card text-card-foreground shadow-md">
-                {course.thumbnailUrl ? (
+                {course.promoVideoPlaybackId || course.promoVideoUrl ? (
+                  <PromoVideoPlayer
+                    playbackId={course.promoVideoPlaybackId}
+                    videoUrl={course.promoVideoUrl}
+                    title={course.title}
+                    thumbnailUrl={course.thumbnailUrl}
+                  />
+                ) : course.thumbnailUrl ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
                     src={course.thumbnailUrl}
@@ -235,8 +268,8 @@ export default async function CourseDetailPage({ params }: PageProps) {
         </section>
 
         {/* Contenu */}
-        <Container className="grid gap-10 py-12 lg:grid-cols-[1fr_360px]">
-          <div className="space-y-12">
+        <Container className="grid gap-8 py-8 lg:grid-cols-[1fr_360px]">
+          <div className="space-y-8">
             {course.whatYouWillLearn && course.whatYouWillLearn.length > 0 ? (
               <section aria-labelledby="objectives">
                 <h2 id="objectives" className="text-xl font-semibold text-foreground">
@@ -351,7 +384,7 @@ export default async function CourseDetailPage({ params }: PageProps) {
 
         {/* Cours similaires */}
         {related.length > 0 ? (
-          <section className="border-t border-border bg-muted/30 py-12">
+          <section className="border-t border-border bg-muted/30 py-8">
             <Container>
               <h2 className="text-xl font-semibold tracking-tight text-foreground">
                 Vous aimerez aussi

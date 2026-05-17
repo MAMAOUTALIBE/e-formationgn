@@ -4,7 +4,7 @@
 
 import { revalidatePath } from "next/cache";
 
-import { auth } from "@/auth";
+import { requireAnyAdminRole } from "@/lib/auth/authorization";
 import { prisma } from "@/lib/prisma";
 import type {
   DisputeStatus,
@@ -15,14 +15,7 @@ import type {
 
 import type { ActionResult } from "./auth";
 
-async function requireSupportRole() {
-  const session = await auth();
-  if (!session?.user) throw new Error("Connectez-vous.");
-  if (session.user.role !== "ADMIN" && session.user.role !== "SUPPORT") {
-    throw new Error("Réservé aux admins et au rôle Support.");
-  }
-  return session.user;
-}
+const requireSupportRole = () => requireAnyAdminRole("ADMIN", "SUPPORT");
 
 async function audit(actorId: string, action: string, targetType: string, targetId: string) {
   await prisma.auditLog.create({
@@ -40,13 +33,13 @@ export async function createTicketReply(
     return { success: false, message: "Message trop court." };
   }
   await prisma.ticketMessage.create({
-    data: { ticketId, authorId: user.id, body, isInternalNote },
+    data: { ticketId, authorId: user.userId, body, isInternalNote },
   });
   await prisma.supportTicket.update({
     where: { id: ticketId },
     data: { updatedAt: new Date() },
   });
-  await audit(user.id, "ticket.reply", "SupportTicket", ticketId);
+  await audit(user.userId, "ticket.reply", "SupportTicket", ticketId);
   revalidatePath(`/admin/support/tickets/${ticketId}`);
   return { success: true };
 }
@@ -65,7 +58,7 @@ export async function updateTicketStatus(
         : { closedAt: null }),
     },
   });
-  await audit(user.id, "ticket.status-change", "SupportTicket", ticketId);
+  await audit(user.userId, "ticket.status-change", "SupportTicket", ticketId);
   revalidatePath(`/admin/support/tickets/${ticketId}`);
   revalidatePath("/admin/support");
   return { success: true };
@@ -80,7 +73,7 @@ export async function assignTicket(
     where: { id: ticketId },
     data: { assigneeId },
   });
-  await audit(user.id, "ticket.assign", "SupportTicket", ticketId);
+  await audit(user.userId, "ticket.assign", "SupportTicket", ticketId);
   revalidatePath(`/admin/support/tickets/${ticketId}`);
   return { success: true };
 }
@@ -91,7 +84,7 @@ export async function setTicketPriority(
 ): Promise<ActionResult> {
   const user = await requireSupportRole();
   await prisma.supportTicket.update({ where: { id: ticketId }, data: { priority } });
-  await audit(user.id, "ticket.priority", "SupportTicket", ticketId);
+  await audit(user.userId, "ticket.priority", "SupportTicket", ticketId);
   revalidatePath(`/admin/support/tickets/${ticketId}`);
   return { success: true };
 }
@@ -107,9 +100,9 @@ export async function createTicket(
     return { success: false, message: "Sujet et demandeur requis." };
   }
   const ticket = await prisma.supportTicket.create({
-    data: { subject, category, requesterId, assigneeId: user.id },
+    data: { subject, category, requesterId, assigneeId: user.userId },
   });
-  await audit(user.id, "ticket.create", "SupportTicket", ticket.id);
+  await audit(user.userId, "ticket.create", "SupportTicket", ticket.id);
   revalidatePath("/admin/support");
   return { success: true, message: "Ticket créé." };
 }
@@ -130,7 +123,7 @@ export async function updateDisputeStatus(
       resolvedAt: status.startsWith("RESOLVED") ? new Date() : null,
     },
   });
-  await audit(user.id, "dispute.status", "Dispute", disputeId);
+  await audit(user.userId, "dispute.status", "Dispute", disputeId);
   revalidatePath("/admin/support/litiges");
   return { success: true };
 }

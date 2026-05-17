@@ -11,20 +11,13 @@
 
 import { redirect } from "next/navigation";
 
-import { auth } from "@/auth";
+import { requireInstructorOrAdmin } from "@/lib/auth/authorization";
 import { getStripeClient, isStripeConfigured } from "@/lib/stripe";
 import { prisma } from "@/lib/prisma";
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
 
-async function requireInstructor() {
-  const session = await auth();
-  if (!session?.user) throw new Error("Vous devez être connecté.");
-  if (session.user.role !== "INSTRUCTOR" && session.user.role !== "ADMIN") {
-    throw new Error("Réservé aux formateurs.");
-  }
-  return session.user;
-}
+const requireInstructor = requireInstructorOrAdmin;
 
 export async function createInstructorOnboardingLink(): Promise<void> {
   if (!isStripeConfigured()) {
@@ -34,7 +27,7 @@ export async function createInstructorOnboardingLink(): Promise<void> {
   const stripe = getStripeClient();
 
   const dbUser = await prisma.user.findUnique({
-    where: { id: user.id },
+    where: { id: user.userId },
     select: { id: true, email: true, stripeAccountId: true },
   });
   if (!dbUser) throw new Error("Utilisateur introuvable.");
@@ -79,7 +72,7 @@ export async function refreshInstructorAccountStatus(): Promise<InstructorAccoun
   const user = await requireInstructor();
 
   const dbUser = await prisma.user.findUnique({
-    where: { id: user.id },
+    where: { id: user.userId },
     select: { stripeAccountId: true },
   });
   if (!dbUser?.stripeAccountId || !isStripeConfigured()) {
@@ -106,7 +99,7 @@ export async function refreshInstructorAccountStatus(): Promise<InstructorAccoun
         : "pending";
 
   await prisma.user.update({
-    where: { id: user.id },
+    where: { id: user.userId },
     data: {
       stripeAccountStatus: status,
       stripeOnboardingDone: payoutsEnabled && chargesEnabled,
@@ -127,7 +120,7 @@ export async function openInstructorDashboardLink(): Promise<void> {
   const user = await requireInstructor();
 
   const dbUser = await prisma.user.findUnique({
-    where: { id: user.id },
+    where: { id: user.userId },
     select: { stripeAccountId: true },
   });
   if (!dbUser?.stripeAccountId) throw new Error("Aucun compte Stripe connecté.");

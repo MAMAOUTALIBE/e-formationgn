@@ -24,8 +24,8 @@ export default async function CategoriesPage() {
     <>
       <SiteHeader />
 
-      <main className="flex-1 bg-muted/20 py-10">
-        <Container className="space-y-8">
+      <main className="flex-1 bg-muted/20 py-8">
+        <Container className="space-y-6">
           <Breadcrumbs items={[{ label: "Accueil", href: "/" }, { label: "Catégories" }]} />
 
           <header>

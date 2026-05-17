@@ -45,3 +45,7 @@ next-env.d.ts
 
 /src/generated/prisma
 pexels-videos.json
+
+# Playwright (artefacts d'exécution : traces, screenshots, vidéos d'erreur)
+test-results/
+playwright-report/

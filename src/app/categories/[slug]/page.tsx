@@ -2,18 +2,21 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
 import { auth } from "@/auth";
-import { CourseFilters } from "@/components/features/courses/course-filters";
-import { CourseGrid } from "@/components/features/courses/course-grid";
-import { CoursePagination } from "@/components/features/courses/course-pagination";
+import { CourseCard } from "@/components/features/courses/course-card";
+import { CourseCarousel } from "@/components/features/courses/course-carousel";
+import { CourseEmptyState } from "@/components/features/courses/course-empty-state";
+import { CourseFilterBar } from "@/components/features/courses/course-filter-bar";
+import { CourseMobileFilterBar } from "@/components/features/courses/course-mobile-filter-bar";
 import { CourseSearchBar } from "@/components/features/courses/course-search-bar";
-import { CourseSort } from "@/components/features/courses/course-sort";
 import { SiteFooter } from "@/components/layout/site-footer";
 import { SiteHeader } from "@/components/layout/site-header";
 import { Breadcrumbs } from "@/components/ui/breadcrumbs";
 import { Container } from "@/components/ui/container";
 import { getCategoryBySlug, listCategories } from "@/server/queries/categories";
 import { listPublishedCourses } from "@/server/queries/courses";
-import { COURSES_PER_PAGE, courseFiltersSchema } from "@/lib/validators/courses";
+import { courseFiltersSchema } from "@/lib/validators/courses";
+
+const CATALOG_MAX_ITEMS = 200;
 
 interface PageProps {
   params: Promise<{ slug: string }>;
@@ -44,20 +47,24 @@ export default async function CategoryDetailPage({ params, searchParams }: PageP
   const session = await auth();
   const currency = session?.user.preferredCurrency ?? "EUR";
 
-  const [{ items, total, page, pageCount }, allCategories] = await Promise.all([
+  const [{ items, total }, allCategories] = await Promise.all([
     listPublishedCourses({
       filters,
-      take: COURSES_PER_PAGE,
-      skip: (filters.page - 1) * COURSES_PER_PAGE,
+      take: CATALOG_MAX_ITEMS,
+      skip: 0,
     }),
     listCategories(),
   ]);
 
-  const flatParams: Record<string, string | string[] | undefined> = {};
-  for (const [key, value] of Object.entries(sp)) {
-    if (key === "page" || key === "category") continue;
-    flatParams[key] = value;
-  }
+  const categoryOptions = allCategories.map((c) => ({ slug: c.slug, name: c.name }));
+  const resetKey = JSON.stringify({
+    q: filters.q ?? "",
+    level: filters.level ?? "",
+    price: filters.price ?? "",
+    duration: filters.duration ?? "",
+    rating: filters.rating ?? "",
+    sort: filters.sort ?? "",
+  });
 
   return (
     <>
@@ -89,32 +96,28 @@ export default async function CategoryDetailPage({ params, searchParams }: PageP
 
           <CourseSearchBar />
 
-          <div className="grid gap-8 lg:grid-cols-[280px_1fr]">
-            <CourseFilters
-              categories={allCategories.map((c) => ({ slug: c.slug, name: c.name }))}
-              hideCategory
+          <CourseFilterBar
+            categories={categoryOptions}
+            hideCategory
+            className="hidden sm:flex"
+          />
+
+          {items.length === 0 ? (
+            <CourseEmptyState
+              basePath={`/categories/${slug}`}
+              preserveParams={["q"]}
             />
-
-            <div className="space-y-6">
-              <div className="flex items-center justify-between gap-4">
-                <p className="text-sm text-muted-foreground">
-                  Page {page} sur {pageCount}
-                </p>
-                <CourseSort />
-              </div>
-
-              <CourseGrid courses={items} currency={currency} />
-
-              <CoursePagination
-                currentPage={page}
-                pageCount={pageCount}
-                searchParams={flatParams}
-                basePath={`/categories/${slug}`}
-              />
-            </div>
-          </div>
+          ) : (
+            <CourseCarousel resetKey={resetKey}>
+              {items.map((course) => (
+                <CourseCard key={course.id} course={course} currency={currency} />
+              ))}
+            </CourseCarousel>
+          )}
         </Container>
       </main>
+
+      <CourseMobileFilterBar categories={categoryOptions} hideCategory />
 
       <SiteFooter />
     </>

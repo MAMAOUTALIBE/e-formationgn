@@ -32,7 +32,7 @@ export function CourseCard({ course, currency = "EUR" }: CourseCardProps) {
           {course.thumbnailUrl ? (
             <Image
               src={course.thumbnailUrl}
-              alt=""
+              alt={`Vignette du cours ${course.title}`}
               fill
               sizes="(min-width: 1024px) 25vw, (min-width: 640px) 50vw, 100vw"
               className="object-cover transition-transform duration-200 group-hover:scale-[1.02]"
@@ -47,8 +47,8 @@ export function CourseCard({ course, currency = "EUR" }: CourseCardProps) {
         </div>
       </Link>
 
-      <div className="flex flex-1 flex-col p-4">
-        <div className="mb-2 flex items-center gap-2">
+      <div className="flex flex-1 flex-col p-5">
+        <div className="mb-2 flex flex-wrap items-center gap-1.5">
           <Badge variant="secondary" className="text-[10px]">
             {course.category.name}
           </Badge>
@@ -57,24 +57,28 @@ export function CourseCard({ course, currency = "EUR" }: CourseCardProps) {
           </Badge>
         </div>
 
-        <h3 className="line-clamp-2 text-sm font-semibold leading-snug text-foreground">
+        <h3 className="line-clamp-2 text-base font-semibold leading-snug text-foreground">
           <Link href={`/cours/${course.slug}`} className="hover:underline">
             {course.title}
           </Link>
         </h3>
 
         {course.subtitle ? (
-          <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">{course.subtitle}</p>
+          <p className="mt-1.5 line-clamp-2 text-sm text-muted-foreground">{course.subtitle}</p>
         ) : null}
 
-        <p className="mt-2 text-xs text-muted-foreground">
+        <p className="mt-2 text-sm text-muted-foreground">
           Par <span className="text-foreground">{instructorName}</span>
         </p>
 
-        <div className="mt-2 flex items-center gap-2 text-xs">
-          <Stars rating={course.averageRating} size="sm" />
-          <span className="font-medium text-foreground">{course.averageRating.toFixed(1)}</span>
-          <span className="text-muted-foreground">
+        <div className="mt-2 flex items-center gap-2 text-sm">
+          <Stars
+            rating={course.averageRating}
+            size="sm"
+            totalRatings={course.totalRatings}
+          />
+          <span className="font-semibold text-foreground">{course.averageRating.toFixed(1)}</span>
+          <span className="text-xs text-muted-foreground">
             ({course.totalRatings} {pluralize(course.totalRatings, "avis", "avis")})
           </span>
         </div>
@@ -85,7 +89,7 @@ export function CourseCard({ course, currency = "EUR" }: CourseCardProps) {
           {pluralize(course.totalEnrollments, "élève", "élèves")}
         </p>
 
-        <div className="mt-auto pt-3">
+        <div className="mt-auto pt-4">
           <CoursePrice
             priceEUR={Number(course.priceEUR)}
             priceUSD={Number(course.priceUSD)}

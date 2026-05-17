@@ -21,6 +21,12 @@ const ROLE_LABELS: Record<string, string> = {
   ADMIN: "Administrateur",
 };
 
+const ROLE_DASHBOARD: Record<string, { href: string; label: string }> = {
+  STUDENT: { href: "/apprentissage", label: "Mon apprentissage" },
+  INSTRUCTOR: { href: "/formateur", label: "Espace formateur" },
+  ADMIN: { href: "/admin", label: "Tableau de bord admin" },
+};
+
 export function UserMenu({ user }: UserMenuProps) {
   const [open, setOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -78,6 +84,28 @@ export function UserMenu({ user }: UserMenuProps) {
           </div>
 
           <div className="my-1 h-px bg-border" />
+
+          {ROLE_DASHBOARD[user.role] ? (
+            <Link
+              href={ROLE_DASHBOARD[user.role].href}
+              role="menuitem"
+              onClick={() => setOpen(false)}
+              className="block rounded-md px-3 py-2 text-sm font-medium text-foreground hover:bg-muted"
+            >
+              {ROLE_DASHBOARD[user.role].label}
+            </Link>
+          ) : null}
+
+          {user.role === "ADMIN" ? (
+            <Link
+              href="/formateur"
+              role="menuitem"
+              onClick={() => setOpen(false)}
+              className="block rounded-md px-3 py-2 text-sm text-foreground hover:bg-muted"
+            >
+              Espace formateur
+            </Link>
+          ) : null}
 
           <Link
             href="/profil"

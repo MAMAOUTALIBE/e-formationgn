@@ -11,20 +11,13 @@ import {
   checkUserRateLimit,
   rateLimitMessage,
 } from "@/lib/auth/rate-limit-ip";
+import { requireSession } from "@/lib/auth/authorization";
 import { writeCurrencyCookie } from "@/lib/currency";
 import { prisma } from "@/lib/prisma";
 import { setCurrencySchema } from "@/lib/validators/checkout";
 import { isUserEnrolledIn } from "@/server/queries/cart";
 
 import type { ActionResult } from "./auth";
-
-async function requireSessionUserId(): Promise<string> {
-  const session = await auth();
-  if (!session?.user) {
-    throw new Error("Vous devez être connecté.");
-  }
-  return session.user.id;
-}
 
 export async function addCourseToCart(courseId: string): Promise<ActionResult> {
   const session = await auth();
@@ -77,7 +70,7 @@ export async function addCourseToCart(courseId: string): Promise<ActionResult> {
 }
 
 export async function removeCourseFromCart(courseId: string): Promise<ActionResult> {
-  const userId = await requireSessionUserId();
+  const { userId } = await requireSession();
   await prisma.cartItem.deleteMany({ where: { userId, courseId } });
   revalidatePath("/panier");
   revalidatePath("/", "layout");
@@ -85,7 +78,7 @@ export async function removeCourseFromCart(courseId: string): Promise<ActionResu
 }
 
 export async function clearCart(): Promise<ActionResult> {
-  const userId = await requireSessionUserId();
+  const { userId } = await requireSession();
   await prisma.cartItem.deleteMany({ where: { userId } });
   revalidatePath("/panier");
   revalidatePath("/", "layout");

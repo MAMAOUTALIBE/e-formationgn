@@ -13,6 +13,8 @@ import { COURSE_LEVELS } from "@/lib/validators/courses";
 import { updateCourseGeneral } from "@/server/actions/instructor";
 import type { ActionResult } from "@/server/actions/auth";
 
+import { ThumbnailUploader } from "./thumbnail-uploader";
+
 const initialState: ActionResult = { success: false };
 
 interface CourseGeneralFormProps {
@@ -110,16 +112,13 @@ export function CourseGeneralForm({
 
       <FormField
         id="thumbnailUrl"
-        label="URL de l'image de couverture"
+        label="Photo de couverture"
         error={errors.thumbnailUrl?.[0]}
-        hint="Format 16:9, idéalement ≥ 1280×720. L'upload direct arrivera en Phase 8."
+        hint="Format 16:9, idéalement ≥ 1280×720. Sert aussi de visuel sur la fiche du cours."
       >
-        <Input
-          id="thumbnailUrl"
+        <ThumbnailUploader
           name="thumbnailUrl"
-          type="url"
           defaultValue={defaults.thumbnailUrl}
-          placeholder="https://"
         />
       </FormField>
 

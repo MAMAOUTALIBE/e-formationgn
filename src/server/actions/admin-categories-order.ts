@@ -4,21 +4,12 @@
 
 import { revalidatePath } from "next/cache";
 
-import { auth } from "@/auth";
+import { requireAdmin } from "@/lib/auth/authorization";
 import { prisma } from "@/lib/prisma";
 
 interface ReorderResult {
   success: boolean;
   message?: string;
-}
-
-async function requireAdmin() {
-  const session = await auth();
-  if (!session?.user) throw new Error("Connectez-vous.");
-  if (session.user.role !== "ADMIN") {
-    throw new Error("Réservé à l'administrateur.");
-  }
-  return session.user;
 }
 
 export async function reorderCategories(
@@ -49,7 +40,7 @@ export async function reorderCategories(
 
   await prisma.auditLog.create({
     data: {
-      actorId: admin.id,
+      actorId: admin.userId,
       action: "category.reorder",
       targetType: "Category",
       targetId: orderedIds[0],

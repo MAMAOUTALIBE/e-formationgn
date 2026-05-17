@@ -2,18 +2,11 @@
 
 // Exports comptables (CSV) du module Finances.
 
-import { auth } from "@/auth";
+import { requireAnyAdminRole } from "@/lib/auth/authorization";
 import { rowsToCsv } from "@/lib/csv";
 import { prisma } from "@/lib/prisma";
 
-async function requireFinanceRole() {
-  const session = await auth();
-  if (!session?.user) throw new Error("Connectez-vous.");
-  if (session.user.role !== "ADMIN" && session.user.role !== "FINANCE") {
-    throw new Error("Accès réservé aux admins / finance.");
-  }
-  return session.user;
-}
+const requireFinanceRole = () => requireAnyAdminRole("ADMIN", "FINANCE");
 
 export async function exportFinancialReport(): Promise<
   { csv: string; filename: string } | { error: string }

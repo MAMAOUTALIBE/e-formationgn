@@ -16,6 +16,12 @@ export const createCourseSchema = z
   .object({
     title: slugFromTitle,
     categoryId: z.string().min(1, "Sélectionnez une catégorie."),
+    thumbnailUrl: z
+      .string()
+      .trim()
+      .url("URL d'image invalide.")
+      .optional()
+      .or(z.literal("")),
   })
   .strict();
 export type CreateCourseInput = z.infer<typeof createCourseSchema>;

@@ -10,20 +10,13 @@
 
 import { revalidatePath } from "next/cache";
 
-import { auth } from "@/auth";
+import { requireInstructorOrAdmin } from "@/lib/auth/authorization";
 import { instructorPromoCreateSchema } from "@/lib/validators/instructor-promo";
 import { prisma } from "@/lib/prisma";
 
 import type { ActionResult } from "./auth";
 
-async function requireInstructorUser() {
-  const session = await auth();
-  if (!session?.user) throw new Error("Connectez-vous.");
-  if (session.user.role !== "INSTRUCTOR" && session.user.role !== "ADMIN") {
-    throw new Error("Réservé aux formateurs.");
-  }
-  return session.user;
-}
+const requireInstructorUser = requireInstructorOrAdmin;
 
 export async function createInstructorPromoCode(
   formData: FormData,
@@ -47,7 +40,7 @@ export async function createInstructorPromoCode(
 
   // Vérifie que tous les courseIds appartiennent au formateur connecté.
   const ownedCount = await prisma.course.count({
-    where: { id: { in: data.courseIds }, instructorId: user.id },
+    where: { id: { in: data.courseIds }, instructorId: user.userId },
   });
   if (ownedCount !== data.courseIds.length) {
     return {
@@ -82,7 +75,7 @@ export async function createInstructorPromoCode(
           : Number(data.maxRedemptions),
       endsAt: data.endsAt && data.endsAt !== "" ? new Date(data.endsAt) : null,
       isActive: data.isActive,
-      instructorId: user.id,
+      instructorId: user.userId,
       courses: {
         create: data.courseIds.map((courseId) => ({ courseId })),
       },
@@ -98,7 +91,7 @@ export async function deleteInstructorPromoCode(promoId: string): Promise<Action
 
   // Charge + vérifie la propriété en une seule query.
   const promo = await prisma.promoCode.findFirst({
-    where: { id: promoId, instructorId: user.id },
+    where: { id: promoId, instructorId: user.userId },
     select: { id: true },
   });
   if (!promo) {
@@ -116,7 +109,7 @@ export async function toggleInstructorPromoCode(
 ): Promise<ActionResult> {
   const user = await requireInstructorUser();
   const promo = await prisma.promoCode.findFirst({
-    where: { id: promoId, instructorId: user.id },
+    where: { id: promoId, instructorId: user.userId },
     select: { id: true },
   });
   if (!promo) return { success: false, message: "Code introuvable ou non autorisé." };

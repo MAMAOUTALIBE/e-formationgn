@@ -59,6 +59,59 @@ export async function getLessonNotes(userId: string, lessonId: string) {
   });
 }
 
+export async function isLessonBookmarked(
+  userId: string,
+  lessonId: string,
+): Promise<boolean> {
+  const bm = await prisma.lessonBookmark.findUnique({
+    where: { userId_lessonId: { userId, lessonId } },
+    select: { id: true },
+  });
+  return Boolean(bm);
+}
+
+export async function listCourseAnnouncements(courseId: string) {
+  return prisma.courseAnnouncement.findMany({
+    where: { courseId },
+    orderBy: { createdAt: "desc" },
+    take: 50,
+    include: {
+      author: {
+        select: { id: true, name: true, firstName: true, lastName: true, image: true },
+      },
+    },
+  });
+}
+
+export async function getCourseReviewsForLearner(courseId: string, take = 20) {
+  const [reviews, course] = await Promise.all([
+    prisma.review.findMany({
+      where: { courseId, isPublished: true },
+      orderBy: { createdAt: "desc" },
+      take,
+      include: {
+        user: { select: { id: true, name: true, firstName: true, image: true } },
+      },
+    }),
+    prisma.course.findUnique({
+      where: { id: courseId },
+      select: { averageRating: true, totalRatings: true },
+    }),
+  ]);
+  return {
+    reviews,
+    averageRating: course?.averageRating ?? 0,
+    totalRatings: course?.totalRatings ?? 0,
+  };
+}
+
+export async function getMyReviewForCourse(userId: string, courseId: string) {
+  return prisma.review.findUnique({
+    where: { userId_courseId: { userId, courseId } },
+    select: { rating: true, title: true, comment: true },
+  });
+}
+
 export async function getLessonForLearner(
   userId: string,
   lessonId: string,

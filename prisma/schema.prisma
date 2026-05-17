@@ -111,6 +111,8 @@ model User {
   questions       Question[]
   answers         Answer[]
   notes           LessonNote[]
+  lessonBookmarks LessonBookmark[]
+  courseAnnouncementsAuthored CourseAnnouncement[] @relation("CourseAnnouncementAuthor")
   cartItems       CartItem[]
   wishlistItems   WishlistItem[]
   orders          Order[]
@@ -253,6 +255,7 @@ model Course {
   thumbnailUrl         String?
   promoVideoMuxId      String?
   promoVideoPlaybackId String?
+  promoVideoUrl        String?
 
   level           CourseLevel @default(ALL_LEVELS)
   language        Locale      @default(FR)
@@ -309,6 +312,7 @@ model Course {
   certificates    Certificate[]
   promoCodes      CoursePromoCode[]
   affiliateClicks AffiliateClick[]
+  announcements   CourseAnnouncement[]
   tags            Tag[]             @relation("CourseTags")
 
   createdAt DateTime @default(now())
@@ -380,6 +384,7 @@ model Lesson {
   quiz      Quiz?
   progress  LessonProgress[]
   notes     LessonNote[]
+  bookmarks LessonBookmark[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -541,6 +546,37 @@ model LessonNote {
   updatedAt             DateTime @updatedAt
 
   @@index([userId, lessonId])
+}
+
+// Marque-page de leçon — bouton ♥ dans le header de lecture pour retrouver
+// les leçons importantes plus tard via /apprentissage (vue d'ensemble).
+model LessonBookmark {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  lessonId  String
+  lesson    Lesson   @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([userId, lessonId])
+  @@index([userId])
+}
+
+// Annonces publiées par le formateur sur un cours. Visibles par tous les
+// inscrits dans l'onglet « Annonces » de chaque leçon. Pas de fil par leçon
+// (granularité = cours entier), ordonnées par date desc.
+model CourseAnnouncement {
+  id        String   @id @default(cuid())
+  courseId  String
+  course    Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  authorId  String
+  author    User     @relation("CourseAnnouncementAuthor", fields: [authorId], references: [id], onDelete: Cascade)
+  title     String
+  body      String   @db.Text
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([courseId, createdAt])
 }
 
 model Review {

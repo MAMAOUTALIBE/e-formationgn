@@ -1,16 +1,14 @@
 "use server";
 
 // Démarre un paiement CinetPay (Mobile Money + cartes locales).
-// Miroir de checkout.ts (Stripe) : crée un Order PENDING en DB, puis
-// délègue à CinetPay qui renvoie une payment_url. L'utilisateur est
-// redirigé vers cette URL ; le webhook /api/webhooks/cinetpay finalise
-// l'order quand CinetPay nous renvoie le statut.
+// Miroir de checkout.ts (Stripe) : la construction de l'Order est déléguée
+// au builder partagé `buildCheckoutOrder`, cette action n'orchestre plus que
+// l'init transaction côté CinetPay.
 
 import { redirect } from "next/navigation";
 
 import { auth } from "@/auth";
 import { readAffiliateCode } from "@/lib/affiliate";
-import { computeCommission } from "@/lib/commission";
 import { getCurrentCurrency } from "@/lib/currency";
 import {
   CinetPayError,
@@ -21,12 +19,7 @@ import {
 import { logError } from "@/lib/logger";
 import { isCinetPaySupported } from "@/lib/payments/currency";
 import { prisma } from "@/lib/prisma";
-import { promoCodeSchema } from "@/lib/validators/checkout";
-import {
-  computeCartLines,
-  listCartItems,
-  tryApplyPromo,
-} from "@/server/queries/cart";
+import { buildCheckoutOrder } from "@/server/services/checkout-order-builder";
 
 import type { ActionResult } from "./auth";
 
@@ -51,12 +44,6 @@ export async function startCinetPayCheckout(
     };
   }
   const userId = session.user.id;
-
-  const items = await listCartItems(userId);
-  if (items.length === 0) {
-    return { success: false, message: "Votre panier est vide." };
-  }
-
   const currency = await getCurrentCurrency(session.user.preferredCurrency);
   if (!isCinetPaySupported(currency)) {
     return {
@@ -66,137 +53,33 @@ export async function startCinetPayCheckout(
   }
 
   const affiliateCode = await readAffiliateCode();
-  const { lines, subtotalCents } = computeCartLines({ items, currency, affiliateCode });
-  if (lines.length === 0) {
-    return {
-      success: false,
-      message: "Aucun cours disponible dans votre panier.",
-    };
+  const rawPromoCode = formData.get("promoCode");
+
+  const result = await buildCheckoutOrder({
+    userId,
+    currency,
+    affiliateCode,
+    rawPromoCode: typeof rawPromoCode === "string" ? rawPromoCode : null,
+    // CinetPay : on garde l'historique — pas d'allocation per-line, la
+    // commission est calculée sur le total brut de la ligne.
+    allocateInstructorDiscount: false,
+  });
+
+  if (result.kind === "empty-cart") {
+    return { success: false, message: "Votre panier est vide." };
   }
-
-  // Code promo (optionnel) — même logique que checkout Stripe
-  const rawCode = formData.get("promoCode");
-  let promoApplied: {
-    promoCodeId: string;
-    code: string;
-    discountCents: number;
-    instructorId: string | null;
-  } | null = null;
-
-  if (typeof rawCode === "string" && rawCode.trim().length > 0) {
-    const parsed = promoCodeSchema.safeParse({ code: rawCode.trim() });
-    if (parsed.success) {
-      const result = await tryApplyPromo({
-        code: parsed.data.code,
-        currency,
-        subtotalCents,
-        cart: lines.map((l) => ({ courseId: l.courseId, instructorId: l.instructorId })),
-      });
-      if (result.ok) {
-        promoApplied = {
-          promoCodeId: result.promo.promoCodeId,
-          code: result.promo.code,
-          discountCents: result.promo.discountCents,
-          instructorId: result.promo.instructorId,
-        };
-      } else {
-        return { success: false, message: result.message };
-      }
-    } else {
-      return { success: false, message: "Code promo invalide." };
-    }
+  if (result.kind === "no-eligible-line") {
+    return { success: false, message: "Aucun cours disponible dans votre panier." };
   }
-
-  const totalCents = Math.max(0, subtotalCents - (promoApplied?.discountCents ?? 0));
-
-  // Cours gratuits → finalisation immédiate (pas de paiement nécessaire)
-  if (totalCents === 0) {
-    // On délègue à la logique de checkout.ts (export public d'un finalize
-    // gratuit n'existe pas → on duplique la logique courte ici)
-    await prisma.$transaction(async (tx) => {
-      const order = await tx.order.create({
-        data: {
-          userId,
-          status: "PAID",
-          paidAt: new Date(),
-          currency,
-          subtotalCents,
-          discountCents: promoApplied?.discountCents ?? 0,
-          totalCents,
-          promoCodeId: promoApplied?.promoCodeId ?? null,
-          affiliateCode: affiliateCode ?? null,
-        },
-      });
-      for (const line of lines) {
-        const source = line.isInstructorDriven ? "INSTRUCTOR_DRIVEN" : "PLATFORM_DRIVEN";
-        const breakdown = computeCommission(line.totalCents, source);
-        await tx.orderItem.create({
-          data: {
-            orderId: order.id,
-            courseId: line.courseId,
-            currency,
-            unitPriceCents: line.unitPriceCents,
-            discountCents: line.discountCents,
-            totalCents: line.totalCents,
-            commissionSource: source,
-            commissionRateBps: breakdown.rateBps,
-            platformFeeCents: breakdown.platformFeeCents,
-            instructorPayoutCents: breakdown.instructorPayoutCents,
-          },
-        });
-        await tx.enrollment.upsert({
-          where: { userId_courseId: { userId, courseId: line.courseId } },
-          update: { orderItemId: undefined, source: "PROMO_FREE" },
-          create: { userId, courseId: line.courseId, source: "PROMO_FREE" },
-        });
-      }
-      await tx.cartItem.deleteMany({ where: { userId } });
-      if (promoApplied) {
-        await tx.promoCode.update({
-          where: { id: promoApplied.promoCodeId },
-          data: { usedCount: { increment: 1 } },
-        });
-      }
-      return order;
-    });
+  if (result.kind === "promo-error") {
+    return { success: false, message: result.message };
+  }
+  if (result.kind === "free") {
     redirect("/apprentissage");
   }
 
-  // Persiste l'Order PENDING + items
-  const order = await prisma.$transaction(async (tx) => {
-    const created = await tx.order.create({
-      data: {
-        userId,
-        status: "PENDING",
-        currency,
-        subtotalCents,
-        discountCents: promoApplied?.discountCents ?? 0,
-        totalCents,
-        promoCodeId: promoApplied?.promoCodeId ?? null,
-        affiliateCode: affiliateCode ?? null,
-      },
-    });
-
-    for (const line of lines) {
-      const source = line.isInstructorDriven ? "INSTRUCTOR_DRIVEN" : "PLATFORM_DRIVEN";
-      const breakdown = computeCommission(line.totalCents, source);
-      await tx.orderItem.create({
-        data: {
-          orderId: created.id,
-          courseId: line.courseId,
-          currency,
-          unitPriceCents: line.unitPriceCents,
-          discountCents: line.discountCents,
-          totalCents: line.totalCents,
-          commissionSource: source,
-          commissionRateBps: breakdown.rateBps,
-          platformFeeCents: breakdown.platformFeeCents,
-          instructorPayoutCents: breakdown.instructorPayoutCents,
-        },
-      });
-    }
-    return created;
-  });
+  // result.kind === "pending"
+  const { orderId, totalCents } = result;
 
   // Récupère infos client (best-effort)
   const dbUser = await prisma.user.findUnique({
@@ -210,9 +93,9 @@ export async function startCinetPayCheckout(
 
   // Init transaction CinetPay
   try {
-    const description = `Gandal — Commande ${order.id.slice(0, 8)}`;
-    const result = await initTransaction({
-      transactionId: order.id,
+    const description = `Gandal — Commande ${orderId.slice(0, 8)}`;
+    const initResult = await initTransaction({
+      transactionId: orderId,
       // CinetPay attend la valeur en unité entière, dans la devise de l'order.
       // Notre totalCents est déjà en minor units : 1 pour GNF/XOF, 100 pour EUR/USD
       // → on divise donc seulement pour EUR/USD.
@@ -222,7 +105,7 @@ export async function startCinetPayCheckout(
           : totalCents,
       currency: currency as CinetPayCurrency,
       description,
-      returnUrl: `${APP_URL}/commande/${order.id}/confirmation`,
+      returnUrl: `${APP_URL}/commande/${orderId}/confirmation`,
       notifyUrl: `${APP_URL}/api/webhooks/cinetpay`,
       customerId: userId,
       customerName,
@@ -230,7 +113,7 @@ export async function startCinetPayCheckout(
       customerCountry: currency === "GNF" ? "GN" : currency === "XOF" ? "CI" : "GN",
     });
 
-    redirect(result.paymentUrl);
+    redirect(initResult.paymentUrl);
   } catch (error) {
     // redirect() lève NEXT_REDIRECT — re-throw pour que Next le traite
     if (
@@ -243,10 +126,10 @@ export async function startCinetPayCheckout(
       throw error;
     }
     if (error instanceof CinetPayError) {
-      logError("cinetpay-checkout", error, { orderId: order.id, code: error.code });
+      logError("cinetpay-checkout", error, { orderId, code: error.code });
       // Marque l'order FAILED pour ne pas laisser un PENDING orphelin
       await prisma.order.update({
-        where: { id: order.id },
+        where: { id: orderId },
         data: { status: "FAILED" },
       });
       return {
@@ -254,7 +137,7 @@ export async function startCinetPayCheckout(
         message: `Échec de l'initialisation du paiement CinetPay : ${error.message}`,
       };
     }
-    logError("cinetpay-checkout", error, { orderId: order.id });
+    logError("cinetpay-checkout", error, { orderId });
     return {
       success: false,
       message: "Erreur inattendue à l'initialisation du paiement.",

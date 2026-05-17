@@ -4,20 +4,11 @@
 
 import { revalidatePath } from "next/cache";
 
-import { auth } from "@/auth";
+import { requireAdmin } from "@/lib/auth/authorization";
 import { rowsToCsv } from "@/lib/csv";
 import { prisma } from "@/lib/prisma";
 
 import type { ActionResult } from "./auth";
-
-async function requireAdmin() {
-  const session = await auth();
-  if (!session?.user) throw new Error("Connectez-vous.");
-  if (session.user.role !== "ADMIN") {
-    throw new Error("Réservé à l'administrateur.");
-  }
-  return session.user;
-}
 
 export async function exportAuditLogCsv(): Promise<
   { csv: string; filename: string } | { error: string }
@@ -51,7 +42,7 @@ export async function revokeSession(sessionId: string): Promise<ActionResult> {
   await prisma.session.delete({ where: { id: sessionId } });
   await prisma.auditLog.create({
     data: {
-      actorId: admin.id,
+      actorId: admin.userId,
       action: "session.revoke",
       targetType: "Session",
       targetId: sessionId,
@@ -69,11 +60,11 @@ export async function banIp(ipHash: string, reason?: string): Promise<ActionResu
   await prisma.bannedIP.upsert({
     where: { ipHash },
     update: { reason: reason ?? null },
-    create: { ipHash, reason: reason ?? null, bannedById: admin.id },
+    create: { ipHash, reason: reason ?? null, bannedById: admin.userId },
   });
   await prisma.auditLog.create({
     data: {
-      actorId: admin.id,
+      actorId: admin.userId,
       action: "ip.ban",
       targetType: "IP",
       targetId: ipHash,
@@ -89,7 +80,7 @@ export async function unbanIp(ipHash: string): Promise<ActionResult> {
   await prisma.bannedIP.deleteMany({ where: { ipHash } });
   await prisma.auditLog.create({
     data: {
-      actorId: admin.id,
+      actorId: admin.userId,
       action: "ip.unban",
       targetType: "IP",
       targetId: ipHash,
@@ -107,7 +98,7 @@ export async function markGdprRequestComplete(id: string): Promise<ActionResult>
   });
   await prisma.auditLog.create({
     data: {
-      actorId: admin.id,
+      actorId: admin.userId,
       action: "gdpr.complete",
       targetType: "GdprRequest",
       targetId: id,

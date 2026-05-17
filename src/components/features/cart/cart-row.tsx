@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { useTransition } from "react";
 import { Trash2 } from "lucide-react";
@@ -48,12 +49,17 @@ export function CartRow({
     <li className="flex gap-4 border-b border-border py-4 last:border-b-0">
       <Link
         href={`/cours/${slug}`}
-        className="aspect-video w-32 shrink-0 overflow-hidden rounded-md bg-muted"
+        className="relative aspect-video w-32 shrink-0 overflow-hidden rounded-md bg-muted"
         aria-hidden
       >
         {thumbnailUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={thumbnailUrl} alt="" className="h-full w-full object-cover" />
+          <Image
+            src={thumbnailUrl}
+            alt={`Vignette de ${title}`}
+            fill
+            sizes="128px"
+            className="object-cover"
+          />
         ) : (
           <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-[color:var(--brand-primary)]/10 via-muted to-[color:var(--brand-accent)]/10 text-[10px] uppercase tracking-wide text-muted-foreground">
             Gandal

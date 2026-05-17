@@ -10,7 +10,11 @@ export default defineConfig({
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
-  workers: process.env.CI ? 1 : undefined,
+  // En dev local, on plafonne à 2 workers : `next dev` n'aime pas recevoir
+  // simultanément 8 requêtes qui déclenchent chacune un compile (ECONNRESET
+  // observés sur les routes lourdes comme /api/og Satori). En CI on reste
+  // séquentiel pour la stabilité maximale.
+  workers: process.env.CI ? 1 : 2,
   reporter: process.env.CI ? "github" : "list",
   use: {
     baseURL: process.env.PLAYWRIGHT_BASE_URL ?? "http://localhost:3000",

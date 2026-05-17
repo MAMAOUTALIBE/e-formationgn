@@ -62,11 +62,13 @@ export async function getAdminOverviewKpis(
       where: { enrolledAt: { gte: range.from, lte: range.to } },
     }),
     prisma.course.count({ where: { status: "PENDING_REVIEW" } }),
-    prisma.lessonProgress.findMany({
-      distinct: ["userId"],
-      where: { updatedAt: { gte: new Date(Date.now() - 30 * 24 * 3600 * 1000) } },
-      select: { userId: true },
-    }),
+    // COUNT(DISTINCT) en SQL pur : évite de matérialiser tous les userIds
+    // (un findMany distinct charge N lignes, même pour juste compter).
+    prisma.$queryRaw<Array<{ count: bigint }>>`
+      SELECT COUNT(DISTINCT "userId")::bigint AS count
+      FROM "LessonProgress"
+      WHERE "updatedAt" >= ${new Date(Date.now() - 30 * 24 * 3600 * 1000)}
+    `,
   ]);
 
   const revenueByCurrency: Record<Currency, number> = { EUR: 0, USD: 0, GNF: 0, XOF: 0 };
@@ -88,7 +90,7 @@ export async function getAdminOverviewKpis(
       (completionAgg._avg.progressPercent ?? 0) * 10,
     ) / 10,
     pendingCoursesCount: pendingCourses,
-    activeStudents30d: activeStudents.length,
+    activeStudents30d: Number(activeStudents[0]?.count ?? 0),
   };
 }
 
@@ -197,50 +199,47 @@ export async function getTopInstructorsByRevenue(
   range: PeriodRange,
   limit = 5,
 ): Promise<TopInstructorRow[]> {
-  const items = await prisma.orderItem.findMany({
-    where: {
-      order: { status: "PAID", paidAt: { gte: range.from, lte: range.to } },
-    },
-    select: {
-      currency: true,
-      instructorPayoutCents: true,
-      platformFeeCents: true,
-      course: { select: { instructorId: true } },
-    },
-  });
+  // Agrégation côté DB (GROUP BY + ORDER BY + LIMIT) plutôt que findMany
+  // exhaustif + reduce JS : O(N) lignes au lieu de O(orderItems).
+  const rows = await prisma.$queryRaw<
+    Array<{
+      instructorId: string;
+      payout: bigint;
+      fee: bigint;
+      currency: Currency;
+    }>
+  >`
+    SELECT c."instructorId"               AS "instructorId",
+           SUM(oi."instructorPayoutCents")::bigint AS "payout",
+           SUM(oi."platformFeeCents")::bigint     AS "fee",
+           MIN(oi."currency"::text)::"Currency"   AS "currency"
+    FROM "OrderItem" oi
+    INNER JOIN "Course" c ON c."id" = oi."courseId"
+    INNER JOIN "Order"  o ON o."id" = oi."orderId"
+    WHERE o."status" = 'PAID'
+      AND o."paidAt" >= ${range.from}
+      AND o."paidAt" <= ${range.to}
+    GROUP BY c."instructorId"
+    ORDER BY "payout" DESC
+    LIMIT ${limit}
+  `;
 
-  const map = new Map<
-    string,
-    { payout: number; fee: number; currency: Currency }
-  >();
-  for (const it of items) {
-    const id = it.course.instructorId;
-    const existing = map.get(id) ?? { payout: 0, fee: 0, currency: it.currency };
-    existing.payout += it.instructorPayoutCents;
-    existing.fee += it.platformFeeCents;
-    map.set(id, existing);
-  }
-
-  const sorted = Array.from(map.entries())
-    .sort((a, b) => b[1].payout - a[1].payout)
-    .slice(0, limit);
-
-  const ids = sorted.map(([id]) => id);
+  const ids = rows.map((r) => r.instructorId);
   const users = await prisma.user.findMany({
     where: { id: { in: ids } },
     select: { id: true, name: true, email: true, firstName: true },
   });
   const userMap = new Map(users.map((u) => [u.id, u]));
 
-  return sorted.map(([id, agg]) => {
-    const u = userMap.get(id);
+  return rows.map((r) => {
+    const u = userMap.get(r.instructorId);
     return {
-      id,
+      id: r.instructorId,
       name: u?.name ?? u?.firstName ?? "(supprimé)",
       email: u?.email ?? "",
-      payoutCents: agg.payout,
-      platformFeeCents: agg.fee,
-      currency: agg.currency,
+      payoutCents: Number(r.payout),
+      platformFeeCents: Number(r.fee),
+      currency: r.currency,
     };
   });
 }
@@ -254,32 +253,34 @@ export interface CategoryRevenueSlice {
 export async function getRevenueByCategory(
   range: PeriodRange,
 ): Promise<CategoryRevenueSlice[]> {
-  const items = await prisma.orderItem.findMany({
-    where: {
-      order: { status: "PAID", paidAt: { gte: range.from, lte: range.to } },
-    },
-    select: {
-      totalCents: true,
-      course: { select: { categoryId: true } },
-    },
-  });
-  const map = new Map<string, number>();
-  for (const it of items) {
-    map.set(it.course.categoryId, (map.get(it.course.categoryId) ?? 0) + it.totalCents);
-  }
-  const ids = Array.from(map.keys());
+  // Agrégation côté DB (GROUP BY catégorie + ORDER BY revenue).
+  const rows = await prisma.$queryRaw<
+    Array<{ categoryId: string; revenue: bigint }>
+  >`
+    SELECT c."categoryId"          AS "categoryId",
+           SUM(oi."totalCents")::bigint AS "revenue"
+    FROM "OrderItem" oi
+    INNER JOIN "Course" c ON c."id" = oi."courseId"
+    INNER JOIN "Order"  o ON o."id" = oi."orderId"
+    WHERE o."status" = 'PAID'
+      AND o."paidAt" >= ${range.from}
+      AND o."paidAt" <= ${range.to}
+    GROUP BY c."categoryId"
+    ORDER BY "revenue" DESC
+  `;
+  if (rows.length === 0) return [];
+
+  const ids = rows.map((r) => r.categoryId);
   const cats = await prisma.category.findMany({
     where: { id: { in: ids } },
     select: { id: true, name: true },
   });
   const catMap = new Map(cats.map((c) => [c.id, c.name]));
-  return Array.from(map.entries())
-    .sort((a, b) => b[1] - a[1])
-    .map(([categoryId, revenueCents]) => ({
-      categoryId,
-      categoryName: catMap.get(categoryId) ?? "(supprimée)",
-      revenueCents,
-    }));
+  return rows.map((r) => ({
+    categoryId: r.categoryId,
+    categoryName: catMap.get(r.categoryId) ?? "(supprimée)",
+    revenueCents: Number(r.revenue),
+  }));
 }
 
 export interface AdminAlert {

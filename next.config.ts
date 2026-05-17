@@ -67,6 +67,25 @@ const nextConfig: NextConfig = {
       },
     ];
   },
+
+  // Aliases conviviaux : /admin/dashboard et /formateur/dashboard sont des
+  // raccourcis fréquents (habitude Wordpress/Discord) — on redirige vers
+  // les vraies pages racines plutôt que de servir un 404.
+  async redirects() {
+    return [
+      { source: "/admin/dashboard", destination: "/admin", permanent: false },
+      {
+        source: "/formateur/dashboard",
+        destination: "/formateur",
+        permanent: false,
+      },
+      // Tolérance aux fautes d'orthographe fréquentes
+      { source: "/conexion", destination: "/connexion", permanent: false },
+      { source: "/connection", destination: "/connexion", permanent: false },
+      { source: "/login", destination: "/connexion", permanent: false },
+      { source: "/signin", destination: "/connexion", permanent: false },
+    ];
+  },
 };
 
 export default nextConfig;

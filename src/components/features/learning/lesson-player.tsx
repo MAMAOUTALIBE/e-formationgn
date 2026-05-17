@@ -276,6 +276,7 @@ declare module "react" {
           "start-time"?: number;
           "metadata-video-title"?: string;
           poster?: string;
+          autoplay?: boolean | string;
         },
         HTMLElement
       >;
