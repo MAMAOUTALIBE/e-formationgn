@@ -17,6 +17,8 @@ export function CourseEditorTabs({ courseId }: CourseEditorTabsProps) {
     { href: `/formateur/cours/${courseId}/programme`, label: "Programme" },
     { href: `/formateur/cours/${courseId}/tarification`, label: "Tarification" },
     { href: `/formateur/cours/${courseId}/seo`, label: "SEO & Objectifs" },
+    { href: `/formateur/cours/${courseId}/insights`, label: "Insights" },
+    { href: `/formateur/cours/${courseId}/annonces`, label: "Annonces" },
   ];
 
   return (

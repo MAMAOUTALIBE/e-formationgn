@@ -15,7 +15,6 @@ import { auth } from "@/auth";
 import { AvatarUploader } from "@/components/features/auth/avatar-uploader";
 import { ProfileForm } from "@/components/features/auth/profile-form";
 import { CurrencyToggle } from "@/components/features/preferences/currency-toggle";
-import { LocaleToggle } from "@/components/features/i18n/locale-toggle";
 import { SiteFooter } from "@/components/layout/site-footer";
 import { SiteHeader } from "@/components/layout/site-header";
 import { Avatar } from "@/components/ui/avatar";
@@ -31,7 +30,6 @@ import {
 } from "@/components/ui/card";
 import { Container } from "@/components/ui/container";
 import { formatDurationFromSeconds } from "@/lib/format/duration";
-import { getDictionary } from "@/lib/i18n/server";
 import { prisma } from "@/lib/prisma";
 
 export const metadata: Metadata = {
@@ -62,7 +60,6 @@ export default async function ProfilePage() {
   }
 
   const userId = session.user.id;
-  const { locale } = await getDictionary();
 
   // Toutes les queries en parallèle — stats personnelles + sessions
   // actives + dernière connexion.
@@ -226,20 +223,11 @@ export default async function ProfilePage() {
                 <CardTitle className="text-base">Préférences</CardTitle>
               </div>
               <CardDescription>
-                Langue d&apos;interface et devise des prix affichés.
+                Devise des prix affichés sur le site et au panier.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="flex flex-wrap items-center justify-between gap-3">
-                <div>
-                  <p className="text-sm font-medium text-foreground">Langue</p>
-                  <p className="text-xs text-muted-foreground">
-                    Langue de l&apos;interface, des emails et du support.
-                  </p>
-                </div>
-                <LocaleToggle current={locale} />
-              </div>
-              <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border pt-4">
                 <div>
                   <p className="text-sm font-medium text-foreground">Devise</p>
                   <p className="text-xs text-muted-foreground">

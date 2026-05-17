@@ -3,11 +3,14 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useTransition } from "react";
-import { Trash2 } from "lucide-react";
+import { Heart, Trash2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { CoursePrice } from "@/components/features/courses/course-price";
-import { removeCourseFromCart } from "@/server/actions/cart";
+import {
+  moveCartItemToWishlist,
+  removeCourseFromCart,
+} from "@/server/actions/cart";
 import type { Currency } from "@/generated/prisma/enums";
 
 interface CartRowProps {
@@ -42,6 +45,12 @@ export function CartRow({
   function handleRemove() {
     startTransition(async () => {
       await removeCourseFromCart(courseId);
+    });
+  }
+
+  function handleMoveToWishlist() {
+    startTransition(async () => {
+      await moveCartItemToWishlist(courseId);
     });
   }
 
@@ -91,17 +100,32 @@ export function CartRow({
           currency={currency}
           size="md"
         />
-        <Button
-          type="button"
-          variant="ghost"
-          size="sm"
-          onClick={handleRemove}
-          disabled={pending}
-          aria-label={`Retirer ${title} du panier`}
-        >
-          <Trash2 className="h-4 w-4" />
-          Retirer
-        </Button>
+        <div className="flex flex-col items-end gap-0.5 sm:flex-row sm:items-center sm:gap-1">
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={handleMoveToWishlist}
+            disabled={pending}
+            aria-label={`Garder ${title} pour plus tard`}
+            className="text-xs text-muted-foreground hover:text-foreground"
+          >
+            <Heart className="h-3.5 w-3.5" aria-hidden />
+            Plus tard
+          </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={handleRemove}
+            disabled={pending}
+            aria-label={`Retirer ${title} du panier`}
+            className="text-xs text-muted-foreground hover:text-destructive"
+          >
+            <Trash2 className="h-3.5 w-3.5" aria-hidden />
+            Retirer
+          </Button>
+        </div>
       </div>
     </li>
   );

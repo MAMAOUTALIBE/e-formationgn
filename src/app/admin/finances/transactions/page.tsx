@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { Download } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -35,7 +36,7 @@ export default async function AdminTransactionsPage({ searchParams }: PageProps)
 
   return (
     <div className="space-y-5">
-      <header className="flex items-end justify-between gap-3">
+      <header className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight text-foreground">
             Transactions
@@ -44,6 +45,22 @@ export default async function AdminTransactionsPage({ searchParams }: PageProps)
             {total.toLocaleString("fr-FR")} commandes · page {page} / {totalPages}
           </p>
         </div>
+        {/* Export CSV — preserve les filtres actifs via querystring */}
+        <Button asChild variant="outline" size="sm">
+          <a
+            href={`/api/admin/transactions-csv?${new URLSearchParams(
+              Object.entries({
+                q: params.q,
+                status: params.status,
+                currency: params.currency,
+              }).filter(([, v]) => v) as [string, string][],
+            ).toString()}`}
+            download
+          >
+            <Download className="h-4 w-4" aria-hidden />
+            Exporter CSV (max 10k lignes)
+          </a>
+        </Button>
       </header>
 
       <Card>

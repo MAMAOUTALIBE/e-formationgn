@@ -79,7 +79,7 @@ export function DateRangePicker({ paramName = "period" }: { paramName?: string }
       </Button>
 
       {open ? (
-        <div className="absolute right-0 top-full z-30 mt-2 w-72 rounded-md border border-border bg-popover p-2 shadow-lg">
+        <div className="absolute right-0 top-full z-30 mt-2 w-[min(calc(100vw-2rem),18rem)] rounded-md border border-border bg-popover p-2 shadow-lg">
           <div className="grid gap-1">
             {(Object.keys(PRESET_LABELS) as PeriodPreset[])
               .filter((p) => p !== "custom")
@@ -101,14 +101,14 @@ export function DateRangePicker({ paramName = "period" }: { paramName?: string }
             <p className="px-1 text-xs font-medium uppercase tracking-wide text-muted-foreground">
               Personnalisé
             </p>
-            <div className="mt-2 grid grid-cols-2 gap-2">
+            <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
               <input
                 type="date"
                 value={period.from ?? ""}
                 onChange={(e) =>
                   setPeriod({ preset: "custom", from: e.target.value, to: period.to })
                 }
-                className="rounded-md border border-border bg-background px-2 py-1 text-sm"
+                className="rounded-md border border-border bg-background px-2 py-2 text-base sm:py-1 sm:text-sm"
               />
               <input
                 type="date"
@@ -116,7 +116,7 @@ export function DateRangePicker({ paramName = "period" }: { paramName?: string }
                 onChange={(e) =>
                   setPeriod({ preset: "custom", from: period.from, to: e.target.value })
                 }
-                className="rounded-md border border-border bg-background px-2 py-1 text-sm"
+                className="rounded-md border border-border bg-background px-2 py-2 text-base sm:py-1 sm:text-sm"
               />
             </div>
             <Button

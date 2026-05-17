@@ -270,3 +270,219 @@ export async function getLessonForInstructor(
   if (!isAdmin && lesson.section.course.instructorId !== instructorId) return null;
   return lesson;
 }
+
+// ---------------------------------------------------------------------------
+// Centre Q&A — agrégation des questions sur tous les cours du formateur.
+// ---------------------------------------------------------------------------
+export interface InstructorQuestionRow {
+  id: string;
+  title: string;
+  body: string;
+  createdAt: Date;
+  isResolved: boolean;
+  answersCount: number;
+  hasInstructorAnswer: boolean;
+  course: { id: string; slug: string; title: string };
+  user: { id: string; name: string | null; image: string | null };
+}
+
+export async function listInstructorQuestions(
+  instructorId: string,
+  opts: { onlyUnanswered?: boolean; limit?: number } = {},
+): Promise<InstructorQuestionRow[]> {
+  const questions = await prisma.question.findMany({
+    where: {
+      course: { instructorId },
+      ...(opts.onlyUnanswered
+        ? {
+            answers: { none: { userId: instructorId } },
+          }
+        : {}),
+    },
+    include: {
+      course: { select: { id: true, slug: true, title: true } },
+      user: { select: { id: true, name: true, image: true } },
+      answers: { select: { userId: true } },
+    },
+    orderBy: { createdAt: "desc" },
+    take: opts.limit ?? 100,
+  });
+  return questions.map((q) => ({
+    id: q.id,
+    title: q.title,
+    body: q.body,
+    createdAt: q.createdAt,
+    isResolved: q.isResolved,
+    answersCount: q.answers.length,
+    hasInstructorAnswer: q.answers.some((a) => a.userId === instructorId),
+    course: q.course,
+    user: q.user,
+  }));
+}
+
+// ---------------------------------------------------------------------------
+// Centre Avis — agrégation des reviews sur tous les cours du formateur,
+// incluant la réponse formateur (instructorReply) si présente.
+// ---------------------------------------------------------------------------
+export interface InstructorReviewRow {
+  id: string;
+  rating: number;
+  title: string | null;
+  comment: string | null;
+  createdAt: Date;
+  instructorReply: string | null;
+  instructorRepliedAt: Date | null;
+  course: { id: string; slug: string; title: string };
+  user: { id: string; name: string | null; firstName: string | null; image: string | null };
+}
+
+export async function listInstructorReviews(
+  instructorId: string,
+  opts: { onlyUnanswered?: boolean; minRating?: number; limit?: number } = {},
+): Promise<InstructorReviewRow[]> {
+  const reviews = await prisma.review.findMany({
+    where: {
+      course: { instructorId },
+      isPublished: true,
+      ...(opts.minRating ? { rating: { gte: opts.minRating } } : {}),
+      ...(opts.onlyUnanswered ? { instructorReply: null } : {}),
+    },
+    include: {
+      course: { select: { id: true, slug: true, title: true } },
+      user: {
+        select: { id: true, name: true, firstName: true, image: true },
+      },
+    },
+    orderBy: { createdAt: "desc" },
+    take: opts.limit ?? 100,
+  });
+  return reviews;
+}
+
+// ---------------------------------------------------------------------------
+// Annonces aux élèves — liste pour un cours donné (CRUD côté formateur).
+// ---------------------------------------------------------------------------
+export async function listCourseAnnouncements(
+  courseId: string,
+  instructorId: string,
+) {
+  const course = await prisma.course.findUnique({
+    where: { id: courseId },
+    select: { instructorId: true },
+  });
+  if (!course || course.instructorId !== instructorId) return null;
+  return prisma.courseAnnouncement.findMany({
+    where: { courseId },
+    orderBy: { createdAt: "desc" },
+    include: {
+      author: { select: { id: true, name: true, firstName: true, image: true } },
+    },
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Engagement par leçon — dropoff = (% d'élèves qui ont vu cette leçon vs
+// l'effectif total des inscrits du cours). Identifie où les élèves décrochent.
+// ---------------------------------------------------------------------------
+export interface LessonDropoffRow {
+  lessonId: string;
+  lessonTitle: string;
+  sectionTitle: string;
+  displayOrder: number;
+  completedCount: number;
+  startedCount: number;
+}
+
+export async function getLessonDropoff(
+  courseId: string,
+  instructorId: string,
+): Promise<LessonDropoffRow[] | null> {
+  const course = await prisma.course.findUnique({
+    where: { id: courseId },
+    select: { instructorId: true },
+  });
+  if (!course || course.instructorId !== instructorId) return null;
+
+  const lessons = await prisma.lesson.findMany({
+    where: { section: { courseId } },
+    select: {
+      id: true,
+      title: true,
+      displayOrder: true,
+      section: { select: { title: true, displayOrder: true } },
+      progress: {
+        select: { isCompleted: true, watchedSeconds: true },
+      },
+    },
+  });
+
+  const rows: LessonDropoffRow[] = lessons.map((l) => ({
+    lessonId: l.id,
+    lessonTitle: l.title,
+    sectionTitle: l.section.title,
+    displayOrder: l.section.displayOrder * 1000 + l.displayOrder,
+    completedCount: l.progress.filter((p) => p.isCompleted).length,
+    startedCount: l.progress.filter((p) => p.watchedSeconds > 0).length,
+  }));
+
+  rows.sort((a, b) => a.displayOrder - b.displayOrder);
+  return rows;
+}
+
+// ---------------------------------------------------------------------------
+// Courbes daily enrollment + revenue d'un cours sur les 30 derniers jours.
+// ---------------------------------------------------------------------------
+export interface CourseTimeseriesPoint {
+  date: string; // YYYY-MM-DD
+  enrollments: number;
+  revenueCents: number;
+}
+
+export async function getCourseTimeseries(
+  courseId: string,
+  instructorId: string,
+  days = 30,
+): Promise<CourseTimeseriesPoint[] | null> {
+  const course = await prisma.course.findUnique({
+    where: { id: courseId },
+    select: { instructorId: true },
+  });
+  if (!course || course.instructorId !== instructorId) return null;
+
+  const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+  since.setHours(0, 0, 0, 0);
+
+  const [enrollments, orderItems] = await Promise.all([
+    prisma.enrollment.findMany({
+      where: { courseId, enrolledAt: { gte: since } },
+      select: { enrolledAt: true },
+    }),
+    prisma.orderItem.findMany({
+      where: {
+        courseId,
+        order: { status: "PAID", paidAt: { gte: since } },
+      },
+      select: { instructorPayoutCents: true, order: { select: { paidAt: true } } },
+    }),
+  ]);
+
+  // Bucket par jour
+  const buckets = new Map<string, { enrollments: number; revenueCents: number }>();
+  for (let i = 0; i < days; i++) {
+    const d = new Date(since.getTime() + i * 24 * 60 * 60 * 1000);
+    buckets.set(d.toISOString().slice(0, 10), { enrollments: 0, revenueCents: 0 });
+  }
+  for (const e of enrollments) {
+    const key = e.enrolledAt.toISOString().slice(0, 10);
+    const b = buckets.get(key);
+    if (b) b.enrollments++;
+  }
+  for (const it of orderItems) {
+    if (!it.order.paidAt) continue;
+    const key = it.order.paidAt.toISOString().slice(0, 10);
+    const b = buckets.get(key);
+    if (b) b.revenueCents += it.instructorPayoutCents;
+  }
+  return Array.from(buckets.entries()).map(([date, v]) => ({ date, ...v }));
+}
+

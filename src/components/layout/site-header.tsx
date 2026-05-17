@@ -5,7 +5,6 @@ import { Logo } from "@/components/branding/logo";
 import { UserMenu } from "@/components/features/auth/user-menu";
 import { CartIcon } from "@/components/features/cart/cart-icon";
 import { HeaderSearch } from "@/components/features/courses/header-search";
-import { LocaleToggle } from "@/components/features/i18n/locale-toggle";
 import { NotificationBell } from "@/components/features/notifications/notification-bell";
 import { CategoriesDropdown } from "@/components/layout/categories-dropdown";
 import { MobileMenu } from "@/components/layout/mobile-menu";
@@ -20,7 +19,7 @@ import { listFeaturedCategories } from "@/server/queries/categories";
 export async function SiteHeader() {
   const session = await auth();
   const user = session?.user;
-  const { locale, t } = await getDictionary();
+  const { t } = await getDictionary();
 
   // Toutes ces queries en parallèle. `listFeaturedCategories` est déjà
   // mise en cache 1 h (cf. Sprint 1) — coût négligeable par render.
@@ -72,7 +71,6 @@ export async function SiteHeader() {
         </div>
 
         <div className="flex items-center gap-1 md:gap-2">
-          <LocaleToggle current={locale} className="hidden lg:inline-flex" />
           {user ? (
             <>
               <NotificationBell unreadCount={unreadNotifs} />
@@ -88,11 +86,14 @@ export async function SiteHeader() {
             </>
           ) : (
             <>
-              <Button variant="ghost" asChild className="hidden md:inline-flex">
+              {/* Connexion : toujours visible (mobile inclus) — accès direct sans
+                  passer par le hamburger, c'était la friction principale en mobile. */}
+              <Button variant="ghost" asChild size="sm" className="px-2 sm:px-3">
                 <Link href="/connexion">{t.common.login}</Link>
               </Button>
               <Button
                 asChild
+                size="sm"
                 className="hidden bg-[color:var(--brand-mint)] text-[color:var(--neutral-900)] shadow-sm hover:bg-[color:var(--brand-mint-deep)] sm:inline-flex"
               >
                 <Link href="/inscription">{t.common.register}</Link>

@@ -67,6 +67,151 @@ export async function getFinancesKpis(range: {
   };
 }
 
+// Série mensuelle revenu / commission / refund — pattern Stripe Dashboard.
+// Retourne les 12 derniers mois pour graphique MRR-like.
+export interface MonthlyFinancePoint {
+  month: string; // YYYY-MM
+  grossCents: number; // tous orders payés ce mois (en EUR converti côté UI)
+  platformFeeCents: number; // commission plateforme
+  refundsCents: number; // remboursements émis ce mois
+  ordersCount: number;
+}
+
+export async function getMonthlyFinanceSeries(
+  months = 12,
+): Promise<MonthlyFinancePoint[]> {
+  const now = new Date();
+  const fromMonth = new Date(now.getFullYear(), now.getMonth() - (months - 1), 1);
+
+  const [items, refunds] = await Promise.all([
+    prisma.orderItem.findMany({
+      where: {
+        order: { status: "PAID", paidAt: { gte: fromMonth } },
+        currency: "EUR", // pour la V1 on aggrège en EUR (devise reporting plateforme)
+      },
+      select: {
+        totalCents: true,
+        platformFeeCents: true,
+        order: { select: { id: true, paidAt: true } },
+      },
+    }),
+    prisma.refund.findMany({
+      where: { createdAt: { gte: fromMonth }, order: { currency: "EUR" } },
+      select: { amountCents: true, createdAt: true },
+    }),
+  ]);
+
+  // Init buckets
+  const buckets = new Map<string, MonthlyFinancePoint>();
+  for (let i = 0; i < months; i++) {
+    const d = new Date(now.getFullYear(), now.getMonth() - (months - 1 - i), 1);
+    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+    buckets.set(key, {
+      month: key,
+      grossCents: 0,
+      platformFeeCents: 0,
+      refundsCents: 0,
+      ordersCount: 0,
+    });
+  }
+
+  const seenOrders = new Set<string>();
+  for (const it of items) {
+    if (!it.order.paidAt) continue;
+    const key = `${it.order.paidAt.getFullYear()}-${String(it.order.paidAt.getMonth() + 1).padStart(2, "0")}`;
+    const b = buckets.get(key);
+    if (!b) continue;
+    b.grossCents += it.totalCents;
+    b.platformFeeCents += it.platformFeeCents;
+    if (!seenOrders.has(it.order.id)) {
+      b.ordersCount += 1;
+      seenOrders.add(it.order.id);
+    }
+  }
+  for (const r of refunds) {
+    const key = `${r.createdAt.getFullYear()}-${String(r.createdAt.getMonth() + 1).padStart(2, "0")}`;
+    const b = buckets.get(key);
+    if (b) b.refundsCents += r.amountCents;
+  }
+
+  return Array.from(buckets.values());
+}
+
+// KPIs santé financière : net revenue + refund rate + delta période précédente.
+// Tout exprimé en EUR (reporting plateforme), conversion à la charge de la
+// devise locale ailleurs.
+export interface FinanceHealthKpis {
+  netRevenueCents: number; // gross EUR - refunds EUR
+  netRevenuePreviousCents: number;
+  refundRatePercent: number; // refunds / gross
+  chargebackCount: number; // disputes ouvertes
+  outstandingPayoutsCents: number; // somme à verser aux formateurs (PENDING)
+}
+
+export async function getFinanceHealthKpis(range: {
+  from: Date;
+  to: Date;
+}): Promise<FinanceHealthKpis> {
+  const durationMs = range.to.getTime() - range.from.getTime();
+  const previousRange = {
+    from: new Date(range.from.getTime() - durationMs),
+    to: range.from,
+  };
+
+  const [grossRows, refundsRows, prevGrossRows, prevRefundsRows, chargebacks, payouts] =
+    await Promise.all([
+      prisma.orderItem.findMany({
+        where: {
+          order: { status: "PAID", paidAt: { gte: range.from, lte: range.to } },
+          currency: "EUR",
+        },
+        select: { totalCents: true },
+      }),
+      prisma.refund.findMany({
+        where: {
+          createdAt: { gte: range.from, lte: range.to },
+          order: { currency: "EUR" },
+        },
+        select: { amountCents: true },
+      }),
+      prisma.orderItem.findMany({
+        where: {
+          order: {
+            status: "PAID",
+            paidAt: { gte: previousRange.from, lte: previousRange.to },
+          },
+          currency: "EUR",
+        },
+        select: { totalCents: true },
+      }),
+      prisma.refund.findMany({
+        where: {
+          createdAt: { gte: previousRange.from, lte: previousRange.to },
+          order: { currency: "EUR" },
+        },
+        select: { amountCents: true },
+      }),
+      prisma.dispute.count({ where: { status: "OPEN" } }),
+      prisma.payout.aggregate({
+        where: { status: { in: ["PENDING", "PROCESSING"] } },
+        _sum: { amountCents: true },
+      }),
+    ]);
+
+  const grossCents = grossRows.reduce((s, r) => s + r.totalCents, 0);
+  const refundsCents = refundsRows.reduce((s, r) => s + r.amountCents, 0);
+  const prevGross = prevGrossRows.reduce((s, r) => s + r.totalCents, 0);
+  const prevRefunds = prevRefundsRows.reduce((s, r) => s + r.amountCents, 0);
+
+  return {
+    netRevenueCents: grossCents - refundsCents,
+    netRevenuePreviousCents: prevGross - prevRefunds,
+    refundRatePercent: grossCents > 0 ? (refundsCents / grossCents) * 100 : 0,
+    chargebackCount: chargebacks,
+    outstandingPayoutsCents: payouts._sum.amountCents ?? 0,
+  };
+}
+
 export interface AdminTransactionRow {
   id: string;
   status: OrderStatus;

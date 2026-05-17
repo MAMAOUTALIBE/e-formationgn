@@ -19,6 +19,7 @@ import {
   SORT_OPTIONS,
 } from "@/lib/validators/courses";
 
+import { useFilterTransition } from "./filter-transition-context";
 import { CourseFilterDrawer } from "./course-filter-drawer";
 
 const RATING_THRESHOLDS = [4.5, 4, 3.5, 3] as const;
@@ -28,26 +29,46 @@ interface CategoryOption {
   name: string;
 }
 
+export interface CourseFilterCountsProp {
+  categories?: Record<string, number>;
+  levels?: Record<string, number>;
+  prices?: Record<string, number>;
+  durations?: Record<string, number>;
+  ratings?: Record<string, number>;
+}
+
 interface CourseFilterBarProps {
   categories: CategoryOption[];
+  counts?: CourseFilterCountsProp;
   hideCategory?: boolean;
   className?: string;
 }
 
+// Helper : suffixe " (12)" si on a un count, "" sinon. Format français.
+function countSuffix(count: number | undefined): string {
+  if (typeof count !== "number") return "";
+  return ` (${count.toLocaleString("fr-FR")})`;
+}
+
 export function CourseFilterBar({
   categories,
+  counts,
   hideCategory,
   className,
 }: CourseFilterBarProps) {
   const router = useRouter();
   const params = useSearchParams();
-  const [, startTransition] = React.useTransition();
+  const { startTransition } = useFilterTransition();
   const [drawerOpen, setDrawerOpen] = React.useState(false);
 
   const currentCategory = params.get("category") ?? "";
-  const currentLevel = params.get("level") ?? "";
+  const currentLevelRaw = params.get("level") ?? "";
+  const currentLevels = currentLevelRaw ? currentLevelRaw.split(",").filter(Boolean) : [];
+  const currentLevel = currentLevels[0] ?? ""; // pour radio mono dans les dropdowns chip
   const currentPrice = params.get("price") ?? "";
-  const currentDuration = params.get("duration") ?? "";
+  const currentDurationRaw = params.get("duration") ?? "";
+  const currentDurations = currentDurationRaw ? currentDurationRaw.split(",").filter(Boolean) : [];
+  const currentDuration = currentDurations[0] ?? "";
   const currentRating = params.get("rating") ?? "";
   const currentSort = params.get("sort") ?? "relevance";
 
@@ -77,9 +98,9 @@ export function CourseFilterBar({
 
   const activeCount =
     (currentCategory ? 1 : 0) +
-    (currentLevel ? 1 : 0) +
+    currentLevels.length +
     (currentPrice ? 1 : 0) +
-    (currentDuration ? 1 : 0) +
+    currentDurations.length +
     (currentRating ? 1 : 0);
 
   const categoryName =
@@ -137,6 +158,7 @@ export function CourseFilterBar({
                     }}
                   >
                     {c.name}
+                    {countSuffix(counts?.categories?.[c.slug])}
                   </FilterOption>
                 ))}
               </FilterMenu>
@@ -146,8 +168,14 @@ export function CourseFilterBar({
 
         <FilterChip
           label="Niveau"
-          value={currentLevel}
-          valueLabel={currentLevel ? COURSE_LEVEL_LABELS[currentLevel as keyof typeof COURSE_LEVEL_LABELS] : ""}
+          value={currentLevelRaw}
+          valueLabel={
+            currentLevels.length === 1
+              ? COURSE_LEVEL_LABELS[currentLevels[0] as keyof typeof COURSE_LEVEL_LABELS]
+              : currentLevels.length > 1
+                ? `${currentLevels.length} sélectionnés`
+                : ""
+          }
           onClear={() => update({ level: undefined })}
         >
           {(close) => (
@@ -171,6 +199,7 @@ export function CourseFilterBar({
                   }}
                 >
                   {COURSE_LEVEL_LABELS[lv]}
+                  {countSuffix(counts?.levels?.[lv])}
                 </FilterOption>
               ))}
             </FilterMenu>
@@ -195,6 +224,7 @@ export function CourseFilterBar({
                   }}
                 >
                   {PRICE_FILTER_LABELS[p]}
+                  {p !== "all" ? countSuffix(counts?.prices?.[p]) : ""}
                 </FilterOption>
               ))}
             </FilterMenu>
@@ -203,8 +233,14 @@ export function CourseFilterBar({
 
         <FilterChip
           label="Durée"
-          value={currentDuration}
-          valueLabel={currentDuration ? DURATION_FILTER_LABELS[currentDuration] : ""}
+          value={currentDurationRaw}
+          valueLabel={
+            currentDurations.length === 1
+              ? DURATION_FILTER_LABELS[currentDurations[0] as keyof typeof DURATION_FILTER_LABELS]
+              : currentDurations.length > 1
+                ? `${currentDurations.length} sélectionnées`
+                : ""
+          }
           onClear={() => update({ duration: undefined })}
         >
           {(close) => (
@@ -219,6 +255,7 @@ export function CourseFilterBar({
                   }}
                 >
                   {DURATION_FILTER_LABELS[d]}
+                  {d !== "all" ? countSuffix(counts?.durations?.[d]) : ""}
                 </FilterOption>
               ))}
             </FilterMenu>
@@ -253,7 +290,10 @@ export function CourseFilterBar({
                 >
                   <span className="inline-flex items-center gap-2">
                     <Stars rating={threshold} size="sm" />
-                    <span>{threshold.toFixed(1)} et plus</span>
+                    <span>
+                      {threshold.toFixed(1)} et plus
+                      {countSuffix(counts?.ratings?.[String(threshold)])}
+                    </span>
                   </span>
                 </FilterOption>
               ))}
@@ -303,6 +343,7 @@ export function CourseFilterBar({
         open={drawerOpen}
         onClose={() => setDrawerOpen(false)}
         categories={categories}
+        counts={counts}
         hideCategory={hideCategory}
       />
     </>

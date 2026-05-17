@@ -1,11 +1,12 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { CheckCircle2, Users } from "lucide-react";
+import { CalendarClock, CheckCircle2, Globe2, MessageSquare, Users } from "lucide-react";
 
 import { auth } from "@/auth";
 import { JsonLd } from "@/components/seo/json-ld";
 import { AddToCartButton } from "@/components/features/cart/add-to-cart-button";
+import { BuyNowButton } from "@/components/features/cart/buy-now-button";
 import { CourseBadges } from "@/components/features/courses/course-badges";
 import { CourseCard } from "@/components/features/courses/course-card";
 import { CourseCouponInput } from "@/components/features/courses/course-coupon-input";
@@ -199,6 +200,11 @@ export default async function CourseDetailPage({ params }: PageProps) {
             alreadyEnrolled={alreadyEnrolled}
             alreadyInCart={alreadyInCart}
           />
+          <BuyNowButton
+            courseId={course.id}
+            fullWidth
+            alreadyEnrolled={alreadyEnrolled}
+          />
           <WishlistButton
             courseId={course.id}
             fullWidth
@@ -259,6 +265,7 @@ export default async function CourseDetailPage({ params }: PageProps) {
                 <p className="mt-3 text-base text-primary-foreground/80">{course.subtitle}</p>
               ) : null}
 
+              {/* Trust signals : rating + count élèves (gros, mis en avant) */}
               <div className="mt-5 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
                 <span className="inline-flex items-center gap-1.5">
                   <Stars
@@ -277,16 +284,28 @@ export default async function CourseDetailPage({ params }: PageProps) {
                   {course.totalEnrollments.toLocaleString("fr-FR")}{" "}
                   {pluralize(course.totalEnrollments, "élève")}
                 </span>
-                {course.publishedAt ? (
-                  <span className="text-primary-foreground/70">
-                    Mise à jour :{" "}
-                    {new Intl.DateTimeFormat("fr-FR", {
-                      month: "long",
-                      year: "numeric",
-                    }).format(course.publishedAt)}
-                  </span>
-                ) : null}
-                <span className="text-primary-foreground/70">Français</span>
+              </div>
+
+              {/* Meta enrichi (pattern Udemy) : dernière mise à jour, langue
+                  audio, sous-titres. updatedAt vs publishedAt = signal de
+                  fraîcheur (le cours est-il maintenu ?). */}
+              <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-primary-foreground/70">
+                <span className="inline-flex items-center gap-1">
+                  <CalendarClock className="h-3.5 w-3.5" aria-hidden />
+                  Dernière mise à jour :{" "}
+                  {new Intl.DateTimeFormat("fr-FR", {
+                    month: "long",
+                    year: "numeric",
+                  }).format(course.updatedAt)}
+                </span>
+                <span className="inline-flex items-center gap-1">
+                  <Globe2 className="h-3.5 w-3.5" aria-hidden />
+                  Audio : Français
+                </span>
+                <span className="inline-flex items-center gap-1">
+                  <MessageSquare className="h-3.5 w-3.5" aria-hidden />
+                  Sous-titres : Français
+                </span>
               </div>
 
               <p className="mt-3 text-sm text-primary-foreground/80">

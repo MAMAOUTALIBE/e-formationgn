@@ -8,6 +8,10 @@ import { Select } from "@/components/ui/select";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { listAdminCourses } from "@/server/queries/admin-courses";
 import { listFeaturedCategories } from "@/server/queries/categories";
+import {
+  computeQualityScore,
+  qualityTierColor,
+} from "@/lib/courses/quality-score";
 import type { CourseStatus } from "@/generated/prisma/enums";
 
 export const metadata: Metadata = {
@@ -120,6 +124,7 @@ export default async function AdminCoursesPage({ searchParams }: PageProps) {
                 <th className="hidden px-4 py-3 sm:table-cell">Catégorie</th>
                 <th className="hidden px-4 py-3 lg:table-cell">Élèves</th>
                 <th className="hidden px-4 py-3 lg:table-cell">Note</th>
+                <th className="hidden px-4 py-3 lg:table-cell">Score qualité</th>
                 <th className="px-4 py-3 text-right">Action</th>
               </tr>
             </thead>
@@ -127,7 +132,7 @@ export default async function AdminCoursesPage({ searchParams }: PageProps) {
               {rows.length === 0 ? (
                 <tr>
                   <td
-                    colSpan={7}
+                    colSpan={8}
                     className="px-4 py-10 text-center text-sm text-muted-foreground"
                   >
                     Aucun cours.
@@ -162,6 +167,13 @@ export default async function AdminCoursesPage({ searchParams }: PageProps) {
                     <td className="hidden px-4 py-3 text-muted-foreground lg:table-cell">
                       {c.averageRating.toFixed(1)}
                     </td>
+                    <td className="hidden px-4 py-3 lg:table-cell">
+                      <QualityScoreBadge
+                        averageRating={c.averageRating}
+                        totalEnrollments={c.totalEnrollments}
+                        totalRatings={c.totalRatings}
+                      />
+                    </td>
                     <td className="px-4 py-3 text-right">
                       <Link
                         href={`/admin/cours/${c.id}`}
@@ -187,4 +199,37 @@ function CourseStatusBadge({ status }: { status: CourseStatus }) {
   if (status === "REJECTED") return <StatusBadge tone="danger">Rejeté</StatusBadge>;
   if (status === "ARCHIVED") return <StatusBadge tone="neutral">Archivé</StatusBadge>;
   return <StatusBadge tone="neutral">Brouillon</StatusBadge>;
+}
+
+function QualityScoreBadge({
+  averageRating,
+  totalEnrollments,
+  totalRatings,
+}: {
+  averageRating: number;
+  totalEnrollments: number;
+  totalRatings: number;
+}) {
+  const result = computeQualityScore({
+    averageRating,
+    totalEnrollments,
+    totalRatings,
+  });
+  return (
+    <span
+      className={`inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-semibold tabular-nums ${qualityTierColor(result.tier)}`}
+      title={result.reason}
+    >
+      {result.tier === "indéfini" ? (
+        "—"
+      ) : (
+        <>
+          <span>{result.score}</span>
+          <span className="text-[10px] font-normal uppercase opacity-75">
+            {result.tier}
+          </span>
+        </>
+      )}
+    </span>
+  );
 }

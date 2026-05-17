@@ -30,15 +30,28 @@ const stringOrFirst = z
   .preprocess((value) => (Array.isArray(value) ? value[0] : value), z.string())
   .optional();
 
+// Multi-select : format URL "?level=BEGINNER,INTERMEDIATE" — séparateur virgule.
+// Validation : on découpe, on filtre les valeurs valides, on dédoublonne.
+// Retourne undefined si tableau vide ou input invalide → comportement
+// identique à "pas de filtre" pour les requêtes en aval.
+function parseMultiCsv<T extends string>(
+  validValues: readonly T[],
+): (value: string | undefined) => T[] | undefined {
+  return (value) => {
+    if (!value) return undefined;
+    const set = new Set<T>();
+    for (const raw of value.split(",")) {
+      const v = raw.trim();
+      if ((validValues as readonly string[]).includes(v)) set.add(v as T);
+    }
+    return set.size > 0 ? Array.from(set) : undefined;
+  };
+}
+
 export const courseFiltersSchema = z.object({
   q: stringOrFirst,
   category: stringOrFirst,
-  level: stringOrFirst.transform((value) => {
-    if (!value) return undefined;
-    return (COURSE_LEVELS as readonly string[]).includes(value)
-      ? (value as CourseLevelFilter)
-      : undefined;
-  }),
+  level: stringOrFirst.transform(parseMultiCsv(COURSE_LEVELS)),
   price: stringOrFirst.transform((value) => {
     if (!value) return undefined;
     return (PRICE_FILTERS as readonly string[]).includes(value)
@@ -51,12 +64,7 @@ export const courseFiltersSchema = z.object({
     if (Number.isNaN(parsed)) return undefined;
     return Math.min(5, Math.max(0, parsed));
   }),
-  duration: stringOrFirst.transform((value) => {
-    if (!value) return undefined;
-    return (DURATION_FILTERS as readonly string[]).includes(value)
-      ? (value as DurationFilter)
-      : undefined;
-  }),
+  duration: stringOrFirst.transform(parseMultiCsv(DURATION_FILTERS.filter((d) => d !== "all") as readonly DurationFilter[])),
   sort: stringOrFirst.transform((value) => {
     if (!value) return "relevance" as CourseSort;
     return (SORT_OPTIONS as readonly string[]).includes(value)

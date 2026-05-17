@@ -39,12 +39,12 @@ export function MobileMenu({ isLoggedIn, role }: MobileMenuProps) {
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="inline-flex h-10 w-10 items-center justify-center rounded-md text-foreground hover:bg-muted md:hidden"
+        className="inline-flex h-11 w-11 items-center justify-center rounded-md border border-border bg-background text-foreground shadow-sm transition-colors hover:bg-muted active:bg-muted md:hidden"
         aria-label="Ouvrir le menu"
         aria-expanded={open}
         aria-controls="mobile-menu-drawer"
       >
-        <Menu className="h-5 w-5" aria-hidden />
+        <Menu className="h-6 w-6" aria-hidden />
       </button>
 
       {open ? (

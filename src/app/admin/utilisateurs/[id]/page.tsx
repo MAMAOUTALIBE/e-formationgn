@@ -33,7 +33,23 @@ export default async function AdminUserDetailPage({ params }: PageProps) {
   const { id } = await params;
   const data = await getAdminUserDetail(id);
   if (!data) notFound();
-  const { user, orders, enrollments, recentAudit, notes, spendByCurrency } = data;
+  const {
+    user,
+    orders,
+    enrollments,
+    recentAudit,
+    notes,
+    spendByCurrency,
+    engagement,
+    lastSessionExpires,
+  } = data;
+
+  const lifetimeSpendEur =
+    spendByCurrency.find((s) => s.currency === "EUR")?._sum.totalCents ?? 0;
+  const completionRate =
+    engagement.lessonsStarted > 0
+      ? (engagement.lessonsCompleted / engagement.lessonsStarted) * 100
+      : 0;
 
   return (
     <div className="space-y-6">
@@ -107,6 +123,48 @@ export default async function AdminUserDetailPage({ params }: PageProps) {
         <MiniStat label="Inscriptions" value={user._count.enrollments} />
         <MiniStat label="Cours créés" value={user._count.coursesAuthored} />
         <MiniStat label="Certificats" value={user._count.certificates} />
+      </section>
+
+      {/* Engagement apprentissage — pattern Udemy student profile */}
+      <section
+        aria-labelledby="engagement-heading"
+        className="rounded-lg border border-border bg-card p-5"
+      >
+        <h2
+          id="engagement-heading"
+          className="text-xs font-semibold uppercase tracking-wide text-muted-foreground"
+        >
+          Engagement apprentissage
+        </h2>
+        <div className="mt-3 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <MiniStat
+            label="Leçons commencées"
+            value={engagement.lessonsStarted}
+          />
+          <MiniStat
+            label="Leçons terminées"
+            value={engagement.lessonsCompleted}
+          />
+          <MiniStat
+            label="Taux de complétion"
+            value={`${completionRate.toFixed(0)}%`}
+          />
+          <MiniStat
+            label="Temps de visionnage"
+            value={formatDuration(engagement.totalWatchedSeconds)}
+          />
+        </div>
+        <p className="mt-3 text-xs text-muted-foreground">
+          {user.lastLoginAt
+            ? `Dernière connexion : ${user.lastLoginAt.toLocaleString("fr-FR")}`
+            : "Aucune connexion récente enregistrée"}
+          {lastSessionExpires
+            ? ` · Session active jusqu'au ${lastSessionExpires.toLocaleString("fr-FR")}`
+            : ""}
+          {lifetimeSpendEur > 0
+            ? ` · Lifetime spend : ${(lifetimeSpendEur / 100).toLocaleString("fr-FR", { minimumFractionDigits: 2 })} €`
+            : ""}
+        </p>
       </section>
 
       <section className="grid gap-4 sm:grid-cols-2">
@@ -307,7 +365,13 @@ export default async function AdminUserDetailPage({ params }: PageProps) {
   );
 }
 
-function MiniStat({ label, value }: { label: string; value: number }) {
+function MiniStat({
+  label,
+  value,
+}: {
+  label: string;
+  value: number | string;
+}) {
   return (
     <Card>
       <CardContent className="p-4">
@@ -320,6 +384,14 @@ function MiniStat({ label, value }: { label: string; value: number }) {
       </CardContent>
     </Card>
   );
+}
+
+function formatDuration(totalSeconds: number): string {
+  if (totalSeconds === 0) return "—";
+  const h = Math.floor(totalSeconds / 3600);
+  const m = Math.floor((totalSeconds % 3600) / 60);
+  if (h > 0) return `${h}h ${m}min`;
+  return `${m}min`;
 }
 
 function ServerActionButton({

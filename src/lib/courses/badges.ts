@@ -32,7 +32,9 @@ interface BadgeSourceCourse {
   totalEnrollments: number;
   averageRating: number;
   totalRatings: number;
-  publishedAt: Date | null;
+  // string accepté : la date peut traverser une boundary Client Component
+  // (sérialisation JSON → string ISO) avant d'arriver ici.
+  publishedAt: Date | string | null;
   isFeatured: boolean;
 }
 
@@ -67,8 +69,11 @@ export function getCourseBadges(course: BadgeSourceCourse): CourseBadge[] {
   }
 
   if (course.publishedAt) {
-    const ageMs = Date.now() - course.publishedAt.getTime();
-    const ageDays = ageMs / (1000 * 60 * 60 * 24);
+    const publishedAtMs =
+      typeof course.publishedAt === "string"
+        ? new Date(course.publishedAt).getTime()
+        : course.publishedAt.getTime();
+    const ageDays = (Date.now() - publishedAtMs) / (1000 * 60 * 60 * 24);
     if (ageDays <= NEW_DAYS) {
       badges.push({
         kind: "new",

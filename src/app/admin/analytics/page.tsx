@@ -51,6 +51,40 @@ export default async function AdminAnalyticsPage({ searchParams }: PageProps) {
         <DateRangePicker />
       </header>
 
+      {/* Sous-sections analytics — Udemy-style nav cards */}
+      <nav aria-label="Sections analytics" className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+        <Link
+          href="/admin/analytics/funnel"
+          className="rounded-lg border border-border bg-card p-3 text-sm font-medium text-foreground transition-colors hover:border-[color:var(--brand-secondary)] hover:bg-muted/50"
+        >
+          📊 Funnel de conversion
+        </Link>
+        <Link
+          href="/admin/analytics/clients"
+          className="rounded-lg border border-border bg-card p-3 text-sm font-medium text-foreground transition-colors hover:border-[color:var(--brand-secondary)] hover:bg-muted/50"
+        >
+          💰 Clients (AOV / LTV)
+        </Link>
+        <Link
+          href="/admin/analytics/cohortes"
+          className="rounded-lg border border-border bg-card p-3 text-sm font-medium text-foreground transition-colors hover:border-[color:var(--brand-secondary)] hover:bg-muted/50"
+        >
+          🔁 Cohortes rétention
+        </Link>
+        <Link
+          href="/admin/analytics/revenus"
+          className="rounded-lg border border-border bg-card p-3 text-sm font-medium text-foreground transition-colors hover:border-[color:var(--brand-secondary)] hover:bg-muted/50"
+        >
+          📈 Revenus
+        </Link>
+        <Link
+          href="/admin/analytics/apprentissage"
+          className="rounded-lg border border-border bg-card p-3 text-sm font-medium text-foreground transition-colors hover:border-[color:var(--brand-secondary)] hover:bg-muted/50"
+        >
+          🎓 Apprentissage
+        </Link>
+      </nav>
+
       <Card>
         <CardHeader>
           <CardTitle className="text-base">Entonnoir de conversion</CardTitle>

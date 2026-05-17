@@ -1,17 +1,45 @@
 "use client";
 
 // Toggle clair/sombre/auto. Utilisé dans le UserMenu et l'header admin.
-// Pas de gating "mounted" — next-themes injecte la classe sur <html> côté
-// serveur via le ThemeProvider, donc l'état initial des boutons matche déjà
-// le DOM. `suppressHydrationWarning` sur <html> couvre les variations.
+// Gating "mounted" indispensable : `useTheme()` retourne `undefined` côté
+// serveur (pas d'accès à localStorage), puis la vraie valeur après mount.
+// Sans gate, les `aria-checked` divergent entre SSR et client → hydration
+// error visible en dev. On rend un skeleton stable avant mount.
 
 import { Monitor, Moon, Sun } from "lucide-react";
 import { useTheme } from "next-themes";
+import { useEffect, useState } from "react";
 
 import { cn } from "@/lib/utils";
 
 export function ThemeToggle({ className }: { className?: string }) {
   const { theme, setTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+
+  // Skeleton placeholder même structure (anti layout shift) mais sans
+  // aria-checked dynamique. Devient interactif au mount client.
+  if (!mounted) {
+    return (
+      <div
+        aria-hidden
+        className={cn(
+          "inline-flex items-center gap-0.5 rounded-md border border-border bg-background p-0.5 opacity-60",
+          className,
+        )}
+      >
+        <span className="inline-flex h-7 w-7 items-center justify-center text-muted-foreground">
+          <Sun className="h-3.5 w-3.5" aria-hidden />
+        </span>
+        <span className="inline-flex h-7 w-7 items-center justify-center text-muted-foreground">
+          <Monitor className="h-3.5 w-3.5" aria-hidden />
+        </span>
+        <span className="inline-flex h-7 w-7 items-center justify-center text-muted-foreground">
+          <Moon className="h-3.5 w-3.5" aria-hidden />
+        </span>
+      </div>
+    );
+  }
 
   return (
     <div

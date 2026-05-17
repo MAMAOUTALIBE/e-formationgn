@@ -120,6 +120,142 @@ export async function getCohorts(): Promise<CohortRow[]> {
   );
 }
 
+// AOV (Average Order Value) + LTV (Lifetime Value) — pilotage business critique.
+// AOV = revenu total / nombre de commandes payées sur la période.
+// LTV moyen = revenu total / nombre de clients distincts (ayant payé au moins
+//   1 fois). Per-cohort plus tard si besoin.
+export interface ClientsKpis {
+  totalCustomers: number;
+  payingCustomers: number;
+  repeatCustomers: number; // clients avec >= 2 commandes
+  aovCentsByCurrency: Record<Currency, number>;
+  ltvCentsByCurrency: Record<Currency, number>;
+  averageOrdersPerCustomer: number;
+  topCustomers: Array<{
+    userId: string;
+    name: string | null;
+    email: string;
+    ordersCount: number;
+    totalSpentCents: number;
+    currency: Currency;
+  }>;
+}
+
+export async function getClientsKpis(range: {
+  from: Date;
+  to: Date;
+}): Promise<ClientsKpis> {
+  const [paidOrders, totalUsers] = await Promise.all([
+    prisma.order.findMany({
+      where: {
+        status: "PAID",
+        paidAt: { gte: range.from, lte: range.to },
+      },
+      select: {
+        userId: true,
+        totalCents: true,
+        currency: true,
+      },
+    }),
+    prisma.user.count(),
+  ]);
+
+  // AOV par devise
+  const aovTotals = new Map<Currency, { sum: number; count: number }>();
+  const customerSpend = new Map<
+    string,
+    { totalCents: number; ordersCount: number; currency: Currency }
+  >();
+  for (const o of paidOrders) {
+    const a = aovTotals.get(o.currency) ?? { sum: 0, count: 0 };
+    a.sum += o.totalCents;
+    a.count += 1;
+    aovTotals.set(o.currency, a);
+
+    const c = customerSpend.get(o.userId) ?? {
+      totalCents: 0,
+      ordersCount: 0,
+      currency: o.currency,
+    };
+    c.totalCents += o.totalCents;
+    c.ordersCount += 1;
+    customerSpend.set(o.userId, c);
+  }
+
+  const aovCentsByCurrency: Record<Currency, number> = {
+    EUR: 0,
+    USD: 0,
+    GNF: 0,
+    XOF: 0,
+  };
+  const ltvCentsByCurrency: Record<Currency, number> = {
+    EUR: 0,
+    USD: 0,
+    GNF: 0,
+    XOF: 0,
+  };
+  for (const [currency, agg] of aovTotals) {
+    aovCentsByCurrency[currency] = agg.count > 0 ? agg.sum / agg.count : 0;
+  }
+
+  // LTV = totalSpent / distinct paying customers, par devise
+  const ltvAggregates = new Map<Currency, { sum: number; customers: Set<string> }>();
+  for (const [userId, c] of customerSpend) {
+    const agg = ltvAggregates.get(c.currency) ?? { sum: 0, customers: new Set() };
+    agg.sum += c.totalCents;
+    agg.customers.add(userId);
+    ltvAggregates.set(c.currency, agg);
+  }
+  for (const [currency, agg] of ltvAggregates) {
+    ltvCentsByCurrency[currency] =
+      agg.customers.size > 0 ? agg.sum / agg.customers.size : 0;
+  }
+
+  const payingCustomers = customerSpend.size;
+  const repeatCustomers = Array.from(customerSpend.values()).filter(
+    (c) => c.ordersCount >= 2,
+  ).length;
+  const totalOrders = paidOrders.length;
+  const averageOrdersPerCustomer =
+    payingCustomers > 0 ? totalOrders / payingCustomers : 0;
+
+  // Top 10 clients (revenue total)
+  const topCustomersIds = Array.from(customerSpend.entries())
+    .sort((a, b) => b[1].totalCents - a[1].totalCents)
+    .slice(0, 10)
+    .map(([userId]) => userId);
+
+  const topCustomersUsers = await prisma.user.findMany({
+    where: { id: { in: topCustomersIds } },
+    select: { id: true, name: true, email: true },
+  });
+  const topCustomers = topCustomersIds
+    .map((id) => {
+      const u = topCustomersUsers.find((x) => x.id === id);
+      const spend = customerSpend.get(id);
+      if (!u || !spend) return null;
+      return {
+        userId: id,
+        name: u.name,
+        email: u.email,
+        ordersCount: spend.ordersCount,
+        totalSpentCents: spend.totalCents,
+        currency: spend.currency,
+      };
+    })
+    .filter((x): x is NonNullable<typeof x> => x !== null);
+
+  return {
+    totalCustomers: totalUsers,
+    payingCustomers,
+    repeatCustomers,
+    aovCentsByCurrency,
+    ltvCentsByCurrency,
+    averageOrdersPerCustomer,
+    topCustomers,
+  };
+}
+
 export interface PerformancePoint {
   label: string;
   value: number;

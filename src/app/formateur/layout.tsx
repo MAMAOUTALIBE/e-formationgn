@@ -1,6 +1,14 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { BookOpenText, GaugeCircle, LinkIcon, Tag, Wallet } from "lucide-react";
+import {
+  BookOpenText,
+  CircleHelp,
+  GaugeCircle,
+  LinkIcon,
+  Star,
+  Tag,
+  Wallet,
+} from "lucide-react";
 
 import { auth } from "@/auth";
 import { Logo } from "@/components/branding/logo";
@@ -52,6 +60,12 @@ export default async function InstructorLayout({
             </NavItem>
             <NavItem href="/formateur/cours" icon={<BookOpenText className="h-4 w-4" />}>
               Mes cours
+            </NavItem>
+            <NavItem href="/formateur/questions" icon={<CircleHelp className="h-4 w-4" />}>
+              Q&amp;A
+            </NavItem>
+            <NavItem href="/formateur/avis" icon={<Star className="h-4 w-4" />}>
+              Avis
             </NavItem>
             <NavItem href="/formateur/paiements" icon={<Wallet className="h-4 w-4" />}>
               Paiements

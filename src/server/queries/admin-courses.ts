@@ -22,6 +22,7 @@ export interface AdminCourseRow {
   isFeatured: boolean;
   featuredOrder: number | null;
   averageRating: number;
+  totalRatings: number;
   totalEnrollments: number;
   priceEUR: number;
   category: { id: string; name: string };
@@ -65,6 +66,7 @@ export async function listAdminCourses(
         isFeatured: true,
         featuredOrder: true,
         averageRating: true,
+        totalRatings: true,
         totalEnrollments: true,
         priceEUR: true,
         createdAt: true,
@@ -96,6 +98,7 @@ export async function listFeaturedCoursesAdmin(): Promise<AdminCourseRow[]> {
       isFeatured: true,
       featuredOrder: true,
       averageRating: true,
+      totalRatings: true,
       totalEnrollments: true,
       priceEUR: true,
       createdAt: true,

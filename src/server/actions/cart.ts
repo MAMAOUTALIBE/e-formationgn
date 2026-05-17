@@ -5,6 +5,7 @@
 // (userId, courseId) sur CartItem.
 
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 
 import { auth } from "@/auth";
 import {
@@ -67,6 +68,40 @@ export async function addCourseToCart(courseId: string): Promise<ActionResult> {
   revalidatePath("/panier");
   revalidatePath("/", "layout");
   return { success: true, message: "Cours ajouté au panier." };
+}
+
+// "Acheter maintenant" — ajoute le cours au panier (idempotent), puis
+// redirige vers /panier où l'utilisateur sélectionne le PSP et finalise.
+// Pourquoi pas direct Stripe : Gandal supporte Stripe + CinetPay selon devise,
+// le panier est l'endroit qui pilote ce choix. Reste 1 clic vs 2 normalement.
+export async function buyCourseNow(courseId: string): Promise<void> {
+  const result = await addCourseToCart(courseId);
+  if (!result.success) {
+    // Si l'add fail (déjà inscrit, rate limit), on redirige quand même vers
+    // /panier qui affichera le message d'erreur via la query string `?msg`.
+    redirect(`/panier?msg=${encodeURIComponent(result.message ?? "Action impossible.")}`);
+  }
+  redirect("/panier");
+}
+
+// "Garder pour plus tard" — déplace l'item du panier vers la wishlist en une
+// transaction. Idempotent : upsert wishlist + delete cart. Pattern Udemy
+// "Move to wishlist" qui réduit le drop-off perçu (le user n'a pas l'impression
+// de "perdre" le cours en le retirant).
+export async function moveCartItemToWishlist(courseId: string): Promise<ActionResult> {
+  const { userId } = await requireSession();
+  await prisma.$transaction([
+    prisma.wishlistItem.upsert({
+      where: { userId_courseId: { userId, courseId } },
+      update: {},
+      create: { userId, courseId },
+    }),
+    prisma.cartItem.deleteMany({ where: { userId, courseId } }),
+  ]);
+  revalidatePath("/panier");
+  revalidatePath("/wishlist");
+  revalidatePath("/", "layout");
+  return { success: true, message: "Cours déplacé vers votre wishlist." };
 }
 
 export async function removeCourseFromCart(courseId: string): Promise<ActionResult> {

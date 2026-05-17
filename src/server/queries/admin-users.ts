@@ -169,13 +169,47 @@ export async function getAdminUserDetail(userId: string) {
     }),
   ]);
 
-  const spendByCurrency = await prisma.order.groupBy({
-    by: ["currency"],
-    where: { userId, status: "PAID" },
-    _sum: { totalCents: true },
-  });
+  const [spendByCurrency, engagement, lastSession] = await Promise.all([
+    prisma.order.groupBy({
+      by: ["currency"],
+      where: { userId, status: "PAID" },
+      _sum: { totalCents: true },
+    }),
+    // Engagement apprentissage : lessons commencées/terminées + temps cumulé
+    prisma.lessonProgress
+      .aggregate({
+        where: { userId },
+        _sum: { watchedSeconds: true },
+        _count: { _all: true },
+      })
+      .then(async (started) => {
+        const completed = await prisma.lessonProgress.count({
+          where: { userId, isCompleted: true },
+        });
+        return {
+          lessonsStarted: started._count._all,
+          lessonsCompleted: completed,
+          totalWatchedSeconds: started._sum.watchedSeconds ?? 0,
+        };
+      }),
+    // Dernière session
+    prisma.session.findFirst({
+      where: { userId },
+      orderBy: { expires: "desc" },
+      select: { expires: true },
+    }),
+  ]);
 
-  return { user, orders, enrollments, recentAudit, notes, spendByCurrency };
+  return {
+    user,
+    orders,
+    enrollments,
+    recentAudit,
+    notes,
+    spendByCurrency,
+    engagement,
+    lastSessionExpires: lastSession?.expires ?? null,
+  };
 }
 
 export interface CountryFacet {

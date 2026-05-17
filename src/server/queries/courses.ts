@@ -82,8 +82,17 @@ function buildWhere(filters: Partial<CourseFilters> = {}): Prisma.CourseWhereInp
     where.category = { slug: filters.category };
   }
 
+  // Multi-select : level peut être une string (legacy) ou un array.
   if (filters.level) {
-    where.level = filters.level;
+    if (Array.isArray(filters.level)) {
+      if (filters.level.length === 1) {
+        where.level = filters.level[0];
+      } else if (filters.level.length > 1) {
+        where.level = { in: filters.level };
+      }
+    } else {
+      where.level = filters.level;
+    }
   }
 
   if (filters.rating && filters.rating > 0) {
@@ -96,12 +105,25 @@ function buildWhere(filters: Partial<CourseFilters> = {}): Prisma.CourseWhereInp
     where.priceEUR = { gt: 0 };
   }
 
-  if (filters.duration === "short") {
-    where.durationSeconds = { lt: 3 * 3600 };
-  } else if (filters.duration === "medium") {
-    where.durationSeconds = { gte: 3 * 3600, lte: 10 * 3600 };
-  } else if (filters.duration === "long") {
-    where.durationSeconds = { gt: 10 * 3600 };
+  // Multi-select : duration peut être un array de buckets (short/medium/long).
+  // Chaque bucket = un range → on combine via OR.
+  if (filters.duration) {
+    const durs = Array.isArray(filters.duration)
+      ? filters.duration
+      : [filters.duration];
+    const conditions: Prisma.CourseWhereInput[] = [];
+    for (const d of durs) {
+      if (d === "short") conditions.push({ durationSeconds: { lt: 3 * 3600 } });
+      else if (d === "medium")
+        conditions.push({ durationSeconds: { gte: 3 * 3600, lte: 10 * 3600 } });
+      else if (d === "long")
+        conditions.push({ durationSeconds: { gt: 10 * 3600 } });
+    }
+    if (conditions.length === 1) {
+      Object.assign(where, conditions[0]);
+    } else if (conditions.length > 1) {
+      where.OR = conditions;
+    }
   }
 
   return where;
@@ -223,8 +245,14 @@ function buildFullTextFilterSql(filters: Partial<CourseFilters>): {
   }
 
   if (filters.level) {
-    // CourseLevel enum — Prisma stocke en text natif (CAST côté Postgres si besoin).
-    whereParts.push(Prisma.sql`c."level"::text = ${filters.level}`);
+    // CourseLevel enum — multi-select supporté (array). text cast pour
+    // que la comparaison fonctionne quel que soit le type enum côté Postgres.
+    const levels = Array.isArray(filters.level) ? filters.level : [filters.level];
+    if (levels.length === 1) {
+      whereParts.push(Prisma.sql`c."level"::text = ${levels[0]}`);
+    } else if (levels.length > 1) {
+      whereParts.push(Prisma.sql`c."level"::text IN (${Prisma.join(levels)})`);
+    }
   }
 
   if (filters.rating && filters.rating > 0) {
@@ -237,14 +265,26 @@ function buildFullTextFilterSql(filters: Partial<CourseFilters>): {
     whereParts.push(Prisma.sql`c."priceEUR" > 0`);
   }
 
-  if (filters.duration === "short") {
-    whereParts.push(Prisma.sql`c."durationSeconds" < ${3 * 3600}`);
-  } else if (filters.duration === "medium") {
-    whereParts.push(
-      Prisma.sql`c."durationSeconds" >= ${3 * 3600} AND c."durationSeconds" <= ${10 * 3600}`,
-    );
-  } else if (filters.duration === "long") {
-    whereParts.push(Prisma.sql`c."durationSeconds" > ${10 * 3600}`);
+  // Multi-select : duration → OR de range conditions.
+  if (filters.duration) {
+    const durs = Array.isArray(filters.duration)
+      ? filters.duration
+      : [filters.duration];
+    const durParts: Prisma.Sql[] = [];
+    for (const d of durs) {
+      if (d === "short") durParts.push(Prisma.sql`c."durationSeconds" < ${3 * 3600}`);
+      else if (d === "medium")
+        durParts.push(
+          Prisma.sql`(c."durationSeconds" >= ${3 * 3600} AND c."durationSeconds" <= ${10 * 3600})`,
+        );
+      else if (d === "long")
+        durParts.push(Prisma.sql`c."durationSeconds" > ${10 * 3600}`);
+    }
+    if (durParts.length === 1) {
+      whereParts.push(durParts[0]);
+    } else if (durParts.length > 1) {
+      whereParts.push(Prisma.sql`(${Prisma.join(durParts, " OR ")})`);
+    }
   }
 
   // Concatène les conditions en `AND ... AND ...` (préfixe AND pour pouvoir
@@ -415,6 +455,71 @@ export type PublicCourseDetail = Prisma.CourseGetPayload<{
   include: typeof COURSE_DETAIL_INCLUDE;
 }>;
 
+// Cross-sell pour le panier — recommande des cours dans les mêmes catégories
+// que ceux déjà dans le panier, en excluant ceux du panier + déjà achetés par
+// l'utilisateur. Fallback : top des cours populaires si pas de catégorie en
+// commun ou pas assez de candidats.
+//
+// Pattern Amazon/Udemy "Vous pourriez aimer aussi" — gros lever de conversion
+// car le user est en mode achat.
+export async function listCartCrossSell({
+  userId,
+  excludeCourseIds,
+  fromCategoryIds,
+  limit = 4,
+}: {
+  userId: string;
+  excludeCourseIds: string[];
+  fromCategoryIds: string[];
+  limit?: number;
+}): Promise<PublicCourseListItem[]> {
+  // 1. Exclut aussi les cours déjà inscrits (Enrollment).
+  const enrollments = await prisma.enrollment.findMany({
+    where: { userId },
+    select: { courseId: true },
+  });
+  const excludedIds = new Set([
+    ...excludeCourseIds,
+    ...enrollments.map((e) => e.courseId),
+  ]);
+
+  // 2. D'abord, même catégorie + populaire.
+  const sameCategory =
+    fromCategoryIds.length > 0
+      ? await prisma.course.findMany({
+          where: {
+            status: "PUBLISHED",
+            categoryId: { in: fromCategoryIds },
+            id: { notIn: Array.from(excludedIds) },
+          },
+          include: PUBLIC_COURSE_INCLUDE,
+          orderBy: [{ totalEnrollments: "desc" }, { averageRating: "desc" }],
+          take: limit,
+        })
+      : [];
+
+  if (sameCategory.length >= limit) {
+    return sameCategory as PublicCourseListItem[];
+  }
+
+  // 3. Fallback : top cours toutes catégories pour compléter.
+  const fallback = await prisma.course.findMany({
+    where: {
+      status: "PUBLISHED",
+      id: {
+        notIn: Array.from(
+          new Set([...excludedIds, ...sameCategory.map((c) => c.id)]),
+        ),
+      },
+    },
+    include: PUBLIC_COURSE_INCLUDE,
+    orderBy: [{ totalEnrollments: "desc" }, { averageRating: "desc" }],
+    take: limit - sameCategory.length,
+  });
+
+  return [...sameCategory, ...fallback] as PublicCourseListItem[];
+}
+
 export async function getPublishedCourseBySlug(
   slug: string,
 ): Promise<PublicCourseDetail | null> {
@@ -513,6 +618,111 @@ export async function getCourseRatingDistribution(
       });
     },
   );
+}
+
+// Counts par option pour chaque facette du catalogue — pattern Udemy.
+// Pour chaque facette, on EXCLUT son propre filtre actif pour répondre à la
+// question "si j'ajoute cette option, combien de cours j'aurai ?". C'est ce
+// qui rend les filtres pertinents (un user voit immédiatement les options
+// qui ramènent des résultats vs celles qui en ont 0).
+//
+// 5 count queries en parallèle. Coût acceptable pour une page catalogue.
+export interface CourseFilterCounts {
+  categories: Record<string, number>; // slug → count
+  levels: Record<string, number>;
+  prices: Record<string, number>; // "free" | "paid"
+  durations: Record<string, number>; // "short" | "medium" | "long"
+  ratings: Record<string, number>; // "4.5" | "4" | "3.5" | "3"
+}
+
+export async function getCourseFilterCounts(
+  filters: Partial<CourseFilters> = {},
+): Promise<CourseFilterCounts> {
+  // Helper : whereInput excluant une facette donnée (pour le compte de cette facette)
+  const baseWhere = (excludeKey: keyof CourseFilters): Prisma.CourseWhereInput => {
+    const f = { ...filters };
+    delete (f as Record<string, unknown>)[excludeKey];
+    return buildWhere(f);
+  };
+
+  const [categoryGroups, levelGroups, freeCount, paidCount, durationCounts, ratingCounts] =
+    await Promise.all([
+      // Catégories : group by categoryId
+      prisma.course.groupBy({
+        by: ["categoryId"],
+        where: baseWhere("category"),
+        _count: { _all: true },
+      }),
+      // Niveaux : group by level
+      prisma.course.groupBy({
+        by: ["level"],
+        where: baseWhere("level"),
+        _count: { _all: true },
+      }),
+      // Prix : free vs paid (2 counts)
+      prisma.course.count({
+        where: { ...baseWhere("price"), priceEUR: { equals: 0 } },
+      }),
+      prisma.course.count({
+        where: { ...baseWhere("price"), priceEUR: { gt: 0 } },
+      }),
+      // Durée : short / medium / long (3 counts en parallèle)
+      Promise.all([
+        prisma.course.count({
+          where: { ...baseWhere("duration"), durationSeconds: { lt: 3 * 3600 } },
+        }),
+        prisma.course.count({
+          where: {
+            ...baseWhere("duration"),
+            durationSeconds: { gte: 3 * 3600, lte: 10 * 3600 },
+          },
+        }),
+        prisma.course.count({
+          where: { ...baseWhere("duration"), durationSeconds: { gt: 10 * 3600 } },
+        }),
+      ]),
+      // Rating : ≥4.5, ≥4, ≥3.5, ≥3 (4 counts)
+      Promise.all([
+        prisma.course.count({
+          where: { ...baseWhere("rating"), averageRating: { gte: 4.5 } },
+        }),
+        prisma.course.count({
+          where: { ...baseWhere("rating"), averageRating: { gte: 4 } },
+        }),
+        prisma.course.count({
+          where: { ...baseWhere("rating"), averageRating: { gte: 3.5 } },
+        }),
+        prisma.course.count({
+          where: { ...baseWhere("rating"), averageRating: { gte: 3 } },
+        }),
+      ]),
+    ]);
+
+  // Hydrate catégories : on a categoryId → count, mais l'UI veut slug → count.
+  const categoryIdToCount: Record<string, number> = {};
+  for (const g of categoryGroups) categoryIdToCount[g.categoryId] = g._count._all;
+  const categoriesMeta = await prisma.category.findMany({
+    where: { id: { in: Object.keys(categoryIdToCount) } },
+    select: { id: true, slug: true },
+  });
+  const categories: Record<string, number> = {};
+  for (const cat of categoriesMeta) {
+    categories[cat.slug] = categoryIdToCount[cat.id] ?? 0;
+  }
+
+  const levels: Record<string, number> = {};
+  for (const g of levelGroups) levels[g.level] = g._count._all;
+
+  const [shortCount, mediumCount, longCount] = durationCounts;
+  const [r45, r40, r35, r30] = ratingCounts;
+
+  return {
+    categories,
+    levels,
+    prices: { free: freeCount, paid: paidCount },
+    durations: { short: shortCount, medium: mediumCount, long: longCount },
+    ratings: { "4.5": r45, "4": r40, "3.5": r35, "3": r30 },
+  };
 }
 
 export async function countPublishedCoursesByCategory(): Promise<Record<string, number>> {

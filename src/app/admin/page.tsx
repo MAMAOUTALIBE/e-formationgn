@@ -6,6 +6,10 @@ import {
   BookOpenText,
   CheckCircle2,
   Coins,
+  Megaphone,
+  PiggyBank,
+  Send,
+  ShieldCheck,
   ShoppingCart,
   TrendingUp,
   Users,
@@ -14,6 +18,7 @@ import {
 import { CategoryDonut } from "@/components/features/admin/charts/category-donut";
 import { RevenueChart } from "@/components/features/admin/charts/revenue-chart";
 import { Sparkline } from "@/components/features/admin/charts/sparkline";
+import { LiveActivityFeed } from "@/components/features/admin/live-activity-feed";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DateRangePicker } from "@/components/ui/date-range-picker";
 import { periodToRange } from "@/lib/admin/period";
@@ -29,6 +34,7 @@ import {
   getTopCoursesByRevenue,
   getTopInstructorsByRevenue,
 } from "@/server/queries/admin-overview";
+import { getFinanceHealthKpis } from "@/server/queries/admin-finances";
 
 export const metadata: Metadata = {
   title: "Vue d'ensemble — CRM admin",
@@ -45,7 +51,7 @@ export default async function AdminOverviewPage({ searchParams }: PageProps) {
   const period = await readPeriod(params.period ?? null);
   const range = periodToRange(period);
 
-  const [kpis, timeseries, topCourses, topInstructors, byCategory, alerts, activity] =
+  const [kpis, timeseries, topCourses, topInstructors, byCategory, alerts, activity, financeHealth] =
     await Promise.all([
       getAdminOverviewKpis(range),
       getRevenueTimeseries(range),
@@ -54,6 +60,7 @@ export default async function AdminOverviewPage({ searchParams }: PageProps) {
       getRevenueByCategory(range),
       getAdminAlerts(),
       getRecentActivity(20),
+      getFinanceHealthKpis(range),
     ]);
 
   const revenueDeltaEur = computeDelta(
@@ -108,6 +115,20 @@ export default async function AdminOverviewPage({ searchParams }: PageProps) {
 
       <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <KpiCard
+          label="Revenu net plateforme"
+          value={`${(financeHealth.netRevenueCents / 100).toLocaleString("fr-FR", { minimumFractionDigits: 2 })} €`}
+          delta={
+            financeHealth.netRevenuePreviousCents > 0
+              ? ((financeHealth.netRevenueCents - financeHealth.netRevenuePreviousCents) /
+                  financeHealth.netRevenuePreviousCents) *
+                100
+              : null
+          }
+          icon={<PiggyBank className="h-4 w-4" />}
+          hint="Gross − refunds (EUR)"
+          href="/admin/finances"
+        />
+        <KpiCard
           label="Revenus EUR"
           value={`${(kpis.revenueByCurrency.EUR / 100).toLocaleString("fr-FR", { minimumFractionDigits: 2 })} €`}
           delta={revenueDeltaEur}
@@ -160,6 +181,44 @@ export default async function AdminOverviewPage({ searchParams }: PageProps) {
           hint="Cours à examiner"
           href="/admin/cours?status=PENDING_REVIEW"
         />
+      </section>
+
+      {/* Quick actions — accès rapide aux opérations courantes (pattern Stripe) */}
+      <section
+        aria-labelledby="quick-actions-heading"
+        className="rounded-lg border border-border bg-card p-4"
+      >
+        <h2
+          id="quick-actions-heading"
+          className="mb-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground"
+        >
+          Actions rapides
+        </h2>
+        <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+          <QuickAction
+            href="/admin/cours?status=PENDING_REVIEW"
+            icon={<TrendingUp className="h-4 w-4" />}
+            label="Modérer les cours en attente"
+            count={kpis.pendingCoursesCount}
+          />
+          <QuickAction
+            href="/admin/finances/payouts?status=PENDING"
+            icon={<Send className="h-4 w-4" />}
+            label="Payouts en attente"
+            count={undefined}
+          />
+          <QuickAction
+            href="/admin/support/litiges"
+            icon={<ShieldCheck className="h-4 w-4" />}
+            label="Litiges / chargebacks"
+            count={financeHealth.chargebackCount}
+          />
+          <QuickAction
+            href="/admin/marketing/campagnes-email"
+            icon={<Megaphone className="h-4 w-4" />}
+            label="Campagnes email"
+          />
+        </div>
       </section>
 
       <div className="grid gap-6 lg:grid-cols-3">
@@ -270,9 +329,11 @@ export default async function AdminOverviewPage({ searchParams }: PageProps) {
         </Card>
       </div>
 
+      <LiveActivityFeed />
+
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Activité récente</CardTitle>
+          <CardTitle className="text-base">Activité récente (7 derniers jours)</CardTitle>
         </CardHeader>
         <CardContent>
           {activity.length === 0 ? (
@@ -356,4 +417,33 @@ function formatRelative(date: Date): string {
 function computeDelta(current: number, previous: number): number | null {
   if (previous === 0) return current > 0 ? 100 : null;
   return ((current - previous) / previous) * 100;
+}
+
+function QuickAction({
+  href,
+  icon,
+  label,
+  count,
+}: {
+  href: string;
+  icon: React.ReactNode;
+  label: string;
+  count?: number;
+}) {
+  return (
+    <Link
+      href={href}
+      className="group flex items-center gap-3 rounded-md border border-border bg-background p-3 text-sm transition-colors hover:border-[color:var(--brand-secondary)] hover:bg-muted/50"
+    >
+      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground group-hover:bg-[color:var(--brand-secondary)]/10 group-hover:text-[color:var(--brand-secondary)]">
+        {icon}
+      </div>
+      <span className="min-w-0 flex-1 font-medium text-foreground">{label}</span>
+      {typeof count === "number" && count > 0 ? (
+        <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-[color:var(--brand-warning)] px-1.5 text-[10px] font-bold text-white">
+          {count}
+        </span>
+      ) : null}
+    </Link>
+  );
 }

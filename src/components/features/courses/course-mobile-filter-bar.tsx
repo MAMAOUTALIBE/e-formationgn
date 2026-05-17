@@ -11,6 +11,7 @@ import { SORT_LABELS } from "@/lib/format/labels";
 import { SORT_OPTIONS } from "@/lib/validators/courses";
 
 import { CourseFilterDrawer } from "./course-filter-drawer";
+import { useFilterTransition } from "./filter-transition-context";
 
 interface CategoryOption {
   slug: string;
@@ -19,16 +20,24 @@ interface CategoryOption {
 
 interface CourseMobileFilterBarProps {
   categories: CategoryOption[];
+  counts?: {
+    categories?: Record<string, number>;
+    levels?: Record<string, number>;
+    prices?: Record<string, number>;
+    durations?: Record<string, number>;
+    ratings?: Record<string, number>;
+  };
   hideCategory?: boolean;
 }
 
 export function CourseMobileFilterBar({
   categories,
+  counts,
   hideCategory,
 }: CourseMobileFilterBarProps) {
   const router = useRouter();
   const params = useSearchParams();
-  const [, startTransition] = React.useTransition();
+  const { startTransition } = useFilterTransition();
   const [filtersOpen, setFiltersOpen] = React.useState(false);
   const [sortOpen, setSortOpen] = React.useState(false);
 
@@ -84,6 +93,7 @@ export function CourseMobileFilterBar({
         open={filtersOpen}
         onClose={() => setFiltersOpen(false)}
         categories={categories}
+        counts={counts}
         hideCategory={hideCategory}
       />
 

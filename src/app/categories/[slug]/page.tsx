@@ -7,13 +7,14 @@ import { CourseCarousel } from "@/components/features/courses/course-carousel";
 import { CourseEmptyState } from "@/components/features/courses/course-empty-state";
 import { CourseFilterBar } from "@/components/features/courses/course-filter-bar";
 import { CourseMobileFilterBar } from "@/components/features/courses/course-mobile-filter-bar";
+import { FilterTransitionProvider } from "@/components/features/courses/filter-transition-context";
 import { CourseSearchBar } from "@/components/features/courses/course-search-bar";
 import { SiteFooter } from "@/components/layout/site-footer";
 import { SiteHeader } from "@/components/layout/site-header";
 import { Breadcrumbs } from "@/components/ui/breadcrumbs";
 import { Container } from "@/components/ui/container";
 import { getCategoryBySlug, listCategories } from "@/server/queries/categories";
-import { listPublishedCourses } from "@/server/queries/courses";
+import { getCourseFilterCounts, listPublishedCourses } from "@/server/queries/courses";
 import { courseFiltersSchema } from "@/lib/validators/courses";
 
 const CATALOG_MAX_ITEMS = 200;
@@ -47,13 +48,14 @@ export default async function CategoryDetailPage({ params, searchParams }: PageP
   const session = await auth();
   const currency = session?.user.preferredCurrency ?? "EUR";
 
-  const [{ items, total }, allCategories] = await Promise.all([
+  const [{ items, total }, allCategories, filterCounts] = await Promise.all([
     listPublishedCourses({
       filters,
       take: CATALOG_MAX_ITEMS,
       skip: 0,
     }),
     listCategories(),
+    getCourseFilterCounts(filters),
   ]);
 
   const categoryOptions = allCategories.map((c) => ({ slug: c.slug, name: c.name }));
@@ -70,8 +72,9 @@ export default async function CategoryDetailPage({ params, searchParams }: PageP
     <>
       <SiteHeader />
 
-      <main className="flex-1 bg-muted/20 py-8">
-        <Container className="space-y-6">
+      <FilterTransitionProvider>
+        <main className="flex-1 bg-muted/20 py-8">
+          <Container className="space-y-6">
           <Breadcrumbs
             items={[
               { label: "Accueil", href: "/" },
@@ -98,6 +101,7 @@ export default async function CategoryDetailPage({ params, searchParams }: PageP
 
           <CourseFilterBar
             categories={categoryOptions}
+            counts={filterCounts}
             hideCategory
             className="hidden sm:flex"
           />
@@ -106,6 +110,9 @@ export default async function CategoryDetailPage({ params, searchParams }: PageP
             <CourseEmptyState
               basePath={`/categories/${slug}`}
               preserveParams={["q"]}
+              suggestedCategories={categoryOptions
+                .filter((c) => c.slug !== slug)
+                .slice(0, 6)}
             />
           ) : (
             <CourseCarousel resetKey={resetKey}>
@@ -114,10 +121,11 @@ export default async function CategoryDetailPage({ params, searchParams }: PageP
               ))}
             </CourseCarousel>
           )}
-        </Container>
-      </main>
+          </Container>
+        </main>
 
-      <CourseMobileFilterBar categories={categoryOptions} hideCategory />
+        <CourseMobileFilterBar categories={categoryOptions} counts={filterCounts} hideCategory />
+      </FilterTransitionProvider>
 
       <SiteFooter />
     </>

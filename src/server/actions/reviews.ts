@@ -160,3 +160,50 @@ export async function deleteReview(courseId: string): Promise<ActionResult> {
   await recomputeCourseRating(courseId);
   return { success: true };
 }
+
+// Réponse publique du formateur à un avis. Vérifie que l'auteur est bien le
+// formateur du cours (sinon refuse silencieusement). Reply vide = retire la
+// réponse précédente.
+export async function replyToReview(
+  reviewId: string,
+  reply: string,
+): Promise<ActionResult> {
+  const session = await auth();
+  if (!session?.user) return { success: false, message: "Connectez-vous." };
+
+  const review = await prisma.review.findUnique({
+    where: { id: reviewId },
+    select: { courseId: true, course: { select: { instructorId: true } } },
+  });
+  if (!review) return { success: false, message: "Avis introuvable." };
+  if (review.course.instructorId !== session.user.id) {
+    return { success: false, message: "Action non autorisée." };
+  }
+
+  const trimmed = reply.trim();
+  if (trimmed.length > 2000) {
+    return { success: false, message: "Réponse trop longue (max 2000 caractères)." };
+  }
+
+  await prisma.review.update({
+    where: { id: reviewId },
+    data: {
+      instructorReply: trimmed.length > 0 ? trimmed : null,
+      instructorRepliedAt: trimmed.length > 0 ? new Date() : null,
+    },
+  });
+
+  await createAuditLog({
+    actorId: session.user.id,
+    action: "instructor.review.reply",
+    targetType: "Review",
+    targetId: reviewId,
+    metadata: { courseId: review.courseId, length: trimmed.length },
+  });
+
+  revalidatePath("/formateur/avis");
+  return {
+    success: true,
+    message: trimmed.length > 0 ? "Réponse publiée." : "Réponse supprimée.",
+  };
+}

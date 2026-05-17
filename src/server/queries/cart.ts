@@ -25,6 +25,7 @@ const CART_ITEM_INCLUDE = {
       discountEndsAt: true,
       status: true,
       instructorId: true,
+      categoryId: true,
       instructor: {
         select: { id: true, name: true, firstName: true, affiliateCode: true },
       },

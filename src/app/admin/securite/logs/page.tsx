@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
+import { AlertTriangle, ShieldAlert, ShieldCheck, ShieldX } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { KpiCard } from "@/components/ui/kpi-card";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { unbanIp } from "@/server/actions/admin-security";
 import { prisma } from "@/lib/prisma";
@@ -15,7 +17,7 @@ function last24h() {
 }
 
 export default async function LoginLogsPage() {
-  const [attempts, banned, suspiciousIps] = await Promise.all([
+  const [attempts, banned, suspiciousIps, totals, distinctIps] = await Promise.all([
     prisma.loginAttempt.findMany({
       where: { createdAt: { gte: last24h() } },
       orderBy: { createdAt: "desc" },
@@ -33,15 +35,78 @@ export default async function LoginLogsPage() {
       orderBy: { _count: { ipHash: "desc" } },
       take: 20,
     }),
+    Promise.all([
+      prisma.loginAttempt.count({
+        where: { createdAt: { gte: last24h() } },
+      }),
+      prisma.loginAttempt.count({
+        where: { createdAt: { gte: last24h() }, success: true },
+      }),
+      prisma.loginAttempt.count({
+        where: { createdAt: { gte: last24h() }, success: false },
+      }),
+    ]).then(([total, success, fail]) => ({ total, success, fail })),
+    prisma.loginAttempt
+      .findMany({
+        where: { createdAt: { gte: last24h() } },
+        select: { ipHash: true },
+        distinct: ["ipHash"],
+      })
+      .then((rows) => rows.length),
   ]);
+
+  const successRate =
+    totals.total > 0 ? ((totals.success / totals.total) * 100).toFixed(1) : "—";
 
   return (
     <div className="space-y-5">
       <header>
-        <h1 className="text-2xl font-semibold tracking-tight text-foreground">
-          Logs de connexion
+        <h1 className="flex items-center gap-2 text-2xl font-semibold tracking-tight text-foreground">
+          <ShieldAlert
+            className="h-6 w-6 text-[color:var(--brand-warning)]"
+            aria-hidden
+          />
+          Sécurité — Logs &amp; fraude
         </h1>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Vue d&apos;ensemble des tentatives de connexion et IPs bannies (24
+          dernières heures).
+        </p>
       </header>
+
+      {/* KPIs sécurité — vue d'ensemble 24h */}
+      <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+        <KpiCard
+          label="Tentatives 24h"
+          value={totals.total}
+          icon={<ShieldAlert className="h-4 w-4" />}
+          hint="Login attempts loggés"
+        />
+        <KpiCard
+          label="Succès"
+          value={totals.success}
+          icon={<ShieldCheck className="h-4 w-4" />}
+          hint={`${successRate}% taux de succès`}
+        />
+        <KpiCard
+          label="Échecs"
+          value={totals.fail}
+          icon={<ShieldX className="h-4 w-4" />}
+          hint="Tentatives infructueuses"
+        />
+        <KpiCard
+          label="IPs distinctes"
+          value={distinctIps}
+          icon={<ShieldAlert className="h-4 w-4" />}
+          hint="Sources uniques"
+        />
+        <KpiCard
+          label="IPs bannies"
+          value={banned.length}
+          icon={<AlertTriangle className="h-4 w-4" />}
+          hint="Au total (cumulatif)"
+        />
+      </section>
 
       {suspiciousIps.length > 0 ? (
         <Card>

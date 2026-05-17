@@ -598,17 +598,21 @@ model CourseAnnouncement {
 }
 
 model Review {
-  id          String   @id @default(cuid())
-  userId      String
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  courseId    String
-  course      Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
-  rating      Int
-  title       String?
-  comment     String?  @db.Text
-  isPublished Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id                  String    @id @default(cuid())
+  userId              String
+  user                User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  courseId            String
+  course              Course    @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  rating              Int
+  title               String?
+  comment             String?   @db.Text
+  isPublished         Boolean   @default(true)
+  // Réponse publique du formateur (style Udemy "Instructor reply"). Affichée
+  // sous l'avis original, signée du formateur, visible publiquement.
+  instructorReply     String?   @db.Text
+  instructorRepliedAt DateTime?
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
 
   @@unique([userId, courseId])
   @@index([courseId])
