@@ -3,16 +3,23 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import { auth } from "@/auth";
+import {
+  EnrollmentCard,
+  WishlistCard,
+} from "@/components/features/learning/enrollment-card";
+import {
+  LearningFilterTabs,
+  type LearningFilter,
+} from "@/components/features/learning/learning-filter-tabs";
 import { SiteFooter } from "@/components/layout/site-footer";
 import { SiteHeader } from "@/components/layout/site-header";
-import { Badge } from "@/components/ui/badge";
 import { Breadcrumbs } from "@/components/ui/breadcrumbs";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Container } from "@/components/ui/container";
+import { EmptyState } from "@/components/ui/empty-state";
 import { pluralize } from "@/lib/format/labels";
 import { prisma } from "@/lib/prisma";
-import { getRecommendedCourses } from "@/server/queries/recommendations";
 
 export const metadata: Metadata = {
   title: "Mon apprentissage",
@@ -20,40 +27,131 @@ export const metadata: Metadata = {
 
 export const dynamic = "force-dynamic";
 
-const dateFormatter = new Intl.DateTimeFormat("fr-FR", {
-  day: "numeric",
-  month: "long",
-  year: "numeric",
-});
+interface PageProps {
+  searchParams: Promise<{ filter?: string }>;
+}
 
-export default async function LearningPage() {
+const VALID_FILTERS = new Set<LearningFilter>([
+  "all",
+  "in-progress",
+  "completed",
+  "wishlist",
+]);
+
+function parseFilter(value: string | undefined): LearningFilter {
+  if (value && (VALID_FILTERS as Set<string>).has(value)) {
+    return value as LearningFilter;
+  }
+  return "all";
+}
+
+export default async function LearningPage({ searchParams }: PageProps) {
   const session = await auth();
   if (!session?.user) {
     redirect("/connexion?callbackUrl=/apprentissage");
   }
 
-  const [enrollments, recommendations] = await Promise.all([
+  const params = await searchParams;
+  const activeFilter = parseFilter(params.filter);
+  const userId = session.user.id;
+
+  // Toutes les données en parallèle. Les enrollments servent aussi à
+  // calculer les compteurs des tabs (Tous / En cours / Terminés).
+  const [enrollments, wishlistItems] = await Promise.all([
     prisma.enrollment.findMany({
-      where: { userId: session.user.id },
+      where: { userId },
+      include: {
+        course: {
+          select: {
+            slug: true,
+            title: true,
+            thumbnailUrl: true,
+            sections: {
+              orderBy: { displayOrder: "asc" },
+              select: {
+                lessons: {
+                  orderBy: { displayOrder: "asc" },
+                  select: { id: true },
+                },
+              },
+            },
+            instructor: {
+              select: { name: true, firstName: true, lastName: true },
+            },
+          },
+        },
+      },
+      orderBy: [{ lastAccessedAt: "desc" }, { enrolledAt: "desc" }],
+    }),
+    prisma.wishlistItem.findMany({
+      where: { userId },
       include: {
         course: {
           select: {
             id: true,
             slug: true,
             title: true,
-            subtitle: true,
             thumbnailUrl: true,
-            durationSeconds: true,
             instructor: {
-              select: { id: true, name: true, firstName: true, lastName: true },
+              select: { name: true, firstName: true, lastName: true },
             },
           },
         },
       },
-      orderBy: [{ enrolledAt: "desc" }],
+      orderBy: { addedAt: "desc" },
     }),
-    getRecommendedCourses({ userId: session.user.id, limit: 6 }),
   ]);
+
+  // Pour le bouton « Reprendre », on charge la dernière LessonProgress
+  // actualisée par enrollment (la leçon où l'élève s'est arrêté).
+  const lastProgressBySlug = new Map<string, string>();
+  if (enrollments.length > 0) {
+    const lastProgress = await prisma.lessonProgress.findMany({
+      where: {
+        userId,
+        lesson: {
+          section: { courseId: { in: enrollments.map((e) => e.courseId) } },
+        },
+      },
+      orderBy: { updatedAt: "desc" },
+      select: {
+        lessonId: true,
+        lesson: {
+          select: { section: { select: { course: { select: { slug: true } } } } },
+        },
+      },
+      take: enrollments.length * 5, // marge — on garde la 1re par cours
+    });
+    for (const p of lastProgress) {
+      const slug = p.lesson.section.course.slug;
+      if (!lastProgressBySlug.has(slug)) {
+        lastProgressBySlug.set(slug, p.lessonId);
+      }
+    }
+  }
+
+  // Buckets pour les filtres + compteurs.
+  const inProgress = enrollments.filter(
+    (e) => e.progressPercent > 0 && e.progressPercent < 100 && e.completedAt === null,
+  );
+  const completed = enrollments.filter(
+    (e) => e.completedAt !== null || e.progressPercent >= 100,
+  );
+  const counts: Record<LearningFilter, number> = {
+    all: enrollments.length,
+    "in-progress": inProgress.length,
+    completed: completed.length,
+    wishlist: wishlistItems.length,
+  };
+
+  const visibleEnrollments =
+    activeFilter === "all"
+      ? enrollments
+      : activeFilter === "in-progress"
+        ? inProgress
+        : activeFilter === "completed"
+          ? completed
+          : []; // wishlist gérée séparément
 
   return (
     <>
@@ -69,164 +167,116 @@ export default async function LearningPage() {
             <h1 className="text-3xl font-semibold tracking-tight text-foreground">
               Mon apprentissage
             </h1>
-            <p className="text-sm text-muted-foreground">
-              {enrollments.length.toLocaleString("fr-FR")}{" "}
-              {pluralize(enrollments.length, "cours suivi", "cours suivis")}
+            <p className="mt-1 text-sm text-muted-foreground">
+              {counts.all.toLocaleString("fr-FR")}{" "}
+              {pluralize(counts.all, "cours suivi", "cours suivis")}
+              {counts["in-progress"] > 0 ? ` · ${counts["in-progress"]} en cours` : ""}
+              {counts.completed > 0
+                ? ` · ${counts.completed} terminé${counts.completed > 1 ? "s" : ""}`
+                : ""}
             </p>
           </header>
 
-          {enrollments.length === 0 ? (
-            <Card>
-              <CardContent className="flex flex-col items-center gap-3 p-10 text-center">
-                <p className="text-base font-medium text-foreground">
-                  Vous n&apos;avez pas encore acheté de cours.
-                </p>
-                <p className="max-w-md text-sm text-muted-foreground">
-                  Parcourez le catalogue, ajoutez des cours à votre panier et
-                  retrouvez-les ici dès votre paiement validé.
-                </p>
-                <Button asChild>
-                  <Link href="/cours">Explorer le catalogue</Link>
-                </Button>
-              </CardContent>
-            </Card>
-          ) : (
-            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-              {enrollments.map((enrollment) => {
-                const course = enrollment.course;
-                const instructorName =
-                  course.instructor.name ??
-                  ([course.instructor.firstName, course.instructor.lastName]
-                    .filter(Boolean)
-                    .join(" ") ||
-                    "Formateur");
-                return (
-                  <Card key={enrollment.id} className="overflow-hidden">
-                    <Link
-                      href={`/cours/${course.slug}`}
-                      className="block aspect-video overflow-hidden bg-muted"
-                    >
-                      {course.thumbnailUrl ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img
-                          src={course.thumbnailUrl}
-                          alt=""
-                          className="h-full w-full object-cover"
-                        />
-                      ) : null}
-                    </Link>
-                    <CardContent className="space-y-3 p-4">
-                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                        <Badge variant="success">Inscrit</Badge>
-                        <span>
-                          le {dateFormatter.format(enrollment.enrolledAt)}
-                        </span>
-                      </div>
-                      <Link
-                        href={`/cours/${course.slug}`}
-                        className="line-clamp-2 text-sm font-semibold text-foreground hover:underline"
-                      >
-                        {course.title}
-                      </Link>
-                      <p className="text-xs text-muted-foreground">Par {instructorName}</p>
-                      <div className="space-y-1">
-                        <div className="flex items-center justify-between text-xs">
-                          <span className="text-muted-foreground">Progression</span>
-                          <span className="font-medium text-foreground">
-                            {Math.round(enrollment.progressPercent)}%
-                          </span>
-                        </div>
-                        <div className="h-1.5 overflow-hidden rounded-full bg-muted">
-                          <div
-                            className="h-full bg-[color:var(--brand-secondary)] transition-all"
-                            style={{ width: `${Math.min(100, enrollment.progressPercent)}%` }}
-                          />
-                        </div>
-                      </div>
-                      <Button asChild className="w-full" variant="outline">
-                        <Link href={`/apprentissage/${course.slug}`}>
-                          {enrollment.progressPercent > 0 ? "Reprendre" : "Commencer"}
-                        </Link>
-                      </Button>
-                    </CardContent>
-                  </Card>
-                );
-              })}
-            </div>
-          )}
+          <LearningFilterTabs active={activeFilter} counts={counts} />
 
-          {recommendations.length > 0 ? (
-            <section
-              aria-labelledby="recos-heading"
-              className="space-y-4 rounded-xl border border-border bg-card p-5"
-            >
-              <header>
-                <h2
-                  id="recos-heading"
-                  className="text-lg font-semibold tracking-tight text-foreground"
-                >
-                  Recommandés pour vous
-                </h2>
-                <p className="text-xs text-muted-foreground">
-                  Cours sélectionnés selon vos centres d&apos;intérêt et votre
-                  apprentissage en cours.
-                </p>
-              </header>
-
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                {recommendations.map((course) => {
-                  const instructorName =
-                    course.instructor.name ??
-                    ([
-                      course.instructor.firstName,
-                      course.instructor.lastName,
-                    ]
-                      .filter(Boolean)
-                      .join(" ") ||
-                      "Formateur");
+          {/* Cours (Tous / En cours / Terminés) */}
+          {activeFilter !== "wishlist" ? (
+            visibleEnrollments.length === 0 ? (
+              <EmptyState
+                title={
+                  activeFilter === "in-progress"
+                    ? "Aucun cours en cours."
+                    : activeFilter === "completed"
+                      ? "Vous n'avez encore terminé aucun cours."
+                      : "Vous n'avez pas encore acheté de cours."
+                }
+                description={
+                  activeFilter === "in-progress"
+                    ? "Reprenez un cours dans « Tous mes cours » ou démarrez-en un nouveau."
+                    : activeFilter === "completed"
+                      ? "Terminez les leçons d'un cours en cours pour le voir apparaître ici."
+                      : "Parcourez le catalogue et achetez un cours pour le retrouver ici."
+                }
+                action={
+                  <Button asChild>
+                    <Link href="/cours">Explorer le catalogue</Link>
+                  </Button>
+                }
+              />
+            ) : (
+              <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+                {visibleEnrollments.map((enrollment) => {
+                  const slug = enrollment.course.slug;
+                  const lastLessonId = lastProgressBySlug.get(slug);
+                  const firstLessonId =
+                    enrollment.course.sections[0]?.lessons[0]?.id;
+                  const resumeHref = lastLessonId
+                    ? `/apprentissage/${slug}/lecons/${lastLessonId}`
+                    : firstLessonId
+                      ? `/apprentissage/${slug}/lecons/${firstLessonId}`
+                      : `/apprentissage/${slug}`;
                   return (
-                    <Card key={course.id} className="overflow-hidden">
-                      <Link
-                        href={`/cours/${course.slug}`}
-                        className="block aspect-video overflow-hidden bg-muted"
-                      >
-                        {course.thumbnailUrl ? (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img
-                            src={course.thumbnailUrl}
-                            alt=""
-                            className="h-full w-full object-cover"
-                          />
-                        ) : null}
-                      </Link>
-                      <CardContent className="space-y-2 p-4">
-                        <Badge variant="secondary" className="text-[10px]">
-                          {course.reason}
-                        </Badge>
-                        <Link
-                          href={`/cours/${course.slug}`}
-                          className="line-clamp-2 text-sm font-semibold text-foreground hover:underline"
-                        >
-                          {course.title}
-                        </Link>
-                        <p className="text-xs text-muted-foreground">
-                          Par {instructorName}
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          {course._count.enrollments.toLocaleString("fr-FR")}{" "}
-                          {pluralize(
-                            course._count.enrollments,
-                            "élève",
-                            "élèves",
-                          )}{" "}
-                          · {course.averageRating.toFixed(1)}/5
-                        </p>
-                      </CardContent>
-                    </Card>
+                    <EnrollmentCard
+                      key={enrollment.id}
+                      enrollment={{
+                        id: enrollment.id,
+                        enrolledAt: enrollment.enrolledAt,
+                        progressPercent: enrollment.progressPercent,
+                        completedAt: enrollment.completedAt,
+                        course: enrollment.course,
+                      }}
+                      resumeHref={resumeHref}
+                    />
                   );
                 })}
               </div>
-            </section>
+            )
+          ) : null}
+
+          {/* Wishlist */}
+          {activeFilter === "wishlist" ? (
+            wishlistItems.length === 0 ? (
+              <EmptyState
+                title="Votre liste d'envies est vide."
+                description="Ajoutez des cours via le bouton ♥ sur la page d'un cours pour les retrouver ici."
+                action={
+                  <Button asChild>
+                    <Link href="/cours">Explorer le catalogue</Link>
+                  </Button>
+                }
+              />
+            ) : (
+              <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+                {wishlistItems.map((item) => (
+                  <WishlistCard
+                    key={item.id}
+                    course={item.course}
+                    addedAt={item.addedAt}
+                  />
+                ))}
+              </div>
+            )
+          ) : null}
+
+          {/* Encart « Continuer à explorer » : visible uniquement quand
+              l'élève a déjà au moins 1 cours, pour le pousser à compléter
+              son apprentissage avec le catalogue. */}
+          {counts.all > 0 ? (
+            <Card className="border-dashed">
+              <CardContent className="flex flex-wrap items-center justify-between gap-3 p-4">
+                <div>
+                  <p className="text-sm font-medium text-foreground">
+                    Vous cherchez un nouveau cours ?
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    Le catalogue est mis à jour chaque semaine avec de nouvelles formations.
+                  </p>
+                </div>
+                <Button asChild variant="outline">
+                  <Link href="/cours">Parcourir le catalogue →</Link>
+                </Button>
+              </CardContent>
+            </Card>
           ) : null}
         </Container>
       </main>

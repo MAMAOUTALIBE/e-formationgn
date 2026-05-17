@@ -7,13 +7,12 @@ import { revalidatePath } from "next/cache";
 import { requireAdmin } from "@/lib/auth/authorization";
 import { prisma } from "@/lib/prisma";
 import { sendEmailCampaign } from "@/server/services/email-campaign";
+import { createAuditLog } from "@/server/services/audit-log";
 
 import type { ActionResult } from "./auth";
 
 async function audit(actorId: string, action: string, targetType: string, targetId: string) {
-  await prisma.auditLog.create({
-    data: { actorId, action, targetType, targetId },
-  });
+  await createAuditLog({ actorId, action, targetType, targetId });
 }
 
 // --- Campagnes email -------------------------------------------------------

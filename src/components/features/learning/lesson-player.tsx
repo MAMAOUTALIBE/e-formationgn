@@ -11,6 +11,8 @@ import { recordLessonProgress } from "@/server/actions/learning";
 interface LessonPlayerProps {
   /** Identifiant Mux Playback. Prioritaire sur externalVideoUrl. */
   playbackId?: string | null;
+  /** JWT signé pour les assets en policy `signed`. null si policy `public`. */
+  playbackToken?: string | null;
   /** URL .mp4 externe utilisée si playbackId est absent. */
   externalVideoUrl?: string | null;
   lessonId: string;
@@ -24,6 +26,7 @@ const COMPLETION_THRESHOLD = 0.95; // 95 % regardé = leçon terminée
 
 export function LessonPlayer({
   playbackId,
+  playbackToken,
   externalVideoUrl,
   lessonId,
   initialPositionSeconds = 0,
@@ -35,6 +38,7 @@ export function LessonPlayer({
     return (
       <MuxLessonPlayer
         playbackId={playbackId}
+        playbackToken={playbackToken ?? null}
         lessonId={lessonId}
         initialPositionSeconds={initialPositionSeconds}
         durationSeconds={durationSeconds}
@@ -64,6 +68,7 @@ export function LessonPlayer({
 
 interface MuxLessonPlayerProps {
   playbackId: string;
+  playbackToken: string | null;
   lessonId: string;
   initialPositionSeconds: number;
   durationSeconds: number;
@@ -73,6 +78,7 @@ interface MuxLessonPlayerProps {
 
 function MuxLessonPlayer({
   playbackId,
+  playbackToken,
   lessonId,
   initialPositionSeconds,
   durationSeconds,
@@ -145,6 +151,7 @@ function MuxLessonPlayer({
     <div ref={containerRef} className="overflow-hidden rounded-lg bg-black">
       <mux-player
         playback-id={playbackId}
+        playback-token={playbackToken || undefined}
         metadata-video-title={title}
         primary-color="#1E3A8A"
         accent-color="#0EA5E9"
@@ -269,6 +276,7 @@ declare module "react" {
       "mux-player": React.DetailedHTMLProps<
         React.HTMLAttributes<HTMLElement> & {
           "playback-id"?: string;
+          "playback-token"?: string;
           "stream-type"?: "on-demand" | "live";
           "primary-color"?: string;
           "accent-color"?: string;

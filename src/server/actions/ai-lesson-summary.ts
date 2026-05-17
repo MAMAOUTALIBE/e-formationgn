@@ -36,7 +36,7 @@ export async function regenerateLessonSummary(
 
     const { userId, courseId } = await requireLessonOwnership(lessonId);
 
-    const rl = checkUserRateLimit({
+    const rl = await checkUserRateLimit({
       prefix: "ai-summary",
       userId,
       windowMs: 60 * 60 * 1000,

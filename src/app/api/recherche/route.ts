@@ -11,7 +11,7 @@ import { suggestCourses } from "@/server/queries/courses";
 const PRIVATE_NO_STORE = "private, no-store, max-age=0";
 
 export async function GET(request: Request) {
-  const rl = checkRateLimit({
+  const rl = await checkRateLimit({
     key: clientKey(request.headers, "search"),
     windowMs: 60_000,
     max: 60,

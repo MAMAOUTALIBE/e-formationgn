@@ -53,6 +53,7 @@ const PUBLIC_ROUTES = [
   "/confidentialite",
   "/cookies",
   "/credits",
+  "/aide",
 ];
 
 // Routes d'authentification (un user déjà connecté est redirigé vers la home)
@@ -67,12 +68,16 @@ const API_AUTH_PREFIX = "/api/auth";
 
 function isPublicRoute(pathname: string): boolean {
   if (PUBLIC_ROUTES.includes(pathname)) return true;
-  // Sous-pages publiques (cours/[slug], categories/[slug], blog/[slug], ...)
+  // Sous-pages publiques (cours/[slug], categories/[slug], blog/[slug],
+  // /formateurs/[code] = vitrine publique formateur, /newsletter/* =
+  // pages unsubscribe accessibles sans session).
   return (
     pathname.startsWith("/cours/") ||
     pathname.startsWith("/categories/") ||
     pathname.startsWith("/blog/") ||
-    pathname.startsWith("/verifier-email")
+    pathname.startsWith("/verifier-email") ||
+    pathname.startsWith("/formateurs/") ||
+    pathname.startsWith("/newsletter/")
   );
 }
 
@@ -165,7 +170,8 @@ export const authConfig = {
       }
 
       // Routes formateur : login + rôle INSTRUCTOR (ou ADMIN)
-      if (pathname.startsWith("/formateur")) {
+      // Note : on exclut explicitement /formateurs/* (vitrine publique).
+      if (pathname === "/formateur" || pathname.startsWith("/formateur/")) {
         if (!isLoggedIn) {
           const callbackUrl = encodeURIComponent(pathname + nextUrl.search);
           return Response.redirect(

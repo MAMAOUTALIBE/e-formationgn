@@ -25,6 +25,14 @@ import type { ActionResult } from "./auth";
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
 
+// Accepte uniquement un UUID v4 — protège du fuzzing.
+function sanitizeIdempotencyKey(raw: FormDataEntryValue | null): string | null {
+  if (typeof raw !== "string") return null;
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(raw)
+    ? raw.toLowerCase()
+    : null;
+}
+
 export async function startCinetPayCheckout(
   formData: FormData,
 ): Promise<ActionResult> {
@@ -54,12 +62,14 @@ export async function startCinetPayCheckout(
 
   const affiliateCode = await readAffiliateCode();
   const rawPromoCode = formData.get("promoCode");
+  const rawIdempotencyKey = formData.get("idempotencyKey");
 
   const result = await buildCheckoutOrder({
     userId,
     currency,
     affiliateCode,
     rawPromoCode: typeof rawPromoCode === "string" ? rawPromoCode : null,
+    idempotencyKey: sanitizeIdempotencyKey(rawIdempotencyKey),
     // CinetPay : on garde l'historique — pas d'allocation per-line, la
     // commission est calculée sur le total brut de la ligne.
     allocateInstructorDiscount: false,

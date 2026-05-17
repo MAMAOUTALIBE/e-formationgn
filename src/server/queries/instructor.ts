@@ -3,6 +3,7 @@
 // les helpers admin (à venir en Phase 7).
 
 import type { Prisma } from "@/generated/prisma/client";
+import type { Currency } from "@/generated/prisma/enums";
 import { prisma } from "@/lib/prisma";
 
 const INSTRUCTOR_COURSE_INCLUDE = {
@@ -113,6 +114,143 @@ export async function getInstructorDashboardStats(
     if (group.status === "DRAFT") stats.draftCourses = group._count._all;
   }
   return stats;
+}
+
+// ---------------------------------------------------------------------------
+// Analytics revenue formateur — Sprint Conversion+
+// ---------------------------------------------------------------------------
+//
+// Toutes les agrégations sont faites en SQL (GROUP BY + SUM) plutôt qu'en
+// chargeant tous les OrderItem en mémoire. Garde le payload constant même
+// avec un gros catalogue.
+
+export interface InstructorRevenueOverview {
+  /** Revenu net (instructorPayoutCents) du formateur, par devise. */
+  payoutByCurrency: Record<Currency, number>;
+  /** Revenu net du mois courant, par devise. */
+  payoutThisMonthByCurrency: Record<Currency, number>;
+  /** Nombre total de ventes (OrderItem) all-time. */
+  salesCount: number;
+  /** Ventes du mois courant. */
+  salesThisMonthCount: number;
+  /** Cours le plus vendu (revenue net) avec compteurs. */
+  topCourses: Array<{
+    courseId: string;
+    title: string;
+    slug: string;
+    payoutCents: number;
+    currency: Currency;
+    salesCount: number;
+  }>;
+}
+
+export async function getInstructorRevenueOverview(
+  instructorId: string,
+): Promise<InstructorRevenueOverview> {
+  const startOfMonth = new Date(
+    new Date().getFullYear(),
+    new Date().getMonth(),
+    1,
+  );
+
+  // 1) Revenu total par devise (all-time) + count des ventes (en 1 query SQL)
+  const allTimeRows = await prisma.$queryRaw<
+    Array<{ currency: Currency; payout: bigint; salesCount: bigint }>
+  >`
+    SELECT oi."currency" AS currency,
+           COALESCE(SUM(oi."instructorPayoutCents"), 0)::bigint AS payout,
+           COUNT(*)::bigint AS "salesCount"
+    FROM "OrderItem" oi
+    INNER JOIN "Course" c ON c."id" = oi."courseId"
+    INNER JOIN "Order"  o ON o."id" = oi."orderId"
+    WHERE c."instructorId" = ${instructorId}
+      AND o."status" = 'PAID'
+    GROUP BY oi."currency"
+  `;
+
+  const payoutByCurrency: Record<Currency, number> = {
+    EUR: 0,
+    USD: 0,
+    GNF: 0,
+    XOF: 0,
+  };
+  let salesCount = 0;
+  for (const r of allTimeRows) {
+    payoutByCurrency[r.currency] = Number(r.payout);
+    salesCount += Number(r.salesCount);
+  }
+
+  // 2) Revenu mois courant par devise + count
+  const monthRows = await prisma.$queryRaw<
+    Array<{ currency: Currency; payout: bigint; salesCount: bigint }>
+  >`
+    SELECT oi."currency" AS currency,
+           COALESCE(SUM(oi."instructorPayoutCents"), 0)::bigint AS payout,
+           COUNT(*)::bigint AS "salesCount"
+    FROM "OrderItem" oi
+    INNER JOIN "Course" c ON c."id" = oi."courseId"
+    INNER JOIN "Order"  o ON o."id" = oi."orderId"
+    WHERE c."instructorId" = ${instructorId}
+      AND o."status" = 'PAID'
+      AND o."paidAt" >= ${startOfMonth}
+    GROUP BY oi."currency"
+  `;
+
+  const payoutThisMonthByCurrency: Record<Currency, number> = {
+    EUR: 0,
+    USD: 0,
+    GNF: 0,
+    XOF: 0,
+  };
+  let salesThisMonthCount = 0;
+  for (const r of monthRows) {
+    payoutThisMonthByCurrency[r.currency] = Number(r.payout);
+    salesThisMonthCount += Number(r.salesCount);
+  }
+
+  // 3) Top 5 cours par revenu — GROUP BY courseId + ORDER BY SUM DESC.
+  // On ne prend que la devise dominante du cours pour simplifier (un même
+  // cours peut être vendu en plusieurs devises mais on agrège par max).
+  const topRows = await prisma.$queryRaw<
+    Array<{
+      courseId: string;
+      title: string;
+      slug: string;
+      payout: bigint;
+      currency: Currency;
+      salesCount: bigint;
+    }>
+  >`
+    SELECT c."id"                                        AS "courseId",
+           c."title"                                     AS title,
+           c."slug"                                      AS slug,
+           SUM(oi."instructorPayoutCents")::bigint       AS payout,
+           MIN(oi."currency"::text)::"Currency"          AS currency,
+           COUNT(*)::bigint                              AS "salesCount"
+    FROM "OrderItem" oi
+    INNER JOIN "Course" c ON c."id" = oi."courseId"
+    INNER JOIN "Order"  o ON o."id" = oi."orderId"
+    WHERE c."instructorId" = ${instructorId}
+      AND o."status" = 'PAID'
+    GROUP BY c."id", c."title", c."slug"
+    ORDER BY payout DESC
+    LIMIT 5
+  `;
+
+  return {
+    payoutByCurrency,
+    payoutThisMonthByCurrency,
+    salesCount,
+    salesThisMonthCount,
+    topCourses: topRows.map((r) => ({
+      courseId: r.courseId,
+      title: r.title,
+      slug: r.slug,
+      payoutCents: Number(r.payout),
+      currency: r.currency,
+      salesCount: Number(r.salesCount),
+    })),
+  };
 }
 
 export async function getLessonForInstructor(

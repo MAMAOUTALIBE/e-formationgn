@@ -5,7 +5,9 @@
 import { unstable_cache } from "next/cache";
 
 import { Prisma } from "@/generated/prisma/client";
+import { cached } from "@/lib/cache";
 import { prisma } from "@/lib/prisma";
+import { prismaRead } from "@/lib/prisma-read";
 import {
   COURSES_PER_PAGE,
   type CourseFilters,
@@ -416,7 +418,9 @@ export type PublicCourseDetail = Prisma.CourseGetPayload<{
 export async function getPublishedCourseBySlug(
   slug: string,
 ): Promise<PublicCourseDetail | null> {
-  const course = await prisma.course.findUnique({
+  // Read replica : la page /cours/[slug] est l'endpoint le plus lourd du
+  // catalogue (include profond). Décharger le primary protège le checkout.
+  const course = await prismaRead.course.findUnique({
     where: { slug },
     include: COURSE_DETAIL_INCLUDE,
   });
@@ -443,17 +447,90 @@ export async function getRelatedCourses(
   return items as PublicCourseListItem[];
 }
 
-export async function countPublishedCoursesByCategory(): Promise<Record<string, number>> {
-  const groups = await prisma.course.groupBy({
-    by: ["categoryId"],
-    where: { status: "PUBLISHED" },
-    _count: { _all: true },
+/**
+ * Sélectionne UN avis à mettre en avant sur la page cours détail.
+ * Priorité aux avis 4-5★ avec commentaire non-null. Pas de champ
+ * `isFeatured` côté Review pour rester minimal — la sélection est
+ * algorithmique. Renvoie null si aucun avis ne convient.
+ */
+export async function getFeaturedReview(courseId: string) {
+  return prisma.review.findFirst({
+    where: {
+      courseId,
+      isPublished: true,
+      rating: { gte: 4 },
+      comment: { not: null },
+    },
+    orderBy: [
+      { rating: "desc" }, // 5★ avant 4★
+      { createdAt: "desc" }, // puis le plus récent
+    ],
+    include: {
+      user: {
+        select: { id: true, name: true, firstName: true, lastName: true, image: true },
+      },
+    },
   });
-  const result: Record<string, number> = {};
-  for (const group of groups) {
-    result[group.categoryId] = group._count._all;
-  }
-  return result;
+}
+
+/**
+ * Distribution des notes par étoiles pour un cours.
+ * Renvoie un tableau de 5 entrées [5★, 4★, 3★, 2★, 1★] avec count + percent.
+ * Utilisé pour l'histogramme façon Udemy dans la section avis.
+ */
+export interface RatingDistributionBucket {
+  rating: 1 | 2 | 3 | 4 | 5;
+  count: number;
+  percent: number; // 0..100, arrondi à l'entier
+}
+
+export async function getCourseRatingDistribution(
+  courseId: string,
+): Promise<RatingDistributionBucket[]> {
+  return cached(
+    { key: `course:${courseId}:rating-dist`, ttlSeconds: 300 },
+    async () => {
+      const grouped = await prisma.review.groupBy({
+        by: ["rating"],
+        where: { courseId, isPublished: true },
+        _count: { _all: true },
+      });
+      const countByRating = new Map(
+        grouped.map((g) => [g.rating, g._count._all]),
+      );
+      const total = Array.from(countByRating.values()).reduce(
+        (sum, n) => sum + n,
+        0,
+      );
+
+      return ([5, 4, 3, 2, 1] as const).map((rating) => {
+        const count = countByRating.get(rating) ?? 0;
+        return {
+          rating,
+          count,
+          percent: total === 0 ? 0 : Math.round((count / total) * 100),
+        };
+      });
+    },
+  );
+}
+
+export async function countPublishedCoursesByCategory(): Promise<Record<string, number>> {
+  return cached(
+    { key: "categories:counts", ttlSeconds: 600 },
+    async () => {
+      const groups = await prisma.course.groupBy({
+        by: ["categoryId"],
+        where: { status: "PUBLISHED" },
+        _count: { _all: true },
+      });
+      const result: Record<string, number> = {};
+      for (const group of groups) {
+        result[group.categoryId] = group._count._all;
+      }
+      return result;
+    },
+  );
 }
 
 // ---------------------------------------------------------------------------

@@ -68,7 +68,9 @@ export interface UserRateLimitOptions {
  * Clé : prefix:userId(:suffix). Plus précis que IP-based (un user n'est pas
  * pénalisé par un autre derrière le même NAT).
  */
-export function checkUserRateLimit(opts: UserRateLimitOptions): RateLimitResult {
+export function checkUserRateLimit(
+  opts: UserRateLimitOptions,
+): Promise<RateLimitResult> {
   const key = opts.suffix
     ? `${opts.prefix}:${opts.userId}:${opts.suffix}`
     : `${opts.prefix}:${opts.userId}`;

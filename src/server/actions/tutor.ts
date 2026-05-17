@@ -41,7 +41,7 @@ export async function askLessonTutor(
   }
 
   // Rate limit : 10 questions par heure et par utilisateur
-  const rl = checkRateLimit({
+  const rl = await checkRateLimit({
     key: `tutor:${session.user.id}`,
     windowMs: 60 * 60 * 1000,
     max: 10,

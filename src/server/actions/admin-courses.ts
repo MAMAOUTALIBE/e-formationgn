@@ -6,6 +6,7 @@ import { revalidatePath, updateTag } from "next/cache";
 
 import { requireAnyAdminRole } from "@/lib/auth/authorization";
 import { prisma } from "@/lib/prisma";
+import { createAuditLog } from "@/server/services/audit-log";
 
 import type { ActionResult } from "./auth";
 
@@ -28,14 +29,12 @@ async function audit(
   targetId: string,
   metadata?: Record<string, unknown>,
 ) {
-  await prisma.auditLog.create({
-    data: {
-      actorId,
-      action,
-      targetType: "Course",
-      targetId,
-      metadata: (metadata as never) ?? undefined,
-    },
+  await createAuditLog({
+    actorId,
+    action,
+    targetType: "Course",
+    targetId,
+    metadata: metadata ?? null,
   });
 }
 

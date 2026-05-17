@@ -13,6 +13,7 @@ import {
   readImpersonation,
   writeImpersonation,
 } from "@/lib/admin/impersonation";
+import { createAuditLog } from "@/server/services/audit-log";
 
 import type { ActionResult } from "./auth";
 
@@ -46,14 +47,12 @@ export async function startImpersonation(
     targetUserId: target.id,
   });
 
-  await prisma.auditLog.create({
-    data: {
-      actorId: admin.userId,
-      action: "admin.impersonation.start",
-      targetType: "User",
-      targetId: target.id,
-      metadata: { reason: reason ?? null, email: target.email },
-    },
+  await createAuditLog({
+    actorId: admin.userId,
+    action: "admin.impersonation.start",
+    targetType: "User",
+    targetId: target.id,
+    metadata: { reason: reason ?? null, email: target.email },
   });
 
   revalidatePath("/admin");
@@ -75,13 +74,11 @@ export async function stopImpersonation(): Promise<ActionResult> {
   });
   await clearImpersonation();
 
-  await prisma.auditLog.create({
-    data: {
-      actorId: session.user.id,
-      action: "admin.impersonation.stop",
-      targetType: "User",
-      targetId: cookie.targetUserId,
-    },
+  await createAuditLog({
+    actorId: session.user.id,
+    action: "admin.impersonation.stop",
+    targetType: "User",
+    targetId: cookie.targetUserId,
   });
 
   revalidatePath("/admin");

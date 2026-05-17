@@ -12,6 +12,8 @@ import { CategoryCard } from "@/components/features/courses/category-card";
 import { CategoryTabs } from "@/components/features/courses/category-tabs";
 import { CourseCard } from "@/components/features/courses/course-card";
 import { CourseCarousel } from "@/components/features/courses/course-carousel";
+import { HomeTestimonials } from "@/components/features/marketing/testimonials";
+import { HomeTrustedBy } from "@/components/features/marketing/trusted-by";
 import { SiteFooter } from "@/components/layout/site-footer";
 import { SiteHeader } from "@/components/layout/site-header";
 import { Badge } from "@/components/ui/badge";
@@ -192,6 +194,9 @@ export default async function HomePage() {
             </div>
           </Container>
         </section>
+
+        {/* TRUSTED BY — bande logos d'entreprises */}
+        <HomeTrustedBy />
 
         {/* CATÉGORIES — grille dense */}
         {featuredCategories.length > 0 ? (
@@ -418,6 +423,9 @@ export default async function HomePage() {
             </Container>
           </section>
         ) : null}
+
+        {/* TESTIMONIALS — preuve sociale juste avant le CTA formateur */}
+        <HomeTestimonials />
 
         {/* DEVENIR FORMATEUR */}
         <section className="border-t border-border bg-gradient-to-br from-[color:var(--brand-primary)] via-[color:var(--brand-violet-deep)] to-[color:var(--brand-violet)] py-12 text-white">

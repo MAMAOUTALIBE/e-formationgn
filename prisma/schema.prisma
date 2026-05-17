@@ -562,6 +562,24 @@ model LessonBookmark {
   @@index([userId])
 }
 
+// Inscriptions newsletter — RGPD : consentement explicite horodaté + IP
+// hashée. `unsubscribedAt` désactive sans supprimer la trace (droit à
+// l'oubli = passage par admin pour suppression dure).
+model NewsletterSubscription {
+  id               String    @id @default(cuid())
+  email            String    @unique
+  source           String? // ex: "home-hero", "footer", "checkout-thank-you"
+  consentedAt      DateTime  @default(now())
+  unsubscribedAt   DateTime?
+  // Token aléatoire généré à l'inscription, inclus dans chaque email pour
+  // permettre /newsletter/desinscription?token=… sans révéler l'email.
+  unsubscribeToken String    @unique
+  ipHash           String?
+  userAgent        String?
+
+  @@index([unsubscribedAt])
+}
+
 // Annonces publiées par le formateur sur un cours. Visibles par tous les
 // inscrits dans l'onglet « Annonces » de chaque leçon. Pas de fil par leçon
 // (granularité = cours entier), ordonnées par date desc.
@@ -692,6 +710,12 @@ model Order {
   promoCode     PromoCode? @relation(fields: [promoCodeId], references: [id])
   affiliateCode String?
 
+  // Idempotency client : UUID v4 généré par le navigateur à chaque submit
+  // du panier. Si le user double-clique, les deux requêtes ont la même clé
+  // et la seconde retourne l'Order existant au lieu d'en créer une nouvelle.
+  // UNIQUE par user (pas global, pour ne pas leak l'ID entre comptes).
+  idempotencyKey String?
+
   items   OrderItem[]
   refunds Refund[]
 
@@ -701,6 +725,7 @@ model Order {
 
   @@index([userId])
   @@index([status])
+  @@unique([userId, idempotencyKey])
 }
 
 model OrderItem {
@@ -925,17 +950,26 @@ model CmsPage {
 // AUDIT LOG (modération, changements de commission, suspensions...)
 // ===========================================================================
 
+// Append-only par convention applicative (createAuditLog dans
+// src/server/services/audit-log.ts) — JAMAIS d'update/delete sur cette
+// table en code métier. Le hash-chain (previousHash + hash) permet de
+// détecter toute altération a posteriori (un changement de ligne casse
+// la chaîne, vérifiable via /api/cron/cleanup ou audit manuel SQL).
 model AuditLog {
-  id         String   @id @default(cuid())
-  actorId    String?
-  actor      User?    @relation(fields: [actorId], references: [id], onDelete: SetNull)
-  action     String // ex: "course.publish", "commission.update", "user.suspend"
-  targetType String? // ex: "Course", "User", "Order"
-  targetId   String?
-  metadata   Json?
-  ipAddress  String?
-  userAgent  String?
-  createdAt  DateTime @default(now())
+  id           String   @id @default(cuid())
+  actorId      String?
+  actor        User?    @relation(fields: [actorId], references: [id], onDelete: SetNull)
+  action       String // ex: "course.publish", "commission.update", "user.suspend"
+  targetType   String? // ex: "Course", "User", "Order"
+  targetId     String?
+  metadata     Json?
+  ipAddress    String?
+  userAgent    String?
+  createdAt    DateTime @default(now())
+  // Hash chain : chaque entrée hashe la précédente + son propre contenu.
+  // Altérer une ligne casse la chaîne pour toutes les suivantes — détectable.
+  previousHash String?  @db.Char(64)
+  hash         String?  @db.Char(64)
 
   @@index([actorId])
   @@index([targetType, targetId])
@@ -1294,4 +1328,43 @@ model AdminNote {
   updatedAt  DateTime            @updatedAt
 
   @@index([targetType, targetId])
+}
+
+// --- Webhook event log (idempotency + audit + retry) ------------------------
+// Persiste chaque événement webhook reçu (Stripe, CinetPay, Mux). Sert à :
+//   1. Dédupliquer les replays (Stripe rejoue après ACK manqué).
+//   2. Auditer ce qui est entré (debug, compliance, investigation).
+//   3. Permettre au cron `/api/cron/process-webhooks` de re-tenter les
+//      handlers qui ont échoué (panne DB, timeout transitoire).
+//
+// La clé primaire `eventId` est l'ID fourni par le PSP (evt_xxx pour Stripe).
+// Si on reçoit deux fois le même eventId, le 2e INSERT lève une violation
+// de contrainte unique → on retourne 200 sans rejouer le handler.
+
+enum WebhookSource {
+  STRIPE
+  CINETPAY
+  MUX
+}
+
+enum WebhookStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+}
+
+model WebhookEvent {
+  id          String        @id // eventId du PSP (evt_xxx, cpm_trans_id, …)
+  source      WebhookSource
+  type        String        // event type (checkout.session.completed, …)
+  payload     Json          // payload brut pour audit + retry
+  status      WebhookStatus @default(PENDING)
+  attempts    Int           @default(0)
+  lastError   String?       @db.Text
+  receivedAt  DateTime      @default(now())
+  processedAt DateTime?
+
+  @@index([status, receivedAt])
+  @@index([source, type])
 }

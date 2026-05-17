@@ -1,9 +1,16 @@
 import type { NextConfig } from "next";
 
 // En-têtes de sécurité appliqués à toutes les réponses HTML.
-// CSP en mode `report-only` : les violations sont signalées (console navigateur)
-// mais rien n'est bloqué. Permet de durcir progressivement sans casser le rendu.
-const cspReportOnly = [
+// Mode CSP contrôlé par l'env `CSP_MODE` :
+//   - "enforce" → `Content-Security-Policy` (XSS bloqué activement)
+//   - "report-only" (défaut) → `Content-Security-Policy-Report-Only` (signale
+//     les violations dans la console sans bloquer, pour validation progressive)
+//
+// Procédure de durcissement recommandée :
+//   1. Laisser `report-only` 7 jours en prod, surveiller la console.
+//   2. Quand zéro violation pendant 48 h → CSP_MODE=enforce.
+const cspMode = (process.env.CSP_MODE ?? "report-only").toLowerCase();
+const cspPolicy = [
   "default-src 'self'",
   // 'unsafe-inline' nécessaire pour Next.js (hydration scripts) — à durcir avec
   // un nonce dans une étape ultérieure (cf. Next.js 16 + nonce headers).
@@ -21,6 +28,10 @@ const cspReportOnly = [
   "frame-ancestors 'none'",
   "upgrade-insecure-requests",
 ].join("; ");
+const cspHeaderKey =
+  cspMode === "enforce"
+    ? "Content-Security-Policy"
+    : "Content-Security-Policy-Report-Only";
 
 const securityHeaders = [
   { key: "X-Frame-Options", value: "DENY" },
@@ -37,9 +48,8 @@ const securityHeaders = [
     key: "Strict-Transport-Security",
     value: "max-age=63072000; includeSubDomains; preload",
   },
-  // CSP en report-only. Bascule en `Content-Security-Policy` (sans -Report-Only)
-  // une fois validé en prod (zéro violation pendant 24-48h).
-  { key: "Content-Security-Policy-Report-Only", value: cspReportOnly },
+  // CSP — header key et politique pilotés par CSP_MODE (cf. plus haut).
+  { key: cspHeaderKey, value: cspPolicy },
 ];
 
 const nextConfig: NextConfig = {

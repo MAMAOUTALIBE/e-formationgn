@@ -19,6 +19,7 @@ import {
   type CartItemRow,
   type CartLineComputation,
 } from "@/server/queries/cart";
+import { guardAffiliateCode } from "./affiliate-fraud";
 
 export interface AppliedPromoSnapshot {
   promoCodeId: string;
@@ -62,12 +63,61 @@ export interface BuildOrderInput {
   // la remise au niveau de l'order et la commission est calculée sur le
   // total brut (mode CinetPay actuel).
   allocateInstructorDiscount?: boolean;
+  // UUID v4 généré côté client à chaque submit du panier. Si fourni et qu'un
+  // Order PENDING avec cette même clé existe pour ce user, on le retourne
+  // au lieu d'en créer un nouveau (protection anti double-clic).
+  idempotencyKey?: string | null;
 }
 
 export async function buildCheckoutOrder(
   input: BuildOrderInput,
 ): Promise<BuildOrderResult> {
-  const { userId, currency, affiliateCode } = input;
+  const { userId, currency, idempotencyKey } = input;
+
+  // Idempotency client : si on a déjà un Order PENDING avec cette clé pour
+  // ce user, on le retourne tel quel. Le user va être renvoyé vers la même
+  // session Stripe/CinetPay (déjà persistée en DB). Protège des double-clics
+  // et des retries du formulaire après une erreur réseau côté browser.
+  if (idempotencyKey) {
+    const existing = await prisma.order.findUnique({
+      where: { userId_idempotencyKey: { userId, idempotencyKey } },
+      include: { items: { include: { course: true } } },
+    });
+    if (existing && existing.status === "PENDING") {
+      // Reconstruit un résultat "pending" minimal — le caller utilisera juste
+      // orderId pour relancer la session PSP (qui retournera elle-même
+      // l'URL existante grâce à son propre idempotencyKey serveur).
+      return {
+        kind: "pending",
+        orderId: existing.id,
+        currency: existing.currency,
+        subtotalCents: existing.subtotalCents,
+        totalCents: existing.totalCents,
+        lines: existing.items.map((i) => ({
+          courseId: i.courseId,
+          instructorId: i.course.instructorId,
+          unitPriceCents: i.unitPriceCents,
+          discountCents: i.discountCents,
+          totalCents: i.totalCents,
+          isInstructorDriven: i.commissionSource === "INSTRUCTOR_DRIVEN",
+        })),
+        items: [],
+        promo: null,
+      };
+    }
+  }
+
+  // Garde anti-fraude affiliation : si le code est suspect (self-referral,
+  // velocity cap, IP collision), on neutralise l'affiliation. La commande
+  // continue mais avec la commission standard (PLATFORM_DRIVEN). Logged
+  // dans AuditLog côté guardAffiliateCode pour investigation manuelle.
+  let affiliateCode = input.affiliateCode;
+  if (affiliateCode) {
+    const guard = await guardAffiliateCode({ affiliateCode, buyerId: userId });
+    if (!guard.honored) {
+      affiliateCode = null;
+    }
+  }
 
   const items = await listCartItems(userId);
   if (items.length === 0) return { kind: "empty-cart" };
@@ -111,6 +161,7 @@ export async function buildCheckoutOrder(
       lines,
       promo,
       affiliateCode,
+      idempotencyKey: idempotencyKey ?? null,
     });
     return { kind: "free", orderId: order.id };
   }
@@ -131,6 +182,7 @@ export async function buildCheckoutOrder(
         totalCents,
         promoCodeId: promo?.promoCodeId ?? null,
         affiliateCode: affiliateCode ?? null,
+        idempotencyKey: idempotencyKey ?? null,
       },
     });
 
@@ -210,6 +262,7 @@ async function finalizeFreeOrder({
   lines,
   promo,
   affiliateCode,
+  idempotencyKey,
 }: {
   userId: string;
   currency: Currency;
@@ -217,6 +270,7 @@ async function finalizeFreeOrder({
   lines: CartLineComputation[];
   promo: AppliedPromoSnapshot | null;
   affiliateCode: string | null;
+  idempotencyKey: string | null;
 }) {
   const order = await prisma.$transaction(async (tx) => {
     const created = await tx.order.create({
@@ -230,6 +284,7 @@ async function finalizeFreeOrder({
         totalCents: 0,
         promoCodeId: promo?.promoCodeId ?? null,
         affiliateCode: affiliateCode ?? null,
+        idempotencyKey,
       },
     });
 

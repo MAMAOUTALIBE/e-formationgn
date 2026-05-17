@@ -28,7 +28,7 @@ export async function addCourseToCart(courseId: string): Promise<ActionResult> {
     };
   }
 
-  const rl = checkUserRateLimit({
+  const rl = await checkUserRateLimit({
     prefix: "cart:add",
     userId: session.user.id,
     windowMs: 60_000,

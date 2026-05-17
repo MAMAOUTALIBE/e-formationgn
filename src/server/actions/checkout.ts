@@ -26,6 +26,15 @@ import type { ActionResult } from "./auth";
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
 
+// Accepte uniquement un UUID v4 (36 chars, format strict) — protège du fuzzing
+// et empêche un attaquant de saturer l'index avec des clés aléatoires.
+function sanitizeIdempotencyKey(raw: FormDataEntryValue | null): string | null {
+  if (typeof raw !== "string") return null;
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(raw)
+    ? raw.toLowerCase()
+    : null;
+}
+
 export async function startCheckout(formData: FormData): Promise<ActionResult> {
   if (!isStripeConfigured()) {
     return {
@@ -47,12 +56,14 @@ export async function startCheckout(formData: FormData): Promise<ActionResult> {
   const affiliateCode = await readAffiliateCode();
 
   const rawPromoCode = formData.get("promoCode");
+  const rawIdempotencyKey = formData.get("idempotencyKey");
 
   const result = await buildCheckoutOrder({
     userId,
     currency,
     affiliateCode,
     rawPromoCode: typeof rawPromoCode === "string" ? rawPromoCode : null,
+    idempotencyKey: sanitizeIdempotencyKey(rawIdempotencyKey),
     // Stripe : on alloue la remise du code formateur par ligne pour que
     // le transfer suivant prenne la bonne part (commission plateforme préservée).
     allocateInstructorDiscount: true,
@@ -85,11 +96,15 @@ export async function startCheckout(formData: FormData): Promise<ActionResult> {
   });
   let customerId = dbUser?.stripeCustomerId;
   if (!customerId) {
-    const customer = await stripe.customers.create({
-      email: dbUser?.email ?? undefined,
-      name: dbUser?.name ?? undefined,
-      metadata: { userId },
-    });
+    const customer = await stripe.customers.create(
+      {
+        email: dbUser?.email ?? undefined,
+        name: dbUser?.name ?? undefined,
+        metadata: { userId },
+      },
+      // Idempotency par userId : un retry réseau ne crée pas un 2e Customer.
+      { idempotencyKey: `customer_user_${userId}` },
+    );
     customerId = customer.id;
     await prisma.user.update({
       where: { id: userId },
@@ -114,35 +129,48 @@ export async function startCheckout(formData: FormData): Promise<ActionResult> {
     };
   });
 
-  // Discount Stripe (en cents) — on utilise un coupon ad-hoc si promo
-  const stripeSession = await stripe.checkout.sessions.create({
-    mode: "payment",
-    customer: customerId,
-    payment_intent_data: {
-      metadata: { orderId, userId },
-    },
-    line_items: lineItems,
-    discounts: promo
-      ? [
-          {
-            coupon: (
-              await stripe.coupons.create({
+  // Discount Stripe (en cents) — on utilise un coupon ad-hoc si promo.
+  // Idempotency key sur le coupon : si le call est retry (timeout réseau),
+  // Stripe renvoie le coupon existant au lieu d'en créer un second.
+  const discounts = promo
+    ? [
+        {
+          coupon: (
+            await stripe.coupons.create(
+              {
                 amount_off: promo.discountCents,
                 currency: currency.toLowerCase(),
                 duration: "once",
                 name: `Code ${promo.code}`,
-                metadata: { promoCodeId: promo.promoCodeId },
-              })
-            ).id,
-          },
-        ]
-      : undefined,
-    metadata: { orderId, userId },
-    success_url: `${APP_URL}/commande/${orderId}/confirmation?session_id={CHECKOUT_SESSION_ID}`,
-    cancel_url: `${APP_URL}/panier?canceled=1`,
-    allow_promotion_codes: false,
-    locale: "fr",
-  });
+                metadata: { promoCodeId: promo.promoCodeId, orderId },
+              },
+              { idempotencyKey: `coupon_${orderId}_${promo.promoCodeId}` },
+            )
+          ).id,
+        },
+      ]
+    : undefined;
+
+  // Idempotency key sur la session : protège des double-clics côté UI ET des
+  // retries automatiques en cas de timeout réseau. Sans ça, un double-clic
+  // crée 2 sessions Stripe → 2 PaymentIntents → potentiel double paiement.
+  const stripeSession = await stripe.checkout.sessions.create(
+    {
+      mode: "payment",
+      customer: customerId,
+      payment_intent_data: {
+        metadata: { orderId, userId },
+      },
+      line_items: lineItems,
+      discounts,
+      metadata: { orderId, userId },
+      success_url: `${APP_URL}/commande/${orderId}/confirmation?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${APP_URL}/panier?canceled=1`,
+      allow_promotion_codes: false,
+      locale: "fr",
+    },
+    { idempotencyKey: `checkout_${orderId}` },
+  );
 
   await prisma.order.update({
     where: { id: orderId },

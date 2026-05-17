@@ -6,6 +6,7 @@ import { revalidatePath } from "next/cache";
 
 import { requireAdmin } from "@/lib/auth/authorization";
 import { prisma } from "@/lib/prisma";
+import { createAuditLog } from "@/server/services/audit-log";
 
 interface ReorderResult {
   success: boolean;
@@ -38,14 +39,12 @@ export async function reorderCategories(
     ),
   );
 
-  await prisma.auditLog.create({
-    data: {
-      actorId: admin.userId,
-      action: "category.reorder",
-      targetType: "Category",
-      targetId: orderedIds[0],
-      metadata: { count: orderedIds.length },
-    },
+  await createAuditLog({
+    actorId: admin.userId,
+    action: "category.reorder",
+    targetType: "Category",
+    targetId: orderedIds[0],
+    metadata: { count: orderedIds.length },
   });
 
   revalidatePath("/admin/categories");

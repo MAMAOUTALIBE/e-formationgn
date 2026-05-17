@@ -23,6 +23,7 @@ import { renderBrandedEmail } from "@/lib/email/templates";
 import { logError, logWarning } from "@/lib/logger";
 import { formatMinor } from "@/lib/payments/currency";
 import { prisma } from "@/lib/prisma";
+import { createAuditLog } from "@/server/services/audit-log";
 
 const PRIVATE_NO_STORE = "private, no-store, max-age=0";
 
@@ -75,6 +76,44 @@ export async function POST(request: Request) {
     );
   }
 
+  // Idempotency layer — la PK = transactionId (= orderId). Si CinetPay rejoue
+  // après un ACK manqué, on no-op au 2e hit.
+  const eventId = `cinetpay_${transactionId}`;
+  const existing = await prisma.webhookEvent.findUnique({
+    where: { id: eventId },
+    select: { status: true },
+  });
+  if (existing && existing.status === "COMPLETED") {
+    return NextResponse.json(
+      { received: true, duplicate: true },
+      { headers: { "Cache-Control": PRIVATE_NO_STORE } },
+    );
+  }
+  if (!existing) {
+    try {
+      await prisma.webhookEvent.create({
+        data: {
+          id: eventId,
+          source: "CINETPAY",
+          type: "payment.ipn",
+          payload: payload as unknown as object,
+          status: "PROCESSING",
+          attempts: 1,
+        },
+      });
+    } catch {
+      return NextResponse.json(
+        { received: true, race: true },
+        { headers: { "Cache-Control": PRIVATE_NO_STORE } },
+      );
+    }
+  } else {
+    await prisma.webhookEvent.update({
+      where: { id: eventId },
+      data: { status: "PROCESSING", attempts: { increment: 1 } },
+    });
+  }
+
   try {
     // Re-vérification côté serveur — recommandé par CinetPay
     const verdict = await checkTransaction(transactionId);
@@ -88,6 +127,10 @@ export async function POST(request: Request) {
           data: { status: "FAILED" },
         });
       }
+      await prisma.webhookEvent.update({
+        where: { id: eventId },
+        data: { status: "COMPLETED", processedAt: new Date() },
+      });
       return NextResponse.json(
         { received: true, status: verdict.status },
         { headers: { "Cache-Control": PRIVATE_NO_STORE } },
@@ -97,12 +140,23 @@ export async function POST(request: Request) {
     // ACCEPTED : on traite comme un checkout completed Stripe.
     await handleAccepted(transactionId);
 
+    await prisma.webhookEvent.update({
+      where: { id: eventId },
+      data: { status: "COMPLETED", processedAt: new Date() },
+    });
     return NextResponse.json(
       { received: true, status: "ACCEPTED" },
       { headers: { "Cache-Control": PRIVATE_NO_STORE } },
     );
   } catch (error) {
     logError("cinetpay-webhook", error, { transactionId });
+    await prisma.webhookEvent.update({
+      where: { id: eventId },
+      data: {
+        status: "FAILED",
+        lastError: error instanceof Error ? error.message : String(error),
+      },
+    });
     return NextResponse.json(
       { error: "handler_error" },
       { status: 500, headers: { "Cache-Control": PRIVATE_NO_STORE } },
@@ -168,33 +222,38 @@ async function handleAccepted(orderId: string) {
     await tx.cartItem.deleteMany({ where: { userId: order.userId } });
   });
 
-  // Email confirmation (best-effort)
+  // Email confirmation — best-effort, n'échoue pas le webhook si l'envoi rate.
   if (order.user.email) {
-    const itemsList = order.items.map((i) => `• ${i.course.title}`).join("<br />");
-    const { html, text } = renderBrandedEmail({
-      preview: "Confirmation de votre paiement Gandal",
-      heading: "Merci pour votre paiement",
-      body: `<p style="margin:0 0 12px 0;">Bonjour ${order.user.firstName ?? ""},</p>
-             <p style="margin:0 0 12px 0;">Votre paiement de <strong>${formatMinor(order.totalCents, order.currency)}</strong> via Mobile Money / carte locale a bien été enregistré.</p>
-             <p style="margin:0 0 12px 0;">Cours auxquels vous êtes désormais inscrit·e :</p>
-             <p style="margin:0 0 12px 0;">${itemsList}</p>`,
-      ctaLabel: "Accéder à mes cours",
-      ctaUrl: `${process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"}/apprentissage`,
-    });
-    await sendTransactionalEmail({
-      to: order.user.email,
-      subject: "Confirmation de paiement — Gandal",
-      html,
-      text,
-    });
+    try {
+      const itemsList = order.items.map((i) => `• ${i.course.title}`).join("<br />");
+      const { html, text } = renderBrandedEmail({
+        preview: "Confirmation de votre paiement Gandal",
+        heading: "Merci pour votre paiement",
+        body: `<p style="margin:0 0 12px 0;">Bonjour ${order.user.firstName ?? ""},</p>
+               <p style="margin:0 0 12px 0;">Votre paiement de <strong>${formatMinor(order.totalCents, order.currency)}</strong> via Mobile Money / carte locale a bien été enregistré.</p>
+               <p style="margin:0 0 12px 0;">Cours auxquels vous êtes désormais inscrit·e :</p>
+               <p style="margin:0 0 12px 0;">${itemsList}</p>`,
+        ctaLabel: "Accéder à mes cours",
+        ctaUrl: `${process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"}/apprentissage`,
+      });
+      await sendTransactionalEmail({
+        to: order.user.email,
+        subject: "Confirmation de paiement — Gandal",
+        html,
+        text,
+      });
+    } catch (err) {
+      logError("cinetpay-webhook", err, {
+        operation: "confirmation-email",
+        orderId: order.id,
+      });
+    }
   }
 
-  await prisma.auditLog.create({
-    data: {
-      action: "cinetpay.payment_accepted",
-      targetType: "Order",
-      targetId: order.id,
-      metadata: { totalCents: order.totalCents, currency: order.currency },
-    },
+  await createAuditLog({
+    action: "cinetpay.payment_accepted",
+    targetType: "Order",
+    targetId: order.id,
+    metadata: { totalCents: order.totalCents, currency: order.currency },
   });
 }

@@ -12,15 +12,14 @@ import type {
   TicketPriority,
   TicketStatus,
 } from "@/generated/prisma/enums";
+import { createAuditLog } from "@/server/services/audit-log";
 
 import type { ActionResult } from "./auth";
 
 const requireSupportRole = () => requireAnyAdminRole("ADMIN", "SUPPORT");
 
 async function audit(actorId: string, action: string, targetType: string, targetId: string) {
-  await prisma.auditLog.create({
-    data: { actorId, action, targetType, targetId },
-  });
+  await createAuditLog({ actorId, action, targetType, targetId });
 }
 
 export async function createTicketReply(

@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { FormField } from "@/components/ui/form-field";
 import { Input } from "@/components/ui/input";
 import { loginWithCredentials, type ActionResult } from "@/server/actions/auth";
+import { TurnstileWidget } from "./turnstile-widget";
 
 const initialState: ActionResult = { success: false };
 
@@ -59,6 +60,8 @@ export function LoginForm({ callbackUrl }: LoginFormProps) {
           Mot de passe oublié ?
         </Link>
       </div>
+
+      <TurnstileWidget formId="login" />
 
       <Button type="submit" className="w-full" disabled={pending}>
         {pending ? "Connexion…" : "Se connecter"}

@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { FormField } from "@/components/ui/form-field";
 import { Input } from "@/components/ui/input";
 import { registerUser, type ActionResult } from "@/server/actions/auth";
+import { TurnstileWidget } from "./turnstile-widget";
 
 const initialState: ActionResult = { success: false };
 
@@ -123,6 +124,8 @@ export function RegisterForm() {
           {errors.acceptTerms[0]}
         </p>
       ) : null}
+
+      <TurnstileWidget formId="register" />
 
       <Button type="submit" className="w-full" disabled={pending}>
         {pending ? "Création du compte…" : "Créer mon compte"}

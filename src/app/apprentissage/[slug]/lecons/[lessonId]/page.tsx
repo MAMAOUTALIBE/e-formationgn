@@ -16,6 +16,7 @@ import { LessonBookmarkButton } from "@/components/features/learning/lesson-book
 import { LessonCompletionToggle } from "@/components/features/learning/lesson-completion-toggle";
 import { LessonNotes } from "@/components/features/learning/lesson-notes";
 import { LessonPlayer } from "@/components/features/learning/lesson-player";
+import { signMuxPlaybackToken } from "@/lib/mux";
 import { LessonTutor } from "@/components/features/learning/lesson-tutor";
 import { QuizAttempt } from "@/components/features/learning/quiz-attempt";
 import { CourseReviewsList } from "@/components/features/courses/course-reviews-list";
@@ -228,6 +229,15 @@ export default async function LessonViewerPage({ params }: PageProps) {
                   lesson.muxPlaybackId || lesson.externalVideoUrl ? (
                     <LessonPlayer
                       playbackId={lesson.muxPlaybackId}
+                      playbackToken={
+                        lesson.muxPlaybackId
+                          ? signMuxPlaybackToken({
+                              playbackId: lesson.muxPlaybackId,
+                              expiresInSeconds: 60 * 60,
+                              subject: session.user.id,
+                            })
+                          : null
+                      }
                       externalVideoUrl={lesson.externalVideoUrl}
                       lessonId={lesson.id}
                       initialPositionSeconds={lessonProgress?.lastPositionSeconds ?? 0}

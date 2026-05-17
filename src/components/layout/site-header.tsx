@@ -7,6 +7,7 @@ import { CartIcon } from "@/components/features/cart/cart-icon";
 import { HeaderSearch } from "@/components/features/courses/header-search";
 import { LocaleToggle } from "@/components/features/i18n/locale-toggle";
 import { NotificationBell } from "@/components/features/notifications/notification-bell";
+import { CategoriesDropdown } from "@/components/layout/categories-dropdown";
 import { MobileMenu } from "@/components/layout/mobile-menu";
 import { NavLink } from "@/components/layout/nav-link";
 import { Button } from "@/components/ui/button";
@@ -14,20 +15,24 @@ import { Container } from "@/components/ui/container";
 import { getDictionary } from "@/lib/i18n/server";
 import { prisma } from "@/lib/prisma";
 import { countCartItems } from "@/server/queries/cart";
+import { listFeaturedCategories } from "@/server/queries/categories";
 
 export async function SiteHeader() {
   const session = await auth();
   const user = session?.user;
   const { locale, t } = await getDictionary();
 
-  const [cartCount, unreadNotifs] = user
-    ? await Promise.all([
-        countCartItems(user.id),
-        prisma.notification.count({
+  // Toutes ces queries en parallèle. `listFeaturedCategories` est déjà
+  // mise en cache 1 h (cf. Sprint 1) — coût négligeable par render.
+  const [cartCount, unreadNotifs, headerCategories] = await Promise.all([
+    user ? countCartItems(user.id) : Promise.resolve(0),
+    user
+      ? prisma.notification.count({
           where: { userId: user.id, isRead: false },
-        }),
-      ])
-    : [0, 0];
+        })
+      : Promise.resolve(0),
+    listFeaturedCategories(20),
+  ]);
 
   return (
     <header className="sticky top-0 z-40 w-full border-b border-border bg-background/95 shadow-sm backdrop-blur supports-[backdrop-filter]:bg-background/80">
@@ -50,8 +55,11 @@ export async function SiteHeader() {
           className="hidden items-center gap-6 md:flex"
           aria-label="Navigation principale"
         >
+          <CategoriesDropdown
+            categories={headerCategories.map((c) => ({ slug: c.slug, name: c.name }))}
+            label={t.common.categories}
+          />
           <NavLink href="/cours">{t.common.catalog}</NavLink>
-          <NavLink href="/categories">{t.common.categories}</NavLink>
           {user ? (
             <NavLink href="/apprentissage">{t.common.myLearning}</NavLink>
           ) : (

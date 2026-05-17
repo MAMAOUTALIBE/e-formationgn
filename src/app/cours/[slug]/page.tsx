@@ -1,16 +1,25 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { CheckCircle2, Clock, Globe2, Layers, Users } from "lucide-react";
+import { CheckCircle2, Users } from "lucide-react";
 
 import { auth } from "@/auth";
 import { JsonLd } from "@/components/seo/json-ld";
 import { AddToCartButton } from "@/components/features/cart/add-to-cart-button";
+import { CourseBadges } from "@/components/features/courses/course-badges";
 import { CourseCard } from "@/components/features/courses/course-card";
+import { CourseCouponInput } from "@/components/features/courses/course-coupon-input";
 import { CourseCurriculum } from "@/components/features/courses/course-curriculum";
+import { CourseFaq } from "@/components/features/courses/course-faq";
+import { CourseFeaturedReview } from "@/components/features/courses/course-featured-review";
+import { CourseIncludes } from "@/components/features/courses/course-includes";
 import { CourseInstructorCard } from "@/components/features/courses/course-instructor-card";
+import { CourseMoneyBack } from "@/components/features/courses/course-money-back";
 import { CoursePrice } from "@/components/features/courses/course-price";
+import { CoursePromoCountdown } from "@/components/features/courses/course-promo-countdown";
+import { CourseRatingDistribution } from "@/components/features/courses/course-rating-distribution";
 import { CourseReviewsList } from "@/components/features/courses/course-reviews-list";
+import { CourseStickyBuyBar } from "@/components/features/courses/course-sticky-buy-bar";
 import { PromoVideoPlayer } from "@/components/features/courses/promo-video-player";
 import { ReviewForm } from "@/components/features/reviews/review-form";
 import { WishlistButton } from "@/components/features/wishlist/wishlist-button";
@@ -20,12 +29,14 @@ import { Badge } from "@/components/ui/badge";
 import { Breadcrumbs } from "@/components/ui/breadcrumbs";
 import { Container } from "@/components/ui/container";
 import { Stars } from "@/components/ui/stars";
+import { getCourseBadges } from "@/lib/courses/badges";
 import { getCurrentCurrency } from "@/lib/currency";
 import { COURSE_LEVEL_LABELS, pluralize } from "@/lib/format/labels";
-import { formatDurationFromSeconds } from "@/lib/format/duration";
 import { prisma } from "@/lib/prisma";
 import { buildCourseJsonLd } from "@/lib/seo/json-ld";
 import {
+  getCourseRatingDistribution,
+  getFeaturedReview,
   getPublishedCourseBySlug,
   getRelatedCourses,
 } from "@/server/queries/courses";
@@ -43,8 +54,6 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   const description =
     course.metaDescription ?? course.subtitle ?? course.description.slice(0, 160);
 
-  // OG image dynamique 1200×630 — montre titre + rating sur fond brandé.
-  // Le bot social récupère cette image au moment du partage (cachée 1h CDN).
   const ogQs = new URLSearchParams({
     kind: "course",
     title: course.title,
@@ -115,21 +124,112 @@ export default async function CourseDetailPage({ params }: PageProps) {
     }
   }
 
-  const related = await getRelatedCourses(course.id, course.categoryId, 4);
+  const [related, ratingDistribution, featuredReview] = await Promise.all([
+    getRelatedCourses(course.id, course.categoryId, 4),
+    getCourseRatingDistribution(course.id),
+    getFeaturedReview(course.id),
+  ]);
+
   const totalLessons = course.sections.reduce((acc, s) => acc + s.lessons.length, 0);
+  const resourceCount = course.sections.reduce(
+    (acc, s) => acc + s.lessons.filter((l) => l.type === "RESOURCE").length,
+    0,
+  );
 
   const instructorName =
     course.instructor.name ??
     ([course.instructor.firstName, course.instructor.lastName].filter(Boolean).join(" ") ||
       "Formateur");
 
+  const badges = getCourseBadges({
+    totalEnrollments: course.totalEnrollments,
+    averageRating: course.averageRating,
+    totalRatings: course.totalRatings,
+    publishedAt: course.publishedAt,
+    isFeatured: course.isFeatured,
+  });
+
+  // Card prix : extraite en fragment pour être réutilisée dans la sticky
+  // desktop ET dans la version inline mobile (sous le hero).
+  const priceCard = (
+    <div className="overflow-hidden rounded-lg border border-border bg-card text-card-foreground shadow-md">
+      {course.promoVideoPlaybackId || course.promoVideoUrl ? (
+        <PromoVideoPlayer
+          playbackId={course.promoVideoPlaybackId}
+          videoUrl={course.promoVideoUrl}
+          title={course.title}
+          thumbnailUrl={course.thumbnailUrl}
+        />
+      ) : course.thumbnailUrl ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={course.thumbnailUrl}
+          alt={`Aperçu du cours ${course.title}`}
+          className="aspect-video w-full object-cover"
+        />
+      ) : (
+        <div className="flex aspect-video w-full items-center justify-center bg-gradient-to-br from-[color:var(--brand-primary)]/10 via-muted to-[color:var(--brand-accent)]/10 text-xs uppercase tracking-wide text-muted-foreground">
+          Gandal
+        </div>
+      )}
+      <div className="space-y-5 p-5">
+        {/* Compte à rebours si une promo est active et a une date de fin */}
+        {course.discountEndsAt && course.discountEndsAt.getTime() > Date.now() ? (
+          <CoursePromoCountdown endsAt={course.discountEndsAt.toISOString()} />
+        ) : null}
+
+        <CoursePrice
+          priceEUR={Number(course.priceEUR)}
+          priceUSD={Number(course.priceUSD)}
+          discountPriceEUR={
+            course.discountPriceEUR != null ? Number(course.discountPriceEUR) : null
+          }
+          discountPriceUSD={
+            course.discountPriceUSD != null ? Number(course.discountPriceUSD) : null
+          }
+          currency={currency}
+          size="lg"
+        />
+
+        <div className="space-y-2">
+          <AddToCartButton
+            courseId={course.id}
+            fullWidth
+            size="lg"
+            alreadyEnrolled={alreadyEnrolled}
+            alreadyInCart={alreadyInCart}
+          />
+          <WishlistButton
+            courseId={course.id}
+            fullWidth
+            initialActive={inWishlist}
+          />
+        </div>
+
+        <CourseMoneyBack className="w-full justify-center" />
+
+        <CourseCouponInput courseId={course.id} currency={currency} />
+
+        <div className="border-t border-border pt-5">
+          <CourseIncludes
+            durationSeconds={course.durationSeconds}
+            lessonCount={totalLessons}
+            resourceCount={resourceCount}
+          />
+        </div>
+      </div>
+    </div>
+  );
+
   return (
     <>
       <JsonLd id="course-jsonld" data={buildCourseJsonLd(course)} />
       <SiteHeader />
 
-      <main className="flex-1">
-        {/* Hero */}
+      <main className="flex-1 pb-24 lg:pb-0">
+        {/* Hero — fond plein largeur ; la sticky card de droite (desktop)
+            est positionnée par-dessus via le grid du bloc suivant avec
+            marge négative `lg:-mt-72`. */}
         <section className="border-b border-border bg-[color:var(--brand-primary)] py-8 text-primary-foreground">
           <Container className="grid gap-8 lg:grid-cols-[1fr_360px]">
             <div>
@@ -146,6 +246,12 @@ export default async function CourseDetailPage({ params }: PageProps) {
                 className="text-primary-foreground/70 [&_a]:text-primary-foreground/80 [&_a:hover]:text-primary-foreground [&_[aria-current=page]]:text-primary-foreground"
               />
 
+              {badges.length > 0 ? (
+                <div className="mt-4">
+                  <CourseBadges badges={badges} />
+                </div>
+              ) : null}
+
               <h1 className="mt-4 text-3xl font-semibold tracking-tight sm:text-4xl">
                 {course.title}
               </h1>
@@ -155,10 +261,15 @@ export default async function CourseDetailPage({ params }: PageProps) {
 
               <div className="mt-5 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
                 <span className="inline-flex items-center gap-1.5">
-                  <Stars rating={course.averageRating} size="sm" />
+                  <Stars
+                    rating={course.averageRating}
+                    size="sm"
+                    totalRatings={course.totalRatings}
+                  />
                   <span className="font-medium">{course.averageRating.toFixed(1)}</span>
                   <span className="text-primary-foreground/70">
-                    ({course.totalRatings.toLocaleString("fr-FR")} {pluralize(course.totalRatings, "avis")})
+                    ({course.totalRatings.toLocaleString("fr-FR")}{" "}
+                    {pluralize(course.totalRatings, "avis")})
                   </span>
                 </span>
                 <span className="inline-flex items-center gap-1.5 text-primary-foreground/80">
@@ -166,6 +277,16 @@ export default async function CourseDetailPage({ params }: PageProps) {
                   {course.totalEnrollments.toLocaleString("fr-FR")}{" "}
                   {pluralize(course.totalEnrollments, "élève")}
                 </span>
+                {course.publishedAt ? (
+                  <span className="text-primary-foreground/70">
+                    Mise à jour :{" "}
+                    {new Intl.DateTimeFormat("fr-FR", {
+                      month: "long",
+                      year: "numeric",
+                    }).format(course.publishedAt)}
+                  </span>
+                ) : null}
+                <span className="text-primary-foreground/70">Français</span>
               </div>
 
               <p className="mt-3 text-sm text-primary-foreground/80">
@@ -195,83 +316,24 @@ export default async function CourseDetailPage({ params }: PageProps) {
               </div>
             </div>
 
-            {/* Sidebar achat — sticky desktop */}
-            <aside className="lg:sticky lg:top-24 lg:self-start">
-              <div className="overflow-hidden rounded-lg border border-border bg-card text-card-foreground shadow-md">
-                {course.promoVideoPlaybackId || course.promoVideoUrl ? (
-                  <PromoVideoPlayer
-                    playbackId={course.promoVideoPlaybackId}
-                    videoUrl={course.promoVideoUrl}
-                    title={course.title}
-                    thumbnailUrl={course.thumbnailUrl}
-                  />
-                ) : course.thumbnailUrl ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={course.thumbnailUrl}
-                    alt=""
-                    className="aspect-video w-full object-cover"
-                  />
-                ) : (
-                  <div className="flex aspect-video w-full items-center justify-center bg-gradient-to-br from-[color:var(--brand-primary)]/10 via-muted to-[color:var(--brand-accent)]/10 text-xs uppercase tracking-wide text-muted-foreground">
-                    Gandal
-                  </div>
-                )}
-                <div className="p-5">
-                  <CoursePrice
-                    priceEUR={Number(course.priceEUR)}
-                    priceUSD={Number(course.priceUSD)}
-                    discountPriceEUR={course.discountPriceEUR != null ? Number(course.discountPriceEUR) : null}
-                    discountPriceUSD={course.discountPriceUSD != null ? Number(course.discountPriceUSD) : null}
-                    currency={currency}
-                    size="lg"
-                  />
-
-                  <div className="mt-5 space-y-2">
-                    <AddToCartButton
-                      courseId={course.id}
-                      fullWidth
-                      size="lg"
-                      alreadyEnrolled={alreadyEnrolled}
-                      alreadyInCart={alreadyInCart}
-                    />
-                    <WishlistButton
-                      courseId={course.id}
-                      fullWidth
-                      initialActive={inWishlist}
-                    />
-                  </div>
-
-                  <ul className="mt-5 space-y-2 text-sm text-muted-foreground">
-                    <li className="flex items-center gap-2">
-                      <Clock className="h-4 w-4" aria-hidden />
-                      {formatDurationFromSeconds(course.durationSeconds)} de contenu
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <Layers className="h-4 w-4" aria-hidden />
-                      {course.sections.length} {pluralize(course.sections.length, "section")} ·{" "}
-                      {totalLessons} {pluralize(totalLessons, "leçon")}
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <Globe2 className="h-4 w-4" aria-hidden />
-                      Cours en français
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <CheckCircle2 className="h-4 w-4" aria-hidden />
-                      Certificat de fin de cours
-                    </li>
-                  </ul>
-                </div>
-              </div>
-            </aside>
+            {/* Slot vide à droite du hero — la sticky card est rendue dans
+                la section suivante avec marge négative. */}
+            <div aria-hidden className="hidden lg:block" />
           </Container>
         </section>
 
-        {/* Contenu */}
+        {/* Contenu principal + sticky price card */}
         <Container className="grid gap-8 py-8 lg:grid-cols-[1fr_360px]">
+          {/* Colonne principale */}
           <div className="space-y-8">
+            {/* Card prix inline mobile/tablette (sous le hero) */}
+            <div className="lg:hidden">{priceCard}</div>
+
             {course.whatYouWillLearn && course.whatYouWillLearn.length > 0 ? (
-              <section aria-labelledby="objectives">
+              <section
+                aria-labelledby="objectives"
+                className="rounded-lg border border-border bg-card p-6"
+              >
                 <h2 id="objectives" className="text-xl font-semibold text-foreground">
                   Ce que vous allez apprendre
                 </h2>
@@ -297,7 +359,7 @@ export default async function CourseDetailPage({ params }: PageProps) {
                 Programme du cours
               </h2>
               <div className="mt-4">
-                <CourseCurriculum sections={course.sections} />
+                <CourseCurriculum sections={course.sections} courseSlug={course.slug} />
               </div>
             </section>
 
@@ -368,7 +430,21 @@ export default async function CourseDetailPage({ params }: PageProps) {
                   Questions & réponses →
                 </Link>
               </div>
-              <div className="mt-4">
+              {course.totalRatings > 0 ? (
+                <div className="mt-4 rounded-lg border border-border bg-card p-6">
+                  <CourseRatingDistribution
+                    buckets={ratingDistribution}
+                    averageRating={course.averageRating}
+                    totalRatings={course.totalRatings}
+                  />
+                </div>
+              ) : null}
+              {featuredReview ? (
+                <div className="mt-6">
+                  <CourseFeaturedReview review={featuredReview} />
+                </div>
+              ) : null}
+              <div className="mt-6">
                 <CourseReviewsList
                   reviews={course.reviews}
                   averageRating={course.averageRating}
@@ -376,10 +452,16 @@ export default async function CourseDetailPage({ params }: PageProps) {
                 />
               </div>
             </section>
+
+            <CourseFaq />
           </div>
 
-          {/* Colonne sticky vide pour réserver l'espace de la sidebar */}
-          <div aria-hidden className="hidden lg:block" />
+          {/* Sticky price card desktop — chevauche le hero via marge négative.
+              `lg:-mt-72` (≈18 rem) fait remonter la card sur le bandeau bleu,
+              `lg:sticky lg:top-24` la garde visible pendant tout le scroll. */}
+          <aside className="hidden lg:block lg:-mt-72">
+            <div className="sticky top-24">{priceCard}</div>
+          </aside>
         </Container>
 
         {/* Cours similaires */}
@@ -402,6 +484,22 @@ export default async function CourseDetailPage({ params }: PageProps) {
           </section>
         ) : null}
       </main>
+
+      {/* Barre fixe en bas (mobile uniquement) — prix + CTA toujours visibles */}
+      <CourseStickyBuyBar
+        courseId={course.id}
+        priceEUR={Number(course.priceEUR)}
+        priceUSD={Number(course.priceUSD)}
+        discountPriceEUR={
+          course.discountPriceEUR != null ? Number(course.discountPriceEUR) : null
+        }
+        discountPriceUSD={
+          course.discountPriceUSD != null ? Number(course.discountPriceUSD) : null
+        }
+        currency={currency}
+        alreadyEnrolled={alreadyEnrolled}
+        alreadyInCart={alreadyInCart}
+      />
 
       <SiteFooter />
     </>

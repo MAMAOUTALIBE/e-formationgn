@@ -11,20 +11,19 @@ import type {
   ModerationRuleKind,
   ReportStatus,
 } from "@/generated/prisma/enums";
+import { createAuditLog } from "@/server/services/audit-log";
 
 import type { ActionResult } from "./auth";
 
 const requireModerator = () => requireAnyAdminRole("ADMIN", "MODERATOR");
 
 async function audit(actorId: string, action: string, targetType: string, targetId: string, metadata?: Record<string, unknown>) {
-  await prisma.auditLog.create({
-    data: {
-      actorId,
-      action,
-      targetType,
-      targetId,
-      metadata: (metadata as never) ?? undefined,
-    },
+  await createAuditLog({
+    actorId,
+    action,
+    targetType,
+    targetId,
+    metadata: metadata ?? null,
   });
 }
 

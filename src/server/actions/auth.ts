@@ -21,6 +21,7 @@ import {
   rateLimitMessage,
 } from "@/lib/auth/rate-limit-ip";
 import { safeCallbackUrl } from "@/lib/auth/safe-redirect";
+import { verifyTurnstile } from "@/lib/auth/turnstile";
 import {
   emailVerificationExpiry,
   generateToken,
@@ -62,6 +63,10 @@ export async function registerUser(
     max: 5,
   });
   if (!rl.ok) return { success: false, message: rateLimitMessage(rl.resetAt) };
+
+  // Captcha Turnstile (no-op si non configuré).
+  const captcha = await verifyTurnstile(formData.get("cf-turnstile-response"));
+  if (!captcha.ok) return { success: false, message: captcha.message };
 
   const raw = {
     firstName: formData.get("firstName"),
@@ -227,6 +232,10 @@ export async function loginWithCredentials(
     max: 10,
   });
   if (!rl.ok) return { success: false, message: rateLimitMessage(rl.resetAt) };
+
+  // Captcha Turnstile (no-op si non configuré).
+  const captcha = await verifyTurnstile(formData.get("cf-turnstile-response"));
+  if (!captcha.ok) return { success: false, message: captcha.message };
 
   const raw = {
     email: formData.get("email"),

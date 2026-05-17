@@ -32,3 +32,7 @@ export function logWarning(scope: string, message: string, context?: Context): v
     /* idem */
   }
 }
+
+export function logInfo(scope: string, message: string, context?: Context): void {
+  console.info(`[${scope}] ${message}`, context ?? "");
+}

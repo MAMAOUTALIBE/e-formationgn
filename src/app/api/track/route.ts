@@ -47,7 +47,7 @@ export async function POST(request: NextRequest) {
   }
 
   // Rate limit : 120 hits/min par IP — anti-flood léger
-  const rl = checkRateLimit({
+  const rl = await checkRateLimit({
     key: clientKey(request.headers, "track"),
     windowMs: 60_000,
     max: 120,

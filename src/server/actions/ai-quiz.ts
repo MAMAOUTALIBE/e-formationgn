@@ -38,7 +38,7 @@ export async function generateQuizQuestionsForLesson(
 
     const { userId, courseId } = await requireLessonOwnership(lessonId);
 
-    const rl = checkUserRateLimit({
+    const rl = await checkUserRateLimit({
       prefix: "ai-quiz",
       userId,
       windowMs: 60 * 60 * 1000,

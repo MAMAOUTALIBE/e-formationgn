@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useEffect, useMemo, useState } from "react";
 
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -66,13 +66,37 @@ export function CartSummaryForm({
   const [psp, setPsp] = useState<Psp>(() =>
     defaultPsp(currency, stripeAvailable, cinetpayAvailable),
   );
+  // Pré-remplit le champ « Code promo » si l'utilisateur a validé un code
+  // sur une page cours (clé `gandal:promo-code` posée par CourseCouponInput).
+  // SSR-safe : on hydrate après le mount, valeur initiale = "" côté serveur.
+  const [promoCode, setPromoCode] = useState("");
+  useEffect(() => {
+    try {
+      const stored = window.sessionStorage.getItem("gandal:promo-code");
+      if (stored) setPromoCode(stored);
+    } catch {
+      /* sessionStorage indisponible — non bloquant */
+    }
+  }, []);
 
   const stripeDisabled =
     !stripeAvailable || currency === "GNF" || currency === "XOF";
   const cinetpayDisabled = !cinetpayAvailable;
 
+  // UUID v4 stable pour la durée du composant — un seul submit = une seule
+  // commande, peu importe le nombre de clics. crypto.randomUUID() est natif
+  // dans tous les navigateurs modernes (et Node 19+).
+  const idempotencyKey = useMemo(
+    () =>
+      typeof globalThis.crypto?.randomUUID === "function"
+        ? globalThis.crypto.randomUUID()
+        : `${Date.now().toString(16)}-${Math.random().toString(16).slice(2, 10)}`,
+    [],
+  );
+
   return (
     <form action={formAction} className="space-y-4">
+      <input type="hidden" name="idempotencyKey" value={idempotencyKey} />
       {affiliateActive ? (
         <p className="rounded-md border border-[color:var(--brand-success)]/30 bg-[color:var(--brand-success)]/10 px-3 py-2 text-xs text-foreground">
           Lien d&apos;affiliation actif — taux préférentiel de 15&nbsp;% sur les
@@ -80,8 +104,23 @@ export function CartSummaryForm({
         </p>
       ) : null}
 
-      <FormField id="promoCode" label="Code promo" hint="Optionnel">
-        <Input id="promoCode" name="promoCode" placeholder="EX : BIENVENUE10" />
+      <FormField
+        id="promoCode"
+        label="Code promo"
+        hint={
+          promoCode
+            ? "Code reporté depuis la page cours."
+            : "Optionnel"
+        }
+      >
+        <Input
+          id="promoCode"
+          name="promoCode"
+          value={promoCode}
+          onChange={(e) => setPromoCode(e.target.value.toUpperCase())}
+          placeholder="EX : BIENVENUE10"
+          className="font-mono uppercase"
+        />
       </FormField>
 
       <fieldset className="space-y-2 rounded-md border border-border p-3">

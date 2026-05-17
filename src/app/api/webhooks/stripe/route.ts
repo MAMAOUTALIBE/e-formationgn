@@ -8,22 +8,26 @@
 //   - `charge.refunded`                   : marque l'Order REFUNDED ou
 //     PARTIALLY_REFUNDED selon le montant.
 //
-// La signature est vérifiée avec STRIPE_WEBHOOK_SECRET. Idempotent : on ne
-// traite chaque session qu'une seule fois (`paidAt` non null = traité).
+// Sécurité :
+//   - Signature vérifiée avec STRIPE_WEBHOOK_SECRET.
+//   - Chaque eventId est persisté dans WebhookEvent (PK = eventId). Si Stripe
+//     rejoue un événement déjà COMPLETED, on retourne 200 immédiatement sans
+//     ré-exécuter le handler (protection contre les replays + audit trail).
+//   - Le handler de checkout est extrait dans `finalizeStripeOrder` pour être
+//     partagé avec le cron de réconciliation.
 
 import { NextResponse } from "next/server";
 import type Stripe from "stripe";
 
-import { sendTransactionalEmail } from "@/lib/email/client";
-import { renderBrandedEmail } from "@/lib/email/templates";
 import { logError, logWarning } from "@/lib/logger";
-import { formatPriceFromCents } from "@/lib/money";
 import { prisma } from "@/lib/prisma";
 import {
   getStripeClient,
   STRIPE_WEBHOOK_SECRET,
   isStripeConfigured,
 } from "@/lib/stripe";
+import { createAuditLog } from "@/server/services/audit-log";
+import { finalizeStripeOrder } from "@/server/services/stripe-finalize";
 
 export async function POST(request: Request) {
   if (!isStripeConfigured()) {
@@ -53,6 +57,39 @@ export async function POST(request: Request) {
   } catch (error) {
     logWarning("stripe-webhook", "signature invalide", { error: String(error) });
     return NextResponse.json({ error: "invalid_signature" }, { status: 400 });
+  }
+
+  // Idempotency layer : on persiste l'eventId. Si déjà traité (COMPLETED),
+  // on ACK 200 sans rejouer le handler — protège des replays Stripe.
+  const existing = await prisma.webhookEvent.findUnique({
+    where: { id: event.id },
+    select: { status: true },
+  });
+  if (existing && existing.status === "COMPLETED") {
+    return NextResponse.json({ received: true, duplicate: true });
+  }
+  if (!existing) {
+    try {
+      await prisma.webhookEvent.create({
+        data: {
+          id: event.id,
+          source: "STRIPE",
+          type: event.type,
+          payload: event as unknown as object,
+          status: "PROCESSING",
+          attempts: 1,
+        },
+      });
+    } catch {
+      // Race : un autre worker a déjà inséré le même eventId. ACK 200, l'autre
+      // worker le traite ou l'a déjà traité.
+      return NextResponse.json({ received: true, race: true });
+    }
+  } else {
+    await prisma.webhookEvent.update({
+      where: { id: event.id },
+      data: { status: "PROCESSING", attempts: { increment: 1 } },
+    });
   }
 
   try {
@@ -96,14 +133,29 @@ export async function POST(request: Request) {
     }
   } catch (error) {
     logError("stripe-webhook", error, { eventType: event.type, eventId: event.id });
+    await prisma.webhookEvent.update({
+      where: { id: event.id },
+      data: {
+        status: "FAILED",
+        lastError: error instanceof Error ? error.message : String(error),
+      },
+    });
+    // 500 → Stripe re-tentera ; le cron `/api/cron/process-webhooks` peut
+    // aussi le reprendre depuis le payload persisté.
     return NextResponse.json({ error: "handler_error" }, { status: 500 });
   }
+
+  await prisma.webhookEvent.update({
+    where: { id: event.id },
+    data: { status: "COMPLETED", processedAt: new Date() },
+  });
 
   return NextResponse.json({ received: true });
 }
 
 // ---------------------------------------------------------------------------
-// checkout.session.completed
+// checkout.session.completed — délégué au service partagé (utilisé aussi par
+// le cron `/api/cron/reconcile-orders` pour rattraper les webhooks manqués).
 // ---------------------------------------------------------------------------
 
 async function handleCheckoutCompleted(stripe: Stripe, session: Stripe.Checkout.Session) {
@@ -114,182 +166,11 @@ async function handleCheckoutCompleted(stripe: Stripe, session: Stripe.Checkout.
     });
     return;
   }
-
-  const order = await prisma.order.findUnique({
-    where: { id: orderId },
-    include: {
-      items: {
-        include: {
-          course: { select: { id: true, title: true, instructorId: true } },
-        },
-      },
-      user: {
-        select: { id: true, email: true, firstName: true, name: true },
-      },
-    },
-  });
-  if (!order) {
-    logWarning("stripe-webhook", "order introuvable", { orderId });
-    return;
-  }
-
-  // Idempotence : si déjà PAID, rien à faire.
-  if (order.status === "PAID") return;
-
   const paymentIntentId =
     typeof session.payment_intent === "string"
       ? session.payment_intent
       : (session.payment_intent?.id ?? null);
-
-  // Récupère le receipt URL via la première charge (best-effort)
-  let receiptUrl: string | null = null;
-  if (paymentIntentId) {
-    try {
-      const pi = await stripe.paymentIntents.retrieve(paymentIntentId, {
-        expand: ["latest_charge"],
-      });
-      const charge = pi.latest_charge as Stripe.Charge | null;
-      receiptUrl = charge?.receipt_url ?? null;
-    } catch {
-      /* ignore */
-    }
-  }
-
-  // Transaction : update Order + create Enrollments + supprimer le panier
-  await prisma.$transaction(async (tx) => {
-    await tx.order.update({
-      where: { id: order.id },
-      data: {
-        status: "PAID",
-        paidAt: new Date(),
-        stripePaymentIntentId: paymentIntentId,
-        stripeReceiptUrl: receiptUrl,
-      },
-    });
-
-    for (const item of order.items) {
-      await tx.enrollment.upsert({
-        where: {
-          userId_courseId: { userId: order.userId, courseId: item.courseId },
-        },
-        update: { orderItemId: item.id, source: "PURCHASE" },
-        create: {
-          userId: order.userId,
-          courseId: item.courseId,
-          orderItemId: item.id,
-          source: "PURCHASE",
-        },
-      });
-
-      await tx.course.update({
-        where: { id: item.courseId },
-        data: { totalEnrollments: { increment: 1 } },
-      });
-    }
-
-    if (order.promoCodeId) {
-      await tx.promoCode.update({
-        where: { id: order.promoCodeId },
-        data: { usedCount: { increment: 1 } },
-      });
-    }
-
-    await tx.cartItem.deleteMany({ where: { userId: order.userId } });
-  });
-
-  // Stripe Transfers vers les comptes connectés (best-effort).
-  // On groupe par formateur pour limiter le nombre de transfers.
-  const payoutsByInstructor = new Map<string, number>();
-  for (const item of order.items) {
-    const instructorId = item.course.instructorId;
-    payoutsByInstructor.set(
-      instructorId,
-      (payoutsByInstructor.get(instructorId) ?? 0) + item.instructorPayoutCents,
-    );
-  }
-
-  for (const [instructorId, amountCents] of payoutsByInstructor) {
-    if (amountCents <= 0) continue;
-    const instructor = await prisma.user.findUnique({
-      where: { id: instructorId },
-      select: { stripeAccountId: true, stripeOnboardingDone: true },
-    });
-    if (!instructor?.stripeAccountId || !instructor.stripeOnboardingDone) {
-      logWarning(
-        "stripe-webhook",
-        "formateur sans compte Connect prêt — transfer reporté",
-        { instructorId, orderId: order.id, amountCents },
-      );
-      continue;
-    }
-
-    try {
-      const transfer = await stripe.transfers.create(
-        {
-          amount: amountCents,
-          currency: order.currency.toLowerCase(),
-          destination: instructor.stripeAccountId,
-          source_transaction: paymentIntentId
-            ? (await getChargeForPI(stripe, paymentIntentId)) ?? undefined
-            : undefined,
-          metadata: { orderId: order.id, instructorId },
-        },
-        // idempotence par order x instructeur
-        { idempotencyKey: `order_${order.id}_inst_${instructorId}` },
-      );
-
-      // Marque les OrderItems comme transférés
-      const items = order.items.filter((i) => i.course.instructorId === instructorId);
-      for (const item of items) {
-        await prisma.orderItem.update({
-          where: { id: item.id },
-          data: { stripeTransferId: transfer.id },
-        });
-      }
-    } catch (error) {
-      logError("stripe-webhook", error, {
-        operation: "transfer",
-        instructorId,
-        orderId: order.id,
-        amountCents,
-      });
-    }
-  }
-
-  // Email de confirmation
-  if (order.user.email) {
-    const itemsList = order.items
-      .map((i) => `• ${i.course.title}`)
-      .join("<br />");
-    const { html, text } = renderBrandedEmail({
-      preview: "Confirmation de votre commande Gandal",
-      heading: "Merci pour votre commande",
-      body: `<p style="margin:0 0 12px 0;">Bonjour ${order.user.firstName ?? ""},</p>
-             <p style="margin:0 0 12px 0;">Votre paiement de <strong>${formatPriceFromCents(order.totalCents, order.currency)}</strong> a bien été enregistré.</p>
-             <p style="margin:0 0 12px 0;">Cours auxquels vous êtes désormais inscrit·e :</p>
-             <p style="margin:0 0 12px 0;">${itemsList}</p>`,
-      ctaLabel: "Accéder à mes cours",
-      ctaUrl: `${process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"}/apprentissage`,
-    });
-    await sendTransactionalEmail({
-      to: order.user.email,
-      subject: "Confirmation de commande — Gandal",
-      html,
-      text,
-    });
-  }
-}
-
-async function getChargeForPI(stripe: Stripe, paymentIntentId: string) {
-  try {
-    const pi = await stripe.paymentIntents.retrieve(paymentIntentId, {
-      expand: ["latest_charge"],
-    });
-    const charge = pi.latest_charge as Stripe.Charge | string | null;
-    return typeof charge === "string" ? charge : (charge?.id ?? null);
-  } catch {
-    return null;
-  }
+  await finalizeStripeOrder(stripe, orderId, paymentIntentId);
 }
 
 // ---------------------------------------------------------------------------
@@ -411,13 +292,11 @@ async function handleDispute(event: Stripe.Event) {
   });
 
   // Notifie l'admin via AuditLog
-  await prisma.auditLog.create({
-    data: {
-      action: `stripe.dispute.${event.type.split(".").pop()}`,
-      targetType: "Dispute",
-      targetId: dispute.id,
-      metadata: { orderId: order.id, amount: dispute.amount, reason: dispute.reason },
-    },
+  await createAuditLog({
+    action: `stripe.dispute.${event.type.split(".").pop()}`,
+    targetType: "Dispute",
+    targetId: dispute.id,
+    metadata: { orderId: order.id, amount: dispute.amount, reason: dispute.reason },
   });
 }
 
@@ -460,12 +339,10 @@ async function handlePayoutEvent(event: Stripe.Event) {
     },
   });
 
-  await prisma.auditLog.create({
-    data: {
-      action: `stripe.${event.type}`,
-      targetType: "Payout",
-      targetId: payout.id,
-      metadata: { amount: payout.amount, currency: payout.currency },
-    },
+  await createAuditLog({
+    action: `stripe.${event.type}`,
+    targetType: "Payout",
+    targetId: payout.id,
+    metadata: { amount: payout.amount, currency: payout.currency },
   });
 }

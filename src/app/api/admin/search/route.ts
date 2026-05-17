@@ -34,7 +34,7 @@ export async function GET(request: NextRequest) {
   }
 
   // Rate limit : 60 req/min par admin (IP + userId)
-  const rl = checkRateLimit({
+  const rl = await checkRateLimit({
     key: `${clientKey(request.headers, "admin-search")}:${session.user.id}`,
     windowMs: 60_000,
     max: 60,

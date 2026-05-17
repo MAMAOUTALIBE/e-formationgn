@@ -16,7 +16,7 @@ export async function createQuestion(formData: FormData): Promise<ActionResult> 
   const session = await auth();
   if (!session?.user) return { success: false, message: "Connectez-vous." };
 
-  const rl = checkUserRateLimit({
+  const rl = await checkUserRateLimit({
     prefix: "qa:question",
     userId: session.user.id,
     windowMs: 60 * 60 * 1000,
@@ -78,7 +78,7 @@ export async function answerQuestion(formData: FormData): Promise<ActionResult> 
   const session = await auth();
   if (!session?.user) return { success: false, message: "Connectez-vous." };
 
-  const rl = checkUserRateLimit({
+  const rl = await checkUserRateLimit({
     prefix: "qa:answer",
     userId: session.user.id,
     windowMs: 60 * 60 * 1000,

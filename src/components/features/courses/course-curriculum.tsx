@@ -1,10 +1,17 @@
 "use client";
 
-import { ChevronDown, FileText, HelpCircle, PlayCircle, Paperclip } from "lucide-react";
-import { useState } from "react";
+import Link from "next/link";
+import {
+  ChevronDown,
+  FileText,
+  HelpCircle,
+  PlayCircle,
+  Paperclip,
+} from "lucide-react";
+import { useMemo, useState } from "react";
 
 import { cn } from "@/lib/utils";
-import { formatLessonDuration } from "@/lib/format/duration";
+import { formatDurationFromSeconds, formatLessonDuration } from "@/lib/format/duration";
 import type { LessonType } from "@/generated/prisma/enums";
 import { pluralize } from "@/lib/format/labels";
 
@@ -24,13 +31,18 @@ interface SectionSummary {
 
 interface CourseCurriculumProps {
   sections: SectionSummary[];
+  /** Slug du cours — sert à construire les liens « Aperçu » vers la leçon. */
+  courseSlug?: string;
 }
 
-export function CourseCurriculum({ sections }: CourseCurriculumProps) {
-  // Toutes ouvertes par défaut sur mobile, premières 2 sur desktop
+export function CourseCurriculum({ sections, courseSlug }: CourseCurriculumProps) {
+  // Toutes ouvertes par défaut sur mobile, 2 premières sur desktop.
   const [openIds, setOpenIds] = useState<Set<string>>(
     () => new Set(sections.slice(0, 2).map((s) => s.id)),
   );
+
+  const allIds = useMemo(() => sections.map((s) => s.id), [sections]);
+  const allOpen = openIds.size === allIds.length;
 
   function toggle(id: string) {
     setOpenIds((current) => {
@@ -39,6 +51,14 @@ export function CourseCurriculum({ sections }: CourseCurriculumProps) {
       else next.add(id);
       return next;
     });
+  }
+
+  function expandAll() {
+    setOpenIds(new Set(allIds));
+  }
+
+  function collapseAll() {
+    setOpenIds(new Set());
   }
 
   if (sections.length === 0) {
@@ -50,18 +70,33 @@ export function CourseCurriculum({ sections }: CourseCurriculumProps) {
   }
 
   const totalLessons = sections.reduce((acc, s) => acc + s.lessons.length, 0);
+  const totalSeconds = sections.reduce(
+    (acc, s) =>
+      acc + s.lessons.reduce((sum, l) => sum + l.videoDurationSeconds, 0),
+    0,
+  );
 
   return (
     <div className="rounded-lg border border-border bg-card">
-      <div className="border-b border-border px-4 py-3 text-sm text-muted-foreground">
-        {sections.length} {pluralize(sections.length, "section")} ·{" "}
-        {totalLessons} {pluralize(totalLessons, "leçon")}
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-4 py-3">
+        <p className="text-sm text-muted-foreground">
+          {sections.length} {pluralize(sections.length, "section")} ·{" "}
+          {totalLessons} {pluralize(totalLessons, "leçon")}
+          {totalSeconds > 0 ? ` · ${formatDurationFromSeconds(totalSeconds)}` : ""}
+        </p>
+        <button
+          type="button"
+          onClick={allOpen ? collapseAll : expandAll}
+          className="text-xs font-semibold text-[color:var(--brand-secondary)] underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        >
+          {allOpen ? "Tout masquer" : "Tout afficher"}
+        </button>
       </div>
       <ul className="divide-y divide-border">
         {sections.map((section) => {
           const isOpen = openIds.has(section.id);
           const lessonCount = section.lessons.length;
-          const totalSeconds = section.lessons.reduce(
+          const sectionSeconds = section.lessons.reduce(
             (acc, lesson) => acc + lesson.videoDurationSeconds,
             0,
           );
@@ -88,7 +123,7 @@ export function CourseCurriculum({ sections }: CourseCurriculumProps) {
                 </span>
                 <span className="text-xs text-muted-foreground">
                   {lessonCount} {pluralize(lessonCount, "leçon")}
-                  {totalSeconds > 0 ? ` · ${formatLessonDuration(totalSeconds)}` : ""}
+                  {sectionSeconds > 0 ? ` · ${formatLessonDuration(sectionSeconds)}` : ""}
                 </span>
               </button>
 
@@ -103,9 +138,23 @@ export function CourseCurriculum({ sections }: CourseCurriculumProps) {
                         <LessonIcon type={lesson.type} />
                         <span className="truncate text-foreground">{lesson.title}</span>
                         {lesson.isFreePreview ? (
-                          <span className="ml-1 inline-flex items-center rounded bg-[color:var(--brand-success)]/10 px-1.5 py-0.5 text-[10px] font-medium text-[color:var(--brand-success)]">
-                            Aperçu gratuit
-                          </span>
+                          // Si on a le slug du cours, le badge devient un lien
+                          // cliquable qui ouvre la leçon en mode aperçu (le
+                          // backend laisse passer les `isFreePreview=true`
+                          // même sans inscription).
+                          courseSlug ? (
+                            <Link
+                              href={`/apprentissage/${courseSlug}/lecons/${lesson.id}`}
+                              className="ml-1 inline-flex items-center gap-1 rounded bg-[color:var(--brand-success)]/10 px-1.5 py-0.5 text-[10px] font-medium text-[color:var(--brand-success)] hover:bg-[color:var(--brand-success)]/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                            >
+                              <PlayCircle className="h-3 w-3" aria-hidden />
+                              Aperçu gratuit
+                            </Link>
+                          ) : (
+                            <span className="ml-1 inline-flex items-center rounded bg-[color:var(--brand-success)]/10 px-1.5 py-0.5 text-[10px] font-medium text-[color:var(--brand-success)]">
+                              Aperçu gratuit
+                            </span>
+                          )
                         ) : null}
                       </span>
                       <span className="shrink-0 text-xs text-muted-foreground">

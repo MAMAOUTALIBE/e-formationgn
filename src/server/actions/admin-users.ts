@@ -9,6 +9,7 @@ import { requireAdmin } from "@/lib/auth/authorization";
 import { csvResponseHeaders, rowsToCsv } from "@/lib/csv";
 import { prisma } from "@/lib/prisma";
 import { listAdminUsers } from "@/server/queries/admin-users";
+import { createAuditLog } from "@/server/services/audit-log";
 
 import type { ActionResult } from "./auth";
 
@@ -18,14 +19,12 @@ async function audit(
   targetId: string,
   metadata?: Record<string, unknown>,
 ) {
-  await prisma.auditLog.create({
-    data: {
-      actorId,
-      action,
-      targetType: "User",
-      targetId,
-      metadata: (metadata as never) ?? undefined,
-    },
+  await createAuditLog({
+    actorId,
+    action,
+    targetType: "User",
+    targetId,
+    metadata: metadata ?? null,
   });
 }
 

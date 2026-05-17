@@ -37,7 +37,7 @@ export async function suggestSeoForCourse(
     const { userId } = await requireCourseOwnership(courseId);
 
     // Rate-limit utilisateur : 5 suggestions/h pour limiter le coût.
-    const rl = checkUserRateLimit({
+    const rl = await checkUserRateLimit({
       prefix: "ai-seo",
       userId,
       windowMs: 60 * 60 * 1000,

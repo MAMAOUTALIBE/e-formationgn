@@ -15,6 +15,7 @@ import {
 import { logError } from "@/lib/logger";
 import { prisma } from "@/lib/prisma";
 import { reviewSchema } from "@/lib/validators/engagement";
+import { createAuditLog } from "@/server/services/audit-log";
 
 import type { ActionResult } from "./auth";
 
@@ -41,7 +42,7 @@ export async function upsertReview(formData: FormData): Promise<ActionResult> {
 
   // Limite par couple user×course pour permettre la modification d'un avis
   // existant (upsert) sans pénaliser, mais bloquer le spam multi-cours.
-  const rl = checkUserRateLimit({
+  const rl = await checkUserRateLimit({
     prefix: "review:upsert",
     userId: session.user.id,
     windowMs: 24 * 60 * 60 * 1000,
@@ -115,16 +116,14 @@ export async function upsertReview(formData: FormData): Promise<ActionResult> {
           // Recalcule le rating moyen sans cet avis.
           await recomputeCourseRating(parsed.data.courseId);
           // Trace dans l'audit log pour suivi admin.
-          await prisma.auditLog.create({
-            data: {
-              action: "review.auto_unpublished",
-              targetType: "Review",
-              targetId: review.id,
-              metadata: {
-                category: verdict.category,
-                reason: verdict.reason ?? null,
-                courseId: parsed.data.courseId,
-              },
+          await createAuditLog({
+            action: "review.auto_unpublished",
+            targetType: "Review",
+            targetId: review.id,
+            metadata: {
+              category: verdict.category,
+              reason: verdict.reason ?? null,
+              courseId: parsed.data.courseId,
             },
           });
         }

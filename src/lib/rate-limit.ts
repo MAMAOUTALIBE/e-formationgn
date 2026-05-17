@@ -1,9 +1,12 @@
-// Rate limiter en mémoire — bucket par clé (IP + endpoint).
-// Suffisant pour un seul process. En multi-instance, à remplacer par Upstash
-// Redis ou similaire (cf. ENV LIMIT_PROVIDER plus tard).
+// Rate limiter distribué — Upstash Redis (REST) en prod, fallback mémoire
+// en dev. Le fallback mémoire ne peut PAS être utilisé en multi-instance
+// (chaque pod a son propre compteur → un attaquant brute-force N× le quota).
 //
-// Algo : token bucket simple. Chaque clé a `windowMs` et `max`.
-// Map cleanup automatique au-delà de `windowMs * 2` pour ne pas grossir.
+// Activation Upstash : poser UPSTASH_REDIS_REST_URL + UPSTASH_REDIS_REST_TOKEN.
+// Le swap est transparent côté appelant (mêmes signatures).
+//
+// Algo : fenêtre fixe par bucket de temps. Clé Redis incluant le windowStart
+// pour que les compteurs s'auto-expirent naturellement à la fin du window.
 
 interface Bucket {
   count: number;
@@ -28,10 +31,23 @@ export interface RateLimitResult {
   resetAt: number;
 }
 
-export function checkRateLimit(opts: RateLimitOptions): RateLimitResult {
+const UPSTASH_URL = process.env.UPSTASH_REDIS_REST_URL;
+const UPSTASH_TOKEN = process.env.UPSTASH_REDIS_REST_TOKEN;
+
+export function isDistributedRateLimitEnabled(): boolean {
+  return Boolean(UPSTASH_URL && UPSTASH_TOKEN);
+}
+
+export async function checkRateLimit(opts: RateLimitOptions): Promise<RateLimitResult> {
+  if (isDistributedRateLimitEnabled()) {
+    return checkUpstash(opts);
+  }
+  return checkInMemory(opts);
+}
+
+function checkInMemory(opts: RateLimitOptions): RateLimitResult {
   const now = Date.now();
 
-  // Cleanup périodique pour éviter la fuite mémoire
   if (now - lastCleanup > opts.windowMs * 2) {
     for (const [key, bucket] of buckets) {
       if (bucket.resetAt < now) buckets.delete(key);
@@ -56,6 +72,51 @@ export function checkRateLimit(opts: RateLimitOptions): RateLimitResult {
     remaining: opts.max - bucket.count,
     resetAt: bucket.resetAt,
   };
+}
+
+// Upstash REST : pipeline INCR + PEXPIRE NX. La clé inclut le windowStart
+// pour éviter de devoir gérer le reset (Redis l'expire tout seul).
+// En cas d'erreur réseau → fail-open (on laisse passer) plutôt que de bloquer
+// le site entier si Upstash est down. C'est un trade-off : on accepte un peu
+// d'abus pendant une panne Redis plutôt qu'un déni de service auto-infligé.
+async function checkUpstash(opts: RateLimitOptions): Promise<RateLimitResult> {
+  const now = Date.now();
+  const windowStart = Math.floor(now / opts.windowMs) * opts.windowMs;
+  const resetAt = windowStart + opts.windowMs;
+  const redisKey = `rl:${opts.key}:${windowStart}`;
+  const ttlSec = Math.ceil(opts.windowMs / 1000) + 5;
+
+  try {
+    const response = await fetch(`${UPSTASH_URL}/pipeline`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${UPSTASH_TOKEN}`,
+        "content-type": "application/json",
+      },
+      body: JSON.stringify([
+        ["INCR", redisKey],
+        ["EXPIRE", redisKey, String(ttlSec), "NX"],
+      ]),
+      // 1.5s : si Upstash ne répond pas, on fail-open.
+      signal: AbortSignal.timeout(1500),
+      cache: "no-store",
+    });
+    if (!response.ok) return failOpen(opts, resetAt);
+    const json = (await response.json()) as Array<{ result?: number; error?: string }>;
+    const count = json[0]?.result;
+    if (typeof count !== "number") return failOpen(opts, resetAt);
+
+    if (count > opts.max) {
+      return { ok: false, remaining: 0, resetAt };
+    }
+    return { ok: true, remaining: Math.max(0, opts.max - count), resetAt };
+  } catch {
+    return failOpen(opts, resetAt);
+  }
+}
+
+function failOpen(opts: RateLimitOptions, resetAt: number): RateLimitResult {
+  return { ok: true, remaining: opts.max - 1, resetAt };
 }
 
 /**

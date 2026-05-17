@@ -16,6 +16,7 @@ import {
   promoCodeSchema,
   userActionSchema,
 } from "@/lib/validators/admin";
+import { createAuditLog } from "@/server/services/audit-log";
 
 import type { ActionResult } from "./auth";
 
@@ -26,14 +27,12 @@ async function audit(
   targetId?: string,
   metadata?: Record<string, unknown>,
 ) {
-  await prisma.auditLog.create({
-    data: {
-      actorId,
-      action,
-      targetType: targetType ?? null,
-      targetId: targetId ?? null,
-      metadata: metadata as never,
-    },
+  await createAuditLog({
+    actorId,
+    action,
+    targetType: targetType ?? null,
+    targetId: targetId ?? null,
+    metadata: metadata ?? null,
   });
 }
 

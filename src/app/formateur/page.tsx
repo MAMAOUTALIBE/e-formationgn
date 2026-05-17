@@ -1,18 +1,36 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { BookOpenText, FileText, Plus, Star, TrendingUp, Users } from "lucide-react";
+import {
+  BookOpenText,
+  FileText,
+  Plus,
+  ShoppingBag,
+  Star,
+  TrendingUp,
+  Users,
+  Wallet,
+} from "lucide-react";
 
 import { auth } from "@/auth";
 import { CourseStatusBadge } from "@/components/features/instructor/course-status-badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { pluralize } from "@/lib/format/labels";
+import { formatMinor } from "@/lib/payments/currency";
 import { prisma } from "@/lib/prisma";
 import {
   getInstructorDashboardStats,
+  getInstructorRevenueOverview,
   listInstructorCourses,
 } from "@/server/queries/instructor";
+import type { Currency } from "@/generated/prisma/enums";
 
 export const metadata: Metadata = {
   title: "Tableau de bord formateur",
@@ -22,13 +40,14 @@ export default async function InstructorDashboardPage() {
   const session = await auth();
   if (!session?.user) redirect("/connexion?callbackUrl=/formateur");
 
-  const [stats, courses, currentUser] = await Promise.all([
+  const [stats, courses, currentUser, revenue] = await Promise.all([
     getInstructorDashboardStats(session.user.id),
     listInstructorCourses(session.user.id),
     prisma.user.findUnique({
       where: { id: session.user.id },
       select: { affiliateCode: true, firstName: true },
     }),
+    getInstructorRevenueOverview(session.user.id),
   ]);
 
   const recentCourses = courses.slice(0, 5);
@@ -155,21 +174,146 @@ export default async function InstructorDashboardPage() {
         </Card>
       </section>
 
-      <section>
-        <Card className="bg-[color:var(--brand-primary)] text-primary-foreground">
-          <CardHeader>
-            <CardTitle className="text-base text-primary-foreground">
-              <TrendingUp className="mr-2 inline-block h-4 w-4" aria-hidden />
-              La fonctionnalité revenus arrive avec les paiements (Phase&nbsp;4)
-            </CardTitle>
-            <CardDescription className="text-primary-foreground/80">
-              Le suivi détaillé des revenus, les versements Stripe Connect et les
-              factures seront disponibles à l&apos;activation des paiements.
-            </CardDescription>
-          </CardHeader>
-        </Card>
+      {/* Revenus — section analytics financière (remplace l'ancienne carte
+          "Phase 4" maintenant que Stripe est actif). */}
+      <section
+        aria-labelledby="revenue-heading"
+        className="space-y-4 rounded-xl border border-border bg-card p-5"
+      >
+        <header className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h2
+              id="revenue-heading"
+              className="flex items-center gap-2 text-lg font-semibold tracking-tight text-foreground"
+            >
+              <Wallet className="h-5 w-5 text-[color:var(--brand-primary)]" aria-hidden />
+              Revenus
+            </h2>
+            <p className="text-xs text-muted-foreground">
+              Part nette qui vous revient (après commission plateforme). Les
+              versements se font le 5 de chaque mois via Stripe Connect.
+            </p>
+          </div>
+          <Button asChild variant="outline" size="sm">
+            <Link href="/formateur/paiements">
+              Détails paiements →
+            </Link>
+          </Button>
+        </header>
+
+        {revenue.salesCount === 0 ? (
+          <div className="rounded-md border border-dashed border-border bg-muted/40 p-6 text-center text-sm text-muted-foreground">
+            Aucune vente pour le moment. Publiez un cours et partagez votre
+            lien d&apos;affiliation pour démarrer.
+          </div>
+        ) : (
+          <>
+            {/* Tuiles : revenu mois + revenu all-time + ventes mois + ventes all-time */}
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              <RevenueTile
+                icon={<TrendingUp className="h-4 w-4" aria-hidden />}
+                label="Revenu ce mois"
+                amounts={revenue.payoutThisMonthByCurrency}
+              />
+              <RevenueTile
+                icon={<Wallet className="h-4 w-4" aria-hidden />}
+                label="Revenu total"
+                amounts={revenue.payoutByCurrency}
+              />
+              <StatCard
+                icon={<ShoppingBag className="h-4 w-4" aria-hidden />}
+                label="Ventes ce mois"
+                value={revenue.salesThisMonthCount.toLocaleString("fr-FR")}
+                hint={pluralize(revenue.salesThisMonthCount, "vente")}
+              />
+              <StatCard
+                icon={<ShoppingBag className="h-4 w-4" aria-hidden />}
+                label="Ventes totales"
+                value={revenue.salesCount.toLocaleString("fr-FR")}
+                hint={`Depuis l'inscription`}
+              />
+            </div>
+
+            {/* Top cours par revenu */}
+            {revenue.topCourses.length > 0 ? (
+              <div>
+                <h3 className="mb-3 text-sm font-semibold text-foreground">
+                  Top cours par revenu
+                </h3>
+                <ul className="divide-y divide-border rounded-md border border-border">
+                  {revenue.topCourses.map((c, index) => (
+                    <li
+                      key={c.courseId}
+                      className="flex items-center justify-between gap-3 px-4 py-3 text-sm"
+                    >
+                      <div className="flex min-w-0 items-center gap-3">
+                        <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[color:var(--brand-primary)]/10 text-xs font-semibold text-[color:var(--brand-primary)]">
+                          {index + 1}
+                        </span>
+                        <Link
+                          href={`/cours/${c.slug}`}
+                          className="min-w-0 flex-1 truncate font-medium text-foreground hover:underline"
+                        >
+                          {c.title}
+                        </Link>
+                      </div>
+                      <div className="shrink-0 text-right">
+                        <p className="font-semibold tabular-nums text-foreground">
+                          {formatMinor(c.payoutCents, c.currency)}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {c.salesCount} {pluralize(c.salesCount, "vente")}
+                        </p>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
+          </>
+        )}
       </section>
     </div>
+  );
+}
+
+interface RevenueTileProps {
+  icon: React.ReactNode;
+  label: string;
+  amounts: Record<Currency, number>;
+}
+
+function RevenueTile({ icon, label, amounts }: RevenueTileProps) {
+  // Affiche jusqu'à 2 devises principales (les plus élevées) — empilées
+  // verticalement. Si aucune devise n'a de revenu, on affiche "—".
+  const sorted = (Object.entries(amounts) as Array<[Currency, number]>)
+    .filter(([, amount]) => amount > 0)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 2);
+
+  return (
+    <Card>
+      <CardContent className="p-5">
+        <div className="flex items-center gap-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+          {icon}
+          {label}
+        </div>
+        {sorted.length === 0 ? (
+          <p className="mt-2 text-2xl font-semibold text-foreground">—</p>
+        ) : (
+          <div className="mt-2 space-y-1">
+            {sorted.map(([currency, amount]) => (
+              <p
+                key={currency}
+                className="text-2xl font-semibold tabular-nums text-foreground"
+              >
+                {formatMinor(amount, currency)}
+              </p>
+            ))}
+          </div>
+        )}
+      </CardContent>
+    </Card>
   );
 }
 

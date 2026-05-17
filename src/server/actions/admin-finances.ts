@@ -8,6 +8,7 @@ import { requireAnyAdminRole } from "@/lib/auth/authorization";
 import { logError } from "@/lib/logger";
 import { prisma } from "@/lib/prisma";
 import { getStripeClient, isStripeConfigured } from "@/lib/stripe";
+import { createAuditLog } from "@/server/services/audit-log";
 
 import type { ActionResult } from "./auth";
 
@@ -20,14 +21,12 @@ async function audit(
   targetId: string,
   metadata?: Record<string, unknown>,
 ) {
-  await prisma.auditLog.create({
-    data: {
-      actorId,
-      action,
-      targetType,
-      targetId,
-      metadata: (metadata as never) ?? undefined,
-    },
+  await createAuditLog({
+    actorId,
+    action,
+    targetType,
+    targetId,
+    metadata: metadata ?? null,
   });
 }
 

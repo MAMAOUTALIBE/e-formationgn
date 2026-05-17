@@ -7,6 +7,7 @@ import { revalidatePath } from "next/cache";
 import { requireAdmin } from "@/lib/auth/authorization";
 import { rowsToCsv } from "@/lib/csv";
 import { prisma } from "@/lib/prisma";
+import { createAuditLog } from "@/server/services/audit-log";
 
 import type { ActionResult } from "./auth";
 
@@ -40,13 +41,11 @@ export async function exportAuditLogCsv(): Promise<
 export async function revokeSession(sessionId: string): Promise<ActionResult> {
   const admin = await requireAdmin();
   await prisma.session.delete({ where: { id: sessionId } });
-  await prisma.auditLog.create({
-    data: {
-      actorId: admin.userId,
-      action: "session.revoke",
-      targetType: "Session",
-      targetId: sessionId,
-    },
+  await createAuditLog({
+    actorId: admin.userId,
+    action: "session.revoke",
+    targetType: "Session",
+    targetId: sessionId,
   });
   revalidatePath("/admin/securite/sessions");
   return { success: true, message: "Session révoquée." };
@@ -62,14 +61,12 @@ export async function banIp(ipHash: string, reason?: string): Promise<ActionResu
     update: { reason: reason ?? null },
     create: { ipHash, reason: reason ?? null, bannedById: admin.userId },
   });
-  await prisma.auditLog.create({
-    data: {
-      actorId: admin.userId,
-      action: "ip.ban",
-      targetType: "IP",
-      targetId: ipHash,
-      metadata: reason ? { reason } : undefined,
-    },
+  await createAuditLog({
+    actorId: admin.userId,
+    action: "ip.ban",
+    targetType: "IP",
+    targetId: ipHash,
+    metadata: reason ? { reason } : null,
   });
   revalidatePath("/admin/securite/logs");
   return { success: true, message: "IP bannie." };
@@ -78,13 +75,11 @@ export async function banIp(ipHash: string, reason?: string): Promise<ActionResu
 export async function unbanIp(ipHash: string): Promise<ActionResult> {
   const admin = await requireAdmin();
   await prisma.bannedIP.deleteMany({ where: { ipHash } });
-  await prisma.auditLog.create({
-    data: {
-      actorId: admin.userId,
-      action: "ip.unban",
-      targetType: "IP",
-      targetId: ipHash,
-    },
+  await createAuditLog({
+    actorId: admin.userId,
+    action: "ip.unban",
+    targetType: "IP",
+    targetId: ipHash,
   });
   revalidatePath("/admin/securite/logs");
   return { success: true };
@@ -96,13 +91,11 @@ export async function markGdprRequestComplete(id: string): Promise<ActionResult>
     where: { id },
     data: { status: "COMPLETED", completedAt: new Date() },
   });
-  await prisma.auditLog.create({
-    data: {
-      actorId: admin.userId,
-      action: "gdpr.complete",
-      targetType: "GdprRequest",
-      targetId: id,
-    },
+  await createAuditLog({
+    actorId: admin.userId,
+    action: "gdpr.complete",
+    targetType: "GdprRequest",
+    targetId: id,
   });
   revalidatePath("/admin/securite/rgpd");
   return { success: true };
