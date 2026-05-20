@@ -1,104 +1,16 @@
-# E-FormationGN — stack production VPS Hostinger.
-# Usage : `docker compose up -d --build`
-# Domaine + secrets définis dans .env (cf. .env.production.example).
+# E-FormationGN — stack de PRODUCTION (VPS Hostinger).
+#
+# Ce fichier est la source de vérité du déploiement. Sur le VPS il vit dans
+# /docker/e-formationgn/docker-compose.yml, à côté d'un .env (secrets, non commité).
+#
+# L'image n'est PAS buildée ici : elle est construite sur le Mac et poussée sur
+# Docker Hub (`./scripts/deploy.sh`). Le VPS ne fait que `docker compose pull`.
+# Procédure complète : voir REDEPLOY.md.
 
 name: eformationgn
 
 services:
-  # -------- Reverse proxy + HTTPS automatique (Let's Encrypt) --------
-  caddy:
-    image: caddy:2-alpine
-    restart: unless-stopped
-    ports:
-      - "80:80"
-      - "443:443"
-      - "443:443/udp"   # HTTP/3
-    environment:
-      DOMAIN: ${DOMAIN}
-      ACME_EMAIL: ${ACME_EMAIL}
-    volumes:
-      - ./infra/Caddyfile:/etc/caddy/Caddyfile:ro
-      - caddy_data:/data
-      - caddy_config:/config
-    depends_on:
-      app:
-        condition: service_healthy
-    networks:
-      - web
-
-  # -------- Application Next.js --------
-  app:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    image: eformationgn-app:latest
-    restart: unless-stopped
-    environment:
-      NODE_ENV: production
-      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}?schema=public
-      DIRECT_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}?schema=public
-      NEXTAUTH_URL: https://${DOMAIN}
-      NEXTAUTH_SECRET: ${NEXTAUTH_SECRET}
-      AUTH_SECRET: ${NEXTAUTH_SECRET}
-      NEXT_PUBLIC_APP_URL: https://${DOMAIN}
-      NEXT_PUBLIC_APP_NAME: ${NEXT_PUBLIC_APP_NAME:-E-FormationGN}
-
-      # OAuth (optionnel)
-      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
-      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
-
-      # Stripe
-      STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY:-}
-      STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET:-}
-      STRIPE_CONNECT_CLIENT_ID: ${STRIPE_CONNECT_CLIENT_ID:-}
-      NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: ${NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY:-}
-
-      # Mux
-      MUX_TOKEN_ID: ${MUX_TOKEN_ID:-}
-      MUX_TOKEN_SECRET: ${MUX_TOKEN_SECRET:-}
-      MUX_WEBHOOK_SECRET: ${MUX_WEBHOOK_SECRET:-}
-
-      # Resend
-      RESEND_API_KEY: ${RESEND_API_KEY:-}
-      RESEND_FROM_EMAIL: ${RESEND_FROM_EMAIL:-}
-
-      # Stockage R2 (optionnel)
-      R2_ACCOUNT_ID: ${R2_ACCOUNT_ID:-}
-      R2_ACCESS_KEY_ID: ${R2_ACCESS_KEY_ID:-}
-      R2_SECRET_ACCESS_KEY: ${R2_SECRET_ACCESS_KEY:-}
-      R2_BUCKET: ${R2_BUCKET:-e-formationgn}
-      R2_PUBLIC_URL: ${R2_PUBLIC_URL:-}
-
-      # Sentry (optionnel)
-      SENTRY_DSN: ${SENTRY_DSN:-}
-      NEXT_PUBLIC_SENTRY_DSN: ${NEXT_PUBLIC_SENTRY_DSN:-}
-
-      # Tuteur IA (optionnel)
-      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
-
-      # Plateforme
-      PLATFORM_DEFAULT_CURRENCY: ${PLATFORM_DEFAULT_CURRENCY:-EUR}
-      PLATFORM_COMMISSION_INSTRUCTOR_BPS: ${PLATFORM_COMMISSION_INSTRUCTOR_BPS:-1500}
-      PLATFORM_COMMISSION_PLATFORM_BPS: ${PLATFORM_COMMISSION_PLATFORM_BPS:-3000}
-
-      # Cron
-      CRON_SECRET: ${CRON_SECRET}
-    expose:
-      - "3000"
-    depends_on:
-      db:
-        condition: service_healthy
-    healthcheck:
-      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:3000/api/health"]
-      interval: 30s
-      timeout: 5s
-      retries: 5
-      start_period: 30s
-    networks:
-      - web
-      - internal
-
-  # -------- Postgres 16 --------
+  # -------- PostgreSQL 16 --------
   db:
     image: postgres:16-alpine
     restart: unless-stopped
@@ -117,7 +29,35 @@ services:
     networks:
       - internal
 
-  # -------- Cron sidecar : appelle /api/cron/cleanup tous les jours à 3h --------
+  # -------- Application Next.js --------
+  # Image tirée de Docker Hub. Routée par le Traefik mutualisé du VPS via les labels.
+  app:
+    image: bahm2062/e-formationgn:latest
+    restart: unless-stopped
+    env_file:
+      - .env
+    expose:
+      - "3000"
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:3000/api/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 40s
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=eformationgn_internal"
+      - "traefik.http.routers.eformationgn.rule=Host(`gandal.org`) || Host(`www.gandal.org`)"
+      - "traefik.http.routers.eformationgn.entrypoints=websecure"
+      - "traefik.http.routers.eformationgn.tls.certresolver=letsencrypt"
+      - "traefik.http.services.eformationgn.loadbalancer.server.port=3000"
+    networks:
+      - internal
+
+  # -------- Cron sidecar : /api/cron/cleanup tous les jours à 3h --------
   cron:
     image: alpine:3.20
     restart: unless-stopped
@@ -137,9 +77,6 @@ services:
 
 volumes:
   db_data:
-  caddy_data:
-  caddy_config:
 
 networks:
-  web:
   internal:

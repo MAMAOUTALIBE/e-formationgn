@@ -13,6 +13,7 @@
     "db:seed": "tsx prisma/seed.ts",
     "check:payments": "tsx scripts/check-payments.ts",
     "db:migrate:deploy": "prisma migrate deploy",
+    "deploy": "bash scripts/deploy.sh",
     "postinstall": "prisma generate"
   },
   "dependencies": {

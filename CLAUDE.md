@@ -4,17 +4,13 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## ⚠️ Next.js 16 — read before writing code
 
-This repo runs **Next.js 16.2.4 + React 19.2 + Prisma 7**. APIs, conventions, and file layout differ from your training data. Before writing or editing Next.js code, read the relevant guide in `node_modules/next/dist/docs/`. Heed deprecation notices.
+This repo runs **Next.js 16.2.6 + React 19.2 + Prisma 7**. APIs, conventions, and file layout differ from your training data. Before writing or editing Next.js code, read the relevant guide in `node_modules/next/dist/docs/`. Heed deprecation notices.
 
 Specific traps:
 - **No `middleware.ts`** — it has been renamed to `proxy.ts` (see [src/proxy.ts](src/proxy.ts)) using `NextAuth(authConfig)` from the edge-safe `auth.config.ts`.
 - **Prisma 7 datasource URL** is set in [prisma.config.ts](prisma.config.ts) (`datasource.url`), NOT in `schema.prisma`.
 - **Prisma client output** goes to `src/generated/prisma` (gitignored). Always import from `@/generated/prisma` (or `@/lib/prisma` for the singleton), never `@prisma/client`.
 - **NextAuth v5 beta** (`next-auth@5.0.0-beta.31`) with the JWT strategy; the PrismaAdapter is cast because it type-checks against the legacy `@prisma/client` shape — runtime is fine, do not rewrite.
-
-## Working directory
-
-The actual app lives in the **`e-formationgn/`** subdirectory. The sibling `../prisma/` and `../src/` folders at the workspace root are leftovers — ignore them. Run all commands from `e-formationgn/`.
 
 ## Commands
 
@@ -25,6 +21,7 @@ npm run start            # next start (after build)
 npm run lint             # eslint
 npm run typecheck        # tsc --noEmit
 npm run test:e2e         # playwright test (requires a running dev server on :3000)
+npm run test:e2e:install # one-time: install the Chromium browser for Playwright
 npm run db:seed          # tsx prisma/seed.ts — idempotent: 8 cats, 1 demo instructor, 4 courses
 npm run check:payments   # tsx scripts/check-payments.ts — sanity-check payment config
 npm run db:migrate:deploy
@@ -97,6 +94,7 @@ CinetPay IPN handling: **always re-verify** via `checkTransaction()` after signa
 - `fakeVerifyPassword()` burns bcrypt CPU on missing users to flatten timing-based email enumeration.
 - New passwords are checked against HaveIBeenPwned (k-anonymity, degrades gracefully).
 - Admin impersonation flows through a signed cookie read in the `session()` callback — `session.impersonation` carries the real admin ID.
+- Login and registration are gated by **Cloudflare Turnstile** ([src/lib/auth/turnstile.ts](src/lib/auth/turnstile.ts)) — the token is verified server-side in the auth Server Actions; verification degrades gracefully (allows through) when no Turnstile keys are configured.
 
 ### Database / Prisma 7 specifics
 
@@ -116,6 +114,10 @@ In-memory `Map`-based limiter in [src/lib/rate-limit.ts](src/lib/rate-limit.ts) 
 
 Course thumbnails / instructor uploads use Cloudflare R2 ([src/lib/storage/r2.ts](src/lib/storage/r2.ts) — S3-compatible). Mux handles video (direct upload + asset/upload helpers in [src/lib/mux.ts](src/lib/mux.ts)). `next.config.ts` sets `images.unoptimized: true` because thumbnails can come from arbitrary instructor-provided URLs — don't reintroduce an `images.remotePatterns` allow-list without coordinating.
 
+### AI features (Anthropic)
+
+[src/lib/ai/](src/lib/ai/) holds five independent Claude-backed helpers — `lesson-summary`, `quiz-generator`, `seo-suggestions` (Sonnet), `review-moderation` (Haiku), and `tutor` (Opus). All share the same contract: a single `ANTHROPIC_API_KEY` env var, an `isXxxConfigured()` guard, and **graceful degradation** when the key is absent (the feature is simply skipped, never throws). When adding an AI feature, follow that pattern — never make a code path hard-depend on the AI being configured.
+
 ## Conventions enforced by the codebase
 
 - TypeScript **strict**, no `any`.
@@ -127,9 +129,15 @@ Course thumbnails / instructor uploads use Cloudflare R2 ([src/lib/storage/r2.ts
 
 ## Deployment
 
-- **Hostinger VPS via Docker Compose** is the production target (see [DEPLOY.md](DEPLOY.md), [docker-compose.yml](docker-compose.yml), [Dockerfile](Dockerfile)). Multi-stage build → standalone Next.js output; entrypoint runs `prisma migrate deploy` then `node server.js`.
-- A **Vercel** path also works (see [README.md](README.md)) — set the build command to `prisma migrate deploy && next build`.
+Production is **live at https://gandal.org** on a Hostinger VPS. [REDEPLOY.md](REDEPLOY.md) is the source of truth for the redeploy procedure.
+
+- **Orchestration:** Docker Compose project `eformationgn` at `/docker/e-formationgn/` on the VPS — `db` + `app` + `cron`. [docker-compose.yml](docker-compose.yml) in the repo is the prod config.
+- **Image:** built on the Mac (`linux/amd64`) and pushed to Docker Hub `bahm2062/e-formationgn` via `npm run deploy` ([scripts/deploy.sh](scripts/deploy.sh)). The VPS only `docker compose pull`s — it never builds.
+- **Reverse proxy:** the VPS's shared Traefik (`traefik-zcbs`), wired via Traefik labels on the `app` service. **No Caddy** — older revisions of the compose shipped Caddy; it was dropped because Traefik already owns ports 80/443.
+- Multi-stage [Dockerfile](Dockerfile) → standalone Next.js; the entrypoint runs `prisma migrate deploy` then `node server.js`, so **migrations auto-apply on every redeploy**.
+- The Postgres password **must be URL-safe (hex)** — a base64 password (`+`/`/`) breaks the runtime `@prisma/adapter-pg` connection-string parser even though `prisma migrate deploy` tolerates it.
 - Healthcheck: `GET /api/health` → 200 (or 503 if DB is unreachable).
+- [DEPLOY.md](DEPLOY.md) documents the original from-scratch install (with Caddy) — partly historical; trust REDEPLOY.md for current reality.
 - CSP is currently `Report-Only` in [next.config.ts](next.config.ts); the long-standing TODO is to flip to enforce after 48h of clean reports in prod.
 
 ## Demo accounts
