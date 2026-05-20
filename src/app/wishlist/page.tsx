@@ -12,6 +12,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Container } from "@/components/ui/container";
 import { getCurrentCurrency } from "@/lib/currency";
 import { prisma } from "@/lib/prisma";
+import { serializeCourseListItem } from "@/server/queries/courses";
 
 export const metadata: Metadata = {
   title: "Liste de souhaits",
@@ -70,7 +71,11 @@ export default async function WishlistPage() {
           ) : (
             <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
               {items.map((item) => (
-                <CourseCard key={item.id} course={item.course} currency={currency} />
+                <CourseCard
+                  key={item.id}
+                  course={serializeCourseListItem(item.course)}
+                  currency={currency}
+                />
               ))}
             </div>
           )}

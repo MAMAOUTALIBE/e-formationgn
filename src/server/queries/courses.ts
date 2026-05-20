@@ -30,9 +30,58 @@ const PUBLIC_COURSE_INCLUDE = {
   },
 } satisfies Prisma.CourseInclude;
 
-export type PublicCourseListItem = Prisma.CourseGetPayload<{
+// internalNotes est un champ de curation réservé aux admins — jamais exposé
+// dans les vues publiques du catalogue.
+const COURSE_PUBLIC_OMIT = { internalNotes: true } satisfies Prisma.CourseOmit;
+
+type RawPublicCourse = Prisma.CourseGetPayload<{
   include: typeof PUBLIC_COURSE_INCLUDE;
+  omit: typeof COURSE_PUBLIC_OMIT;
 }>;
+
+// Les colonnes Decimal de Prisma ne traversent pas la frontière Server →
+// Client Component (non sérialisables). On les convertit en `number` dès la
+// couche query : tout PublicCourseListItem renvoyé est un objet plain.
+export type PublicCourseListItem = Omit<
+  RawPublicCourse,
+  | "priceEUR"
+  | "priceUSD"
+  | "discountPriceEUR"
+  | "discountPriceUSD"
+  | "priceGNF"
+  | "priceXOF"
+  | "discountPriceGNF"
+  | "discountPriceXOF"
+> & {
+  priceEUR: number;
+  priceUSD: number;
+  priceGNF: number;
+  priceXOF: number;
+  discountPriceEUR: number | null;
+  discountPriceUSD: number | null;
+  discountPriceGNF: number | null;
+  discountPriceXOF: number | null;
+};
+
+export function serializeCourseListItem(
+  course: RawPublicCourse,
+): PublicCourseListItem {
+  return {
+    ...course,
+    priceEUR: Number(course.priceEUR),
+    priceUSD: Number(course.priceUSD),
+    priceGNF: Number(course.priceGNF),
+    priceXOF: Number(course.priceXOF),
+    discountPriceEUR:
+      course.discountPriceEUR == null ? null : Number(course.discountPriceEUR),
+    discountPriceUSD:
+      course.discountPriceUSD == null ? null : Number(course.discountPriceUSD),
+    discountPriceGNF:
+      course.discountPriceGNF == null ? null : Number(course.discountPriceGNF),
+    discountPriceXOF:
+      course.discountPriceXOF == null ? null : Number(course.discountPriceXOF),
+  };
+}
 
 interface ListCoursesParams {
   filters?: Partial<CourseFilters>;
@@ -189,6 +238,7 @@ export async function listPublishedCourses({
     const hydrated = await prisma.course.findMany({
       where: { id: { in: ids } },
       include: PUBLIC_COURSE_INCLUDE,
+      omit: COURSE_PUBLIC_OMIT,
     });
     const byId = new Map(hydrated.map((c) => [c.id, c]));
     const ordered = ids
@@ -196,7 +246,7 @@ export async function listPublishedCourses({
       .filter((c): c is (typeof hydrated)[number] => Boolean(c));
 
     return {
-      items: ordered as PublicCourseListItem[],
+      items: ordered.map(serializeCourseListItem),
       total,
       page,
       pageCount: Math.max(1, Math.ceil(total / take)),
@@ -209,6 +259,7 @@ export async function listPublishedCourses({
     prisma.course.findMany({
       where,
       include: PUBLIC_COURSE_INCLUDE,
+      omit: COURSE_PUBLIC_OMIT,
       orderBy: buildOrderBy(sort),
       take,
       skip,
@@ -217,7 +268,7 @@ export async function listPublishedCourses({
   ]);
 
   return {
-    items: items as PublicCourseListItem[],
+    items: items.map(serializeCourseListItem),
     total,
     page,
     pageCount: Math.max(1, Math.ceil(total / take)),
@@ -322,10 +373,11 @@ export const listFeaturedCourses = unstable_cache(
     const items = await prisma.course.findMany({
       where: { status: "PUBLISHED" },
       include: PUBLIC_COURSE_INCLUDE,
+      omit: COURSE_PUBLIC_OMIT,
       orderBy: [{ totalEnrollments: "desc" }, { averageRating: "desc" }],
       take: limit,
     });
-    return items as PublicCourseListItem[];
+    return items.map(serializeCourseListItem);
   },
   ["featured-courses"],
   { revalidate: 600, tags: ["courses"] },
@@ -336,10 +388,11 @@ export const listLatestCourses = unstable_cache(
     const items = await prisma.course.findMany({
       where: { status: "PUBLISHED" },
       include: PUBLIC_COURSE_INCLUDE,
+      omit: COURSE_PUBLIC_OMIT,
       orderBy: [{ publishedAt: "desc" }, { createdAt: "desc" }],
       take: limit,
     });
-    return items as PublicCourseListItem[];
+    return items.map(serializeCourseListItem);
   },
   ["latest-courses"],
   { revalidate: 600, tags: ["courses"] },
@@ -352,10 +405,11 @@ export async function listCoursesByCategorySlug(
   const items = await prisma.course.findMany({
     where: { status: "PUBLISHED", category: { slug } },
     include: PUBLIC_COURSE_INCLUDE,
+    omit: COURSE_PUBLIC_OMIT,
     orderBy: [{ totalEnrollments: "desc" }, { averageRating: "desc" }],
     take: limit,
   });
-  return items as PublicCourseListItem[];
+  return items.map(serializeCourseListItem);
 }
 
 // Batch version : top N PUBLISHED courses per category slug, en 2 requêtes
@@ -393,10 +447,13 @@ export const listCoursesByCategorySlugs = unstable_cache(
     const courses = await prisma.course.findMany({
       where: { id: { in: ids } },
       include: PUBLIC_COURSE_INCLUDE,
+      omit: COURSE_PUBLIC_OMIT,
       orderBy: [{ totalEnrollments: "desc" }, { averageRating: "desc" }],
     });
 
-    const byId = new Map(courses.map((c) => [c.id, c as PublicCourseListItem]));
+    const byId = new Map(
+      courses.map((c) => [c.id, serializeCourseListItem(c)]),
+    );
     const result = empty;
     for (const row of rows) {
       const course = byId.get(row.id);
@@ -453,6 +510,7 @@ const COURSE_DETAIL_INCLUDE = {
 
 export type PublicCourseDetail = Prisma.CourseGetPayload<{
   include: typeof COURSE_DETAIL_INCLUDE;
+  omit: typeof COURSE_PUBLIC_OMIT;
 }>;
 
 // Cross-sell pour le panier — recommande des cours dans les mêmes catégories
@@ -493,13 +551,14 @@ export async function listCartCrossSell({
             id: { notIn: Array.from(excludedIds) },
           },
           include: PUBLIC_COURSE_INCLUDE,
+          omit: COURSE_PUBLIC_OMIT,
           orderBy: [{ totalEnrollments: "desc" }, { averageRating: "desc" }],
           take: limit,
         })
       : [];
 
   if (sameCategory.length >= limit) {
-    return sameCategory as PublicCourseListItem[];
+    return sameCategory.map(serializeCourseListItem);
   }
 
   // 3. Fallback : top cours toutes catégories pour compléter.
@@ -513,11 +572,12 @@ export async function listCartCrossSell({
       },
     },
     include: PUBLIC_COURSE_INCLUDE,
+    omit: COURSE_PUBLIC_OMIT,
     orderBy: [{ totalEnrollments: "desc" }, { averageRating: "desc" }],
     take: limit - sameCategory.length,
   });
 
-  return [...sameCategory, ...fallback] as PublicCourseListItem[];
+  return [...sameCategory, ...fallback].map(serializeCourseListItem);
 }
 
 export async function getPublishedCourseBySlug(
@@ -528,6 +588,7 @@ export async function getPublishedCourseBySlug(
   const course = await prismaRead.course.findUnique({
     where: { slug },
     include: COURSE_DETAIL_INCLUDE,
+    omit: COURSE_PUBLIC_OMIT,
   });
   if (!course) return null;
   if (course.status !== "PUBLISHED") return null;
@@ -546,10 +607,11 @@ export async function getRelatedCourses(
       NOT: { id: courseId },
     },
     include: PUBLIC_COURSE_INCLUDE,
+    omit: COURSE_PUBLIC_OMIT,
     orderBy: [{ averageRating: "desc" }, { totalEnrollments: "desc" }],
     take: limit,
   });
-  return items as PublicCourseListItem[];
+  return items.map(serializeCourseListItem);
 }
 
 /**
@@ -803,6 +865,7 @@ export async function searchCourses(
   const courses = await prisma.course.findMany({
     where: { id: { in: ids } },
     include: PUBLIC_COURSE_INCLUDE,
+    omit: COURSE_PUBLIC_OMIT,
   });
 
   // Préserver l'ordre par rank (Prisma `findMany` ne garantit pas l'ordre des `in`).
@@ -811,7 +874,7 @@ export async function searchCourses(
     .map((id) => byId.get(id))
     .filter((c): c is (typeof courses)[number] => Boolean(c));
 
-  return { items: ordered as PublicCourseListItem[], total };
+  return { items: ordered.map(serializeCourseListItem), total };
 }
 
 // Suggestions courtes (autocomplete header) — top 5 par rang.

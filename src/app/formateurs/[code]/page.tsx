@@ -21,6 +21,7 @@ import { Container } from "@/components/ui/container";
 import { Stars } from "@/components/ui/stars";
 import { pluralize } from "@/lib/format/labels";
 import { prisma } from "@/lib/prisma";
+import { serializeCourseListItem } from "@/server/queries/courses";
 
 interface PageProps {
   params: Promise<{ code: string }>;
@@ -302,7 +303,7 @@ export default async function PublicInstructorPage({ params }: PageProps) {
                       href={withRef(`/cours/${course.slug}`)}
                       className="block focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-lg"
                     >
-                      <CourseCard course={course} />
+                      <CourseCard course={serializeCourseListItem(course)} />
                     </Link>
                   ))}
                 </div>
