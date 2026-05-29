@@ -105,14 +105,21 @@ export default async function CourseProgramPage({ params }: PageProps) {
                                 Aperçu
                               </span>
                             ) : null}
-                            {lesson.muxPlaybackId ? (
-                              <span className="ml-1 inline-flex items-center rounded bg-[color:var(--brand-accent)]/10 px-1.5 py-0.5 text-[10px] font-medium text-[color:var(--brand-accent)]">
-                                Vidéo prête
-                              </span>
+                            {lesson.type === "VIDEO" ? (
+                              lesson.muxPlaybackId || lesson.externalVideoUrl ? (
+                                <span className="ml-1 inline-flex items-center rounded bg-[color:var(--brand-accent)]/10 px-1.5 py-0.5 text-[10px] font-medium text-[color:var(--brand-accent)]">
+                                  Vidéo prête
+                                </span>
+                              ) : (
+                                <span className="ml-1 inline-flex items-center rounded bg-[color:var(--brand-warning)]/10 px-1.5 py-0.5 text-[10px] font-medium text-[color:var(--brand-warning)]">
+                                  Vidéo manquante
+                                </span>
+                              )
                             ) : null}
                           </span>
                           <span className="flex items-center gap-3 text-xs text-muted-foreground">
-                            {lesson.videoDurationSeconds > 0
+                            {lesson.type === "VIDEO" &&
+                            lesson.videoDurationSeconds > 0
                               ? formatLessonDuration(lesson.videoDurationSeconds)
                               : null}
                             <Button asChild variant="link" size="sm" className="h-auto px-0">
