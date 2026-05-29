@@ -17,17 +17,16 @@ export async function getFinancesKpis(range: {
   from: Date;
   to: Date;
 }): Promise<FinancesKpis> {
-  const [orderItems, refunds, pendingPayouts, failedOrders] = await Promise.all([
-    prisma.orderItem.findMany({
+  // Agrégation côté base (GROUP BY currency) plutôt que de charger tous les
+  // OrderItem en mémoire pour les sommer en JS — la table grossit avec les
+  // ventes, le SUM SQL reste O(1) côté Node.
+  const [itemAgg, refunds, pendingPayouts, failedOrders] = await Promise.all([
+    prisma.orderItem.groupBy({
+      by: ["currency"],
       where: {
         order: { status: "PAID", paidAt: { gte: range.from, lte: range.to } },
       },
-      select: {
-        currency: true,
-        totalCents: true,
-        platformFeeCents: true,
-        instructorPayoutCents: true,
-      },
+      _sum: { totalCents: true, platformFeeCents: true, instructorPayoutCents: true },
     }),
     prisma.refund.findMany({
       where: { createdAt: { gte: range.from, lte: range.to } },
@@ -47,14 +46,14 @@ export async function getFinancesKpis(range: {
   const grossByCurrency: Record<Currency, number> = { EUR: 0, USD: 0, GNF: 0, XOF: 0 };
   const platformFeeByCurrency: Record<Currency, number> = { EUR: 0, USD: 0, GNF: 0, XOF: 0 };
   const payoutsToInstructorsByCurrency: Record<Currency, number> = { EUR: 0, USD: 0, GNF: 0, XOF: 0 };
-  for (const it of orderItems) {
-    grossByCurrency[it.currency] += it.totalCents;
-    platformFeeByCurrency[it.currency] += it.platformFeeCents;
-    payoutsToInstructorsByCurrency[it.currency] += it.instructorPayoutCents;
+  for (const row of itemAgg) {
+    grossByCurrency[row.currency] = row._sum.totalCents ?? 0;
+    platformFeeByCurrency[row.currency] = row._sum.platformFeeCents ?? 0;
+    payoutsToInstructorsByCurrency[row.currency] = row._sum.instructorPayoutCents ?? 0;
   }
   const refundsByCurrency: Record<Currency, number> = { EUR: 0, USD: 0, GNF: 0, XOF: 0 };
   for (const r of refunds) {
-    refundsByCurrency[r.order.currency] += r.amountCents;
+    if (r.order) refundsByCurrency[r.order.currency] += r.amountCents;
   }
 
   return {
@@ -83,25 +82,37 @@ export async function getMonthlyFinanceSeries(
   const now = new Date();
   const fromMonth = new Date(now.getFullYear(), now.getMonth() - (months - 1), 1);
 
-  const [items, refunds] = await Promise.all([
-    prisma.orderItem.findMany({
-      where: {
-        order: { status: "PAID", paidAt: { gte: fromMonth } },
-        currency: "EUR", // pour la V1 on aggrège en EUR (devise reporting plateforme)
-      },
-      select: {
-        totalCents: true,
-        platformFeeCents: true,
-        order: { select: { id: true, paidAt: true } },
-      },
-    }),
-    prisma.refund.findMany({
-      where: { createdAt: { gte: fromMonth }, order: { currency: "EUR" } },
-      select: { amountCents: true, createdAt: true },
-    }),
+  // Agrégation mensuelle directement en SQL (date_trunc + GROUP BY) au lieu de
+  // charger tous les OrderItem des 12 derniers mois en mémoire pour les bucketer
+  // en JS. COUNT(DISTINCT order_id) remplace le Set de dédup applicatif.
+  // V1 : reporting en EUR uniquement (devise plateforme).
+  const [grossRows, refundRows] = await Promise.all([
+    prisma.$queryRaw<
+      Array<{ month: string; gross: bigint; fee: bigint; orders: bigint }>
+    >`
+      SELECT to_char(date_trunc('month', o."paidAt"), 'YYYY-MM') AS month,
+             COALESCE(SUM(oi."totalCents"), 0)::bigint AS gross,
+             COALESCE(SUM(oi."platformFeeCents"), 0)::bigint AS fee,
+             COUNT(DISTINCT o.id)::bigint AS orders
+      FROM "OrderItem" oi
+      JOIN "Order" o ON o.id = oi."orderId"
+      WHERE o."status"::text = 'PAID'
+        AND oi."currency"::text = 'EUR'
+        AND o."paidAt" >= ${fromMonth}
+      GROUP BY 1
+    `,
+    prisma.$queryRaw<Array<{ month: string; refunds: bigint }>>`
+      SELECT to_char(date_trunc('month', r."createdAt"), 'YYYY-MM') AS month,
+             COALESCE(SUM(r."amountCents"), 0)::bigint AS refunds
+      FROM "Refund" r
+      JOIN "Order" o ON o.id = r."orderId"
+      WHERE o."currency"::text = 'EUR'
+        AND r."createdAt" >= ${fromMonth}
+      GROUP BY 1
+    `,
   ]);
 
-  // Init buckets
+  // Init buckets (garantit les 12 mois présents, même à zéro).
   const buckets = new Map<string, MonthlyFinancePoint>();
   for (let i = 0; i < months; i++) {
     const d = new Date(now.getFullYear(), now.getMonth() - (months - 1 - i), 1);
@@ -115,23 +126,16 @@ export async function getMonthlyFinanceSeries(
     });
   }
 
-  const seenOrders = new Set<string>();
-  for (const it of items) {
-    if (!it.order.paidAt) continue;
-    const key = `${it.order.paidAt.getFullYear()}-${String(it.order.paidAt.getMonth() + 1).padStart(2, "0")}`;
-    const b = buckets.get(key);
+  for (const row of grossRows) {
+    const b = buckets.get(row.month);
     if (!b) continue;
-    b.grossCents += it.totalCents;
-    b.platformFeeCents += it.platformFeeCents;
-    if (!seenOrders.has(it.order.id)) {
-      b.ordersCount += 1;
-      seenOrders.add(it.order.id);
-    }
+    b.grossCents = Number(row.gross);
+    b.platformFeeCents = Number(row.fee);
+    b.ordersCount = Number(row.orders);
   }
-  for (const r of refunds) {
-    const key = `${r.createdAt.getFullYear()}-${String(r.createdAt.getMonth() + 1).padStart(2, "0")}`;
-    const b = buckets.get(key);
-    if (b) b.refundsCents += r.amountCents;
+  for (const row of refundRows) {
+    const b = buckets.get(row.month);
+    if (b) b.refundsCents = Number(row.refunds);
   }
 
   return Array.from(buckets.values());
@@ -158,23 +162,25 @@ export async function getFinanceHealthKpis(range: {
     to: range.from,
   };
 
-  const [grossRows, refundsRows, prevGrossRows, prevRefundsRows, chargebacks, payouts] =
+  // SUM côté base (aggregate _sum) au lieu de charger toutes les lignes pour
+  // les additionner en JS — même résultat, charge mémoire constante.
+  const [grossAgg, refundsAgg, prevGrossAgg, prevRefundsAgg, chargebacks, payouts] =
     await Promise.all([
-      prisma.orderItem.findMany({
+      prisma.orderItem.aggregate({
         where: {
           order: { status: "PAID", paidAt: { gte: range.from, lte: range.to } },
           currency: "EUR",
         },
-        select: { totalCents: true },
+        _sum: { totalCents: true },
       }),
-      prisma.refund.findMany({
+      prisma.refund.aggregate({
         where: {
           createdAt: { gte: range.from, lte: range.to },
           order: { currency: "EUR" },
         },
-        select: { amountCents: true },
+        _sum: { amountCents: true },
       }),
-      prisma.orderItem.findMany({
+      prisma.orderItem.aggregate({
         where: {
           order: {
             status: "PAID",
@@ -182,14 +188,14 @@ export async function getFinanceHealthKpis(range: {
           },
           currency: "EUR",
         },
-        select: { totalCents: true },
+        _sum: { totalCents: true },
       }),
-      prisma.refund.findMany({
+      prisma.refund.aggregate({
         where: {
           createdAt: { gte: previousRange.from, lte: previousRange.to },
           order: { currency: "EUR" },
         },
-        select: { amountCents: true },
+        _sum: { amountCents: true },
       }),
       prisma.dispute.count({ where: { status: "OPEN" } }),
       prisma.payout.aggregate({
@@ -198,10 +204,10 @@ export async function getFinanceHealthKpis(range: {
       }),
     ]);
 
-  const grossCents = grossRows.reduce((s, r) => s + r.totalCents, 0);
-  const refundsCents = refundsRows.reduce((s, r) => s + r.amountCents, 0);
-  const prevGross = prevGrossRows.reduce((s, r) => s + r.totalCents, 0);
-  const prevRefunds = prevRefundsRows.reduce((s, r) => s + r.amountCents, 0);
+  const grossCents = grossAgg._sum.totalCents ?? 0;
+  const refundsCents = refundsAgg._sum.amountCents ?? 0;
+  const prevGross = prevGrossAgg._sum.totalCents ?? 0;
+  const prevRefunds = prevRefundsAgg._sum.amountCents ?? 0;
 
   return {
     netRevenueCents: grossCents - refundsCents,
