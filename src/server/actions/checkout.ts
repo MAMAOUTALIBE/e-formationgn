@@ -17,6 +17,7 @@ import { auth } from "@/auth";
 import { readAffiliateCode } from "@/lib/affiliate";
 import { getCurrentCurrency } from "@/lib/currency";
 import { centsToAmount } from "@/lib/money";
+import { isStripeSupported } from "@/lib/payments/currency";
 import { getStripeClient, isStripeConfigured } from "@/lib/stripe";
 import { prisma } from "@/lib/prisma";
 import { computeCartLines, listCartItems } from "@/server/queries/cart";
@@ -53,6 +54,15 @@ export async function startCheckout(formData: FormData): Promise<ActionResult> {
   }
   const userId = session.user.id;
   const currency = await getCurrentCurrency(session.user.preferredCurrency);
+  // Garde de devise symétrique à CinetPay : Stripe ne gère que EUR/USD ici.
+  // Sans ça, une devise GNF/XOF créerait une session Stripe non prévue (et
+  // ferait échouer le Stripe Transfer côté webhook). On oriente vers CinetPay.
+  if (!isStripeSupported(currency)) {
+    return {
+      success: false,
+      message: `Le paiement par carte (Stripe) ne gère pas la devise ${currency}. Utilisez le paiement Mobile Money.`,
+    };
+  }
   const affiliateCode = await readAffiliateCode();
 
   const rawPromoCode = formData.get("promoCode");

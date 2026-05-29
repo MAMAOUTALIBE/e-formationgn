@@ -1,13 +1,17 @@
 "use server";
 
+import { randomBytes } from "node:crypto";
+
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 
 import type { ActionResult } from "./auth";
 
+// Suffixe imprévisible (8 octets → 16 hex). Remplace Math.random (prévisible,
+// faible entropie) : un certificat ne doit pas être devinable par énumération.
 function buildSerial(): string {
   const year = new Date().getFullYear();
-  const random = Math.random().toString(36).slice(2, 8).toUpperCase();
+  const random = randomBytes(8).toString("hex").toUpperCase();
   return `EFGN-${year}-${random}`;
 }
 

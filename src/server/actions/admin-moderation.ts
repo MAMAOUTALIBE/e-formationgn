@@ -6,11 +6,8 @@ import { revalidatePath } from "next/cache";
 
 import { requireAnyAdminRole } from "@/lib/auth/authorization";
 import { prisma } from "@/lib/prisma";
-import type {
-  ModerationRuleAction,
-  ModerationRuleKind,
-  ReportStatus,
-} from "@/generated/prisma/enums";
+import type { ReportStatus } from "@/generated/prisma/enums";
+import { moderationRuleSchema } from "@/lib/validators/moderation";
 import { createAuditLog } from "@/server/services/audit-log";
 
 import type { ActionResult } from "./auth";
@@ -84,15 +81,23 @@ export async function createModerationRule(
   formData: FormData,
 ): Promise<ActionResult> {
   const user = await requireModerator();
-  const name = String(formData.get("name") ?? "").trim();
-  const kind = (String(formData.get("kind") ?? "KEYWORD") as ModerationRuleKind);
-  const pattern = String(formData.get("pattern") ?? "").trim();
-  const action = (String(formData.get("action") ?? "FLAG") as ModerationRuleAction);
-  if (!name || !pattern) {
-    return { success: false, message: "Nom et pattern requis." };
+  // Validation stricte des enums (kind/action) + bornes (name/pattern) :
+  // un cast brut laissait passer une valeur invalide jusqu'à la contrainte DB
+  // (erreur non gérée). Zod la rejette proprement côté serveur.
+  const parsed = moderationRuleSchema.safeParse({
+    name: String(formData.get("name") ?? "").trim(),
+    kind: String(formData.get("kind") ?? "KEYWORD"),
+    pattern: String(formData.get("pattern") ?? "").trim(),
+    action: String(formData.get("action") ?? "FLAG"),
+  });
+  if (!parsed.success) {
+    return {
+      success: false,
+      message: "Règle invalide (nom, type, motif ou action incorrect).",
+    };
   }
   const rule = await prisma.moderationRule.create({
-    data: { name, kind, pattern, action, isActive: true },
+    data: { ...parsed.data, isActive: true },
   });
   await audit(user.userId, "moderation-rule.create", "ModerationRule", rule.id);
   revalidatePath("/admin/moderation/regles");
