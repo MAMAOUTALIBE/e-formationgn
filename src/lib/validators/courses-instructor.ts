@@ -197,6 +197,22 @@ export const lessonSchema = z
   .strict();
 export type LessonInput = z.infer<typeof lessonSchema>;
 
+// URL vidéo externe (lien direct .mp4/.webm/.mov ou hébergement tiers servant
+// un fichier lisible par la balise <video>). Validée http/https + longueur.
+export const lessonVideoUrlSchema = z
+  .object({
+    url: z
+      .string()
+      .trim()
+      .url("URL invalide.")
+      .max(2000, "URL trop longue.")
+      .refine(
+        (u) => /^https?:\/\//i.test(u),
+        "L'URL doit commencer par http:// ou https://.",
+      ),
+  })
+  .strict();
+
 export const reorderItemsSchema = z
   .object({
     ids: z.array(z.string().min(1)).min(1).max(200),

@@ -20,6 +20,7 @@ import { prisma } from "@/lib/prisma";
 import { safeDeleteMuxAsset } from "@/server/services/mux-service";
 import {
   lessonSchema,
+  lessonVideoUrlSchema,
   reorderItemsSchema,
   sectionSchema,
 } from "@/lib/validators/courses-instructor";
@@ -436,6 +437,105 @@ export async function detachMuxFromLesson(lessonId: string): Promise<ActionResul
 
   revalidatePath(`/formateur/cours/${lesson.section.course.id}/programme`);
   return { success: true, message: "Vidéo détachée." };
+}
+
+// ---------------------------------------------------------------------------
+// Source vidéo « URL externe » / fichier hébergé (R2) au niveau d'une leçon.
+// Mux et externalVideoUrl sont mutuellement exclusifs : choisir l'un efface
+// l'autre (le player priorise muxPlaybackId, on évite donc les ambiguïtés).
+// ---------------------------------------------------------------------------
+
+export async function setLessonExternalVideoUrl(
+  lessonId: string,
+  url: string,
+): Promise<ActionResult> {
+  const { lesson } = await requireLessonOwnership(lessonId);
+
+  const parsed = lessonVideoUrlSchema.safeParse({ url });
+  if (!parsed.success) {
+    return {
+      success: false,
+      message: parsed.error.flatten().fieldErrors.url?.[0] ?? "URL invalide.",
+    };
+  }
+
+  // Si une vidéo Mux existait, on la libère côté Mux (best-effort).
+  if (lesson.muxAssetId) {
+    await safeDeleteMuxAsset(lesson.muxAssetId, {
+      context: { operation: "switch-to-external", lessonId },
+    });
+  }
+
+  await prisma.lesson.update({
+    where: { id: lessonId },
+    data: {
+      externalVideoUrl: parsed.data.url,
+      muxAssetId: null,
+      muxPlaybackId: null,
+      muxUploadId: null,
+      // Durée inconnue tant que le player ne l'a pas rapportée (loadedmetadata).
+      videoDurationSeconds: 0,
+    },
+  });
+
+  await recomputeCourseDuration(lesson.section.course.id);
+
+  revalidatePath(`/formateur/cours/${lesson.section.course.id}/programme`);
+  revalidatePath(`/formateur/cours/${lesson.section.course.id}/lecons/${lessonId}`);
+  return { success: true, message: "Vidéo enregistrée." };
+}
+
+export async function clearLessonVideo(lessonId: string): Promise<ActionResult> {
+  const { lesson } = await requireLessonOwnership(lessonId);
+
+  if (lesson.muxAssetId) {
+    await safeDeleteMuxAsset(lesson.muxAssetId, {
+      context: { operation: "clear-lesson-video", lessonId },
+    });
+  }
+
+  await prisma.lesson.update({
+    where: { id: lessonId },
+    data: {
+      externalVideoUrl: null,
+      muxAssetId: null,
+      muxPlaybackId: null,
+      muxUploadId: null,
+      videoDurationSeconds: 0,
+    },
+  });
+
+  await recomputeCourseDuration(lesson.section.course.id);
+
+  revalidatePath(`/formateur/cours/${lesson.section.course.id}/programme`);
+  revalidatePath(`/formateur/cours/${lesson.section.course.id}/lecons/${lessonId}`);
+  return { success: true, message: "Vidéo retirée." };
+}
+
+// Persiste la durée d'une leçon à source externe/R2. Appelée par le lecteur
+// formateur une fois la métadonnée vidéo chargée (loadedmetadata) — Mux la
+// fournit déjà, donc on ne touche pas aux leçons Mux ici.
+export async function setLessonVideoDuration(
+  lessonId: string,
+  durationSeconds: number,
+): Promise<ActionResult> {
+  if (!Number.isFinite(durationSeconds) || durationSeconds <= 0) {
+    return { success: false, message: "Durée invalide." };
+  }
+  const rounded = Math.min(Math.round(durationSeconds), 24 * 3600);
+
+  const { lesson } = await requireLessonOwnership(lessonId);
+  // Ne s'applique qu'aux leçons à source externe (Mux gère sa propre durée).
+  if (!lesson.externalVideoUrl) {
+    return { success: false, message: "Leçon sans source vidéo externe." };
+  }
+
+  await prisma.lesson.update({
+    where: { id: lessonId },
+    data: { videoDurationSeconds: rounded },
+  });
+  await recomputeCourseDuration(lesson.section.course.id);
+  return { success: true };
 }
 
 // ---------------------------------------------------------------------------

@@ -53,6 +53,13 @@ export function isR2Configured(): boolean {
   );
 }
 
+// Une URL publique (custom domain R2) est indispensable pour SERVIR les vidéos
+// de leçon au lecteur — l'endpoint S3 signé brut n'est pas lisible publiquement.
+// L'upload d'images peut s'en passer (servies via proxy/route), pas les vidéos.
+export function isR2PublicUrlConfigured(): boolean {
+  return Boolean(process.env.R2_PUBLIC_URL);
+}
+
 export interface PresignedUploadResult {
   uploadUrl: string;
   publicUrl: string;

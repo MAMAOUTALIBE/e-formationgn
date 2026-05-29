@@ -6,11 +6,12 @@ import { auth } from "@/auth";
 import { ConfirmAction } from "@/components/features/instructor/confirm-action";
 import { LessonAiTools } from "@/components/features/instructor/lesson-ai-tools";
 import { LessonEditForm } from "@/components/features/instructor/lesson-edit-form";
-import { MuxUploader } from "@/components/features/instructor/mux-uploader";
+import { LessonVideoSource } from "@/components/features/instructor/lesson-video-source";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { isLessonSummaryConfigured } from "@/lib/ai/lesson-summary";
 import { isMuxConfigured } from "@/lib/mux";
+import { isR2Configured, isR2PublicUrlConfigured } from "@/lib/storage/r2";
 import { deleteLesson } from "@/server/actions/curriculum";
 import { getLessonForInstructor } from "@/server/queries/instructor";
 
@@ -89,15 +90,18 @@ export default async function LessonEditPage({ params }: PageProps) {
             <CardHeader>
               <CardTitle>Vidéo</CardTitle>
               <CardDescription>
-                Téléversez une vidéo. L&apos;encodage et le streaming sont gérés par Mux.
+                Choisissez la source : Mux (encodage adaptatif), téléversement
+                d&apos;un fichier, ou lien direct vers une vidéo.
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <MuxUploader
+              <LessonVideoSource
                 lessonId={lesson.id}
-                initialPlaybackId={lesson.muxPlaybackId}
-                initialDurationSeconds={lesson.videoDurationSeconds}
+                muxPlaybackId={lesson.muxPlaybackId}
+                externalVideoUrl={lesson.externalVideoUrl}
+                durationSeconds={lesson.videoDurationSeconds}
                 isMuxConfigured={isMuxConfigured()}
+                isR2VideoConfigured={isR2Configured() && isR2PublicUrlConfigured()}
               />
             </CardContent>
           </Card>
