@@ -5,6 +5,7 @@ import { ArrowLeft, ArrowRight, Download } from "lucide-react";
 
 import { auth } from "@/auth";
 import { CourseAnnouncements } from "@/components/features/learning/course-announcements";
+import { CourseCompleteBanner } from "@/components/features/learning/course-complete-banner";
 import {
   FocusModeProvider,
   FocusModeToggle,
@@ -223,6 +224,11 @@ export default async function LessonViewerPage({ params }: PageProps) {
         >
           {/* ── Colonne principale : player + tabs ───────────────────── */}
           <section className="order-1 min-w-0 bg-card">
+            {progressPercent === 100 ? (
+              <div className="px-4 pt-4 sm:px-6">
+                <CourseCompleteBanner courseId={course.id} />
+              </div>
+            ) : null}
             <div className="bg-black">
               <div className="mx-auto w-full max-w-[1280px]">
                 {lesson.type === "VIDEO" ? (

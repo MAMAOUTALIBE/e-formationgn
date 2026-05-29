@@ -5,6 +5,7 @@
 // est présent (utile pour le seed démo Blender ou tout contenu hors-Mux).
 
 import { useEffect, useRef } from "react";
+import { useRouter } from "next/navigation";
 
 import { recordLessonProgress } from "@/server/actions/learning";
 
@@ -85,6 +86,7 @@ function MuxLessonPlayer({
   thumbnail,
   title,
 }: MuxLessonPlayerProps) {
+  const router = useRouter();
   const containerRef = useRef<HTMLDivElement>(null);
   const lastReportRef = useRef<number>(0);
   const completedRef = useRef(false);
@@ -126,16 +128,21 @@ function MuxLessonPlayer({
           isCompleted: true,
           watchedSeconds: Math.round(player.currentTime),
           lastPositionSeconds: Math.round(player.currentTime),
-        });
+        }).then(() => router.refresh());
       }
     }
 
     function handleEnded() {
+      const alreadyCompleted = completedRef.current;
+      completedRef.current = true;
       void recordLessonProgress({
         lessonId,
         isCompleted: true,
         watchedSeconds: Math.round(player?.currentTime ?? durationSeconds),
         lastPositionSeconds: 0,
+      }).then(() => {
+        // Évite un refresh redondant si le seuil 95 % l'a déjà déclenché.
+        if (!alreadyCompleted) router.refresh();
       });
     }
 
@@ -145,7 +152,7 @@ function MuxLessonPlayer({
       player.removeEventListener("timeupdate", handleTimeUpdate);
       player.removeEventListener("ended", handleEnded);
     };
-  }, [lessonId, durationSeconds]);
+  }, [lessonId, durationSeconds, router]);
 
   return (
     <div ref={containerRef} className="overflow-hidden rounded-lg bg-black">
@@ -186,6 +193,7 @@ function NativeLessonPlayer({
   poster,
   title,
 }: NativeLessonPlayerProps) {
+  const router = useRouter();
   const videoRef = useRef<HTMLVideoElement>(null);
   const lastReportRef = useRef<number>(0);
   const completedRef = useRef(false);
@@ -229,16 +237,21 @@ function NativeLessonPlayer({
           isCompleted: true,
           watchedSeconds: Math.round(video.currentTime),
           lastPositionSeconds: Math.round(video.currentTime),
-        });
+        }).then(() => router.refresh());
       }
     }
 
     function handleEnded() {
+      const alreadyCompleted = completedRef.current;
+      completedRef.current = true;
       void recordLessonProgress({
         lessonId,
         isCompleted: true,
         watchedSeconds: Math.round(video?.currentTime ?? durationSeconds),
         lastPositionSeconds: 0,
+      }).then(() => {
+        // Évite un refresh redondant si le seuil 95 % l'a déjà déclenché.
+        if (!alreadyCompleted) router.refresh();
       });
     }
 
@@ -248,7 +261,7 @@ function NativeLessonPlayer({
       video.removeEventListener("timeupdate", handleTimeUpdate);
       video.removeEventListener("ended", handleEnded);
     };
-  }, [lessonId, durationSeconds, initialPositionSeconds]);
+  }, [lessonId, durationSeconds, initialPositionSeconds, router]);
 
   return (
     <div className="overflow-hidden rounded-lg bg-black">
