@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { FormField } from "@/components/ui/form-field";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
+import { formatPriceFromCents } from "@/lib/money";
 import { prisma } from "@/lib/prisma";
 import {
   createInstructorPromoCode,
@@ -34,7 +35,7 @@ export default async function InstructorPromoCodesPage() {
     redirect("/devenir-formateur");
   }
 
-  const [promos, courses] = await Promise.all([
+  const [promos, courses, salesByPromo] = await Promise.all([
     prisma.promoCode.findMany({
       where: { instructorId: session.user.id },
       include: {
@@ -49,7 +50,32 @@ export default async function InstructorPromoCodesPage() {
       select: { id: true, title: true, status: true },
       orderBy: { createdAt: "desc" },
     }),
+    // Performance réelle : commandes PAYÉES par code promo du formateur.
+    // Agrégation côté base (groupBy) plutôt que de charger les commandes.
+    prisma.order.groupBy({
+      by: ["promoCodeId"],
+      where: {
+        status: "PAID",
+        promoCode: { instructorId: session.user.id },
+      },
+      _count: true,
+      _sum: { totalCents: true, discountCents: true },
+    }),
   ]);
+
+  // Index des ventes par code pour un accès O(1) dans le rendu.
+  const salesById = new Map(
+    salesByPromo.map((s) => [
+      s.promoCodeId,
+      {
+        orders: s._count,
+        grossCents: s._sum.totalCents ?? 0,
+        discountCents: s._sum.discountCents ?? 0,
+      },
+    ]),
+  );
+  const totalRedemptions = salesByPromo.reduce((acc, s) => acc + s._count, 0);
+  const codesWithSales = salesByPromo.filter((s) => s._count > 0).length;
 
   return (
     <div className="space-y-6">
@@ -63,6 +89,80 @@ export default async function InstructorPromoCodesPage() {
           plateforme reste calculée sur le prix avant remise.
         </p>
       </header>
+
+      {promos.length > 0 ? (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Performance</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+              <StatTile
+                label="Utilisations totales"
+                value={totalRedemptions.toLocaleString("fr-FR")}
+              />
+              <StatTile
+                label="Codes avec ventes"
+                value={`${codesWithSales} / ${promos.length}`}
+              />
+              <StatTile
+                label="Codes créés"
+                value={promos.length.toLocaleString("fr-FR")}
+              />
+            </div>
+
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[520px] text-sm">
+                <thead>
+                  <tr className="border-b border-border text-left text-xs uppercase tracking-wide text-muted-foreground">
+                    <th className="py-2 pr-4 font-medium">Code</th>
+                    <th className="py-2 pr-4 font-medium">Utilisations</th>
+                    <th className="py-2 pr-4 font-medium">CA généré</th>
+                    <th className="py-2 font-medium">Remise accordée</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {promos.map((promo) => {
+                    const sales = salesById.get(promo.id);
+                    const orders = sales?.orders ?? 0;
+                    const cur = promo.currency ?? "EUR";
+                    return (
+                      <tr key={promo.id} className="border-b border-border/60">
+                        <td className="py-2 pr-4 font-mono text-foreground">
+                          {promo.code}
+                        </td>
+                        <td className="py-2 pr-4 tabular-nums text-foreground">
+                          {orders.toLocaleString("fr-FR")}
+                          {promo.maxRedemptions != null ? (
+                            <span className="text-muted-foreground">
+                              {" "}
+                              / {promo.maxRedemptions.toLocaleString("fr-FR")}
+                            </span>
+                          ) : null}
+                        </td>
+                        <td className="py-2 pr-4 tabular-nums text-foreground">
+                          {orders > 0
+                            ? formatPriceFromCents(sales?.grossCents ?? 0, cur)
+                            : "—"}
+                        </td>
+                        <td className="py-2 tabular-nums text-muted-foreground">
+                          {orders > 0
+                            ? formatPriceFromCents(sales?.discountCents ?? 0, cur)
+                            : "—"}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Les utilisations comptent les commandes payées ayant appliqué le
+              code. Montants affichés dans la devise déclarée du code.
+            </p>
+          </CardContent>
+        </Card>
+      ) : null}
 
       <div className="grid gap-6 lg:grid-cols-[1fr_400px]">
         <Card>
@@ -250,6 +350,17 @@ export default async function InstructorPromoCodesPage() {
           </CardContent>
         </Card>
       </div>
+    </div>
+  );
+}
+
+function StatTile({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-lg border border-border bg-muted/30 p-3">
+      <p className="text-xs text-muted-foreground">{label}</p>
+      <p className="mt-1 text-xl font-semibold tabular-nums text-foreground">
+        {value}
+      </p>
     </div>
   );
 }
