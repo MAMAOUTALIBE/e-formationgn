@@ -11,8 +11,10 @@
 //  - expose un bouton "Mode focus" rendu via un portail inutile : on rend
 //    juste le bouton dans le header avec le hook `useFocusMode`.
 
-import { createContext, useCallback, useContext, useEffect, useState } from "react";
+import { createContext, useCallback, useContext, useEffect } from "react";
 import { Maximize2, Minimize2 } from "lucide-react";
+
+import { usePersistentState } from "@/lib/hooks/use-persistent-state";
 
 const STORAGE_KEY = "gandal:learning-focus";
 
@@ -24,34 +26,25 @@ interface FocusModeContextValue {
 const Ctx = createContext<FocusModeContextValue | null>(null);
 
 export function FocusModeProvider({ children }: { children: React.ReactNode }) {
-  const [focus, setFocus] = useState(false);
-
-  // Hydrate depuis localStorage au premier mount (pas de SSR mismatch :
-  // on démarre toujours à false côté serveur, le client met à jour ensuite).
-  useEffect(() => {
-    try {
-      if (window.localStorage.getItem(STORAGE_KEY) === "1") setFocus(true);
-    } catch {
-      /* localStorage indisponible (private mode) — non bloquant */
-    }
-  }, []);
+  // Persistance + hydratation gérées par le hook (useSyncExternalStore) :
+  // serveur → "" (focus=false), client → valeur stockée. Pas de setState
+  // dans un effet, donc plus de cascade de renders.
+  const [stored, setStored] = usePersistentState("local", STORAGE_KEY, "");
+  const focus = stored === "1";
 
   // Synchronise la classe sur <body> pour que la sidebar puisse réagir
-  // sans avoir besoin de prop drilling.
+  // sans prop drilling. Effet légitime (mise à jour d'un système externe).
   useEffect(() => {
     document.body.classList.toggle("learning-focus", focus);
-    try {
-      if (focus) window.localStorage.setItem(STORAGE_KEY, "1");
-      else window.localStorage.removeItem(STORAGE_KEY);
-    } catch {
-      /* idem */
-    }
     return () => {
       document.body.classList.remove("learning-focus");
     };
   }, [focus]);
 
-  const toggle = useCallback(() => setFocus((f) => !f), []);
+  const toggle = useCallback(
+    () => setStored(focus ? "" : "1"),
+    [focus, setStored],
+  );
 
   return <Ctx.Provider value={{ focus, toggle }}>{children}</Ctx.Provider>;
 }

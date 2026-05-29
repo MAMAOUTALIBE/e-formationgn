@@ -14,6 +14,7 @@ import { CourseCard } from "@/components/features/courses/course-card";
 import { CourseCardList } from "@/components/features/courses/course-card-list";
 import { CourseResultsToolbar } from "@/components/features/courses/course-results-toolbar";
 import { useFilterTransition } from "@/components/features/courses/filter-transition-context";
+import { usePersistentState } from "@/lib/hooks/use-persistent-state";
 import { cn } from "@/lib/utils";
 import type { Currency } from "@/generated/prisma/enums";
 import type { PublicCourseListItem } from "@/server/queries/courses";
@@ -35,27 +36,15 @@ export function CourseResultsArea({
   total,
   searchTerm,
 }: CourseResultsAreaProps) {
-  const [mode, setMode] = React.useState<ViewMode>("grid");
   const { pending } = useFilterTransition();
 
-  // Hydratation client : lit la préférence stockée. Évite l'hydration mismatch
-  // en partant toujours de "grid" côté SSR.
-  React.useEffect(() => {
-    try {
-      const saved = window.localStorage.getItem(STORAGE_KEY);
-      if (saved === "list" || saved === "grid") setMode(saved);
-    } catch {
-      /* localStorage indisponible — ignore */
-    }
-  }, []);
+  // Persistance + hydratation via useSyncExternalStore (serveur → "grid").
+  // Plus de setState dans un effet.
+  const [storedMode, setStoredMode] = usePersistentState("local", STORAGE_KEY, "grid");
+  const mode: ViewMode = storedMode === "list" ? "list" : "grid";
 
   function changeMode(next: ViewMode) {
-    setMode(next);
-    try {
-      window.localStorage.setItem(STORAGE_KEY, next);
-    } catch {
-      /* ignore */
-    }
+    setStoredMode(next);
   }
 
   return (

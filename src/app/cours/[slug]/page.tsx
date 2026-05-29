@@ -174,8 +174,10 @@ export default async function CourseDetailPage({ params }: PageProps) {
         </div>
       )}
       <div className="space-y-5 p-5">
-        {/* Compte à rebours si une promo est active et a une date de fin */}
-        {course.discountEndsAt && course.discountEndsAt.getTime() > Date.now() ? (
+        {/* Compte à rebours si une promo a une date de fin. Le composant
+            client se masque lui-même une fois l'offre expirée — on évite ainsi
+            d'appeler Date.now() pendant le render serveur (impur). */}
+        {course.discountEndsAt ? (
           <CoursePromoCountdown endsAt={course.discountEndsAt.toISOString()} />
         ) : null}
 

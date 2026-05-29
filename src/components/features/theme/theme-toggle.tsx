@@ -8,14 +8,13 @@
 
 import { Monitor, Moon, Sun } from "lucide-react";
 import { useTheme } from "next-themes";
-import { useEffect, useState } from "react";
 
+import { useMounted } from "@/lib/hooks/use-persistent-state";
 import { cn } from "@/lib/utils";
 
 export function ThemeToggle({ className }: { className?: string }) {
   const { theme, setTheme } = useTheme();
-  const [mounted, setMounted] = useState(false);
-  useEffect(() => setMounted(true), []);
+  const mounted = useMounted();
 
   // Skeleton placeholder même structure (anti layout shift) mais sans
   // aria-checked dynamique. Devient interactif au mount client.

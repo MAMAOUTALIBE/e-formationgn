@@ -1,12 +1,13 @@
 "use client";
 
-import { useActionState, useEffect, useMemo, useState } from "react";
+import { useActionState, useState } from "react";
 
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { FormField } from "@/components/ui/form-field";
 import { Input } from "@/components/ui/input";
 import { SubmitButton } from "@/components/ui/submit-button";
+import { useStoredValue } from "@/lib/hooks/use-persistent-state";
 import { formatPriceFromCents } from "@/lib/money";
 import { startCheckout } from "@/server/actions/checkout";
 import { startCinetPayCheckout } from "@/server/actions/cinetpay-checkout";
@@ -68,31 +69,21 @@ export function CartSummaryForm({
   );
   // Pré-remplit le champ « Code promo » si l'utilisateur a validé un code
   // sur une page cours (clé `gandal:promo-code` posée par CourseCouponInput).
-  // SSR-safe : on hydrate après le mount, valeur initiale = "" côté serveur.
-  const [promoCode, setPromoCode] = useState("");
-  useEffect(() => {
-    try {
-      const stored = window.sessionStorage.getItem("gandal:promo-code");
-      if (stored) setPromoCode(stored);
-    } catch {
-      /* sessionStorage indisponible — non bloquant */
-    }
-  }, []);
+  // SSR-safe via useSyncExternalStore (serveur → null). L'override local prend
+  // le relais dès que l'utilisateur tape, sans setState dans un effet.
+  const storedPromo = useStoredValue("session", "gandal:promo-code") ?? "";
+  const [promoOverride, setPromoOverride] = useState<string | null>(null);
+  const promoCode = promoOverride ?? storedPromo;
 
   const stripeDisabled =
     !stripeAvailable || currency === "GNF" || currency === "XOF";
   const cinetpayDisabled = !cinetpayAvailable;
 
   // UUID v4 stable pour la durée du composant — un seul submit = une seule
-  // commande, peu importe le nombre de clics. crypto.randomUUID() est natif
-  // dans tous les navigateurs modernes (et Node 19+).
-  const idempotencyKey = useMemo(
-    () =>
-      typeof globalThis.crypto?.randomUUID === "function"
-        ? globalThis.crypto.randomUUID()
-        : `${Date.now().toString(16)}-${Math.random().toString(16).slice(2, 10)}`,
-    [],
-  );
+  // commande, peu importe le nombre de clics. Initialiseur paresseux (exécuté
+  // une fois) : crypto.randomUUID() est natif dans tous les navigateurs
+  // modernes et Node 19+.
+  const [idempotencyKey] = useState(() => crypto.randomUUID());
 
   return (
     <form action={formAction} className="space-y-4">
@@ -117,7 +108,7 @@ export function CartSummaryForm({
           id="promoCode"
           name="promoCode"
           value={promoCode}
-          onChange={(e) => setPromoCode(e.target.value.toUpperCase())}
+          onChange={(e) => setPromoOverride(e.target.value.toUpperCase())}
           placeholder="EX : BIENVENUE10"
           className="font-mono uppercase"
         />

@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 import { useFilterTransition } from "@/components/features/courses/filter-transition-context";
 import { Button } from "@/components/ui/button";
@@ -63,14 +63,21 @@ export function CourseFilterDrawer({
   const [duration, setDuration] = useState("");
   const [rating, setRating] = useState("");
 
-  useEffect(() => {
-    if (!open) return;
-    setCategory(params.get("category") ?? "");
-    setLevel(params.get("level") ?? "");
-    setPrice(params.get("price") ?? "");
-    setDuration(params.get("duration") ?? "");
-    setRating(params.get("rating") ?? "");
-  }, [open, params]);
+  // Resynchronise les champs sur les paramètres d'URL à chaque ouverture du
+  // tiroir. Pattern React « ajuster l'état quand une prop change » : on
+  // détecte la transition fermé→ouvert pendant le render (pas dans un effet,
+  // donc pas de cascade de renders). https://react.dev/learn/you-might-not-need-an-effect#adjusting-some-state-when-a-prop-changes
+  const [wasOpen, setWasOpen] = useState(false);
+  if (open !== wasOpen) {
+    setWasOpen(open);
+    if (open) {
+      setCategory(params.get("category") ?? "");
+      setLevel(params.get("level") ?? "");
+      setPrice(params.get("price") ?? "");
+      setDuration(params.get("duration") ?? "");
+      setRating(params.get("rating") ?? "");
+    }
+  }
 
   function apply() {
     const next = new URLSearchParams(params.toString());
