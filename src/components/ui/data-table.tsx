@@ -49,6 +49,10 @@ export function DataTable<T extends { id: string }>({
   const [sorting, setSorting] = useState<SortingState>([]);
   const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
 
+  // useReactTable renvoie des fonctions non mémoïsables par le React Compiler
+  // (limitation connue de TanStack Table). Le composant fonctionne correctement ;
+  // on neutralise l'avertissement ciblé pour garder un lint 100 % propre.
+  // eslint-disable-next-line react-hooks/incompatible-library
   const table = useReactTable({
     data,
     columns,

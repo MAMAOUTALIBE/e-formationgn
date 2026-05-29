@@ -18,7 +18,6 @@ import { Avatar } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Breadcrumbs } from "@/components/ui/breadcrumbs";
 import { Container } from "@/components/ui/container";
-import { Stars } from "@/components/ui/stars";
 import { pluralize } from "@/lib/format/labels";
 import { prisma } from "@/lib/prisma";
 import { serializeCourseListItem } from "@/server/queries/courses";

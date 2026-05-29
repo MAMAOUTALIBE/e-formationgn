@@ -40,7 +40,7 @@ async function main() {
     select: { id: true, email: true, role: true, status: true },
   });
 
-  // eslint-disable-next-line no-console
+   
   console.log(`✅ Compte test prêt :`);
   console.log(`   email : ${user.email}`);
   console.log(`   mdp   : ${PASSWORD}`);

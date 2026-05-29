@@ -81,7 +81,7 @@ export function CourseFilterSidebar({
         router.push(`?${next.toString()}`, { scroll: false });
       });
     },
-    [params, router],
+    [params, router, startTransition],
   );
 
   // Toggle d'une valeur dans une liste CSV — pattern multi-select.

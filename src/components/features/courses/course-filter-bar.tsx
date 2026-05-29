@@ -84,7 +84,7 @@ export function CourseFilterBar({
         router.push(`?${next.toString()}`, { scroll: false });
       });
     },
-    [params, router],
+    [params, router, startTransition],
   );
 
   function reset() {

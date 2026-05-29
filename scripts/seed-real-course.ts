@@ -182,9 +182,9 @@ Cette formation s'adresse aux personnes qui hésitent à se lancer ou qui veulen
     },
   });
 
-  // eslint-disable-next-line no-console
+   
   console.log(`✅ Cours créé : /cours/${course.slug}  (id=${course.id})`);
-  // eslint-disable-next-line no-console
+   
   console.log(
     `   Prix : 19,90 €  ·  Durée : ${totalDuration}s  ·  Instructeur : ${instructor.name}`,
   );
