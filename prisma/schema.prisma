@@ -532,6 +532,8 @@ model LessonProgress {
   @@unique([userId, lessonId])
   @@index([userId])
   @@index([lessonId])
+  // recomputeEnrollmentProgress compte les leçons complétées d'un user.
+  @@index([userId, isCompleted])
 }
 
 model LessonNote {
@@ -729,6 +731,8 @@ model Order {
 
   @@index([userId])
   @@index([status])
+  // Analytics & finances filtrent status=PAID + paidAt sur une plage.
+  @@index([status, paidAt])
   @@unique([userId, idempotencyKey])
 }
 
@@ -772,6 +776,8 @@ model Refund {
   createdAt      DateTime @default(now())
 
   @@index([orderId])
+  // Reporting financier : somme des remboursements par plage de dates.
+  @@index([createdAt])
 }
 
 // ===========================================================================
