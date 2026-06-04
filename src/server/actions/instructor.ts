@@ -22,6 +22,10 @@ import {
   updateCoursePricingSchema,
   updateCourseSeoSchema,
 } from "@/lib/validators/courses-instructor";
+import {
+  COURSE_NOT_DELETABLE_MESSAGE,
+  getCourseDeletionStatus,
+} from "@/server/queries/course-deletion";
 import { computeCourseReadiness } from "@/server/queries/instructor";
 import type { ActionResult } from "./auth";
 
@@ -502,14 +506,14 @@ export async function unpublishCourse(courseId: string): Promise<ActionResult> {
 
 export async function deleteCourse(courseId: string): Promise<ActionResult> {
   const ctx = await requireInstructor();
-  const course = await ensureCourseOwnership(courseId, ctx);
-  if (course.status === "PUBLISHED" || course.status === "PENDING_REVIEW") {
-    return {
-      success: false,
-      message:
-        "Impossible de supprimer un cours publié ou en attente. Archivez-le d'abord.",
-    };
+  await ensureCourseOwnership(courseId, ctx);
+
+  // Garde financière : pas de suppression définitive si ventes/certificats.
+  const status = await getCourseDeletionStatus(courseId);
+  if (!status.deletable) {
+    return { success: false, message: COURSE_NOT_DELETABLE_MESSAGE };
   }
+
   await prisma.course.delete({ where: { id: courseId } });
   revalidatePath("/formateur/cours");
   redirect("/formateur/cours");

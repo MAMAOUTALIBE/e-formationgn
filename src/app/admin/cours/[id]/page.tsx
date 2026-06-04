@@ -6,6 +6,7 @@ import { ModerationForm } from "@/components/features/admin/moderation-form";
 import { CourseStatusBadge } from "@/components/features/instructor/course-status-badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { CourseDeleteButton } from "@/components/features/courses/course-delete-button";
 import { formatDurationFromSeconds } from "@/lib/format/duration";
 import { formatPrice } from "@/lib/money";
 import { getPublishCriteria } from "@/lib/validators/course-publish";
@@ -14,6 +15,7 @@ import {
   toggleFeaturedCourse,
 } from "@/server/actions/admin-courses";
 import { getAdminCourse } from "@/server/queries/admin";
+import { getCourseDeletionStatus } from "@/server/queries/course-deletion";
 import { Check, X } from "lucide-react";
 
 export const metadata: Metadata = {
@@ -34,6 +36,7 @@ export default async function AdminCourseReviewPage({ params }: PageProps) {
   const totalLessons = course.sections.reduce((acc, s) => acc + s.lessons.length, 0);
   const publishCriteria = getPublishCriteria(course);
   const publishable = publishCriteria.every((c) => c.ok);
+  const deletion = await getCourseDeletionStatus(course.id);
 
   return (
     <div className="space-y-6">
@@ -199,6 +202,26 @@ export default async function AdminCourseReviewPage({ params }: PageProps) {
               <InternalNotesForm
                 courseId={course.id}
                 value={course.internalNotes ?? ""}
+              />
+            </CardContent>
+          </Card>
+
+          <Card className="border-[color:var(--brand-danger)]/30">
+            <CardHeader>
+              <CardTitle className="text-base text-[color:var(--brand-danger)]">
+                Zone de danger
+              </CardTitle>
+              <CardDescription>
+                Suppression définitive du cours (irréversible).
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <CourseDeleteButton
+                courseId={course.id}
+                courseTitle={course.title}
+                mode="admin"
+                deletable={deletion.deletable}
+                enrollments={deletion.enrollments}
               />
             </CardContent>
           </Card>

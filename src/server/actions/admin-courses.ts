@@ -7,6 +7,10 @@ import { revalidatePath, updateTag } from "next/cache";
 import { requireAnyAdminRole } from "@/lib/auth/authorization";
 import { failedCriteriaLabels } from "@/lib/validators/course-publish";
 import { prisma } from "@/lib/prisma";
+import {
+  COURSE_NOT_DELETABLE_MESSAGE,
+  getCourseDeletionStatus,
+} from "@/server/queries/course-deletion";
 import { createAuditLog } from "@/server/services/audit-log";
 
 import type { ActionResult } from "./auth";
@@ -171,6 +175,28 @@ export async function bulkChangeCategory(
     success: true,
     message: `${courseIds.length} cours déplacés.`,
   };
+}
+
+export async function adminDeleteCourse(courseId: string): Promise<ActionResult> {
+  // Suppression définitive réservée à l'ADMIN (pas MODERATOR).
+  const admin = await requireAnyAdminRole("ADMIN");
+
+  const status = await getCourseDeletionStatus(courseId);
+  if (!status.deletable) {
+    return { success: false, message: COURSE_NOT_DELETABLE_MESSAGE };
+  }
+
+  const course = await prisma.course.findUnique({
+    where: { id: courseId },
+    select: { title: true },
+  });
+  if (!course) return { success: false, message: "Cours introuvable." };
+
+  await prisma.course.delete({ where: { id: courseId } });
+  await audit(admin.userId, "course.delete", courseId, { title: course.title });
+  revalidatePath("/admin/cours");
+  invalidateCatalogCaches();
+  return { success: true, message: "Cours supprimé définitivement." };
 }
 
 export async function setInternalNotesOnCourse(

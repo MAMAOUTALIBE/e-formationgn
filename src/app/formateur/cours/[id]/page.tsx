@@ -1,11 +1,13 @@
 import { notFound } from "next/navigation";
 
 import { auth } from "@/auth";
+import { CourseDeleteButton } from "@/components/features/courses/course-delete-button";
 import { CourseGeneralForm } from "@/components/features/instructor/course-general-form";
 import { MuxPromoUploader } from "@/components/features/instructor/mux-promo-uploader";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { isMuxConfigured } from "@/lib/mux";
 import { listCategories } from "@/server/queries/categories";
+import { getCourseDeletionStatus } from "@/server/queries/course-deletion";
 import { getInstructorCourse } from "@/server/queries/instructor";
 import type { CourseLevel } from "@/generated/prisma/enums";
 
@@ -25,6 +27,8 @@ export default async function CourseGeneralPage({ params }: PageProps) {
     listCategories(),
   ]);
   if (!course) notFound();
+
+  const deletion = await getCourseDeletionStatus(course.id);
 
   return (
     <div className="space-y-6">
@@ -63,6 +67,26 @@ export default async function CourseGeneralPage({ params }: PageProps) {
             courseId={course.id}
             initialPlaybackId={course.promoVideoPlaybackId}
             isMuxConfigured={isMuxConfigured()}
+          />
+        </CardContent>
+      </Card>
+
+      <Card className="border-[color:var(--brand-danger)]/30">
+        <CardHeader>
+          <CardTitle className="text-base text-[color:var(--brand-danger)]">
+            Zone de danger
+          </CardTitle>
+          <CardDescription>
+            Supprimer définitivement ce cours. Cette action est irréversible.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <CourseDeleteButton
+            courseId={course.id}
+            courseTitle={course.title}
+            mode="instructor"
+            deletable={deletion.deletable}
+            enrollments={deletion.enrollments}
           />
         </CardContent>
       </Card>
