@@ -7,7 +7,9 @@ import { auth } from "@/auth";
 import { Avatar } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Breadcrumbs } from "@/components/ui/breadcrumbs";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { setQuestionResolved } from "@/server/actions/qa";
 import { listInstructorQuestions } from "@/server/queries/instructor";
 
 export const metadata: Metadata = {
@@ -160,12 +162,32 @@ export default async function InstructorQuestionsPage({ searchParams }: PageProp
                         {q.answersCount}{" "}
                         {q.answersCount === 1 ? "réponse" : "réponses"}
                       </span>
-                      <Link
-                        href={`/cours/${q.course.slug}/questions`}
-                        className="font-medium text-[color:var(--brand-secondary)] hover:underline"
-                      >
-                        {q.hasInstructorAnswer ? "Voir / éditer" : "Répondre →"}
-                      </Link>
+                      <div className="flex items-center gap-3">
+                        <form
+                          action={setQuestionResolved.bind(
+                            null,
+                            q.id,
+                            !q.isResolved,
+                          )}
+                        >
+                          <Button
+                            type="submit"
+                            variant="ghost"
+                            size="sm"
+                            className="h-auto px-2 text-xs"
+                          >
+                            {q.isResolved
+                              ? "Rouvrir"
+                              : "Marquer comme résolu"}
+                          </Button>
+                        </form>
+                        <Link
+                          href={`/cours/${q.course.slug}/questions`}
+                          className="font-medium text-[color:var(--brand-secondary)] hover:underline"
+                        >
+                          {q.hasInstructorAnswer ? "Voir / éditer" : "Répondre →"}
+                        </Link>
+                      </div>
                     </div>
                   </CardContent>
                 </Card>

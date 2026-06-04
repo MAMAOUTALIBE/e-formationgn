@@ -14,6 +14,9 @@ import {
 
 import { auth } from "@/auth";
 import { CourseStatusBadge } from "@/components/features/instructor/course-status-badge";
+import { InstructorActionCenter } from "@/components/features/instructor/instructor-action-center";
+import { InstructorEmptyState } from "@/components/features/instructor/instructor-empty-state";
+import { SalesTrend } from "@/components/features/instructor/sales-trend";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -26,6 +29,7 @@ import { pluralize } from "@/lib/format/labels";
 import { formatMinor } from "@/lib/payments/currency";
 import { prisma } from "@/lib/prisma";
 import {
+  getInstructorActionItems,
   getInstructorDashboardStats,
   getInstructorRevenueOverview,
   listInstructorCourses,
@@ -40,7 +44,7 @@ export default async function InstructorDashboardPage() {
   const session = await auth();
   if (!session?.user) redirect("/connexion?callbackUrl=/formateur");
 
-  const [stats, courses, currentUser, revenue] = await Promise.all([
+  const [stats, courses, currentUser, revenue, actionItems] = await Promise.all([
     getInstructorDashboardStats(session.user.id),
     listInstructorCourses(session.user.id),
     prisma.user.findUnique({
@@ -48,6 +52,7 @@ export default async function InstructorDashboardPage() {
       select: { affiliateCode: true, firstName: true },
     }),
     getInstructorRevenueOverview(session.user.id),
+    getInstructorActionItems(session.user.id),
   ]);
 
   const recentCourses = courses.slice(0, 5);
@@ -71,6 +76,12 @@ export default async function InstructorDashboardPage() {
           </Link>
         </Button>
       </header>
+
+      {stats.totalCourses === 0 ? (
+        <InstructorEmptyState />
+      ) : (
+        <>
+      <InstructorActionCenter items={actionItems} />
 
       <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard
@@ -208,6 +219,12 @@ export default async function InstructorDashboardPage() {
           </div>
         ) : (
           <>
+            <SalesTrend
+              series={revenue.salesSeries}
+              thisMonth={revenue.salesThisMonthCount}
+              prevMonth={revenue.salesPrevMonthCount}
+            />
+
             {/* Tuiles : revenu mois + revenu all-time + ventes mois + ventes all-time */}
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
               <RevenueTile
@@ -273,6 +290,8 @@ export default async function InstructorDashboardPage() {
           </>
         )}
       </section>
+        </>
+      )}
     </div>
   );
 }

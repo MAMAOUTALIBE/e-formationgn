@@ -110,6 +110,36 @@ export async function finalizeStripeOrder(
     await tx.cartItem.deleteMany({ where: { userId: order.userId } });
   });
 
+  // Notification de vente au(x) formateur(s) — best-effort, ne bloque jamais
+  // le fulfillment. Idempotent de fait : on ne passe ici qu'au 1er finalize
+  // (les ré-appels sortent plus haut via le garde status === "PAID").
+  try {
+    const salesByInstructor = new Map<string, { count: number; title: string }>();
+    for (const item of order.items) {
+      const id = item.course.instructorId;
+      const cur = salesByInstructor.get(id);
+      if (cur) cur.count += 1;
+      else salesByInstructor.set(id, { count: 1, title: item.course.title });
+    }
+    await prisma.notification.createMany({
+      data: [...salesByInstructor.entries()].map(([instructorId, info]) => ({
+        userId: instructorId,
+        kind: "GENERIC" as const,
+        title: info.count > 1 ? `${info.count} nouvelles ventes 🎉` : "Nouvelle vente 🎉",
+        body:
+          info.count > 1
+            ? `${info.count} de vos cours viennent d'être achetés.`
+            : `Votre cours « ${info.title} » vient d'être acheté.`,
+        url: "/formateur/paiements",
+      })),
+    });
+  } catch (err) {
+    logWarning("stripe-finalize", "notif vente formateur échouée (ignorée)", {
+      orderId: order.id,
+      error: err instanceof Error ? err.message : String(err),
+    });
+  }
+
   // Transfers vers les comptes connectés — best-effort, idempotent.
   const payoutsByInstructor = new Map<string, number>();
   for (const item of order.items) {

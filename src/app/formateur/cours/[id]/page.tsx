@@ -9,6 +9,8 @@ import { listCategories } from "@/server/queries/categories";
 import { getInstructorCourse } from "@/server/queries/instructor";
 import type { CourseLevel } from "@/generated/prisma/enums";
 
+import { stepHref } from "./_components/wizard";
+
 interface PageProps {
   params: Promise<{ id: string }>;
 }
@@ -33,6 +35,7 @@ export default async function CourseGeneralPage({ params }: PageProps) {
         <CardContent>
           <CourseGeneralForm
             courseId={course.id}
+            nextHref={stepHref(course.id, "programme")}
             categories={categories.map((c) => ({ id: c.id, name: c.name }))}
             defaults={{
               title: course.title,

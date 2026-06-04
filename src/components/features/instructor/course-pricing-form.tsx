@@ -9,6 +9,8 @@ import { SubmitButton } from "@/components/ui/submit-button";
 import { updateCoursePricing } from "@/server/actions/instructor";
 import type { ActionResult } from "@/server/actions/auth";
 
+import { useAdvanceOnSuccess } from "./use-advance-on-success";
+
 const initialState: ActionResult = { success: false };
 
 interface CoursePricingFormProps {
@@ -24,12 +26,19 @@ interface CoursePricingFormProps {
     discountPriceXOF: number | null;
     discountEndsAt: string;
   };
+  /** Étape suivante de l'assistant — auto-avance après enregistrement. */
+  nextHref?: string;
 }
 
-export function CoursePricingForm({ courseId, defaults }: CoursePricingFormProps) {
+export function CoursePricingForm({
+  courseId,
+  defaults,
+  nextHref,
+}: CoursePricingFormProps) {
   const action = updateCoursePricing.bind(null, courseId);
   const [state, formAction] = useActionState(action, initialState);
   const errors = state.fieldErrors ?? {};
+  useAdvanceOnSuccess(state.success, nextHref);
 
   return (
     <form action={formAction} className="space-y-8">
@@ -225,7 +234,9 @@ export function CoursePricingForm({ courseId, defaults }: CoursePricingFormProps
       </FormField>
 
       <div className="flex justify-end">
-        <SubmitButton>Enregistrer</SubmitButton>
+        <SubmitButton>
+          {nextHref ? "Enregistrer et continuer" : "Enregistrer"}
+        </SubmitButton>
       </div>
     </form>
   );

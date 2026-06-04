@@ -1,14 +1,20 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, ExternalLink } from "lucide-react";
+import { ArrowLeft, ExternalLink, Eye } from "lucide-react";
 
 import { auth } from "@/auth";
+import { CourseReadinessChecklist } from "@/components/features/instructor/course-readiness-checklist";
 import { CourseStatusBadge } from "@/components/features/instructor/course-status-badge";
 import { CourseSubmissionPanel } from "@/components/features/instructor/course-submission-panel";
 import { Button } from "@/components/ui/button";
-import { getInstructorCourse } from "@/server/queries/instructor";
+import {
+  computeCourseReadiness,
+  getInstructorCourse,
+} from "@/server/queries/instructor";
 
 import { CourseEditorTabs } from "./_components/course-editor-tabs";
+import { WizardFooter } from "./_components/wizard-footer";
+import { getWizardState } from "./_components/wizard-state";
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -26,6 +32,9 @@ export default async function CourseEditLayout({ children, params }: LayoutProps
     session.user.role === "ADMIN",
   );
   if (!course) notFound();
+
+  const { completedSlugs, unlockedMaxIndex } = await getWizardState(id);
+  const readiness = computeCourseReadiness(course);
 
   return (
     <div className="space-y-6">
@@ -54,7 +63,18 @@ export default async function CourseEditLayout({ children, params }: LayoutProps
                 Voir la page publique
               </Link>
             </Button>
-          ) : null}
+          ) : (
+            <Button asChild variant="outline" size="sm">
+              <Link
+                href={`/cours/${course.slug}?preview=1`}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <Eye className="h-4 w-4" />
+                Aperçu élève
+              </Link>
+            </Button>
+          )}
           <CourseSubmissionPanel courseId={course.id} status={course.status} />
         </div>
       </div>
@@ -66,9 +86,19 @@ export default async function CourseEditLayout({ children, params }: LayoutProps
         </div>
       ) : null}
 
-      <CourseEditorTabs courseId={course.id} />
+      {course.status !== "PUBLISHED" ? (
+        <CourseReadinessChecklist courseId={course.id} readiness={readiness} />
+      ) : null}
+
+      <CourseEditorTabs
+        courseId={course.id}
+        completedSlugs={completedSlugs}
+        unlockedMaxIndex={unlockedMaxIndex}
+      />
 
       {children}
+
+      <WizardFooter courseId={course.id} unlockedMaxIndex={unlockedMaxIndex} />
     </div>
   );
 }

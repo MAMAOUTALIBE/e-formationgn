@@ -11,6 +11,7 @@ import {
   requireInstructorOrAdmin,
 } from "@/lib/auth/authorization";
 import { prisma } from "@/lib/prisma";
+import { createLocalUpload } from "@/lib/storage/local";
 import {
   createPresignedUpload,
   isR2Configured,
@@ -27,16 +28,13 @@ const ALLOWED_IMAGE_TYPES = new Set([
 
 const MAX_IMAGE_SIZE = 5 * 1024 * 1024;
 
-const ALLOWED_VIDEO_TYPES = new Set([
-  "video/mp4",
-  "video/webm",
-  "video/quicktime", // .mov
-  "video/x-matroska", // .mkv
-]);
+// On accepte TOUT format vidéo (video/*) plutôt qu'une liste blanche figée.
+function isVideoType(contentType: string): boolean {
+  return contentType.startsWith("video/");
+}
 
-// Plafond volontairement conservateur pour l'auto-hébergement R2 (vs Mux qui
-// gère le gros volume). Ajustable selon le forfait R2.
-const MAX_VIDEO_SIZE = 500 * 1024 * 1024; // 500 MB
+// Plafond aligné sur la route d'upload local (/api/upload/blob).
+const MAX_VIDEO_SIZE = 1024 * 1024 * 1024; // 1 GB
 
 interface CreatePresignedThumbnailUploadResult {
   ok: boolean;
@@ -129,18 +127,10 @@ export async function createPresignedLessonVideoUpload(params: {
     throw new AuthorizationError("FORBIDDEN", "Action non autorisée.");
   }
 
-  if (!isR2Configured() || !isR2PublicUrlConfigured()) {
+  if (!isVideoType(params.contentType)) {
     return {
       ok: false,
-      message:
-        "Stockage vidéo non configuré (R2_* et R2_PUBLIC_URL requis). Contactez l'administrateur.",
-    };
-  }
-
-  if (!ALLOWED_VIDEO_TYPES.has(params.contentType)) {
-    return {
-      ok: false,
-      message: "Format vidéo non supporté (MP4, WebM, MOV, MKV).",
+      message: "Format non supporté. Choisissez un fichier vidéo.",
     };
   }
 
@@ -151,15 +141,26 @@ export async function createPresignedLessonVideoUpload(params: {
     };
   }
 
+  const prefix = `lessons/${params.lessonId}`;
+  const useR2 = isR2Configured() && isR2PublicUrlConfigured();
+
   try {
-    const upload = await createPresignedUpload({
-      prefix: `lessons/${params.lessonId}`,
-      filename: params.filename,
-      contentType: params.contentType,
-      maxSizeBytes: params.sizeBytes,
-      // Vidéos plus lourdes → fenêtre d'upload plus large.
-      expiresInSeconds: 600,
-    });
+    // R2 en prod (avec domaine public pour servir la vidéo), sinon fallback
+    // disque local (dev / single-host) servi par l'app sur /uploads/.
+    const upload = useR2
+      ? await createPresignedUpload({
+          prefix,
+          filename: params.filename,
+          contentType: params.contentType,
+          maxSizeBytes: params.sizeBytes,
+          // Vidéos plus lourdes → fenêtre d'upload plus large.
+          expiresInSeconds: 600,
+        })
+      : createLocalUpload({
+          prefix,
+          filename: params.filename,
+          expiresInSeconds: 600,
+        });
     return { ok: true, upload };
   } catch (error) {
     return {

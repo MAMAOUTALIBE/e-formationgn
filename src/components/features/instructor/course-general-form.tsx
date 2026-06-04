@@ -14,6 +14,7 @@ import { updateCourseGeneral } from "@/server/actions/instructor";
 import type { ActionResult } from "@/server/actions/auth";
 
 import { ThumbnailUploader } from "./thumbnail-uploader";
+import { useAdvanceOnSuccess } from "./use-advance-on-success";
 
 const initialState: ActionResult = { success: false };
 
@@ -28,16 +29,20 @@ interface CourseGeneralFormProps {
     thumbnailUrl: string;
   };
   categories: Array<{ id: string; name: string }>;
+  /** Étape suivante de l'assistant — auto-avance après enregistrement. */
+  nextHref?: string;
 }
 
 export function CourseGeneralForm({
   courseId,
   defaults,
   categories,
+  nextHref,
 }: CourseGeneralFormProps) {
   const action = updateCourseGeneral.bind(null, courseId);
   const [state, formAction] = useActionState(action, initialState);
   const errors = state.fieldErrors ?? {};
+  useAdvanceOnSuccess(state.success, nextHref);
 
   return (
     <form action={formAction} className="space-y-6">
@@ -123,7 +128,9 @@ export function CourseGeneralForm({
       </FormField>
 
       <div className="flex justify-end">
-        <SubmitButton>Enregistrer</SubmitButton>
+        <SubmitButton>
+          {nextHref ? "Enregistrer et continuer" : "Enregistrer"}
+        </SubmitButton>
       </div>
     </form>
   );

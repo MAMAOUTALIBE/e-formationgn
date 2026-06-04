@@ -11,7 +11,6 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { isLessonSummaryConfigured } from "@/lib/ai/lesson-summary";
 import { isMuxConfigured } from "@/lib/mux";
-import { isR2Configured, isR2PublicUrlConfigured } from "@/lib/storage/r2";
 import { deleteLesson } from "@/server/actions/curriculum";
 import { getLessonForInstructor } from "@/server/queries/instructor";
 
@@ -101,7 +100,7 @@ export default async function LessonEditPage({ params }: PageProps) {
                 externalVideoUrl={lesson.externalVideoUrl}
                 durationSeconds={lesson.videoDurationSeconds}
                 isMuxConfigured={isMuxConfigured()}
-                isR2VideoConfigured={isR2Configured() && isR2PublicUrlConfigured()}
+                isUploadAvailable={true}
               />
             </CardContent>
           </Card>

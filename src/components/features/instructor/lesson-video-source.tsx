@@ -36,7 +36,7 @@ interface LessonVideoSourceProps {
   externalVideoUrl: string | null;
   durationSeconds: number;
   isMuxConfigured: boolean;
-  isR2VideoConfigured: boolean;
+  isUploadAvailable: boolean;
 }
 
 export function LessonVideoSource({
@@ -45,13 +45,13 @@ export function LessonVideoSource({
   externalVideoUrl,
   durationSeconds,
   isMuxConfigured,
-  isR2VideoConfigured,
+  isUploadAvailable,
 }: LessonVideoSourceProps) {
   const router = useRouter();
 
   const tabs: { key: SourceTab; label: string; available: boolean }[] = [
     { key: "mux", label: "Mux (premium)", available: isMuxConfigured },
-    { key: "upload", label: "Téléverser un fichier", available: isR2VideoConfigured },
+    { key: "upload", label: "Téléverser un fichier", available: isUploadAvailable },
     { key: "url", label: "Lien / URL", available: true },
   ];
   const available = tabs.filter((t) => t.available);
@@ -60,7 +60,7 @@ export function LessonVideoSource({
   const initialTab: SourceTab = muxPlaybackId
     ? "mux"
     : externalVideoUrl
-      ? isR2VideoConfigured
+      ? isUploadAvailable
         ? "upload"
         : "url"
       : (available[0]?.key ?? "url");
@@ -373,7 +373,7 @@ function R2VideoUploader({
             Cliquer pour téléverser un fichier vidéo
           </span>
           <span className="text-xs text-muted-foreground">
-            MP4, WebM, MOV, MKV — jusqu&apos;à 500 Mo. Hébergé sur le stockage de
+            Tous formats vidéo — jusqu&apos;à 1 Go. Hébergé sur le stockage de
             la plateforme.
           </span>
         </button>

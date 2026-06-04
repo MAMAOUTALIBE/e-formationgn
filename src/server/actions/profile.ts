@@ -92,7 +92,10 @@ export async function updateAvatarUrl(
       const publicBase = process.env.R2_PUBLIC_URL ?? "";
       const isFromR2 = publicBase && trimmed.startsWith(publicBase);
       const isFromOauth = /^https:\/\/(lh3\.googleusercontent\.com|graph\.facebook\.com)\//.test(trimmed);
-      if (!isFromR2 && !isFromOauth) {
+      // Stockage local (fallback quand R2 n'est pas configuré) : chemin servi
+      // par l'app, écrit uniquement via la route d'upload signée.
+      const isLocalUpload = trimmed.startsWith("/uploads/avatars/");
+      if (!isFromR2 && !isFromOauth && !isLocalUpload) {
         return {
           success: false,
           message: "URL non autorisée. L'avatar doit être uploadé via le formulaire.",

@@ -8,6 +8,8 @@ import { prisma } from "@/lib/prisma";
 
 const INSTRUCTOR_COURSE_INCLUDE = {
   category: { select: { id: true, slug: true, name: true } },
+  // Sections + ids de leçons : nécessaires au calcul de readiness (% prêt).
+  sections: { select: { lessons: { select: { id: true } } } },
   _count: {
     select: {
       enrollments: true,
@@ -67,6 +69,211 @@ export async function getInstructorCourse(
   if (!isAdmin && course.instructorId !== instructorId) return null;
 
   return course as InstructorCourseDetail;
+}
+
+// ---------------------------------------------------------------------------
+// Readiness « prêt à publier » — source de vérité unique partagée par la
+// checklist de l'éditeur, le badge % de la liste des cours, et la soumission
+// à la modération (submitCourseForReview).
+// ---------------------------------------------------------------------------
+
+export interface ReadinessItem {
+  key: string;
+  label: string;
+  done: boolean;
+  /** true = bloquant pour la soumission ; false = recommandé. */
+  required: boolean;
+  /** Slug de l'étape de l'assistant où corriger ("" = Général). */
+  stepSlug: string;
+}
+
+export interface CourseReadiness {
+  items: ReadinessItem[];
+  requiredDone: number;
+  requiredTotal: number;
+  /** % d'avancement sur les éléments OBLIGATOIRES (0–100). */
+  percent: number;
+  /** true quand tous les éléments obligatoires sont remplis. */
+  ready: boolean;
+  /** Libellés des éléments obligatoires manquants (pour les messages). */
+  missingRequired: string[];
+}
+
+interface ReadinessInput {
+  title: string;
+  description: string;
+  categoryId: string;
+  thumbnailUrl: string | null;
+  priceEUR: Prisma.Decimal | number;
+  priceUSD: Prisma.Decimal | number;
+  priceGNF: Prisma.Decimal | number;
+  priceXOF: Prisma.Decimal | number;
+  metaTitle: string | null;
+  whatYouWillLearn: string[];
+  sections: { lessons: { id: string }[] }[];
+}
+
+export function computeCourseReadiness(c: ReadinessInput): CourseReadiness {
+  const priceOk = [c.priceEUR, c.priceUSD, c.priceGNF, c.priceXOF].some(
+    (p) => Number(p) > 0,
+  );
+
+  const items: ReadinessItem[] = [
+    {
+      key: "title",
+      label: "Titre renseigné",
+      done: c.title.trim().length >= 5,
+      required: true,
+      stepSlug: "",
+    },
+    {
+      key: "description",
+      label: "Description (≥ 50 caractères)",
+      done: c.description.trim().length >= 50,
+      required: true,
+      stepSlug: "",
+    },
+    {
+      key: "category",
+      label: "Catégorie choisie",
+      done: c.categoryId.trim().length > 0,
+      required: true,
+      stepSlug: "",
+    },
+    {
+      key: "thumbnail",
+      label: "Image de couverture",
+      done: Boolean(c.thumbnailUrl),
+      required: true,
+      stepSlug: "",
+    },
+    {
+      key: "section",
+      label: "Au moins une section",
+      done: c.sections.length > 0,
+      required: true,
+      stepSlug: "programme",
+    },
+    {
+      key: "lesson",
+      label: "Au moins une leçon",
+      done: c.sections.some((s) => s.lessons.length > 0),
+      required: true,
+      stepSlug: "programme",
+    },
+    {
+      key: "price",
+      label: "Prix défini (sinon gratuit)",
+      done: priceOk,
+      required: false,
+      stepSlug: "tarification",
+    },
+    {
+      key: "seo",
+      label: "Méta-SEO ou objectifs pédagogiques",
+      done: Boolean(c.metaTitle?.trim()) || c.whatYouWillLearn.length > 0,
+      required: false,
+      stepSlug: "seo",
+    },
+  ];
+
+  const required = items.filter((i) => i.required);
+  const requiredDone = required.filter((i) => i.done).length;
+  const requiredTotal = required.length;
+  const missingRequired = required.filter((i) => !i.done).map((i) => i.label);
+
+  return {
+    items,
+    requiredDone,
+    requiredTotal,
+    percent: Math.round((requiredDone / requiredTotal) * 100),
+    ready: requiredDone === requiredTotal,
+    missingRequired,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Centre d'actions du tableau de bord : ce qui requiert l'attention du
+// formateur (questions sans réponse, avis sans réponse, cours refusés).
+// ---------------------------------------------------------------------------
+
+export interface InstructorActionItems {
+  unansweredQuestions: number;
+  reviewsToReply: number;
+  rejectedCourses: number;
+}
+
+export async function getInstructorActionItems(
+  instructorId: string,
+): Promise<InstructorActionItems> {
+  const [unansweredQuestions, reviewsToReply, rejectedCourses] =
+    await Promise.all([
+      prisma.question.count({
+        where: {
+          course: { instructorId },
+          isResolved: false,
+          answers: { none: { userId: instructorId } },
+        },
+      }),
+      prisma.review.count({
+        where: { course: { instructorId }, instructorReply: null },
+      }),
+      prisma.course.count({
+        where: { instructorId, status: "REJECTED" },
+      }),
+    ]);
+
+  return { unansweredQuestions, reviewsToReply, rejectedCourses };
+}
+
+// ---------------------------------------------------------------------------
+// Funnel d'un cours : vues de la fiche → inscriptions → cours terminés.
+// ---------------------------------------------------------------------------
+
+export interface CourseFunnel {
+  views: number;
+  enrollments: number;
+  completions: number;
+  /** Taux de complétion = completions / enrollments (0–100, arrondi). */
+  completionRate: number;
+  averageRating: number;
+  totalRatings: number;
+}
+
+export async function getCourseFunnel(
+  courseId: string,
+  instructorId: string,
+  isAdmin = false,
+): Promise<CourseFunnel | null> {
+  const course = await prisma.course.findUnique({
+    where: { id: courseId },
+    select: {
+      slug: true,
+      instructorId: true,
+      averageRating: true,
+      totalRatings: true,
+    },
+  });
+  if (!course) return null;
+  if (!isAdmin && course.instructorId !== instructorId) return null;
+
+  const [views, enrollments, completions] = await Promise.all([
+    prisma.pageView.count({ where: { path: `/cours/${course.slug}` } }),
+    prisma.enrollment.count({ where: { courseId } }),
+    prisma.enrollment.count({
+      where: { courseId, completedAt: { not: null } },
+    }),
+  ]);
+
+  return {
+    views,
+    enrollments,
+    completions,
+    completionRate:
+      enrollments > 0 ? Math.round((completions / enrollments) * 100) : 0,
+    averageRating: course.averageRating,
+    totalRatings: course.totalRatings,
+  };
 }
 
 export interface InstructorDashboardStats {
@@ -133,6 +340,10 @@ export interface InstructorRevenueOverview {
   salesCount: number;
   /** Ventes du mois courant. */
   salesThisMonthCount: number;
+  /** Ventes du mois civil précédent (pour le delta de tendance). */
+  salesPrevMonthCount: number;
+  /** Ventes par mois sur les 6 derniers mois (ancien → récent), pour sparkline. */
+  salesSeries: Array<{ label: string; count: number }>;
   /** Cours le plus vendu (revenue net) avec compteurs. */
   topCourses: Array<{
     courseId: string;
@@ -237,11 +448,47 @@ export async function getInstructorRevenueOverview(
     LIMIT 5
   `;
 
+  // 4) Série mensuelle des ventes sur 6 mois (counts, comparables entre devises).
+  const now = new Date();
+  const sixMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 5, 1);
+  const seriesRows = await prisma.$queryRaw<
+    Array<{ month: Date; cnt: bigint }>
+  >`
+    SELECT date_trunc('month', o."paidAt") AS month,
+           COUNT(*)::bigint AS cnt
+    FROM "OrderItem" oi
+    INNER JOIN "Course" c ON c."id" = oi."courseId"
+    INNER JOIN "Order"  o ON o."id" = oi."orderId"
+    WHERE c."instructorId" = ${instructorId}
+      AND o."status" = 'PAID'
+      AND o."paidAt" >= ${sixMonthsAgo}
+    GROUP BY 1
+    ORDER BY 1
+  `;
+
+  const buckets = Array.from({ length: 6 }, (_, i) => {
+    const d = new Date(now.getFullYear(), now.getMonth() - (5 - i), 1);
+    return {
+      key: `${d.getFullYear()}-${d.getMonth()}`,
+      label: d.toLocaleDateString("fr-FR", { month: "short" }),
+      count: 0,
+    };
+  });
+  const byKey = new Map(buckets.map((b) => [b.key, b]));
+  for (const r of seriesRows) {
+    const d = new Date(r.month);
+    const bucket = byKey.get(`${d.getFullYear()}-${d.getMonth()}`);
+    if (bucket) bucket.count = Number(r.cnt);
+  }
+  const salesPrevMonthCount = buckets[buckets.length - 2]?.count ?? 0;
+
   return {
     payoutByCurrency,
     payoutThisMonthByCurrency,
     salesCount,
     salesThisMonthCount,
+    salesPrevMonthCount,
+    salesSeries: buckets.map((b) => ({ label: b.label, count: b.count })),
     topCourses: topRows.map((r) => ({
       courseId: r.courseId,
       title: r.title,

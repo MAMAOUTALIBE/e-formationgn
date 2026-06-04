@@ -22,6 +22,7 @@ import {
   updateCoursePricingSchema,
   updateCourseSeoSchema,
 } from "@/lib/validators/courses-instructor";
+import { computeCourseReadiness } from "@/server/queries/instructor";
 import type { ActionResult } from "./auth";
 
 // ---------------------------------------------------------------------------
@@ -140,6 +141,91 @@ export async function createCourse(
 
   revalidatePath("/formateur/cours");
   redirect(`/formateur/cours/${course.id}`);
+}
+
+// ---------------------------------------------------------------------------
+// Duplication d'un cours (gabarit) → nouveau DRAFT avec sections + leçons.
+// Les vidéos Mux ne sont PAS copiées (l'asset appartient à l'original) ; les
+// liens vidéo directs / contenus texte / ressources le sont. Les quiz ne sont
+// pas dupliqués pour l'instant.
+// ---------------------------------------------------------------------------
+
+export async function duplicateCourse(courseId: string): Promise<void> {
+  const ctx = await requireInstructor();
+  await ensureCourseOwnership(courseId, ctx);
+
+  const source = await prisma.course.findUnique({
+    where: { id: courseId },
+    include: {
+      sections: {
+        orderBy: { displayOrder: "asc" },
+        include: { lessons: { orderBy: { displayOrder: "asc" } } },
+      },
+    },
+  });
+  if (!source) throw new Error("Cours introuvable.");
+
+  const slug = appendSlugSuffix(slugify(source.title), nanoid(6).toLowerCase());
+
+  const created = await prisma.course.create({
+    data: {
+      slug,
+      title: `${source.title} (copie)`,
+      subtitle: source.subtitle,
+      description: source.description,
+      thumbnailUrl: source.thumbnailUrl,
+      level: source.level,
+      language: source.language,
+      durationSeconds: source.durationSeconds,
+      priceEUR: source.priceEUR,
+      priceUSD: source.priceUSD,
+      priceGNF: source.priceGNF,
+      priceXOF: source.priceXOF,
+      discountPriceEUR: source.discountPriceEUR,
+      discountPriceUSD: source.discountPriceUSD,
+      discountPriceGNF: source.discountPriceGNF,
+      discountPriceXOF: source.discountPriceXOF,
+      discountEndsAt: source.discountEndsAt,
+      metaTitle: source.metaTitle,
+      metaDescription: source.metaDescription,
+      whatYouWillLearn: source.whatYouWillLearn,
+      requirements: source.requirements,
+      targetAudience: source.targetAudience,
+      // Réinitialisé : statut, stats, mise en avant, vidéo promo Mux.
+      status: "DRAFT",
+      // Propriétaire = celui du cours source (préserve le cas admin).
+      instructorId: source.instructorId,
+      categoryId: source.categoryId,
+      sections: {
+        create: source.sections.map((s) => ({
+          title: s.title,
+          description: s.description,
+          displayOrder: s.displayOrder,
+          lessons: {
+            create: s.lessons.map((l) => ({
+              title: l.title,
+              description: l.description,
+              type: l.type,
+              displayOrder: l.displayOrder,
+              isFreePreview: l.isFreePreview,
+              videoDurationSeconds: l.videoDurationSeconds,
+              externalVideoUrl: l.externalVideoUrl,
+              textContent: l.textContent,
+              resourceUrl: l.resourceUrl,
+              resourceFileName: l.resourceFileName,
+              transcript: l.transcript,
+              aiSummary: l.aiSummary,
+              aiSummaryUpdatedAt: l.aiSummaryUpdatedAt,
+            })),
+          },
+        })),
+      },
+    },
+    select: { id: true },
+  });
+
+  revalidatePath("/formateur/cours");
+  redirect(`/formateur/cours/${created.id}`);
 }
 
 // ---------------------------------------------------------------------------
@@ -307,19 +393,11 @@ export async function submitCourseForReview(courseId: string): Promise<ActionRes
     return { success: false, message: "Action non autorisée." };
   }
 
-  const issues: string[] = [];
-  if (!course.title || course.title.trim().length < 5) issues.push("titre incomplet");
-  if (!course.description || course.description.trim().length < 50)
-    issues.push("description trop courte");
-  if (!course.thumbnailUrl) issues.push("image de couverture manquante");
-  if (course.sections.length === 0) issues.push("aucune section dans le programme");
-  if (course.sections.every((s) => s.lessons.length === 0))
-    issues.push("aucune leçon publiée");
-
-  if (issues.length > 0) {
+  const readiness = computeCourseReadiness(course);
+  if (!readiness.ready) {
     return {
       success: false,
-      message: `Avant publication, complétez : ${issues.join(", ")}.`,
+      message: `Avant publication, complétez : ${readiness.missingRequired.join(", ")}.`,
     };
   }
 
@@ -365,6 +443,42 @@ export async function withdrawCourseSubmission(courseId: string): Promise<Action
 
   revalidatePath(`/formateur/cours/${courseId}`);
   return { success: true, message: "Soumission annulée. Le cours est repassé en brouillon." };
+}
+
+// Archive un cours quel que soit son statut (le retire des vues actives).
+export async function archiveCourse(courseId: string): Promise<ActionResult> {
+  const ctx = await requireInstructor();
+  const course = await ensureCourseOwnership(courseId, ctx);
+  if (course.status === "ARCHIVED") {
+    return { success: false, message: "Ce cours est déjà archivé." };
+  }
+  await prisma.course.update({
+    where: { id: courseId },
+    data: { status: "ARCHIVED" },
+  });
+  revalidatePath("/formateur/cours");
+  revalidatePath(`/formateur/cours/${courseId}`);
+  updateTag("courses");
+  return { success: true, message: "Cours archivé." };
+}
+
+// Restaure un cours archivé en brouillon (pour le reprendre / resoumettre).
+export async function restoreArchivedCourse(
+  courseId: string,
+): Promise<ActionResult> {
+  const ctx = await requireInstructor();
+  const course = await ensureCourseOwnership(courseId, ctx);
+  if (course.status !== "ARCHIVED") {
+    return { success: false, message: "Ce cours n'est pas archivé." };
+  }
+  await prisma.course.update({
+    where: { id: courseId },
+    data: { status: "DRAFT" },
+  });
+  revalidatePath("/formateur/cours");
+  revalidatePath(`/formateur/cours/${courseId}`);
+  updateTag("courses");
+  return { success: true, message: "Cours restauré en brouillon." };
 }
 
 export async function unpublishCourse(courseId: string): Promise<ActionResult> {

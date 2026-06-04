@@ -17,7 +17,10 @@ import { Button } from "@/components/ui/button";
 import { updateAvatarUrl } from "@/server/actions/profile";
 
 const MAX_BYTES = 2 * 1024 * 1024; // 2 MB — doit matcher api/upload/avatar
-const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp", "image/avif"];
+// Tout format d'image accepté (image/*).
+function isAllowedType(type: string): boolean {
+  return type.startsWith("image/");
+}
 
 interface AvatarUploaderProps {
   currentUrl: string | null;
@@ -47,8 +50,8 @@ export function AvatarUploader({
     setFeedback(null);
 
     // 1) Validation client
-    if (!ALLOWED_TYPES.includes(file.type)) {
-      setError("Format non supporté. JPEG, PNG, WebP ou AVIF uniquement.");
+    if (!isAllowedType(file.type)) {
+      setError("Format non supporté. Choisissez une image.");
       return;
     }
     if (file.size > MAX_BYTES) {
@@ -149,7 +152,7 @@ export function AvatarUploader({
         <input
           ref={inputRef}
           type="file"
-          accept={ALLOWED_TYPES.join(",")}
+          accept="image/*"
           className="hidden"
           onChange={(e) => {
             const file = e.target.files?.[0];
@@ -188,7 +191,7 @@ export function AvatarUploader({
           ) : null}
         </div>
         <p className="text-xs text-muted-foreground">
-          JPG, PNG, WebP ou AVIF · max {MAX_BYTES / (1024 * 1024)} MB.
+          Tous formats image · max {MAX_BYTES / (1024 * 1024)} MB.
         </p>
 
         {error ? (

@@ -4,6 +4,7 @@ import { ImagePlus, Loader2, Trash2, Upload } from "lucide-react";
 import * as React from "react";
 
 import { Button } from "@/components/ui/button";
+import { compressImage } from "@/lib/images/compress";
 import { cn } from "@/lib/utils";
 
 interface ThumbnailUploaderProps {
@@ -20,8 +21,14 @@ interface ThumbnailUploaderProps {
   optional?: boolean;
 }
 
-const MAX_BYTES = 5 * 1024 * 1024;
-const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp", "image/avif"];
+const MAX_BYTES = 1024 * 1024 * 1024; // 1 GB — couvre images et vidéos
+// On accepte tout format d'image ET de vidéo (image/*, video/*).
+function isAllowedType(type: string): boolean {
+  return type.startsWith("image/") || type.startsWith("video/");
+}
+function isVideoUrl(value: string): boolean {
+  return /\.(mp4|webm|mov|m4v|ogg|ogv|mkv|avi)(\?|#|$)/i.test(value);
+}
 
 type Status = "idle" | "presigning" | "uploading" | "done" | "error";
 
@@ -34,6 +41,9 @@ export function ThumbnailUploader({
   optional,
 }: ThumbnailUploaderProps) {
   const [url, setUrl] = React.useState(defaultValue ?? "");
+  const [isVideo, setIsVideo] = React.useState(
+    defaultValue ? isVideoUrl(defaultValue) : false,
+  );
   const [status, setStatus] = React.useState<Status>("idle");
   const [error, setError] = React.useState<string | null>(null);
   const [progress, setProgress] = React.useState(0);
@@ -46,16 +56,23 @@ export function ThumbnailUploader({
   async function handleFile(file: File) {
     setError(null);
 
-    if (!ALLOWED_TYPES.includes(file.type)) {
-      setError("Format non supporté. Utilisez JPEG, PNG, WebP ou AVIF.");
+    if (!isAllowedType(file.type)) {
+      setError("Format non supporté. Choisissez une image ou une vidéo.");
       setStatus("error");
       return;
     }
     if (file.size > MAX_BYTES) {
-      setError("Fichier trop lourd (max 5 MB).");
+      setError(`Fichier trop lourd (max ${MAX_BYTES / (1024 * 1024 * 1024)} GB).`);
       setStatus("error");
       return;
     }
+    const fileIsVideo = file.type.startsWith("video/");
+
+    // Images : compression + recadrage 16:9 côté client avant upload.
+    // Vidéos : envoyées telles quelles.
+    const uploadFile = fileIsVideo
+      ? file
+      : await compressImage(file, { aspectRatio: 16 / 9, maxWidth: 1920 });
 
     setStatus("presigning");
     setProgress(0);
@@ -66,9 +83,9 @@ export function ThumbnailUploader({
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
-          filename: file.name,
-          contentType: file.type,
-          sizeBytes: file.size,
+          filename: uploadFile.name,
+          contentType: uploadFile.type,
+          sizeBytes: uploadFile.size,
         }),
       });
       const json = (await res.json()) as
@@ -86,17 +103,19 @@ export function ThumbnailUploader({
 
     setStatus("uploading");
     try {
-      await uploadWithProgress(presigned.uploadUrl, file, setProgress);
+      await uploadWithProgress(presigned.uploadUrl, uploadFile, setProgress);
       setUrl(presigned.publicUrl);
+      setIsVideo(fileIsVideo);
       setStatus("done");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Échec d'upload R2.");
+      setError(err instanceof Error ? err.message : "Échec de l'upload.");
       setStatus("error");
     }
   }
 
   function reset() {
     setUrl("");
+    setIsVideo(false);
     setStatus("idle");
     setError(null);
     setProgress(0);
@@ -124,8 +143,20 @@ export function ThumbnailUploader({
       {url ? (
         <div className="overflow-hidden rounded-lg border border-border bg-card">
           <div className="relative aspect-video w-full bg-muted">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={url} alt="Aperçu" className="h-full w-full object-cover" />
+            {isVideo ? (
+              <video
+                src={url}
+                controls
+                className="h-full w-full object-contain bg-black"
+              />
+            ) : (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={url}
+                alt="Aperçu"
+                className="h-full w-full object-cover"
+              />
+            )}
           </div>
           <div className="flex items-center justify-between gap-3 border-t border-border bg-muted/40 px-3 py-2">
             <p className="truncate text-xs text-muted-foreground">{url}</p>
@@ -200,10 +231,10 @@ export function ThumbnailUploader({
               </div>
               <div>
                 <p className="text-sm font-medium text-foreground">
-                  Cliquez ou glissez une image
+                  Cliquez ou glissez une image ou une vidéo
                 </p>
                 <p className="mt-1 text-xs text-muted-foreground">
-                  JPEG / PNG / WebP / AVIF — 5 MB max — 16:9 recommandé
+                  Tous formats image &amp; vidéo — 1 GB max — 16:9 recommandé
                 </p>
                 {optional ? (
                   <p className="mt-1 text-xs italic text-muted-foreground">
@@ -238,6 +269,7 @@ export function ThumbnailUploader({
               const value = e.target.value.trim();
               if (value && /^https?:\/\//.test(value)) {
                 setUrl(value);
+                setIsVideo(isVideoUrl(value));
                 setStatus("done");
                 setError(null);
               }
@@ -250,7 +282,7 @@ export function ThumbnailUploader({
       <input
         ref={inputRef}
         type="file"
-        accept={ALLOWED_TYPES.join(",")}
+        accept="image/*,video/*"
         className="hidden"
         disabled={fullyDisabled}
         onChange={(e) => {

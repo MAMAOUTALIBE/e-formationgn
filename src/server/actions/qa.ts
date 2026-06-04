@@ -145,3 +145,35 @@ export async function answerQuestion(formData: FormData): Promise<ActionResult> 
   revalidatePath(`/cours/${question.course.slug}/questions`);
   return { success: true, message: "Réponse publiée." };
 }
+
+// Marque une question comme résolue / la rouvre. Autorisé au formateur
+// propriétaire du cours, à l'auteur de la question, ou à un admin.
+export async function setQuestionResolved(
+  questionId: string,
+  resolved: boolean,
+): Promise<void> {
+  const session = await auth();
+  if (!session?.user) throw new Error("Connectez-vous.");
+
+  const question = await prisma.question.findUnique({
+    where: { id: questionId },
+    include: { course: { select: { slug: true, instructorId: true } } },
+  });
+  if (!question) throw new Error("Question introuvable.");
+
+  const isOwner = session.user.id === question.course.instructorId;
+  const isAuthor = session.user.id === question.userId;
+  const isAdmin = session.user.role === "ADMIN";
+  if (!isOwner && !isAuthor && !isAdmin) {
+    throw new Error("Action non autorisée.");
+  }
+
+  await prisma.question.update({
+    where: { id: questionId },
+    data: { isResolved: resolved },
+  });
+
+  revalidatePath("/formateur/questions");
+  revalidatePath(`/cours/${question.course.slug}/questions/${question.id}`);
+  revalidatePath(`/cours/${question.course.slug}/questions`);
+}

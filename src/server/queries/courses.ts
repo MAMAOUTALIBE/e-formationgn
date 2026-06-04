@@ -582,6 +582,9 @@ export async function listCartCrossSell({
 
 export async function getPublishedCourseBySlug(
   slug: string,
+  // Mode aperçu : le propriétaire (ou un admin) peut voir un cours non publié
+  // tel que le verront les élèves, avant publication.
+  preview?: { viewerId: string; isAdmin: boolean },
 ): Promise<PublicCourseDetail | null> {
   // Read replica : la page /cours/[slug] est l'endpoint le plus lourd du
   // catalogue (include profond). Décharger le primary protège le checkout.
@@ -591,7 +594,11 @@ export async function getPublishedCourseBySlug(
     omit: COURSE_PUBLIC_OMIT,
   });
   if (!course) return null;
-  if (course.status !== "PUBLISHED") return null;
+  if (course.status !== "PUBLISHED") {
+    const canPreview =
+      preview && (preview.isAdmin || course.instructorId === preview.viewerId);
+    if (!canPreview) return null;
+  }
   return course as PublicCourseDetail;
 }
 

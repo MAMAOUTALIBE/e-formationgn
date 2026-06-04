@@ -1,19 +1,21 @@
 import { NextResponse } from "next/server";
 
 import { auth } from "@/auth";
+import { createLocalUpload } from "@/lib/storage/local";
 import { createPresignedUpload, isR2Configured } from "@/lib/storage/r2";
+
+export const runtime = "nodejs";
 
 // Limite plus serrée pour les avatars (vs course-thumbnail) : 2 MB
 // largement suffisant pour une photo de profil après compression côté
 // client / serveur. Évite que des users uploadent du 8 MB juste pour
 // leur avatar (gaspillage stockage + bande passante).
 const MAX_BYTES = 2 * 1024 * 1024; // 2 MB
-const ALLOWED_TYPES = new Set([
-  "image/jpeg",
-  "image/png",
-  "image/webp",
-  "image/avif",
-]);
+
+// On accepte TOUT format d'image (image/*). Une vidéo n'a pas de sens en avatar.
+function isAllowedType(contentType: string): boolean {
+  return contentType.startsWith("image/");
+}
 
 interface RequestBody {
   filename?: string;
@@ -27,16 +29,6 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Non authentifié." }, { status: 401 });
   }
   // Pas de restriction de rôle : tout user connecté peut uploader son avatar.
-
-  if (!isR2Configured()) {
-    return NextResponse.json(
-      {
-        error:
-          "Stockage non configuré. Renseignez R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY et R2_PUBLIC_URL dans .env.",
-      },
-      { status: 503 },
-    );
-  }
 
   let body: RequestBody;
   try {
@@ -52,9 +44,9 @@ export async function POST(request: Request) {
       { status: 400 },
     );
   }
-  if (!ALLOWED_TYPES.has(contentType)) {
+  if (!isAllowedType(contentType)) {
     return NextResponse.json(
-      { error: "Format non supporté. Utilisez JPEG, PNG, WebP ou AVIF." },
+      { error: "Format non supporté. Choisissez une image." },
       { status: 400 },
     );
   }
@@ -65,14 +57,19 @@ export async function POST(request: Request) {
     );
   }
 
+  const prefix = `avatars/${session.user.id}`;
+
   try {
-    const result = await createPresignedUpload({
-      prefix: `avatars/${session.user.id}`,
-      filename,
-      contentType,
-      maxSizeBytes: sizeBytes,
-      expiresInSeconds: 60,
-    });
+    // R2 en prod si configuré, sinon fallback disque local (dev / single-host).
+    const result = isR2Configured()
+      ? await createPresignedUpload({
+          prefix,
+          filename,
+          contentType,
+          maxSizeBytes: sizeBytes,
+          expiresInSeconds: 60,
+        })
+      : createLocalUpload({ prefix, filename, expiresInSeconds: 60 });
     return NextResponse.json(result);
   } catch (err) {
     console.error("[upload/avatar]", err);

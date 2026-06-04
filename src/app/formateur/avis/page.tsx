@@ -4,7 +4,9 @@ import { redirect } from "next/navigation";
 import { MessageSquare, Star } from "lucide-react";
 
 import { auth } from "@/auth";
+import { CourseRatingDistribution } from "@/components/features/courses/course-rating-distribution";
 import { InstructorReplyForm } from "@/components/features/instructor/instructor-reply-form";
+import { ReportReviewButton } from "@/components/features/instructor/report-review-button";
 import { Avatar } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Breadcrumbs } from "@/components/ui/breadcrumbs";
@@ -56,6 +58,14 @@ export default async function InstructorReviewsPage({ searchParams }: PageProps)
     totalReviews > 0
       ? all.reduce((sum, r) => sum + r.rating, 0) / totalReviews
       : 0;
+  const ratingBuckets = ([5, 4, 3, 2, 1] as const).map((rating) => {
+    const count = all.filter((r) => r.rating === rating).length;
+    return {
+      rating,
+      count,
+      percent: totalReviews ? Math.round((count / totalReviews) * 100) : 0,
+    };
+  });
 
   return (
     <div className="space-y-6">
@@ -93,6 +103,18 @@ export default async function InstructorReviewsPage({ searchParams }: PageProps)
           </div>
         ) : null}
       </header>
+
+      {totalReviews > 0 ? (
+        <Card>
+          <CardContent className="p-5">
+            <CourseRatingDistribution
+              buckets={ratingBuckets}
+              averageRating={avgRating}
+              totalRatings={totalReviews}
+            />
+          </CardContent>
+        </Card>
+      ) : null}
 
       {/* Tabs */}
       <nav aria-label="Filtres" className="flex flex-wrap gap-1 border-b border-border">
@@ -181,21 +203,24 @@ export default async function InstructorReviewsPage({ searchParams }: PageProps)
                           </Link>
                         </div>
                       </div>
-                      {r.instructorReply ? (
-                        <Badge
-                          variant="secondary"
-                          className="bg-[color:var(--brand-secondary)]/15 text-[color:var(--brand-secondary)]"
-                        >
-                          Répondu
-                        </Badge>
-                      ) : (
-                        <Badge
-                          variant="outline"
-                          className="border-[color:var(--brand-warning)]/40 text-[color:var(--brand-warning)]"
-                        >
-                          À répondre
-                        </Badge>
-                      )}
+                      <div className="flex items-center gap-2">
+                        {r.instructorReply ? (
+                          <Badge
+                            variant="secondary"
+                            className="bg-[color:var(--brand-secondary)]/15 text-[color:var(--brand-secondary)]"
+                          >
+                            Répondu
+                          </Badge>
+                        ) : (
+                          <Badge
+                            variant="outline"
+                            className="border-[color:var(--brand-warning)]/40 text-[color:var(--brand-warning)]"
+                          >
+                            À répondre
+                          </Badge>
+                        )}
+                        <ReportReviewButton reviewId={r.id} />
+                      </div>
                     </div>
 
                     <div>

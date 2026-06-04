@@ -207,3 +207,38 @@ export async function replyToReview(
     message: trimmed.length > 0 ? "Réponse publiée." : "Réponse supprimée.",
   };
 }
+
+// Signalement d'un avis abusif par le formateur → trace dans l'AuditLog pour
+// que la modération l'examine (pas de suppression directe par le formateur).
+export async function reportReview(
+  reviewId: string,
+  reason: string,
+): Promise<ActionResult> {
+  const session = await auth();
+  if (!session?.user) return { success: false, message: "Connectez-vous." };
+
+  const review = await prisma.review.findUnique({
+    where: { id: reviewId },
+    select: { courseId: true, course: { select: { instructorId: true } } },
+  });
+  if (!review) return { success: false, message: "Avis introuvable." };
+  if (
+    review.course.instructorId !== session.user.id &&
+    session.user.role !== "ADMIN"
+  ) {
+    return { success: false, message: "Action non autorisée." };
+  }
+
+  await createAuditLog({
+    actorId: session.user.id,
+    action: "instructor.review.report",
+    targetType: "Review",
+    targetId: reviewId,
+    metadata: { courseId: review.courseId, reason: reason.trim().slice(0, 500) },
+  });
+
+  return {
+    success: true,
+    message: "Avis signalé à l'équipe de modération.",
+  };
+}

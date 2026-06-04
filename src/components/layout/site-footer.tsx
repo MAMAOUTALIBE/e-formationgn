@@ -9,17 +9,12 @@
 import Link from "next/link";
 
 import { Logo } from "@/components/branding/logo";
-import { CurrencyToggle } from "@/components/features/preferences/currency-toggle";
 import { NewsletterForm } from "@/components/features/marketing/newsletter-form";
 import { Container } from "@/components/ui/container";
-import { getCurrentCurrency } from "@/lib/currency";
 import { getDictionary } from "@/lib/i18n/server";
 
 export async function SiteFooter() {
-  const [{ t }, currency] = await Promise.all([
-    getDictionary(),
-    getCurrentCurrency(),
-  ]);
+  const { t } = await getDictionary();
 
   return (
     <footer className="border-t border-border bg-muted/40">
@@ -170,8 +165,6 @@ export async function SiteFooter() {
             © {new Date().getFullYear()} Gandal. {t.footer.rights}
           </p>
           <div className="flex items-center gap-3">
-            <CurrencyToggle current={currency} />
-            <span aria-hidden className="hidden h-4 w-px bg-border sm:block" />
             <span className="hidden sm:inline">{t.footer.rgpd}</span>
           </div>
         </Container>

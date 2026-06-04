@@ -6,6 +6,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { isSeoAiConfigured } from "@/lib/ai/seo-suggestions";
 import { getInstructorCourse } from "@/server/queries/instructor";
 
+import { assertStepUnlocked } from "../_components/wizard-state";
+
 interface PageProps {
   params: Promise<{ id: string }>;
 }
@@ -21,6 +23,9 @@ export default async function CourseSeoPage({ params }: PageProps) {
     session.user.role === "ADMIN",
   );
   if (!course) notFound();
+
+  // Mode strict : accès verrouillé tant que Général/Programme ne sont pas complets.
+  await assertStepUnlocked(id, 3);
 
   return (
     <Card>

@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
-import { CheckCircle2, ExternalLink, Wallet } from "lucide-react";
+import { CheckCircle2, Download, ExternalLink, Wallet } from "lucide-react";
 
 import { auth } from "@/auth";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -55,11 +55,19 @@ export default async function InstructorPayoutsPage({ searchParams }: PageProps)
 
   return (
     <div className="space-y-6">
-      <header>
-        <h1 className="text-2xl font-semibold tracking-tight text-foreground">Paiements</h1>
-        <p className="text-sm text-muted-foreground">
-          Configurez votre compte pour recevoir vos revenus directement de Stripe.
-        </p>
+      <header className="flex flex-col items-start justify-between gap-3 sm:flex-row sm:items-center">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight text-foreground">Paiements</h1>
+          <p className="text-sm text-muted-foreground">
+            Configurez votre compte pour recevoir vos revenus directement de Stripe.
+          </p>
+        </div>
+        <Button asChild variant="outline" size="sm">
+          <a href="/api/formateur/ventes" download>
+            <Download className="h-4 w-4" />
+            Exporter mes ventes (CSV)
+          </a>
+        </Button>
       </header>
 
       {!isStripeConfigured() ? (

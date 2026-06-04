@@ -46,6 +46,9 @@ next-env.d.ts
 /src/generated/prisma
 pexels-videos.json
 
+# uploads disque local (stockage de fallback quand R2 n'est pas configuré)
+/public/uploads/
+
 # Playwright (artefacts d'exécution : traces, screenshots, vidéos d'erreur)
 test-results/
 playwright-report/

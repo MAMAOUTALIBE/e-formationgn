@@ -45,6 +45,7 @@ import { isCourseInWishlist } from "@/server/actions/wishlist";
 
 interface PageProps {
   params: Promise<{ slug: string }>;
+  searchParams: Promise<{ preview?: string }>;
 }
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
@@ -84,12 +85,24 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   };
 }
 
-export default async function CourseDetailPage({ params }: PageProps) {
+export default async function CourseDetailPage({
+  params,
+  searchParams,
+}: PageProps) {
   const { slug } = await params;
-  const course = await getPublishedCourseBySlug(slug);
+  const { preview } = await searchParams;
+  const session = await auth();
+
+  // Aperçu propriétaire/admin : permet de voir un cours non publié.
+  const previewCtx =
+    preview === "1" && session?.user
+      ? { viewerId: session.user.id, isAdmin: session.user.role === "ADMIN" }
+      : undefined;
+
+  const course = await getPublishedCourseBySlug(slug, previewCtx);
   if (!course) notFound();
 
-  const session = await auth();
+  const isPreview = course.status !== "PUBLISHED";
   const currency = await getCurrentCurrency(session?.user.preferredCurrency ?? "EUR");
 
   // État de l'élève vis-à-vis du cours (inscrit ? au panier ? wishlist ?)
@@ -233,6 +246,23 @@ export default async function CourseDetailPage({ params }: PageProps) {
     <>
       <JsonLd id="course-jsonld" data={buildCourseJsonLd(course)} />
       <SiteHeader />
+
+      {isPreview ? (
+        <div className="border-b border-amber-300 bg-amber-50 py-2 text-amber-900">
+          <Container className="flex flex-wrap items-center justify-between gap-2 text-sm">
+            <span>
+              👁️ <strong>Mode aperçu</strong> — voici comment les élèves verront
+              ce cours. Il n&apos;est pas encore public.
+            </span>
+            <Link
+              href={`/formateur/cours/${course.id}`}
+              className="font-medium underline underline-offset-2"
+            >
+              Retour à l&apos;édition
+            </Link>
+          </Container>
+        </div>
+      ) : null}
 
       <main className="flex-1 pb-24 lg:pb-0">
         {/* Hero — fond plein largeur ; la sticky card de droite (desktop)

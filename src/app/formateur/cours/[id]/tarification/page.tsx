@@ -5,6 +5,9 @@ import { CoursePricingForm } from "@/components/features/instructor/course-prici
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { getInstructorCourse } from "@/server/queries/instructor";
 
+import { stepHref } from "../_components/wizard";
+import { assertStepUnlocked } from "../_components/wizard-state";
+
 interface PageProps {
   params: Promise<{ id: string }>;
 }
@@ -21,6 +24,9 @@ export default async function CoursePricingPage({ params }: PageProps) {
   );
   if (!course) notFound();
 
+  // Mode strict : accès verrouillé tant que Général/Programme ne sont pas complets.
+  await assertStepUnlocked(id, 2);
+
   // Pour l'input datetime-local, format YYYY-MM-DDTHH:mm
   const discountEndsAt = course.discountEndsAt
     ? new Date(course.discountEndsAt).toISOString().slice(0, 16)
@@ -34,6 +40,7 @@ export default async function CoursePricingPage({ params }: PageProps) {
       <CardContent>
         <CoursePricingForm
           courseId={course.id}
+          nextHref={stepHref(course.id, "seo")}
           defaults={{
             priceEUR: Number(course.priceEUR),
             priceUSD: Number(course.priceUSD),

@@ -12,16 +12,24 @@ const slugFromTitle = z
   .min(5, "Le titre doit contenir au moins 5 caractères.")
   .max(120, "Le titre ne peut pas dépasser 120 caractères.");
 
+// URL de média de couverture (image OU vidéo) : accepte une URL absolue
+// http(s) (R2 / domaine public) OU un chemin local servi par l'app
+// (/uploads/… quand R2 n'est pas configuré).
+const coverMediaUrl = z
+  .string()
+  .trim()
+  .refine(
+    (v) => /^https?:\/\//.test(v) || v.startsWith("/uploads/"),
+    "URL de média invalide.",
+  )
+  .optional()
+  .or(z.literal(""));
+
 export const createCourseSchema = z
   .object({
     title: slugFromTitle,
     categoryId: z.string().min(1, "Sélectionnez une catégorie."),
-    thumbnailUrl: z
-      .string()
-      .trim()
-      .url("URL d'image invalide.")
-      .optional()
-      .or(z.literal("")),
+    thumbnailUrl: coverMediaUrl,
   })
   .strict();
 export type CreateCourseInput = z.infer<typeof createCourseSchema>;
@@ -42,12 +50,7 @@ export const updateCourseGeneralSchema = z
       .max(8000, "La description est trop longue."),
     categoryId: z.string().min(1, "Sélectionnez une catégorie."),
     level: z.enum(COURSE_LEVELS),
-    thumbnailUrl: z
-      .string()
-      .trim()
-      .url("URL d'image invalide.")
-      .optional()
-      .or(z.literal("")),
+    thumbnailUrl: coverMediaUrl,
   })
   .strict();
 export type UpdateCourseGeneralInput = z.infer<typeof updateCourseGeneralSchema>;
@@ -204,11 +207,12 @@ export const lessonVideoUrlSchema = z
     url: z
       .string()
       .trim()
-      .url("URL invalide.")
       .max(2000, "URL trop longue.")
       .refine(
-        (u) => /^https?:\/\//i.test(u),
-        "L'URL doit commencer par http:// ou https://.",
+        // URL publique http(s) (lien direct / R2) OU chemin local servi par
+        // l'app (/uploads/… quand R2 n'est pas configuré, upload de fichier).
+        (u) => /^https?:\/\//i.test(u) || u.startsWith("/uploads/"),
+        "L'URL doit être un lien http(s) ou un fichier téléversé.",
       ),
   })
   .strict();

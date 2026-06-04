@@ -284,6 +284,87 @@ export async function deleteLesson(lessonId: string): Promise<ActionResult> {
   redirect(`/formateur/cours/${courseId}/programme`);
 }
 
+// ---------------------------------------------------------------------------
+// Duplication (leçon / section). Le contenu est copié ; les bindings Mux ne le
+// sont PAS (l'asset appartient à l'original). La copie est ajoutée en fin de
+// liste (section pour une leçon, cours pour une section).
+// ---------------------------------------------------------------------------
+
+export async function duplicateLesson(lessonId: string): Promise<void> {
+  const { lesson } = await requireLessonOwnership(lessonId);
+
+  const lastOrder = await prisma.lesson.aggregate({
+    where: { sectionId: lesson.sectionId },
+    _max: { displayOrder: true },
+  });
+
+  await prisma.lesson.create({
+    data: {
+      sectionId: lesson.sectionId,
+      title: `${lesson.title} (copie)`,
+      description: lesson.description,
+      type: lesson.type,
+      displayOrder: (lastOrder._max.displayOrder ?? -1) + 1,
+      isFreePreview: lesson.isFreePreview,
+      videoDurationSeconds: lesson.videoDurationSeconds,
+      externalVideoUrl: lesson.externalVideoUrl,
+      textContent: lesson.textContent,
+      resourceUrl: lesson.resourceUrl,
+      resourceFileName: lesson.resourceFileName,
+      transcript: lesson.transcript,
+      aiSummary: lesson.aiSummary,
+      aiSummaryUpdatedAt: lesson.aiSummaryUpdatedAt,
+    },
+  });
+
+  await recomputeCourseDuration(lesson.section.course.id);
+  revalidatePath(`/formateur/cours/${lesson.section.course.id}/programme`);
+}
+
+export async function duplicateSection(sectionId: string): Promise<void> {
+  const { section } = await requireSectionOwnership(sectionId);
+
+  const full = await prisma.section.findUnique({
+    where: { id: sectionId },
+    include: { lessons: { orderBy: { displayOrder: "asc" } } },
+  });
+  if (!full) throw new AuthorizationError("NOT_FOUND", "Section introuvable.");
+
+  const lastOrder = await prisma.section.aggregate({
+    where: { courseId: section.course.id },
+    _max: { displayOrder: true },
+  });
+
+  await prisma.section.create({
+    data: {
+      courseId: section.course.id,
+      title: `${full.title} (copie)`,
+      description: full.description,
+      displayOrder: (lastOrder._max.displayOrder ?? -1) + 1,
+      lessons: {
+        create: full.lessons.map((l) => ({
+          title: l.title,
+          description: l.description,
+          type: l.type,
+          displayOrder: l.displayOrder,
+          isFreePreview: l.isFreePreview,
+          videoDurationSeconds: l.videoDurationSeconds,
+          externalVideoUrl: l.externalVideoUrl,
+          textContent: l.textContent,
+          resourceUrl: l.resourceUrl,
+          resourceFileName: l.resourceFileName,
+          transcript: l.transcript,
+          aiSummary: l.aiSummary,
+          aiSummaryUpdatedAt: l.aiSummaryUpdatedAt,
+        })),
+      },
+    },
+  });
+
+  await recomputeCourseDuration(section.course.id);
+  revalidatePath(`/formateur/cours/${section.course.id}/programme`);
+}
+
 export async function reorderLessons(
   sectionId: string,
   ids: string[],

@@ -3,10 +3,12 @@ import { notFound, redirect } from "next/navigation";
 import { Activity, TrendingDown, Users } from "lucide-react";
 
 import { auth } from "@/auth";
+import { CourseFunnel } from "@/components/features/instructor/course-funnel";
 import { CourseInsightsChart } from "@/components/features/instructor/course-insights-chart";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { prisma } from "@/lib/prisma";
 import {
+  getCourseFunnel,
   getCourseTimeseries,
   getLessonDropoff,
 } from "@/server/queries/instructor";
@@ -26,10 +28,12 @@ export default async function CourseInsightsPage({ params }: PageProps) {
   if (!session?.user) redirect("/connexion?callbackUrl=/formateur");
 
   const { id } = await params;
-  const [timeseries, dropoff, enrollmentsCount] = await Promise.all([
+  const isAdmin = session.user.role === "ADMIN";
+  const [timeseries, dropoff, enrollmentsCount, funnel] = await Promise.all([
     getCourseTimeseries(id, session.user.id, 30),
     getLessonDropoff(id, session.user.id),
     prisma.enrollment.count({ where: { courseId: id } }),
+    getCourseFunnel(id, session.user.id, isAdmin),
   ]);
 
   if (timeseries === null || dropoff === null) notFound();
@@ -40,6 +44,36 @@ export default async function CourseInsightsPage({ params }: PageProps) {
 
   return (
     <div className="space-y-6">
+      {funnel ? (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Entonnoir de conversion</CardTitle>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Du visiteur de la fiche à l&apos;élève qui termine le cours.
+            </p>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid gap-3 sm:grid-cols-2">
+              <Tile
+                icon={<TrendingDown className="h-4 w-4" aria-hidden />}
+                label="Taux de complétion"
+                value={`${funnel.completionRate}%`}
+              />
+              <Tile
+                icon={<Activity className="h-4 w-4" aria-hidden />}
+                label="Note moyenne"
+                value={
+                  funnel.totalRatings > 0
+                    ? `${funnel.averageRating.toFixed(1)} (${funnel.totalRatings} avis)`
+                    : "—"
+                }
+              />
+            </div>
+            <CourseFunnel funnel={funnel} />
+          </CardContent>
+        </Card>
+      ) : null}
+
       <Card>
         <CardHeader>
           <CardTitle className="text-base">Activité — 30 derniers jours</CardTitle>
