@@ -10,6 +10,7 @@ import { redirect } from "next/navigation";
 import { AuthError } from "next-auth";
 
 import { signIn } from "@/auth";
+import { isAutoVerifyEmailEnabled } from "@/lib/auth/auto-verify";
 import {
   getEmailLockoutState,
   lockoutMessage,
@@ -120,6 +121,10 @@ export async function registerUser(
 
   const hashedPassword = await hashPassword(password);
 
+  // Contournement temporaire : tant que l'envoi d'emails (Resend) n'est pas
+  // configuré, on active directement le compte pour ne pas bloquer l'inscription.
+  const autoVerify = isAutoVerifyEmailEnabled();
+
   const user = await prisma.user.create({
     data: {
       email,
@@ -128,9 +133,17 @@ export async function registerUser(
       name: `${firstName} ${lastName}`,
       hashedPassword,
       role: "STUDENT",
-      status: "PENDING_VERIFICATION",
+      status: autoVerify ? "ACTIVE" : "PENDING_VERIFICATION",
+      emailVerified: autoVerify ? new Date() : null,
     },
   });
+
+  if (autoVerify) {
+    return {
+      success: true,
+      message: "Inscription réussie. Vous pouvez vous connecter dès maintenant.",
+    };
+  }
 
   await issueVerificationEmail(user.id, user.email, user.firstName);
 

@@ -17,6 +17,7 @@ import { PrismaAdapter } from "@auth/prisma-adapter";
 
 import { authConfig } from "@/auth.config";
 import { readImpersonation } from "@/lib/admin/impersonation";
+import { isAutoVerifyEmailEnabled } from "@/lib/auth/auto-verify";
 import { recordLoginAttempt } from "@/lib/auth/login-attempts";
 import { fakeVerifyPassword, verifyPassword } from "@/lib/auth/password";
 import { prisma } from "@/lib/prisma";
@@ -100,9 +101,10 @@ export const {
           return null;
         }
 
-        // Si l'email n'est pas vérifié, on bloque la connexion.
-        // Le formulaire affichera un message dédié grâce au throw.
-        if (!user.emailVerified) {
+        // Si l'email n'est pas vérifié, on bloque la connexion — SAUF quand le
+        // contournement temporaire AUTH_AUTO_VERIFY_EMAIL est actif (Resend pas
+        // encore configuré). Le formulaire affiche un message dédié via le throw.
+        if (!user.emailVerified && !isAutoVerifyEmailEnabled()) {
           await recordLoginAttempt({
             email: parsed.data.email,
             userId: user.id,
