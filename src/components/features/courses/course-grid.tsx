@@ -26,7 +26,7 @@ export function CourseGrid({ courses, currency, className, emptyMessage }: Cours
       className={cn(
         // Grille façon Udemy : cartes compactes, gap resserré. 3 colonnes
         // (cartes assez larges pour la rangée de pastilles sur une ligne).
-        "grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3",
+        "grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4",
         className,
       )}
     >

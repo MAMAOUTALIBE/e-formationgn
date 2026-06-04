@@ -19,6 +19,8 @@ interface CourseCardProps {
   flyoutSide?: "left" | "right";
   /** Désactive le flyout (utile dans les pages où il gênerait : page formateur, wishlist). */
   hideFlyout?: boolean;
+  /** Cible du lien principal (par défaut /cours/[slug]) — ex : URL avec ?ref=. */
+  href?: string;
 }
 
 // Carte de cours au format Udemy : image 16:9 (réf. 480×270), badge en
@@ -30,7 +32,9 @@ export function CourseCard({
   currency = "EUR",
   flyoutSide = "right",
   hideFlyout,
+  href,
 }: CourseCardProps) {
+  const courseHref = href ?? `/cours/${course.slug}`;
   const instructorName =
     course.instructor.name ??
     ([course.instructor.firstName, course.instructor.lastName].filter(Boolean).join(" ") ||
@@ -91,7 +95,7 @@ export function CourseCard({
         {/* Lien étiré : toute la carte mène au cours (after:inset-0). */}
         <h3 className="line-clamp-2 text-[15px] font-bold leading-snug text-foreground">
           <Link
-            href={`/cours/${course.slug}`}
+            href={courseHref}
             aria-label={`Voir le cours ${course.title}`}
             className="after:absolute after:inset-0 after:z-0 after:content-[''] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >

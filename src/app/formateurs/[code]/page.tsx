@@ -6,7 +6,6 @@
 // formateur (commission préférentielle 15 %).
 
 import type { Metadata } from "next";
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Award, BookOpenText, Globe2, Star, Users } from "lucide-react";
 
@@ -296,15 +295,13 @@ export default async function PublicInstructorPage({ params }: PageProps) {
                   Ce formateur n&apos;a pas encore publié de cours.
                 </div>
               ) : (
-                <div className="mt-6 grid grid-cols-1 gap-6 sm:grid-cols-2">
+                <div className="mt-6 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                   {instructor.coursesAuthored.map((course) => (
-                    <Link
+                    <CourseCard
                       key={course.id}
+                      course={serializeCourseListItem(course)}
                       href={withRef(`/cours/${course.slug}`)}
-                      className="block focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-lg"
-                    >
-                      <CourseCard course={serializeCourseListItem(course)} />
-                    </Link>
+                    />
                   ))}
                 </div>
               )}

@@ -68,13 +68,13 @@ export function CourseResultsArea({
           aria-busy={pending}
         >
           {mode === "grid" ? (
-            <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
               {courses.map((course, idx) => (
                 <CourseCard
                   key={course.id}
                   course={course}
                   currency={currency}
-                  flyoutSide={idx % 3 === 2 ? "left" : "right"}
+                  flyoutSide={idx % 4 >= 2 ? "left" : "right"}
                 />
               ))}
             </div>
