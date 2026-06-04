@@ -16,6 +16,7 @@ import {
   promoCodeSchema,
   userActionSchema,
 } from "@/lib/validators/admin";
+import { failedCriteriaLabels } from "@/lib/validators/course-publish";
 import { createAuditLog } from "@/server/services/audit-log";
 
 import type { ActionResult } from "./auth";
@@ -51,11 +52,29 @@ export async function moderateCourse(formData: FormData): Promise<ActionResult> 
 
   const course = await prisma.course.findUnique({
     where: { id: parsed.data.courseId },
-    select: { id: true, instructorId: true, slug: true, title: true, status: true },
+    select: {
+      id: true,
+      instructorId: true,
+      slug: true,
+      title: true,
+      status: true,
+      description: true,
+      thumbnailUrl: true,
+      sections: { select: { lessons: { select: { id: true } } } },
+    },
   });
   if (!course) return { success: false, message: "Cours introuvable." };
 
   if (parsed.data.action === "approve") {
+    // Garde qualité : on ne publie pas un cours incomplet (ex : description
+    // restée sur le texte par défaut, pas d'image, pas de leçon).
+    const failed = failedCriteriaLabels(course);
+    if (failed.length > 0) {
+      return {
+        success: false,
+        message: `Publication refusée — critères qualité non remplis : ${failed.join(" · ")}.`,
+      };
+    }
     await prisma.course.update({
       where: { id: course.id },
       data: { status: "PUBLISHED", publishedAt: new Date(), rejectionReason: null },

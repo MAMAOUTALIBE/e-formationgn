@@ -135,6 +135,7 @@ export default async function AdminOverviewPage({ searchParams }: PageProps) {
           icon={<Coins className="h-4 w-4" />}
           hint="Période sélectionnée"
           sparkline={<Sparkline data={timeseries.map((p) => p.EUR)} color="#1E3A8A" />}
+          href="/admin/analytics/revenus"
         />
         <KpiCard
           label="Revenus USD"
@@ -143,36 +144,42 @@ export default async function AdminOverviewPage({ searchParams }: PageProps) {
           icon={<Coins className="h-4 w-4" />}
           hint="Période sélectionnée"
           sparkline={<Sparkline data={timeseries.map((p) => p.USD)} color="#0EA5E9" />}
+          href="/admin/analytics/revenus"
         />
         <KpiCard
           label="Commandes"
           value={kpis.ordersCount}
           icon={<ShoppingCart className="h-4 w-4" />}
           hint="Payées sur la période"
+          href="/admin/finances/transactions"
         />
         <KpiCard
           label="Nouveaux inscrits"
           value={kpis.newSignups}
           icon={<Users className="h-4 w-4" />}
           hint="Comptes créés"
+          href="/admin/utilisateurs"
         />
         <KpiCard
           label="Cours publiés"
           value={kpis.newCourses}
           icon={<BookOpenText className="h-4 w-4" />}
           hint="Sur la période"
+          href="/admin/cours?status=PUBLISHED"
         />
         <KpiCard
           label="Élèves actifs"
           value={kpis.activeStudents30d}
           icon={<Activity className="h-4 w-4" />}
           hint="Au moins 1 leçon ces 30 j"
+          href="/admin/analytics/apprentissage"
         />
         <KpiCard
           label="Complétion moyenne"
           value={`${kpis.averageCompletionPercent} %`}
           icon={<CheckCircle2 className="h-4 w-4" />}
           hint="Inscriptions de la période"
+          href="/admin/analytics/apprentissage"
         />
         <KpiCard
           label="En attente modération"
@@ -240,14 +247,16 @@ export default async function AdminOverviewPage({ searchParams }: PageProps) {
             {byCategory.length > 0 ? (
               <ul className="mt-3 space-y-1 text-xs">
                 {byCategory.slice(0, 5).map((c) => (
-                  <li
-                    key={c.categoryId}
-                    className="flex items-center justify-between gap-2 text-muted-foreground"
-                  >
-                    <span className="truncate">{c.categoryName}</span>
-                    <span className="font-medium text-foreground">
-                      {(c.revenueCents / 100).toLocaleString("fr-FR", { minimumFractionDigits: 2 })}
-                    </span>
+                  <li key={c.categoryId}>
+                    <Link
+                      href={`/admin/cours?categoryId=${c.categoryId}`}
+                      className="flex items-center justify-between gap-2 rounded px-1 py-0.5 text-muted-foreground hover:bg-muted/50 hover:text-foreground"
+                    >
+                      <span className="truncate">{c.categoryName}</span>
+                      <span className="font-medium text-foreground">
+                        {(c.revenueCents / 100).toLocaleString("fr-FR", { minimumFractionDigits: 2 })}
+                      </span>
+                    </Link>
                   </li>
                 ))}
               </ul>

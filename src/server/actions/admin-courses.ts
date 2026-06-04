@@ -5,6 +5,7 @@
 import { revalidatePath, updateTag } from "next/cache";
 
 import { requireAnyAdminRole } from "@/lib/auth/authorization";
+import { failedCriteriaLabels } from "@/lib/validators/course-publish";
 import { prisma } from "@/lib/prisma";
 import { createAuditLog } from "@/server/services/audit-log";
 
@@ -40,6 +41,26 @@ async function audit(
 
 export async function approveCourse(courseId: string): Promise<ActionResult> {
   const admin = await requireAdmin();
+  const course = await prisma.course.findUnique({
+    where: { id: courseId },
+    select: {
+      title: true,
+      description: true,
+      thumbnailUrl: true,
+      sections: { select: { lessons: { select: { id: true } } } },
+    },
+  });
+  if (!course) return { success: false, message: "Cours introuvable." };
+
+  // Garde qualité — même règle que la file de modération.
+  const failed = failedCriteriaLabels(course);
+  if (failed.length > 0) {
+    return {
+      success: false,
+      message: `Publication refusée — critères qualité non remplis : ${failed.join(" · ")}.`,
+    };
+  }
+
   await prisma.course.update({
     where: { id: courseId },
     data: { status: "PUBLISHED", publishedAt: new Date(), rejectionReason: null },

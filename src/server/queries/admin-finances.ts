@@ -150,6 +150,7 @@ export interface FinanceHealthKpis {
   refundRatePercent: number; // refunds / gross
   chargebackCount: number; // disputes ouvertes
   outstandingPayoutsCents: number; // somme à verser aux formateurs (PENDING)
+  stalePendingOrders: number; // commandes PENDING/PROCESSING depuis > 48h (webhook perdu ?)
 }
 
 export async function getFinanceHealthKpis(range: {
@@ -164,7 +165,7 @@ export async function getFinanceHealthKpis(range: {
 
   // SUM côté base (aggregate _sum) au lieu de charger toutes les lignes pour
   // les additionner en JS — même résultat, charge mémoire constante.
-  const [grossAgg, refundsAgg, prevGrossAgg, prevRefundsAgg, chargebacks, payouts] =
+  const [grossAgg, refundsAgg, prevGrossAgg, prevRefundsAgg, chargebacks, payouts, stalePending] =
     await Promise.all([
       prisma.orderItem.aggregate({
         where: {
@@ -202,6 +203,14 @@ export async function getFinanceHealthKpis(range: {
         where: { status: { in: ["PENDING", "PROCESSING"] } },
         _sum: { amountCents: true },
       }),
+      // Commandes coincées en PENDING/PROCESSING depuis > 48h : signe d'un
+      // webhook PSP perdu → l'élève a peut-être payé sans recevoir l'accès.
+      prisma.order.count({
+        where: {
+          status: { in: ["PENDING", "PROCESSING"] },
+          createdAt: { lt: new Date(Date.now() - 48 * 3600 * 1000) },
+        },
+      }),
     ]);
 
   const grossCents = grossAgg._sum.totalCents ?? 0;
@@ -215,6 +224,7 @@ export async function getFinanceHealthKpis(range: {
     refundRatePercent: grossCents > 0 ? (refundsCents / grossCents) * 100 : 0,
     chargebackCount: chargebacks,
     outstandingPayoutsCents: payouts._sum.amountCents ?? 0,
+    stalePendingOrders: stalePending,
   };
 }
 

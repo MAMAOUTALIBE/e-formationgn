@@ -1,6 +1,11 @@
 import type { Metadata } from "next";
 
-import { Card, CardContent } from "@/components/ui/card";
+import { auth } from "@/auth";
+import {
+  RevokeRoleButton,
+  RoleAssignForm,
+} from "@/components/features/admin/role-manager";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { prisma } from "@/lib/prisma";
 
@@ -9,6 +14,8 @@ export const metadata: Metadata = { title: "Rôles & permissions" };
 export const dynamic = "force-dynamic";
 
 export default async function AdminRolesPage() {
+  const session = await auth();
+  const currentUserId = session?.user?.id;
   const roleHolders = await prisma.user.findMany({
     where: {
       role: { in: ["ADMIN", "MODERATOR", "SUPPORT", "FINANCE"] },
@@ -58,6 +65,15 @@ export default async function AdminRolesPage() {
       </Card>
 
       <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Attribuer un rôle</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <RoleAssignForm />
+        </CardContent>
+      </Card>
+
+      <Card>
         <CardContent className="overflow-x-auto p-0">
           <table className="w-full min-w-[600px] text-sm">
             <thead className="border-b border-border bg-muted/40 text-left text-xs uppercase tracking-wide text-muted-foreground">
@@ -65,6 +81,7 @@ export default async function AdminRolesPage() {
                 <th className="px-4 py-3">Compte</th>
                 <th className="px-4 py-3">Rôle</th>
                 <th className="px-4 py-3">Créé le</th>
+                <th className="px-4 py-3 text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
@@ -81,6 +98,13 @@ export default async function AdminRolesPage() {
                   </td>
                   <td className="px-4 py-3 text-xs text-muted-foreground">
                     {u.createdAt.toLocaleDateString("fr-FR")}
+                  </td>
+                  <td className="px-4 py-3 text-right">
+                    <RevokeRoleButton
+                      userId={u.id}
+                      email={u.email}
+                      isSelf={u.id === currentUserId}
+                    />
                   </td>
                 </tr>
               ))}

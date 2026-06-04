@@ -18,12 +18,15 @@ async function submit(_prev: ActionResult, formData: FormData) {
 
 interface ModerationFormProps {
   courseId: string;
+  /** Tous les critères qualité sont remplis (sinon « Publier » est bloqué). */
+  publishable?: boolean;
 }
 
-export function ModerationForm({ courseId }: ModerationFormProps) {
+export function ModerationForm({ courseId, publishable = true }: ModerationFormProps) {
   const [state, formAction] = useActionState(submit, initialState);
   const [action, setAction] = useState<"approve" | "reject">("approve");
   const errors = state.fieldErrors ?? {};
+  const blockApprove = action === "approve" && !publishable;
 
   return (
     <form action={formAction} className="space-y-4">
@@ -73,7 +76,14 @@ export function ModerationForm({ courseId }: ModerationFormProps) {
         </FormField>
       ) : null}
 
-      <SubmitButton>
+      {blockApprove ? (
+        <p className="text-xs text-[color:var(--brand-danger)]">
+          Critères qualité non remplis (voir la checklist) — publication
+          impossible.
+        </p>
+      ) : null}
+
+      <SubmitButton disabled={blockApprove}>
         {action === "approve" ? "Publier le cours" : "Envoyer le refus"}
       </SubmitButton>
     </form>

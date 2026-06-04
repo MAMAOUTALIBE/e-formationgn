@@ -8,11 +8,13 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatDurationFromSeconds } from "@/lib/format/duration";
 import { formatPrice } from "@/lib/money";
+import { getPublishCriteria } from "@/lib/validators/course-publish";
 import {
   setInternalNotesOnCourse,
   toggleFeaturedCourse,
 } from "@/server/actions/admin-courses";
 import { getAdminCourse } from "@/server/queries/admin";
+import { Check, X } from "lucide-react";
 
 export const metadata: Metadata = {
   title: "Examiner un cours",
@@ -30,6 +32,8 @@ export default async function AdminCourseReviewPage({ params }: PageProps) {
   if (!course) notFound();
 
   const totalLessons = course.sections.reduce((acc, s) => acc + s.lessons.length, 0);
+  const publishCriteria = getPublishCriteria(course);
+  const publishable = publishCriteria.every((c) => c.ok);
 
   return (
     <div className="space-y-6">
@@ -132,10 +136,43 @@ export default async function AdminCourseReviewPage({ params }: PageProps) {
         <aside className="space-y-4 lg:sticky lg:top-24 lg:self-start">
           <Card>
             <CardHeader>
+              <CardTitle className="text-base">Checklist qualité</CardTitle>
+              <CardDescription>
+                {publishable
+                  ? "Tous les critères sont remplis — prêt à publier."
+                  : "Critères requis avant publication."}
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <ul className="space-y-2">
+                {publishCriteria.map((c) => (
+                  <li key={c.key} className="flex items-start gap-2 text-sm">
+                    {c.ok ? (
+                      <Check
+                        className="mt-0.5 h-4 w-4 shrink-0 text-[color:var(--brand-success)]"
+                        aria-label="rempli"
+                      />
+                    ) : (
+                      <X
+                        className="mt-0.5 h-4 w-4 shrink-0 text-[color:var(--brand-danger)]"
+                        aria-label="manquant"
+                      />
+                    )}
+                    <span className={c.ok ? "text-muted-foreground" : "text-foreground"}>
+                      {c.label}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
               <CardTitle className="text-base">Décision de modération</CardTitle>
             </CardHeader>
             <CardContent>
-              <ModerationForm courseId={course.id} />
+              <ModerationForm courseId={course.id} publishable={publishable} />
             </CardContent>
           </Card>
 

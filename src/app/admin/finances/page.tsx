@@ -16,6 +16,7 @@ import { DateRangePicker } from "@/components/ui/date-range-picker";
 import { periodToRange } from "@/lib/admin/period";
 import { readPeriod } from "@/lib/admin/period-server";
 import { KpiCard } from "@/components/ui/kpi-card";
+import { formatPriceFromCents } from "@/lib/money";
 import {
   getFinanceHealthKpis,
   getFinancesKpis,
@@ -120,6 +121,31 @@ export default async function AdminFinancesPage({ searchParams }: PageProps) {
         </section>
       ) : null}
 
+      {health.stalePendingOrders > 0 ? (
+        <section className="flex items-start gap-3 rounded-lg border border-[color:var(--brand-danger)]/30 bg-[color:var(--brand-danger)]/5 p-4">
+          <AlertTriangle
+            className="mt-0.5 h-5 w-5 shrink-0 text-[color:var(--brand-danger)]"
+            aria-hidden
+          />
+          <div className="flex-1 text-sm">
+            <p className="font-semibold text-foreground">
+              {health.stalePendingOrders} commande
+              {health.stalePendingOrders > 1 ? "s" : ""} en cours depuis plus de 48 h
+            </p>
+            <p className="mt-0.5 text-muted-foreground">
+              Webhook PSP possiblement perdu : un élève a pu payer sans recevoir
+              l&apos;accès. Lancez la réconciliation ou vérifiez chez le PSP.
+            </p>
+          </div>
+          <Link
+            href="/admin/finances/transactions?status=PENDING"
+            className="shrink-0 text-sm font-medium text-[color:var(--brand-danger)] hover:underline"
+          >
+            Voir les commandes →
+          </Link>
+        </section>
+      ) : null}
+
       {/* KPIs santé financière — pattern Stripe Dashboard */}
       <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <KpiCard
@@ -178,6 +204,18 @@ export default async function AdminFinancesPage({ searchParams }: PageProps) {
           label="Revenus bruts USD"
           value={`${(kpis.grossByCurrency.USD / 100).toLocaleString("fr-FR", { minimumFractionDigits: 2 })} $`}
           icon={<Coins className="h-4 w-4" />}
+        />
+        <KpiCard
+          label="Revenus bruts GNF"
+          value={formatPriceFromCents(kpis.grossByCurrency.GNF, "GNF")}
+          icon={<Coins className="h-4 w-4" />}
+          hint="CinetPay — Mobile Money Guinée"
+        />
+        <KpiCard
+          label="Revenus bruts XOF"
+          value={formatPriceFromCents(kpis.grossByCurrency.XOF, "XOF")}
+          icon={<Coins className="h-4 w-4" />}
+          hint="CinetPay — zone CFA"
         />
         <KpiCard
           label="Commission plateforme EUR"

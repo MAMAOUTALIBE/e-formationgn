@@ -3,6 +3,7 @@
 // Server Actions Sécurité : audit export, gestion sessions, IP bans, RGPD.
 
 import { revalidatePath } from "next/cache";
+import { z } from "zod";
 
 import { requireAdmin } from "@/lib/auth/authorization";
 import { rowsToCsv } from "@/lib/csv";
@@ -10,6 +11,95 @@ import { prisma } from "@/lib/prisma";
 import { createAuditLog } from "@/server/services/audit-log";
 
 import type { ActionResult } from "./auth";
+
+// --- Attribution / révocation des rôles administratifs --------------------
+// Réservé à l'ADMIN (requireAdmin). Journalisé. Évite de passer par du SQL
+// direct pour promouvoir un MODERATOR/SUPPORT/FINANCE.
+
+const ASSIGNABLE_ROLES = ["ADMIN", "MODERATOR", "SUPPORT", "FINANCE"] as const;
+
+const assignRoleSchema = z
+  .object({
+    email: z.string().trim().toLowerCase().email("Email invalide."),
+    role: z.enum(ASSIGNABLE_ROLES),
+  })
+  .strict();
+
+export async function assignAdminRole(
+  _prev: ActionResult,
+  formData: FormData,
+): Promise<ActionResult> {
+  const admin = await requireAdmin();
+  const parsed = assignRoleSchema.safeParse({
+    email: formData.get("email"),
+    role: formData.get("role"),
+  });
+  if (!parsed.success) {
+    return { success: false, fieldErrors: parsed.error.flatten().fieldErrors };
+  }
+
+  const user = await prisma.user.findUnique({
+    where: { email: parsed.data.email },
+    select: { id: true, role: true },
+  });
+  if (!user) {
+    return { success: false, message: "Aucun compte avec cet email." };
+  }
+  if (user.role === parsed.data.role) {
+    return { success: false, message: `Ce compte est déjà ${parsed.data.role}.` };
+  }
+
+  await prisma.user.update({
+    where: { id: user.id },
+    // ADMIN obtient aussi les capacités formateur ; les autres rôles ne
+    // touchent pas isInstructor (undefined = champ inchangé).
+    data: {
+      role: parsed.data.role,
+      isInstructor: parsed.data.role === "ADMIN" ? true : undefined,
+    },
+  });
+  await createAuditLog({
+    actorId: admin.userId,
+    action: "user.role-assign",
+    targetType: "User",
+    targetId: user.id,
+    metadata: { from: user.role, to: parsed.data.role },
+  });
+  revalidatePath("/admin/securite/roles");
+  return {
+    success: true,
+    message: `Rôle ${parsed.data.role} attribué à ${parsed.data.email}.`,
+  };
+}
+
+export async function revokeAdminRole(userId: string): Promise<ActionResult> {
+  const admin = await requireAdmin();
+  if (userId === admin.userId) {
+    return {
+      success: false,
+      message: "Vous ne pouvez pas révoquer votre propre rôle.",
+    };
+  }
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { role: true, email: true },
+  });
+  if (!user) return { success: false, message: "Compte introuvable." };
+
+  await prisma.user.update({
+    where: { id: userId },
+    data: { role: "STUDENT", isInstructor: false },
+  });
+  await createAuditLog({
+    actorId: admin.userId,
+    action: "user.role-revoke",
+    targetType: "User",
+    targetId: userId,
+    metadata: { from: user.role },
+  });
+  revalidatePath("/admin/securite/roles");
+  return { success: true, message: `Rôle de ${user.email} révoqué (→ STUDENT).` };
+}
 
 export async function exportAuditLogCsv(): Promise<
   { csv: string; filename: string } | { error: string }

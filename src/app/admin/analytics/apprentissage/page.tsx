@@ -1,21 +1,29 @@
 import type { Metadata } from "next";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { DateRangePicker } from "@/components/ui/date-range-picker";
 import { KpiCard } from "@/components/ui/kpi-card";
+import { periodToRange } from "@/lib/admin/period";
+import { readPeriod } from "@/lib/admin/period-server";
 import { prisma } from "@/lib/prisma";
 
 export const metadata: Metadata = { title: "Apprentissage — stats" };
 
 export const dynamic = "force-dynamic";
 
-function thirtyDaysAgo() {
-  return new Date(Date.now() - 30 * 24 * 3600 * 1000);
+interface PageProps {
+  searchParams: Promise<{ period?: string }>;
 }
 
-export default async function LearningStatsPage() {
+export default async function LearningStatsPage({ searchParams }: PageProps) {
+  const params = await searchParams;
+  const period = await readPeriod(params.period ?? null);
+  const range = periodToRange(period);
+  const inRange = { gte: range.from, lte: range.to };
+
   const [
     totalCertificates,
-    certificatesThisMonth,
+    certificatesInPeriod,
     quizAttempts,
     quizPasses,
     avgScore,
@@ -24,21 +32,21 @@ export default async function LearningStatsPage() {
   ] = await Promise.all([
     prisma.certificate.count({}),
     prisma.certificate.count({
-      where: { issuedAt: { gte: thirtyDaysAgo() } },
+      where: { issuedAt: inRange },
     }),
     prisma.quizAttempt.count({
-      where: { completedAt: { not: null } },
+      where: { completedAt: inRange },
     }),
     prisma.quizAttempt.count({
-      where: { passed: true },
+      where: { passed: true, completedAt: inRange },
     }),
     prisma.quizAttempt.aggregate({
       _avg: { score: true },
-      where: { completedAt: { not: null } },
+      where: { completedAt: inRange },
     }),
     prisma.quizAttempt.groupBy({
       by: ["quizId"],
-      where: { completedAt: { not: null } },
+      where: { completedAt: inRange },
       _count: { _all: true },
       _avg: { score: true },
       orderBy: { _count: { quizId: "desc" } },
@@ -70,19 +78,22 @@ export default async function LearningStatsPage() {
 
   return (
     <div className="space-y-6">
-      <header>
-        <h1 className="text-2xl font-semibold tracking-tight text-foreground">
-          Statistiques apprentissage
-        </h1>
-        <p className="text-sm text-muted-foreground">
-          Engagement des élèves : quiz, certificats, taux de complétion.
-        </p>
+      <header className="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight text-foreground">
+            Statistiques apprentissage
+          </h1>
+          <p className="text-sm text-muted-foreground">
+            Engagement des élèves : quiz, certificats, taux de complétion.
+          </p>
+        </div>
+        <DateRangePicker />
       </header>
 
       <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <KpiCard label="Certificats émis" value={totalCertificates} />
-        <KpiCard label="Certificats (30 j)" value={certificatesThisMonth} />
-        <KpiCard label="Tentatives quiz" value={quizAttempts} />
+        <KpiCard label="Certificats émis (total)" value={totalCertificates} />
+        <KpiCard label="Certificats (période)" value={certificatesInPeriod} />
+        <KpiCard label="Tentatives quiz (période)" value={quizAttempts} />
         <KpiCard
           label="Taux de réussite quiz"
           value={`${passRate} %`}

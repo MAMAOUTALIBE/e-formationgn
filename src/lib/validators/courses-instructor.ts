@@ -5,6 +5,7 @@
 import { z } from "zod";
 
 import { COURSE_LEVELS } from "./courses";
+import { PLACEHOLDER_DESCRIPTION } from "./course-publish";
 
 const slugFromTitle = z
   .string()
@@ -47,7 +48,10 @@ export const updateCourseGeneralSchema = z
       .string()
       .trim()
       .min(50, "Décrivez votre cours en au moins 50 caractères.")
-      .max(8000, "La description est trop longue."),
+      .max(8000, "La description est trop longue.")
+      .refine((d) => d !== PLACEHOLDER_DESCRIPTION, {
+        message: "Remplacez le texte par défaut par une vraie description.",
+      }),
     categoryId: z.string().min(1, "Sélectionnez une catégorie."),
     level: z.enum(COURSE_LEVELS),
     thumbnailUrl: coverMediaUrl,
