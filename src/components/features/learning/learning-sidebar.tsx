@@ -19,7 +19,9 @@ import {
   HelpCircle,
   Paperclip,
   PlayCircle,
+  Search,
 } from "lucide-react";
+import { useState } from "react";
 
 import { cn } from "@/lib/utils";
 import { formatDurationFromSeconds, formatLessonDuration } from "@/lib/format/duration";
@@ -30,6 +32,8 @@ interface LessonSummary {
   title: string;
   type: LessonType;
   videoDurationSeconds: number;
+  /** La leçon a une ressource téléchargeable (affiche un trombone). */
+  hasResource?: boolean;
 }
 
 interface SectionSummary {
@@ -51,9 +55,48 @@ export function LearningSidebar({
   completedLessonIds,
   currentLessonId,
 }: LearningSidebarProps) {
+  const [query, setQuery] = useState("");
+  const q = query.trim().toLowerCase();
+
+  // Filtrage : on garde l'index d'origine de chaque section pour conserver la
+  // numérotation « Section N » même quand on filtre.
+  const filteredSections = sections
+    .map((section, index) => {
+      if (!q) return { section, index };
+      const sectionMatches = section.title.toLowerCase().includes(q);
+      const lessons = sectionMatches
+        ? section.lessons
+        : section.lessons.filter((l) => l.title.toLowerCase().includes(q));
+      return { section: { ...section, lessons }, index };
+    })
+    .filter(({ section }) => section.lessons.length > 0);
+
   return (
     <nav aria-label="Programme du cours" className="divide-y divide-border">
-      {sections.map((section, index) => {
+      <div className="border-b border-border p-3">
+        <div className="relative">
+          <Search
+            className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
+            aria-hidden
+          />
+          <input
+            type="search"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Rechercher une leçon…"
+            aria-label="Rechercher une leçon"
+            className="w-full rounded-md border border-border bg-background py-1.5 pl-8 pr-3 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+          />
+        </div>
+      </div>
+
+      {filteredSections.length === 0 ? (
+        <p className="px-4 py-6 text-center text-sm text-muted-foreground">
+          Aucune leçon ne correspond à « {query} ».
+        </p>
+      ) : null}
+
+      {filteredSections.map(({ section, index }) => {
         const total = section.lessons.length;
         const completed = section.lessons.filter((l) =>
           completedLessonIds.has(l.id),
@@ -69,7 +112,7 @@ export function LearningSidebar({
         return (
           <details
             key={section.id}
-            open={containsCurrent}
+            open={containsCurrent || q !== ""}
             className="group"
           >
             <summary className="flex cursor-pointer list-none items-start gap-3 bg-muted/40 px-4 py-3 transition-colors hover:bg-muted/70">
@@ -135,6 +178,15 @@ export function LearningSidebar({
                                 {formatLessonDuration(lesson.videoDurationSeconds)}
                               </span>
                             </>
+                          ) : null}
+                          {lesson.hasResource ? (
+                            <span
+                              className="ml-1 inline-flex items-center gap-0.5 text-[color:var(--brand-secondary)]"
+                              title="Ressource téléchargeable"
+                            >
+                              <Paperclip className="h-3 w-3" aria-hidden />
+                              Ressource
+                            </span>
                           ) : null}
                         </p>
                       </div>

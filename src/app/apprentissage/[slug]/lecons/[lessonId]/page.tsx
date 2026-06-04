@@ -12,6 +12,7 @@ import {
 } from "@/components/features/learning/focus-mode-provider";
 import { LearningHeader } from "@/components/features/learning/learning-header";
 import { LearningSidebar } from "@/components/features/learning/learning-sidebar";
+import { LearningSidebarPanel } from "@/components/features/learning/learning-sidebar-panel";
 import { LearningTabs } from "@/components/features/learning/learning-tabs";
 import { LessonBookmarkButton } from "@/components/features/learning/lesson-bookmark-button";
 import { LessonCompletionToggle } from "@/components/features/learning/lesson-completion-toggle";
@@ -141,7 +142,6 @@ export default async function LessonViewerPage({ params }: PageProps) {
   );
 
   const notesContent = <LessonNotes lessonId={lesson.id} initialNotes={notes} />;
-  const tutorContent = <LessonTutor lessonId={lesson.id} />;
   const announcementsContent = <CourseAnnouncements announcements={announcements} />;
 
   const reviewsContent = (
@@ -204,7 +204,6 @@ export default async function LessonViewerPage({ params }: PageProps) {
       badge: reviewsBundle.totalRatings > 0 ? reviewsBundle.totalRatings : undefined,
       content: reviewsContent,
     },
-    { key: "tutor", label: "Tuteur IA", content: tutorContent },
     { key: "resources", label: "Ressources", content: resourcesContent },
   ];
 
@@ -249,6 +248,12 @@ export default async function LessonViewerPage({ params }: PageProps) {
                       initialPositionSeconds={lessonProgress?.lastPositionSeconds ?? 0}
                       durationSeconds={lesson.videoDurationSeconds}
                       title={lesson.title}
+                      nextLessonHref={
+                        next
+                          ? `/apprentissage/${course.slug}/lecons/${next.id}`
+                          : null
+                      }
+                      nextLessonTitle={next?.title ?? null}
                     />
                   ) : (
                     <div className="flex aspect-video items-center justify-center bg-black/90 px-6 text-center text-sm text-muted-foreground">
@@ -334,27 +339,34 @@ export default async function LessonViewerPage({ params }: PageProps) {
             aria-label="Programme du cours"
             className="order-2 border-l border-border bg-card lg:sticky lg:top-14 lg:max-h-[calc(100vh-3.5rem)] lg:overflow-y-auto"
           >
-            <div className="border-b border-border bg-muted/40 px-4 py-3">
-              <h2 className="text-sm font-semibold text-foreground">Contenu du cours</h2>
-              <p className="mt-0.5 text-xs text-muted-foreground tabular-nums">
-                {completedLessons} / {totalLessons} leçon
-                {totalLessons > 1 ? "s" : ""} · {progressPercent} %
-              </p>
-            </div>
-            <LearningSidebar
-              courseSlug={course.slug}
-              sections={course.sections.map((s) => ({
-                id: s.id,
-                title: s.title,
-                lessons: s.lessons.map((l) => ({
-                  id: l.id,
-                  title: l.title,
-                  type: l.type,
-                  videoDurationSeconds: l.videoDurationSeconds,
-                })),
-              }))}
-              completedLessonIds={completedIds}
-              currentLessonId={lesson.id}
+            <LearningSidebarPanel
+              header={
+                <div className="border-b border-border bg-muted/40 px-4 py-3">
+                  <p className="text-xs text-muted-foreground tabular-nums">
+                    {completedLessons} / {totalLessons} leçon
+                    {totalLessons > 1 ? "s" : ""} · {progressPercent} %
+                  </p>
+                </div>
+              }
+              curriculum={
+                <LearningSidebar
+                  courseSlug={course.slug}
+                  sections={course.sections.map((s) => ({
+                    id: s.id,
+                    title: s.title,
+                    lessons: s.lessons.map((l) => ({
+                      id: l.id,
+                      title: l.title,
+                      type: l.type,
+                      videoDurationSeconds: l.videoDurationSeconds,
+                      hasResource: Boolean(l.resourceUrl),
+                    })),
+                  }))}
+                  completedLessonIds={completedIds}
+                  currentLessonId={lesson.id}
+                />
+              }
+              tutor={<LessonTutor lessonId={lesson.id} />}
             />
           </aside>
         </div>

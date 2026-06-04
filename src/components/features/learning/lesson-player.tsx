@@ -4,8 +4,9 @@
 // fallback sur une balise <video> HTML5 native quand un externalVideoUrl
 // est présent (utile pour le seed démo Blender ou tout contenu hors-Mux).
 
-import { useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { Play, X } from "lucide-react";
 
 import { recordLessonProgress } from "@/server/actions/learning";
 
@@ -21,9 +22,14 @@ interface LessonPlayerProps {
   durationSeconds?: number;
   thumbnail?: string | null;
   title?: string;
+  /** Lien vers la leçon suivante — déclenche l'auto-avance en fin de vidéo. */
+  nextLessonHref?: string | null;
+  /** Titre de la leçon suivante (affiché dans l'overlay). */
+  nextLessonTitle?: string | null;
 }
 
 const COMPLETION_THRESHOLD = 0.95; // 95 % regardé = leçon terminée
+const AUTO_ADVANCE_SECONDS = 5;
 
 export function LessonPlayer({
   playbackId,
@@ -34,6 +40,8 @@ export function LessonPlayer({
   durationSeconds = 0,
   thumbnail,
   title,
+  nextLessonHref,
+  nextLessonTitle,
 }: LessonPlayerProps) {
   if (playbackId) {
     return (
@@ -45,6 +53,8 @@ export function LessonPlayer({
         durationSeconds={durationSeconds}
         thumbnail={thumbnail}
         title={title}
+        nextLessonHref={nextLessonHref}
+        nextLessonTitle={nextLessonTitle}
       />
     );
   }
@@ -57,10 +67,96 @@ export function LessonPlayer({
         durationSeconds={durationSeconds}
         poster={thumbnail ?? undefined}
         title={title}
+        nextLessonHref={nextLessonHref}
+        nextLessonTitle={nextLessonTitle}
       />
     );
   }
   return null;
+}
+
+// ---------------------------------------------------------------------------
+// Auto-avance : décompte + navigation vers la leçon suivante en fin de vidéo.
+// ---------------------------------------------------------------------------
+
+function useAutoAdvance(nextLessonHref?: string | null) {
+  const router = useRouter();
+  const [countdown, setCountdown] = useState<number | null>(null);
+  const startRef = useRef<() => void>(() => {});
+
+  useEffect(() => {
+    startRef.current = () => {
+      if (nextLessonHref) setCountdown(AUTO_ADVANCE_SECONDS);
+    };
+  }, [nextLessonHref]);
+
+  useEffect(() => {
+    if (countdown === null) return;
+    if (countdown <= 0) {
+      if (nextLessonHref) router.push(nextLessonHref);
+      return;
+    }
+    const timer = setTimeout(
+      () => setCountdown((c) => (c === null ? null : c - 1)),
+      1000,
+    );
+    return () => clearTimeout(timer);
+  }, [countdown, nextLessonHref, router]);
+
+  // `trigger` est stable (useCallback) pour pouvoir être appelé depuis l'effet
+  // du player sans le ré-exécuter ni écrire un ref pendant le render.
+  const trigger = useCallback(() => startRef.current(), []);
+
+  return {
+    countdown,
+    /** À appeler en fin de vidéo. */
+    trigger,
+    goNow: () => {
+      if (nextLessonHref) router.push(nextLessonHref);
+    },
+    cancel: () => setCountdown(null),
+  };
+}
+
+function AutoAdvanceOverlay({
+  countdown,
+  nextLessonTitle,
+  onNow,
+  onCancel,
+}: {
+  countdown: number;
+  nextLessonTitle?: string | null;
+  onNow: () => void;
+  onCancel: () => void;
+}) {
+  return (
+    <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-4 bg-black/80 px-6 text-center text-white">
+      <p className="text-xs uppercase tracking-wide text-white/70">
+        Leçon suivante dans {countdown} s
+      </p>
+      {nextLessonTitle ? (
+        <p className="max-w-md text-lg font-semibold">{nextLessonTitle}</p>
+      ) : null}
+      <div className="flex items-center gap-3">
+        <button
+          type="button"
+          onClick={onNow}
+          className="inline-flex items-center gap-2 rounded-md bg-white px-4 py-2 text-sm font-medium text-black hover:bg-white/90"
+        >
+          <Play className="h-4 w-4" />
+          Lancer maintenant
+        </button>
+        <button
+          type="button"
+          onClick={onCancel}
+          className="inline-flex items-center gap-2 rounded-md border border-white/40 px-4 py-2 text-sm font-medium text-white hover:bg-white/10"
+        >
+          <X className="h-4 w-4" />
+          Annuler
+        </button>
+      </div>
+    </div>
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -75,6 +171,8 @@ interface MuxLessonPlayerProps {
   durationSeconds: number;
   thumbnail?: string | null;
   title?: string;
+  nextLessonHref?: string | null;
+  nextLessonTitle?: string | null;
 }
 
 function MuxLessonPlayer({
@@ -85,11 +183,15 @@ function MuxLessonPlayer({
   durationSeconds,
   thumbnail,
   title,
+  nextLessonHref,
+  nextLessonTitle,
 }: MuxLessonPlayerProps) {
   const router = useRouter();
   const containerRef = useRef<HTMLDivElement>(null);
   const lastReportRef = useRef<number>(0);
   const completedRef = useRef(false);
+  const autoAdvance = useAutoAdvance(nextLessonHref);
+  const advanceTrigger = autoAdvance.trigger;
 
   useEffect(() => {
     void import("@mux/mux-player");
@@ -135,6 +237,7 @@ function MuxLessonPlayer({
     function handleEnded() {
       const alreadyCompleted = completedRef.current;
       completedRef.current = true;
+      advanceTrigger(); // overlay « leçon suivante » + décompte
       void recordLessonProgress({
         lessonId,
         isCompleted: true,
@@ -152,10 +255,10 @@ function MuxLessonPlayer({
       player.removeEventListener("timeupdate", handleTimeUpdate);
       player.removeEventListener("ended", handleEnded);
     };
-  }, [lessonId, durationSeconds, router]);
+  }, [lessonId, durationSeconds, router, advanceTrigger]);
 
   return (
-    <div ref={containerRef} className="overflow-hidden rounded-lg bg-black">
+    <div ref={containerRef} className="relative overflow-hidden rounded-lg bg-black">
       <mux-player
         playback-id={playbackId}
         playback-token={playbackToken || undefined}
@@ -168,6 +271,14 @@ function MuxLessonPlayer({
         poster={thumbnail || undefined}
         style={{ width: "100%", aspectRatio: "16 / 9" }}
       />
+      {autoAdvance.countdown !== null ? (
+        <AutoAdvanceOverlay
+          countdown={autoAdvance.countdown}
+          nextLessonTitle={nextLessonTitle}
+          onNow={autoAdvance.goNow}
+          onCancel={autoAdvance.cancel}
+        />
+      ) : null}
     </div>
   );
 }
@@ -183,6 +294,8 @@ interface NativeLessonPlayerProps {
   durationSeconds: number;
   poster?: string;
   title?: string;
+  nextLessonHref?: string | null;
+  nextLessonTitle?: string | null;
 }
 
 function NativeLessonPlayer({
@@ -192,11 +305,15 @@ function NativeLessonPlayer({
   durationSeconds,
   poster,
   title,
+  nextLessonHref,
+  nextLessonTitle,
 }: NativeLessonPlayerProps) {
   const router = useRouter();
   const videoRef = useRef<HTMLVideoElement>(null);
   const lastReportRef = useRef<number>(0);
   const completedRef = useRef(false);
+  const autoAdvance = useAutoAdvance(nextLessonHref);
+  const advanceTrigger = autoAdvance.trigger;
 
   useEffect(() => {
     const video = videoRef.current;
@@ -244,6 +361,7 @@ function NativeLessonPlayer({
     function handleEnded() {
       const alreadyCompleted = completedRef.current;
       completedRef.current = true;
+      advanceTrigger(); // overlay « leçon suivante » + décompte
       void recordLessonProgress({
         lessonId,
         isCompleted: true,
@@ -261,10 +379,10 @@ function NativeLessonPlayer({
       video.removeEventListener("timeupdate", handleTimeUpdate);
       video.removeEventListener("ended", handleEnded);
     };
-  }, [lessonId, durationSeconds, initialPositionSeconds, router]);
+  }, [lessonId, durationSeconds, initialPositionSeconds, router, advanceTrigger]);
 
   return (
-    <div className="overflow-hidden rounded-lg bg-black">
+    <div className="relative overflow-hidden rounded-lg bg-black">
       <video
         ref={videoRef}
         src={src}
@@ -277,6 +395,14 @@ function NativeLessonPlayer({
       >
         Votre navigateur ne supporte pas la lecture vidéo HTML5.
       </video>
+      {autoAdvance.countdown !== null ? (
+        <AutoAdvanceOverlay
+          countdown={autoAdvance.countdown}
+          nextLessonTitle={nextLessonTitle}
+          onNow={autoAdvance.goNow}
+          onCancel={autoAdvance.cancel}
+        />
+      ) : null}
     </div>
   );
 }

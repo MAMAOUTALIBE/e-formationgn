@@ -4,7 +4,6 @@ import { Suspense } from "react";
 
 import { AffiliateTracker } from "@/components/features/affiliate/affiliate-tracker";
 import { ImpersonationBanner } from "@/components/features/admin/impersonation-banner";
-import { TestModeBanner } from "@/components/features/payments/test-mode-banner";
 import { PageViewTracker } from "@/components/features/analytics/page-view-tracker";
 import { CookieBanner } from "@/components/features/cookie-consent/cookie-banner";
 import { SitewideBanner } from "@/components/features/marketing/sitewide-banner";
@@ -108,7 +107,6 @@ export default function RootLayout({
     >
       <body className="min-h-full bg-background text-foreground flex flex-col">
         <ThemeProvider>
-          <TestModeBanner />
           <Suspense fallback={null}>
             <ImpersonationBanner />
           </Suspense>
