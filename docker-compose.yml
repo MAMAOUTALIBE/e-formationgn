@@ -38,6 +38,12 @@ services:
       - .env
     expose:
       - "3000"
+    # Persiste les fichiers uploadés sur disque (couvertures, vidéos de leçon,
+    # avatars) quand Cloudflare R2 n'est PAS configuré — sinon ils sont perdus
+    # à chaque `docker compose up -d`. Inutile si R2 est configuré (les uploads
+    # vont alors sur R2), mais sert de filet de sécurité.
+    volumes:
+      - app_uploads:/app/public/uploads
     depends_on:
       db:
         condition: service_healthy
@@ -57,7 +63,13 @@ services:
     networks:
       - internal
 
-  # -------- Cron sidecar : /api/cron/cleanup tous les jours à 3h --------
+  # -------- Cron sidecar --------
+  # Tâches planifiées, toutes protégées par le Bearer CRON_SECRET (les routes
+  # renvoient 401 sans). CRON_SECRET DOIT être présent dans le .env du VPS.
+  #   - process-webhooks (10 min) : rejoue les webhooks PSP non traités
+  #   - reconcile-orders (15 min) : réconcilie les commandes PENDING (webhook
+  #     perdu/tardif → l'élève a payé mais n'a pas accès → corrigé ici)
+  #   - cleanup (3h du matin) : purge des données expirées
   cron:
     image: alpine:3.20
     restart: unless-stopped
@@ -66,7 +78,11 @@ services:
     command: >
       sh -c "
         apk add --no-cache curl tini >/dev/null;
-        echo '0 3 * * * curl -fsS -H \"Authorization: Bearer $$CRON_SECRET\" http://app:3000/api/cron/cleanup >/proc/1/fd/1 2>/proc/1/fd/2' > /etc/crontabs/root;
+        {
+          echo '*/10 * * * * curl -fsS -H \"Authorization: Bearer $$CRON_SECRET\" http://app:3000/api/cron/process-webhooks >/proc/1/fd/1 2>/proc/1/fd/2';
+          echo '*/15 * * * * curl -fsS -H \"Authorization: Bearer $$CRON_SECRET\" http://app:3000/api/cron/reconcile-orders >/proc/1/fd/1 2>/proc/1/fd/2';
+          echo '0 3 * * * curl -fsS -H \"Authorization: Bearer $$CRON_SECRET\" http://app:3000/api/cron/cleanup >/proc/1/fd/1 2>/proc/1/fd/2';
+        } > /etc/crontabs/root;
         exec /sbin/tini -- crond -f -d 8
       "
     depends_on:
@@ -77,6 +93,7 @@ services:
 
 volumes:
   db_data:
+  app_uploads:
 
 networks:
   internal:

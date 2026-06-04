@@ -69,9 +69,11 @@ Renseigne au minimum :
 
 - `DOMAIN` (ex: `e-formation.mondomaine.gn`)
 - `ACME_EMAIL` (pour Let's Encrypt)
-- `POSTGRES_PASSWORD` — `openssl rand -base64 24`
+- `POSTGRES_PASSWORD` — `openssl rand -hex 24` ⚠️ **hex obligatoire** (un mot de passe base64 contient `+`/`/` qui cassent `@prisma/adapter-pg` au runtime → erreur `28P01`)
+- `DATABASE_URL` / `DIRECT_URL` — reprendre les `POSTGRES_*` ci-dessus, hôte = service `db` (ex: `postgresql://eformationgn:<hex>@db:5432/eformationgn?schema=public`)
 - `NEXTAUTH_SECRET` — `openssl rand -base64 32`
-- `CRON_SECRET` — `openssl rand -hex 32`
+- `NEXTAUTH_URL` / `NEXT_PUBLIC_APP_URL` — `https://${DOMAIN}`
+- `CRON_SECRET` — `openssl rand -hex 32` (requis : le sidecar cron renvoie 401 sans)
 
 Renseigne ensuite (au fur et à mesure) :
 
