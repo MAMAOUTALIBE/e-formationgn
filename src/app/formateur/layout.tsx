@@ -15,6 +15,8 @@ import { Logo } from "@/components/branding/logo";
 import { UserMenu } from "@/components/features/auth/user-menu";
 import { Container } from "@/components/ui/container";
 
+import { InstructorNavItem } from "./_components/instructor-nav-item";
+
 export default async function InstructorLayout({
   children,
 }: {
@@ -53,52 +55,34 @@ export default async function InstructorLayout({
       </header>
 
       <div className="flex flex-1 flex-col lg:flex-row">
-        <aside className="border-b border-border bg-background lg:w-64 lg:border-b-0 lg:border-r">
+        <aside className="border-b border-[#1E293B] bg-[#0F172A] lg:w-64 lg:border-b-0 lg:border-r">
           <nav className="flex gap-2 overflow-x-auto px-4 py-3 lg:flex-col lg:gap-1 lg:px-3 lg:py-6">
-            <NavItem href="/formateur" icon={<GaugeCircle className="h-4 w-4" />}>
+            <InstructorNavItem href="/formateur" exact icon={<GaugeCircle className="h-4 w-4" />}>
               Tableau de bord
-            </NavItem>
-            <NavItem href="/formateur/cours" icon={<BookOpenText className="h-4 w-4" />}>
+            </InstructorNavItem>
+            <InstructorNavItem href="/formateur/cours" icon={<BookOpenText className="h-4 w-4" />}>
               Mes cours
-            </NavItem>
-            <NavItem href="/formateur/questions" icon={<CircleHelp className="h-4 w-4" />}>
+            </InstructorNavItem>
+            <InstructorNavItem href="/formateur/questions" icon={<CircleHelp className="h-4 w-4" />}>
               Q&amp;A
-            </NavItem>
-            <NavItem href="/formateur/avis" icon={<Star className="h-4 w-4" />}>
+            </InstructorNavItem>
+            <InstructorNavItem href="/formateur/avis" icon={<Star className="h-4 w-4" />}>
               Avis
-            </NavItem>
-            <NavItem href="/formateur/paiements" icon={<Wallet className="h-4 w-4" />}>
+            </InstructorNavItem>
+            <InstructorNavItem href="/formateur/paiements" icon={<Wallet className="h-4 w-4" />}>
               Paiements
-            </NavItem>
-            <NavItem href="/formateur/codes-promo" icon={<Tag className="h-4 w-4" />}>
+            </InstructorNavItem>
+            <InstructorNavItem href="/formateur/codes-promo" icon={<Tag className="h-4 w-4" />}>
               Codes promo
-            </NavItem>
-            <NavItem href="/formateur/affiliation" icon={<LinkIcon className="h-4 w-4" />}>
+            </InstructorNavItem>
+            <InstructorNavItem href="/formateur/affiliation" icon={<LinkIcon className="h-4 w-4" />}>
               Affiliation
-            </NavItem>
+            </InstructorNavItem>
           </nav>
         </aside>
 
         <main className="flex-1 px-4 py-8 sm:px-6 lg:px-8">{children}</main>
       </div>
     </div>
-  );
-}
-
-interface NavItemProps {
-  href: string;
-  children: React.ReactNode;
-  icon: React.ReactNode;
-}
-
-function NavItem({ href, children, icon }: NavItemProps) {
-  return (
-    <Link
-      href={href}
-      className="inline-flex shrink-0 items-center gap-2 whitespace-nowrap rounded-md px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-    >
-      <span className="text-muted-foreground">{icon}</span>
-      <span>{children}</span>
-    </Link>
   );
 }
