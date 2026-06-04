@@ -23,6 +23,7 @@ const PUBLIC_COURSE_INCLUDE = {
       lastName: true,
       headline: true,
       image: true,
+      affiliateCode: true,
     },
   },
   category: {

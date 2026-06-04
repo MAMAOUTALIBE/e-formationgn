@@ -24,7 +24,9 @@ export function CourseGrid({ courses, currency, className, emptyMessage }: Cours
   return (
     <div
       className={cn(
-        "grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3",
+        // Grille façon Udemy : cartes compactes, gap resserré. 3 colonnes
+        // (cartes assez larges pour la rangée de pastilles sur une ligne).
+        "grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3",
         className,
       )}
     >
@@ -33,9 +35,8 @@ export function CourseGrid({ courses, currency, className, emptyMessage }: Cours
           key={course.id}
           course={course}
           currency={currency}
-          // Le flyout s'ouvre à droite par défaut. Pour les cartes de la
-          // dernière colonne d'un grid lg:grid-cols-3 (index 2, 5, 8...),
-          // on l'ouvre à gauche pour éviter le débordement viewport.
+          // Flyout à gauche pour la dernière colonne (index 2, 5…) afin d'éviter
+          // le débordement du viewport.
           flyoutSide={idx % 3 === 2 ? "left" : "right"}
         />
       ))}

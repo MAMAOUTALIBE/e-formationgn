@@ -30,7 +30,7 @@ export default async function WishlistPage() {
       course: {
         include: {
           instructor: {
-            select: { id: true, name: true, firstName: true, lastName: true, headline: true, image: true },
+            select: { id: true, name: true, firstName: true, lastName: true, headline: true, image: true, affiliateCode: true },
           },
           category: { select: { id: true, slug: true, name: true } },
         },

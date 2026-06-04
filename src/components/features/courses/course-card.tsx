@@ -1,12 +1,11 @@
+import { Star } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 
-import { Badge } from "@/components/ui/badge";
-import { Stars } from "@/components/ui/stars";
+import { CardWishlistButton } from "@/components/features/wishlist/card-wishlist-button";
 import type { Currency } from "@/generated/prisma/enums";
 import { getCourseBadges } from "@/lib/courses/badges";
-import { COURSE_LEVEL_LABELS, pluralize } from "@/lib/format/labels";
-import { formatDurationFromSeconds } from "@/lib/format/duration";
+import { pluralize } from "@/lib/format/labels";
 import type { PublicCourseListItem } from "@/server/queries/courses";
 
 import { CourseBadges } from "./course-badges";
@@ -22,6 +21,10 @@ interface CourseCardProps {
   hideFlyout?: boolean;
 }
 
+// Carte de cours au format Udemy : image 16:9 (réf. 480×270), badge en
+// overlay, puis titre → formateur → rangée de pastilles (Meilleure vente /
+// type / note / avis) → prix. Compacte. Les infos détaillées (sous-titre,
+// durée, niveau…) restent sur le flyout hover et la fiche du cours.
 export function CourseCard({
   course,
   currency = "EUR",
@@ -41,84 +44,100 @@ export function CourseCard({
     isFeatured: course.isFeatured,
   });
 
+  // % de réduction (devise active) pour le badge promo.
+  const price = currency === "USD" ? Number(course.priceUSD) : Number(course.priceEUR);
+  const discount =
+    currency === "USD" ? course.discountPriceUSD : course.discountPriceEUR;
+  const discountPct =
+    discount != null && price > 0 && Number(discount) < price
+      ? Math.round((1 - Number(discount) / price) * 100)
+      : null;
+
   return (
     <article className="group/card relative flex h-full flex-col overflow-hidden rounded-lg border border-border bg-card text-card-foreground shadow-sm transition-shadow hover:shadow-md">
-      <Link
-        href={`/cours/${course.slug}`}
-        className="block focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-        aria-label={`Voir le cours ${course.title}`}
-      >
-        <div className="relative aspect-video w-full overflow-hidden bg-muted">
-          {course.thumbnailUrl ? (
-            <Image
-              src={course.thumbnailUrl}
-              alt={`Vignette du cours ${course.title}`}
-              fill
-              sizes="(min-width: 1024px) 25vw, (min-width: 640px) 50vw, 100vw"
-              className="object-cover transition-transform duration-200 group-hover/card:scale-[1.02]"
-            />
-          ) : (
-            <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-[color:var(--brand-primary)]/10 via-muted to-[color:var(--brand-accent)]/10">
-              <span className="text-xs uppercase tracking-wide text-muted-foreground">
-                Gandal
-              </span>
-            </div>
-          )}
-        </div>
-      </Link>
+      <div className="relative aspect-video w-full overflow-hidden bg-muted">
+        {course.thumbnailUrl ? (
+          <Image
+            src={course.thumbnailUrl}
+            alt={`Vignette du cours ${course.title}`}
+            fill
+            sizes="(min-width: 1280px) 25vw, (min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
+            className="object-cover transition-transform duration-200 group-hover/card:scale-[1.02]"
+          />
+        ) : (
+          <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-[color:var(--brand-primary)]/10 via-muted to-[color:var(--brand-accent)]/10">
+            <span className="text-xs uppercase tracking-wide text-muted-foreground">
+              Gandal
+            </span>
+          </div>
+        )}
+      </div>
 
-      <div className="flex flex-1 flex-col p-5">
-        {badges.length > 0 ? (
-          <CourseBadges badges={badges} className="mb-2" />
+      {/* Overlays sur l'image (z-10/20 pour rester au-dessus du lien étiré). */}
+      <div className="pointer-events-none absolute left-2 top-2 z-10 flex flex-col items-start gap-1">
+        {badges.length > 0 ? <CourseBadges badges={badges.slice(0, 1)} /> : null}
+        {discountPct != null ? (
+          <span className="rounded bg-[color:var(--brand-danger)] px-1.5 py-0.5 text-[10px] font-bold text-white">
+            -{discountPct}%
+          </span>
         ) : null}
+      </div>
+      <CardWishlistButton
+        courseId={course.id}
+        className="absolute right-2 top-2 z-20"
+      />
 
-        <div className="mb-2 flex flex-wrap items-center gap-1.5">
-          <Badge variant="secondary" className="text-[10px]">
-            {course.category.name}
-          </Badge>
-          <Badge variant="outline" className="text-[10px]">
-            {COURSE_LEVEL_LABELS[course.level]}
-          </Badge>
-        </div>
-
-        <h3 className="line-clamp-2 text-base font-bold leading-snug text-foreground">
-          <Link href={`/cours/${course.slug}`} className="hover:underline">
+      <div className="flex flex-1 flex-col p-3">
+        {/* Lien étiré : toute la carte mène au cours (after:inset-0). */}
+        <h3 className="line-clamp-2 text-[15px] font-bold leading-snug text-foreground">
+          <Link
+            href={`/cours/${course.slug}`}
+            aria-label={`Voir le cours ${course.title}`}
+            className="after:absolute after:inset-0 after:z-0 after:content-[''] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          >
             {course.title}
           </Link>
         </h3>
 
-        {/* Headline marketing : sous-titre mis en avant à la Udemy (italic
-            léger, foreground vs muted, line-clamp 2) — donne un vrai pitch
-            de vente plutôt qu'un descriptif technique discret. */}
-        {course.subtitle ? (
-          <p className="mt-1.5 line-clamp-2 text-sm font-medium leading-snug text-foreground/85">
-            {course.subtitle}
+        {course.instructor.affiliateCode ? (
+          <Link
+            href={`/formateurs/${course.instructor.affiliateCode}`}
+            className="relative z-10 mt-1 block w-fit max-w-full truncate text-xs text-muted-foreground hover:text-foreground hover:underline"
+          >
+            {instructorName}
+          </Link>
+        ) : (
+          <p className="mt-1 truncate text-xs text-muted-foreground">
+            {instructorName}
           </p>
-        ) : null}
+        )}
 
-        <p className="mt-2 text-xs text-muted-foreground">
-          Par <span className="font-medium text-foreground">{instructorName}</span>
-        </p>
-
-        <div className="mt-2 flex items-center gap-2 text-sm">
-          <Stars
-            rating={course.averageRating}
-            size="sm"
-            totalRatings={course.totalRatings}
-          />
-          <span className="font-semibold text-foreground">{course.averageRating.toFixed(1)}</span>
-          <span className="text-xs text-muted-foreground">
-            ({course.totalRatings} {pluralize(course.totalRatings, "avis", "avis")})
+        {/* Rangée de pastilles (une ligne, compacte façon Udemy) :
+            Cours · ★ note · N avis. Le badge marketing est en overlay sur
+            l'image. Note et avis pointent vers la section avis (z-10 pour
+            rester cliquables au-dessus du lien étiré). */}
+        <div className="relative z-10 mt-2 flex w-fit max-w-full flex-wrap items-center gap-1">
+          <span className="inline-flex items-center rounded-md border border-border px-1.5 py-0.5 text-[10px] text-muted-foreground">
+            Cours
           </span>
+          <Link
+            href={`/cours/${course.slug}#reviews`}
+            aria-label={`Voir les avis — note ${course.averageRating.toFixed(1)} sur 5`}
+            className="inline-flex items-center gap-0.5 rounded-md border border-border px-1.5 py-0.5 text-[10px] font-semibold text-foreground hover:border-[color:var(--brand-warning)]"
+          >
+            <Star className="h-3 w-3 fill-[color:var(--brand-warning)] text-[color:var(--brand-warning)]" />
+            {course.averageRating.toFixed(1)}
+          </Link>
+          <Link
+            href={`/cours/${course.slug}#reviews`}
+            className="inline-flex items-center rounded-md border border-border px-1.5 py-0.5 text-[10px] text-muted-foreground hover:text-foreground"
+          >
+            {course.totalRatings.toLocaleString("fr-FR")}{" "}
+            {pluralize(course.totalRatings, "avis", "avis")}
+          </Link>
         </div>
 
-        <p className="mt-1 text-xs text-muted-foreground">
-          {formatDurationFromSeconds(course.durationSeconds)} ·{" "}
-          {course.totalEnrollments.toLocaleString("fr-FR")}{" "}
-          {pluralize(course.totalEnrollments, "élève", "élèves")}
-        </p>
-
-        <div className="mt-auto pt-4">
+        <div className="mt-auto pt-3">
           <CoursePrice
             priceEUR={Number(course.priceEUR)}
             priceUSD={Number(course.priceUSD)}

@@ -100,7 +100,9 @@ export function CourseCarousel({
           {slides.map((slide, i) => (
             <div
               key={i}
-              className="snap-start shrink-0 basis-full sm:basis-[calc((100%-1.5rem)/2)] lg:basis-[calc((100%-3rem)/3)]"
+              // 4 cartes visibles par vue sur grand écran (façon Udemy) : le
+              // reste défile. gap-6 = 1.5rem → 3 gaps entre 4 cartes = 4.5rem.
+              className="snap-start shrink-0 basis-full sm:basis-[calc((100%-1.5rem)/2)] lg:basis-[calc((100%-4.5rem)/4)]"
             >
               {slide}
             </div>

@@ -91,6 +91,7 @@ export default async function PublicInstructorPage({ params }: PageProps) {
               lastName: true,
               headline: true,
               image: true,
+              affiliateCode: true,
             },
           },
           category: { select: { id: true, slug: true, name: true } },
