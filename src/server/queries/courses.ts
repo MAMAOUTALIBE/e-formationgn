@@ -14,7 +14,7 @@ import {
   type CourseSort,
 } from "@/lib/validators/courses";
 
-const PUBLIC_COURSE_INCLUDE = {
+export const PUBLIC_COURSE_INCLUDE = {
   instructor: {
     select: {
       id: true,

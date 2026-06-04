@@ -1,0 +1,206 @@
+// Sections de la page d'accueil : « Comment ça marche », « Pourquoi Gandal »,
+// « Formateurs en vedette ». Composants serveur (pas d'interactivité), aux
+// couleurs de la marque.
+
+import {
+  Award,
+  Clock,
+  GraduationCap,
+  Infinity as InfinityIcon,
+  Languages,
+  PlayCircle,
+  Plus,
+  Search,
+  Smartphone,
+} from "lucide-react";
+import Link from "next/link";
+
+import { Avatar } from "@/components/ui/avatar";
+import { Container } from "@/components/ui/container";
+import type { FeaturedInstructor } from "@/server/queries/instructors-public";
+
+// --- Comment ça marche -----------------------------------------------------
+
+const STEPS = [
+  {
+    icon: Search,
+    title: "Choisissez un cours",
+    text: "Parcourez le catalogue par catégorie ou recherchez le sujet qui vous intéresse.",
+  },
+  {
+    icon: PlayCircle,
+    title: "Apprenez à votre rythme",
+    text: "Vidéos, quiz et ressources accessibles à vie, sur ordinateur comme sur mobile.",
+  },
+  {
+    icon: Award,
+    title: "Obtenez votre certificat",
+    text: "Terminez le cours et recevez un certificat à partager sur votre CV ou LinkedIn.",
+  },
+];
+
+export function HowItWorks() {
+  return (
+    <section className="py-12">
+      <Container>
+        <div className="mx-auto max-w-2xl text-center">
+          <h2 className="text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
+            Comment ça marche ?
+          </h2>
+          <p className="mt-2 text-sm text-muted-foreground">
+            Se former n&apos;a jamais été aussi simple — en 3 étapes.
+          </p>
+        </div>
+
+        <div className="mt-8 grid gap-6 sm:grid-cols-3">
+          {STEPS.map((step, i) => {
+            const Icon = step.icon;
+            return (
+              <div key={step.title} className="relative text-center">
+                <div className="mx-auto inline-flex h-14 w-14 items-center justify-center rounded-2xl bg-[color:var(--brand-secondary)]/10 text-[color:var(--brand-secondary)]">
+                  <Icon className="h-6 w-6" aria-hidden />
+                </div>
+                <p className="mt-4 text-xs font-bold uppercase tracking-wide text-[color:var(--brand-secondary)]">
+                  Étape {i + 1}
+                </p>
+                <h3 className="mt-1 text-base font-semibold text-foreground">
+                  {step.title}
+                </h3>
+                <p className="mt-1.5 text-sm text-muted-foreground">{step.text}</p>
+              </div>
+            );
+          })}
+        </div>
+      </Container>
+    </section>
+  );
+}
+
+// --- Pourquoi Gandal -------------------------------------------------------
+
+const PERKS = [
+  { icon: Award, title: "Certificat à la clé", text: "Valorisez vos acquis avec un certificat reconnu." },
+  { icon: Languages, title: "100% francophone", text: "Des formateurs et un contenu en français." },
+  { icon: InfinityIcon, title: "Accès à vie", text: "Revenez sur vos cours quand vous voulez." },
+  { icon: Smartphone, title: "Paiement Mobile Money", text: "Orange Money, MTN, Moov — et carte bancaire." },
+  { icon: GraduationCap, title: "Formateurs experts", text: "Apprenez auprès de professionnels confirmés." },
+  { icon: Clock, title: "À votre rythme", text: "Apprenez où et quand vous le souhaitez." },
+];
+
+export function WhyGandal() {
+  return (
+    <section className="border-y border-border bg-muted/30 py-12">
+      <Container>
+        <div className="mx-auto max-w-2xl text-center">
+          <h2 className="text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
+            Pourquoi choisir Gandal ?
+          </h2>
+          <p className="mt-2 text-sm text-muted-foreground">
+            Une plateforme pensée pour la réussite des apprenants francophones.
+          </p>
+        </div>
+
+        <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {PERKS.map((perk) => {
+            const Icon = perk.icon;
+            return (
+              <div
+                key={perk.title}
+                className="flex items-start gap-3 rounded-xl border border-border bg-card p-4"
+              >
+                <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[color:var(--brand-secondary)]/10 text-[color:var(--brand-secondary)]">
+                  <Icon className="h-5 w-5" aria-hidden />
+                </span>
+                <div>
+                  <h3 className="text-sm font-semibold text-foreground">
+                    {perk.title}
+                  </h3>
+                  <p className="mt-0.5 text-sm text-muted-foreground">{perk.text}</p>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </Container>
+    </section>
+  );
+}
+
+// --- Formateurs en vedette -------------------------------------------------
+
+function initials(name: string): string {
+  return name
+    .split(" ")
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((p) => p[0]?.toUpperCase() ?? "")
+    .join("");
+}
+
+export function FeaturedInstructors({
+  instructors,
+}: {
+  instructors: FeaturedInstructor[];
+}) {
+  if (instructors.length === 0) return null;
+
+  return (
+    <section className="py-12">
+      <Container>
+        <div className="mx-auto max-w-2xl text-center">
+          <h2 className="text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
+            Nos formateurs experts
+          </h2>
+          <p className="mt-2 text-sm text-muted-foreground">
+            Apprenez auprès de professionnels qui partagent leur savoir-faire.
+          </p>
+        </div>
+
+        <div className="mt-8 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+          {instructors.map((ins) => {
+            const card = (
+              <div className="flex h-full flex-col items-center rounded-xl border border-border bg-card p-5 text-center transition-shadow hover:shadow-md">
+                <Avatar
+                  src={ins.image}
+                  alt={ins.name}
+                  fallback={initials(ins.name)}
+                  size={72}
+                />
+                <p className="mt-3 font-semibold text-foreground">{ins.name}</p>
+                {ins.headline ? (
+                  <p className="mt-0.5 line-clamp-2 text-xs text-muted-foreground">
+                    {ins.headline}
+                  </p>
+                ) : null}
+                <p className="mt-2 text-xs font-medium text-[color:var(--brand-secondary)]">
+                  {ins.courseCount} cours
+                </p>
+              </div>
+            );
+            return ins.affiliateCode ? (
+              <Link key={ins.id} href={`/formateurs/${ins.affiliateCode}`} className="block">
+                {card}
+              </Link>
+            ) : (
+              <div key={ins.id}>{card}</div>
+            );
+          })}
+
+          {/* Carte CTA : devenir formateur */}
+          <Link
+            href="/devenir-formateur"
+            className="flex h-full flex-col items-center justify-center rounded-xl border border-dashed border-[color:var(--brand-secondary)]/40 bg-[color:var(--brand-secondary)]/5 p-5 text-center transition-colors hover:bg-[color:var(--brand-secondary)]/10"
+          >
+            <span className="inline-flex h-[72px] w-[72px] items-center justify-center rounded-full bg-[color:var(--brand-secondary)]/10 text-[color:var(--brand-secondary)]">
+              <Plus className="h-7 w-7" aria-hidden />
+            </span>
+            <p className="mt-3 font-semibold text-foreground">Et vous ?</p>
+            <p className="mt-0.5 text-xs text-muted-foreground">
+              Partagez votre expertise — devenez formateur.
+            </p>
+          </Link>
+        </div>
+      </Container>
+    </section>
+  );
+}

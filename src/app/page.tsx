@@ -1,17 +1,18 @@
 import Link from "next/link";
-import {
-  Award,
-  GraduationCap,
-  Sparkles,
-  Target,
-  Users,
-} from "lucide-react";
+import { Award, Search, Sparkles, Target, Users } from "lucide-react";
 
 import { auth } from "@/auth";
 import { CategoryCard } from "@/components/features/courses/category-card";
 import { CategoryTabs } from "@/components/features/courses/category-tabs";
 import { CourseCard } from "@/components/features/courses/course-card";
 import { CourseCarousel } from "@/components/features/courses/course-carousel";
+import { HeroTechBackground } from "@/components/features/marketing/hero-tech-bg";
+import {
+  FeaturedInstructors,
+  HowItWorks,
+  WhyGandal,
+} from "@/components/features/marketing/home-sections";
+import { MemberHome } from "@/components/features/marketing/member-home";
 import { HomeTestimonials } from "@/components/features/marketing/testimonials";
 import { HomeTrustedBy } from "@/components/features/marketing/trusted-by";
 import { SiteFooter } from "@/components/layout/site-footer";
@@ -26,19 +27,28 @@ import {
   listFeaturedCourses,
   listLatestCourses,
 } from "@/server/queries/courses";
+import { listFeaturedInstructors } from "@/server/queries/instructors-public";
 import { getPublicStats } from "@/server/queries/stats";
 
 export default async function HomePage() {
   const session = await auth();
-  const currency = session?.user ? "EUR" : "EUR";
-  const { locale, t } = await getDictionary();
 
-  const [featuredCategories, featuredCourses, latestCourses, stats] =
+  // Accueil personnalisé pour les membres connectés (reprendre l'apprentissage,
+  // recommandations…) ; page marketing pour les visiteurs.
+  if (session?.user) {
+    return <MemberHome userId={session.user.id} userName={session.user.name ?? null} />;
+  }
+
+  const currency = "EUR";
+  const { t } = await getDictionary();
+
+  const [featuredCategories, featuredCourses, latestCourses, stats, featuredInstructors] =
     await Promise.all([
       listFeaturedCategories(8),
       listFeaturedCourses(8),
       listLatestCourses(8),
       getPublicStats(),
+      listFeaturedInstructors(4),
     ]);
 
   const tabCategories = featuredCategories.slice(0, 5);
@@ -53,150 +63,110 @@ export default async function HomePage() {
       <SiteHeader />
 
       <main className="flex-1">
-        {/* HERO — gradient violet façon Udemy avec card blanche compacte */}
+        {/* HERO — search-first marketplace (gradient on-brand, recherche centrale) */}
         <section className="py-6 md:py-8">
           <Container>
-            <div className="relative overflow-hidden rounded-3xl">
-              <div
-                aria-hidden
-                className="absolute inset-0 -z-10 bg-gradient-to-br from-[color:var(--brand-primary)] via-[color:var(--brand-violet-deep)] to-[color:var(--brand-violet)]"
-              />
-              <div
-                aria-hidden
-                className="absolute inset-0 -z-10 opacity-40"
-                style={{
-                  backgroundImage:
-                    "radial-gradient(circle at 15% 20%, rgba(255,255,255,0.18) 0%, transparent 45%), radial-gradient(circle at 85% 80%, rgba(14,165,233,0.3) 0%, transparent 50%)",
-                }}
-              />
-              {/* Forme décorative type Udemy — grand "U" stylisé en arrière-plan */}
-              <div
-                aria-hidden
-                className="pointer-events-none absolute -right-32 top-1/2 hidden h-[140%] w-[60%] -translate-y-1/2 lg:block"
-                style={{
-                  background:
-                    "radial-gradient(ellipse at center, rgba(255,255,255,0.08) 0%, transparent 60%)",
-                }}
-              />
+            <div className="relative overflow-hidden rounded-3xl px-6 py-10 text-center sm:px-10 md:py-12">
+              <HeroTechBackground />
 
-              <div className="grid items-center gap-8 px-6 py-10 sm:px-10 md:grid-cols-[minmax(0,480px)_1fr] md:py-12 lg:px-14">
-                {/* CARD BLANCHE COMPACTE À GAUCHE */}
-                <div className="relative rounded-2xl bg-white p-6 shadow-2xl ring-1 ring-black/5 sm:p-7">
-                  <Badge
-                    variant="secondary"
-                    className="mb-4 bg-[color:var(--brand-violet)]/10 text-[color:var(--brand-violet-deep)] hover:bg-[color:var(--brand-violet)]/15"
+              <div className="relative mx-auto max-w-3xl">
+                <Badge
+                  variant="secondary"
+                  className="mb-4 border-white/20 bg-white/10 text-white hover:bg-white/15"
+                >
+                  <Sparkles className="mr-1 h-3 w-3" aria-hidden />
+                  {t.hero.badge}
+                </Badge>
+
+                <h1 className="text-balance text-3xl font-bold leading-[1.1] tracking-tight text-white sm:text-4xl md:text-5xl">
+                  {t.hero.headline1}
+                  <span className="mt-1 block text-[color:var(--brand-mint)]">
+                    {t.hero.headline2}
+                  </span>
+                </h1>
+                <p className="mx-auto mt-3 max-w-xl text-sm text-white/85 sm:text-base">
+                  {t.hero.description}
+                </p>
+
+                {/* RECHERCHE — formulaire GET natif vers /cours?q=… */}
+                <form
+                  action="/cours"
+                  role="search"
+                  className="mx-auto mt-6 flex max-w-2xl items-center gap-2 rounded-full bg-white p-2 shadow-2xl ring-1 ring-black/5"
+                >
+                  <Search className="ml-3 h-5 w-5 shrink-0 text-muted-foreground" aria-hidden />
+                  <input
+                    type="search"
+                    name="q"
+                    placeholder="Que voulez-vous apprendre ? (ex : Python, design, marketing…)"
+                    aria-label="Rechercher un cours"
+                    className="min-w-0 flex-1 bg-transparent py-2 text-sm text-foreground outline-none placeholder:text-muted-foreground sm:text-base"
+                  />
+                  <Button
+                    type="submit"
+                    className="shrink-0 rounded-full bg-[color:var(--brand-mint)] px-5 text-[color:var(--neutral-900)] hover:bg-[color:var(--brand-mint-deep)]"
                   >
-                    <Sparkles className="mr-1 h-3 w-3" aria-hidden />
-                    {t.hero.badge}
-                  </Badge>
-                  <h1 className="text-2xl font-bold leading-[1.1] tracking-tight text-[color:var(--neutral-900)] sm:text-3xl md:text-4xl">
-                    {t.hero.headline1}{" "}
-                    <span className="text-[color:var(--brand-violet-deep)]">
-                      {t.hero.headline2}
-                    </span>
-                  </h1>
-                  <p className="mt-4 text-sm leading-6 text-muted-foreground">
-                    {t.hero.description}
-                  </p>
+                    Rechercher
+                  </Button>
+                </form>
 
-                  <div className="mt-5 flex flex-wrap items-center gap-3">
-                    <Button
-                      asChild
-                      className="bg-[color:var(--brand-mint)] text-[color:var(--neutral-900)] shadow-md hover:bg-[color:var(--brand-mint-deep)]"
-                    >
-                      <Link href="/cours">{t.hero.ctaPrimary}</Link>
-                    </Button>
-                    <Button asChild variant="outline">
-                      <Link href="/devenir-formateur">{t.hero.ctaSecondary}</Link>
-                    </Button>
+                {/* PUCES CATÉGORIES populaires */}
+                {featuredCategories.length > 0 ? (
+                  <div className="mt-5 flex flex-wrap items-center justify-center gap-2">
+                    <span className="text-sm text-white/70">Populaire :</span>
+                    {featuredCategories.slice(0, 6).map((cat) => (
+                      <Link
+                        key={cat.id}
+                        href={`/categories/${cat.slug}`}
+                        className="rounded-full border border-white/25 bg-white/10 px-3 py-1 text-sm font-medium text-white transition-colors hover:bg-white/20"
+                      >
+                        {cat.name}
+                      </Link>
+                    ))}
                   </div>
-                </div>
+                ) : null}
 
-                {/* ILLUSTRATION À DROITE — cards flottantes type Udemy */}
-                <div className="relative hidden h-[320px] md:block">
-              {/* Halo décoratif */}
-              <div
-                aria-hidden
-                className="absolute inset-0 rounded-full opacity-30 blur-3xl"
-                style={{
-                  background:
-                    "radial-gradient(circle, rgba(14,165,233,0.6) 0%, transparent 70%)",
-                }}
-              />
-
-              {/* Card 1 — graph */}
-              <HeroFloatingCard
-                className="absolute right-8 top-2 rotate-3 bg-white"
-                size="lg"
-              >
-                <div className="flex h-full w-full items-center justify-center">
-                  <ChartIllustration />
-                </div>
-              </HeroFloatingCard>
-
-              {/* Card 2 — bouclier (sécurité / certification) */}
-              <HeroFloatingCard
-                className="absolute left-4 top-32 -rotate-6 bg-white"
-                size="md"
-              >
-                <div className="flex h-full w-full items-center justify-center">
-                  <Award
-                    className="h-12 w-12 text-[color:var(--brand-violet-deep)]"
-                    aria-hidden
-                  />
-                </div>
-              </HeroFloatingCard>
-
-              {/* Card 3 — étoile / IA (accent menthe) */}
-              <HeroFloatingCard
-                className="absolute bottom-6 right-12 rotate-2 bg-[color:var(--brand-mint)]"
-                size="md"
-              >
-                <div className="flex h-full w-full items-center justify-center">
-                  <Sparkles
-                    className="h-12 w-12 text-[color:var(--neutral-900)]"
-                    aria-hidden
-                  />
-                </div>
-              </HeroFloatingCard>
-
-              {/* Pastille stat compacte */}
-              <div className="absolute bottom-8 left-0 flex items-center gap-3 rounded-full bg-white/95 px-4 py-3 shadow-xl ring-1 ring-black/5 backdrop-blur-sm">
-                <div className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-[color:var(--brand-mint)]">
-                  <Users
-                    className="h-4 w-4 text-[color:var(--neutral-900)]"
-                    aria-hidden
-                  />
-                </div>
-                <div>
-                  <p className="text-base font-bold leading-none text-[color:var(--neutral-900)]">
-                    {stats.totalStudents.toLocaleString(locale === "en" ? "en-US" : "fr-FR")}+
-                  </p>
-                  <p className="mt-0.5 text-xs text-muted-foreground">
-                    {t.hero.activeStudents}
-                  </p>
-                </div>
-              </div>
-            </div>
+                {/* Signaux de confiance (qualitatifs — pas de compteurs faibles) */}
+                <p className="mt-5 text-sm text-white/75">
+                  {stats.totalCourses}+ cours · {stats.totalCategories} catégories ·
+                  Formateurs francophones · Certificat à la clé
+                </p>
               </div>
             </div>
           </Container>
         </section>
 
-        {/* TRUST BAR — stats sur fond clair, juste sous le hero */}
-        <section className="border-b border-border bg-muted/40 py-8">
-          <Container>
-            <div className="grid grid-cols-2 gap-6 text-center sm:grid-cols-4">
-              <CompactStat value={stats.totalStudents} label="élèves" />
-              <CompactStat value={stats.totalInstructors} label="formateurs" />
-              <CompactStat value={stats.totalCourses} label="cours" />
-              <CompactStat value={stats.totalCategories} label="catégories" />
-            </div>
-          </Container>
-        </section>
-
-        {/* TRUSTED BY — bande logos d'entreprises */}
+        {/* TRUSTED BY — preuve sociale immédiate, juste sous le hero */}
         <HomeTrustedBy />
+
+        {/* COURS POPULAIRES — vrais cours, juste sous le hero */}
+        {featuredCourses.length > 0 ? (
+          <section className="py-9">
+            <Container>
+              <div className="flex items-end justify-between gap-4">
+                <h2 className="text-xl font-bold tracking-tight text-foreground sm:text-2xl">
+                  Les plus populaires
+                </h2>
+                <Link
+                  href="/cours?sort=popular"
+                  className="text-sm font-medium text-[color:var(--brand-secondary)] hover:underline"
+                >
+                  Voir tout →
+                </Link>
+              </div>
+              <div className="mt-5">
+                <CourseCarousel>
+                  {featuredCourses.map((course) => (
+                    <CourseCard key={course.id} course={course} currency={currency} />
+                  ))}
+                </CourseCarousel>
+              </div>
+            </Container>
+          </section>
+        ) : null}
+
+        {/* COMMENT ÇA MARCHE — 3 étapes */}
+        <HowItWorks />
 
         {/* CATÉGORIES — grille dense */}
         {featuredCategories.length > 0 ? (
@@ -300,6 +270,12 @@ export default async function HomePage() {
           </section>
         ) : null}
 
+        {/* POURQUOI GANDAL — grille d'atouts */}
+        <WhyGandal />
+
+        {/* FORMATEURS EN VEDETTE */}
+        <FeaturedInstructors instructors={featuredInstructors} />
+
         {/* DARK BLOCK — Réinventez votre carrière */}
         <section className="py-10 md:py-14">
           <Container>
@@ -313,7 +289,7 @@ export default async function HomePage() {
                 }}
               />
 
-              <div className="relative grid gap-8 md:grid-cols-[1.3fr_1fr] md:items-center">
+              <div className="relative max-w-2xl">
                 <div className="text-white">
                   <Badge
                     variant="secondary"
@@ -366,22 +342,6 @@ export default async function HomePage() {
                       <Link href="/a-propos">En savoir plus</Link>
                     </Button>
                   </div>
-                </div>
-
-                {/* Illustration : 3 cards flottantes */}
-                <div className="relative hidden md:block">
-                  <FloatingCard
-                    className="absolute right-0 top-0 rotate-3 bg-gradient-to-br from-[#7c3aed] to-[#5b21b6]"
-                    icon={<Sparkles className="h-8 w-8" />}
-                  />
-                  <FloatingCard
-                    className="absolute right-24 top-24 -rotate-6 bg-gradient-to-br from-[#0ea5e9] to-[#2563eb]"
-                    icon={<Award className="h-8 w-8" />}
-                  />
-                  <FloatingCard
-                    className="absolute right-8 top-48 rotate-2 bg-gradient-to-br from-[#1e3a8a] to-[#0ea5e9]"
-                    icon={<GraduationCap className="h-8 w-8" />}
-                  />
                 </div>
               </div>
             </div>
@@ -458,69 +418,6 @@ export default async function HomePage() {
   );
 }
 
-function HeroFloatingCard({
-  children,
-  className,
-  size = "md",
-}: {
-  children: React.ReactNode;
-  className?: string;
-  size?: "md" | "lg";
-}) {
-  const dims = size === "lg" ? "h-44 w-56" : "h-36 w-36";
-  return (
-    <div
-      className={`${dims} overflow-hidden rounded-2xl shadow-2xl ring-1 ring-black/10 ${className ?? ""}`}
-    >
-      {children}
-    </div>
-  );
-}
-
-function ChartIllustration() {
-  return (
-    <svg
-      viewBox="0 0 220 140"
-      className="h-full w-full p-4"
-      aria-hidden
-    >
-      <defs>
-        <linearGradient id="chart-grad" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0%" stopColor="#7c3aed" />
-          <stop offset="100%" stopColor="#5b21b6" />
-        </linearGradient>
-      </defs>
-      <rect x="20" y="80" width="22" height="40" rx="4" fill="url(#chart-grad)" opacity="0.55" />
-      <rect x="55" y="60" width="22" height="60" rx="4" fill="url(#chart-grad)" opacity="0.7" />
-      <rect x="90" y="40" width="22" height="80" rx="4" fill="url(#chart-grad)" opacity="0.85" />
-      <rect x="125" y="25" width="22" height="95" rx="4" fill="url(#chart-grad)" />
-      <rect x="160" y="10" width="22" height="110" rx="4" fill="#92f6a1" />
-      <path
-        d="M 28 90 L 65 70 L 100 50 L 135 35 L 170 20"
-        stroke="#6ce382"
-        strokeWidth="2.5"
-        fill="none"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-      <circle cx="170" cy="20" r="4" fill="#6ce382" />
-    </svg>
-  );
-}
-
-function CompactStat({ value, label }: { value: number; label: string }) {
-  return (
-    <div>
-      <p className="text-2xl font-bold tracking-tight text-foreground">
-        {value.toLocaleString("fr-FR")}
-      </p>
-      <p className="mt-1 text-xs uppercase tracking-wide text-muted-foreground">
-        {label}
-      </p>
-    </div>
-  );
-}
-
 function Bullet({ icon, label }: { icon: React.ReactNode; label: string }) {
   return (
     <li className="flex items-start gap-3">
@@ -532,18 +429,3 @@ function Bullet({ icon, label }: { icon: React.ReactNode; label: string }) {
   );
 }
 
-function FloatingCard({
-  icon,
-  className,
-}: {
-  icon: React.ReactNode;
-  className?: string;
-}) {
-  return (
-    <div
-      className={`flex h-32 w-32 items-center justify-center rounded-2xl text-white shadow-2xl ring-1 ring-white/20 ${className ?? ""}`}
-    >
-      {icon}
-    </div>
-  );
-}
