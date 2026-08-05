@@ -15,8 +15,11 @@ declare global {
 }
 
 function createPrismaClient(): PrismaClient {
+  // `||` et non `??` : une DATABASE_URL vide (chaîne non nullish) serait passée
+  // telle quelle à PrismaPg, qui retomberait silencieusement sur les défauts
+  // libpq (localhost:5432) au lieu d'échouer visiblement.
   const connectionString =
-    process.env.DATABASE_URL ?? "postgresql://placeholder@localhost:5432/placeholder";
+    process.env.DATABASE_URL || "postgresql://placeholder@localhost:5432/placeholder";
 
   const adapter = new PrismaPg(connectionString);
 

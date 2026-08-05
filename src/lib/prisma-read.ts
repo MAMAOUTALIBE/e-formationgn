@@ -29,9 +29,12 @@ declare global {
 function createReadClient(): PrismaClient {
   // Si DATABASE_READ_URL n'est pas posée, on retombe sur DATABASE_URL
   // → comportement identique au client primaire (pas de risque en dev).
+  // `||` et non `??` : .env.example livre DATABASE_READ_URL="" (chaîne vide,
+  // non nullish) — avec `??` on passerait "" à PrismaPg, qui retomberait sur
+  // les défauts libpq (localhost:5432) au lieu de la vraie base.
   const connectionString =
-    process.env.DATABASE_READ_URL ??
-    process.env.DATABASE_URL ??
+    process.env.DATABASE_READ_URL ||
+    process.env.DATABASE_URL ||
     "postgresql://placeholder@localhost:5432/placeholder";
 
   const adapter = new PrismaPg(connectionString);
