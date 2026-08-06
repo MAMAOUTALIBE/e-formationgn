@@ -144,3 +144,97 @@ export async function revokeCourseAccess(
 
   return { success: true, message: "Accès retiré." };
 }
+
+const grantToUsersSchema = z
+  .object({
+    courseId: z.string().min(1),
+    userIds: z.array(z.string().min(1)).min(1, "Sélectionnez au moins un compte."),
+  })
+  .strict();
+
+/**
+ * Attribue UNE formation à plusieurs comptes — le geste inverse du précédent.
+ *
+ * C'est la façon naturelle d'ouvrir une formation à toute une promotion :
+ * partir de la formation plutôt que de rouvrir chaque fiche élève.
+ */
+export async function grantCourseToUsers(
+  _prev: ActionResult,
+  formData: FormData,
+): Promise<ActionResult> {
+  let session;
+  try {
+    session = await requireAdmin();
+  } catch {
+    return { success: false, message: "Non autorisé." };
+  }
+
+  const parsed = grantToUsersSchema.safeParse({
+    courseId: formData.get("courseId"),
+    userIds: formData.getAll("userIds").map(String),
+  });
+
+  if (!parsed.success) {
+    return {
+      success: false,
+      message: "Sélectionnez au moins un compte.",
+      fieldErrors: parsed.error.flatten().fieldErrors,
+    };
+  }
+
+  const { courseId, userIds } = parsed.data;
+
+  const course = await prisma.course.findUnique({
+    where: { id: courseId },
+    select: { id: true, title: true, status: true },
+  });
+  if (!course) return { success: false, message: "Formation introuvable." };
+
+  // Attribuer un brouillon donnerait accès à un contenu incomplet, sans que
+  // l'élève comprenne pourquoi le programme est vide.
+  if (course.status !== "PUBLISHED") {
+    return {
+      success: false,
+      message: "Publiez d'abord cette formation avant de l'attribuer.",
+    };
+  }
+
+  // On restreint aux comptes réellement existants : un identifiant fabriqué
+  // ferait échouer tout le lot sur la contrainte de clé étrangère.
+  const users = await prisma.user.findMany({
+    where: { id: { in: userIds } },
+    select: { id: true },
+  });
+  if (users.length === 0) return { success: false, message: "Aucun compte valide." };
+
+  const result = await prisma.enrollment.createMany({
+    data: users.map((u) => ({
+      userId: u.id,
+      courseId: course.id,
+      source: "ADMIN_GRANT" as const,
+    })),
+    skipDuplicates: true,
+  });
+
+  await createAuditLog({
+    actorId: session.userId,
+    action: "enrollment.grant_bulk",
+    targetType: "Course",
+    targetId: course.id,
+    metadata: {
+      courseTitle: course.title,
+      requested: users.length,
+      granted: result.count,
+    },
+  });
+
+  revalidatePath(`/admin/cours/${course.id}`);
+
+  return {
+    success: true,
+    message:
+      result.count === 0
+        ? "Ces comptes avaient déjà accès à cette formation."
+        : `Formation ouverte à ${result.count} compte${result.count > 1 ? "s" : ""}.`,
+  };
+}

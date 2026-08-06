@@ -19,8 +19,6 @@
 // email en clair, il reste donc valable tant que l'élève ne le change pas de
 // lui-même depuis son profil.
 
-import { randomInt } from "node:crypto";
-
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
@@ -28,6 +26,7 @@ import { requireAdmin } from "@/lib/auth/authorization";
 import { hashPassword } from "@/lib/auth/password";
 import { prisma } from "@/lib/prisma";
 import { createAuditLog } from "@/server/services/audit-log";
+import { generateTemporaryPassword } from "@/server/services/temporary-password";
 
 import type { ActionResult } from "./auth";
 
@@ -47,22 +46,6 @@ export interface CreateAccountResult extends ActionResult {
   /** Mot de passe provisoire, affiché une seule fois. */
   temporaryPassword?: string;
   createdEmail?: string;
-}
-
-/**
- * Alphabet sans caractères ambigus (0/O, 1/l/I) : ce mot de passe est
- * recopié à la main ou lu au téléphone, une confusion coûte un appel au
- * secrétariat.
- */
-const ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789";
-
-function generateTemporaryPassword(): string {
-  // randomInt (CSPRNG) plutôt que Math.random : c'est un secret d'accès.
-  let out = "";
-  for (let i = 0; i < 14; i++) out += ALPHABET[randomInt(ALPHABET.length)];
-  // Garantit la présence d'un chiffre et d'un caractère spécial, exigés par
-  // la politique de mot de passe appliquée au changement.
-  return `${out}7!`;
 }
 
 export async function createCenterAccount(

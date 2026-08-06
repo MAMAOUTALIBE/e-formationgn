@@ -14,6 +14,9 @@ import {
   setInternalNotesOnCourse,
   toggleFeaturedCourse,
 } from "@/server/actions/admin-courses";
+import { BulkCourseGrant } from "@/components/features/admin/bulk-course-grant";
+import { isTrainingCenterMode } from "@/lib/platform-mode";
+import { prisma } from "@/lib/prisma";
 import { getAdminCourse } from "@/server/queries/admin";
 import { getCourseDeletionStatus } from "@/server/queries/course-deletion";
 import { Check, X } from "lucide-react";
@@ -38,6 +41,34 @@ export default async function AdminCourseReviewPage({ params }: PageProps) {
   const publishable = publishCriteria.every((c) => c.ok);
   const deletion = await getCourseDeletionStatus(course.id);
 
+  // Candidats à l'attribution groupée : élèves et formateurs actifs, avec
+  // l'indication de ceux qui ont déjà accès. On ne propose pas les comptes
+  // supprimés ni suspendus — leur ouvrir une formation n'aurait aucun effet.
+  const grantCandidates = isTrainingCenterMode()
+    ? (
+        await prisma.user.findMany({
+          where: { status: "ACTIVE", role: { in: ["STUDENT", "INSTRUCTOR"] } },
+          orderBy: [{ lastName: "asc" }, { email: "asc" }],
+          take: 500,
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            enrollments: {
+              where: { courseId: course.id },
+              select: { id: true },
+              take: 1,
+            },
+          },
+        })
+      ).map((u) => ({
+        id: u.id,
+        name: u.name ?? u.email,
+        email: u.email,
+        alreadyEnrolled: u.enrollments.length > 0,
+      }))
+    : [];
+
   return (
     <div className="space-y-6">
       <Button asChild variant="link" size="sm" className="h-auto px-0 text-muted-foreground">
@@ -55,6 +86,17 @@ export default async function AdminCourseReviewPage({ params }: PageProps) {
         </div>
         <CourseStatusBadge status={course.status} />
       </header>
+
+      {isTrainingCenterMode() ? (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Ouvrir à une promotion</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <BulkCourseGrant courseId={course.id} candidates={grantCandidates} />
+          </CardContent>
+        </Card>
+      ) : null}
 
       <div className="grid gap-6 lg:grid-cols-[1fr_360px]">
         <div className="space-y-4">

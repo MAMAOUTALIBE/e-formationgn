@@ -2,9 +2,11 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 import { CreateAccountForm } from "@/components/features/admin/create-account-form";
+import { ImportStudentsForm } from "@/components/features/admin/import-students-form";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { isTrainingCenterMode } from "@/lib/platform-mode";
+import { prisma } from "@/lib/prisma";
 import { Select } from "@/components/ui/select";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { Button } from "@/components/ui/button";
@@ -45,6 +47,16 @@ export default async function AdminUsersPage({ searchParams }: PageProps) {
   const { rows, total, page, pageSize } = await listAdminUsers(filters);
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
 
+  // Formations proposées à l'import : publiées uniquement — ouvrir un
+  // brouillon donnerait accès à un programme vide.
+  const publishedCourses = isTrainingCenterMode()
+    ? await prisma.course.findMany({
+        where: { status: "PUBLISHED" },
+        orderBy: { title: "asc" },
+        select: { id: true, title: true },
+      })
+    : [];
+
   return (
     <div className="space-y-5">
       <header className="flex flex-wrap items-end justify-between gap-3">
@@ -72,6 +84,17 @@ export default async function AdminUsersPage({ searchParams }: PageProps) {
               une seule fois, à vous de le transmettre.
             </p>
             <CreateAccountForm />
+          </CardContent>
+        </Card>
+      ) : null}
+
+      {isTrainingCenterMode() ? (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Importer une promotion</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ImportStudentsForm courses={publishedCourses} />
           </CardContent>
         </Card>
       ) : null}
