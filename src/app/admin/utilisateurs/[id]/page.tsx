@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
+import { AccountCredentials } from "@/components/features/admin/account-credentials";
 import { CourseAccessManager } from "@/components/features/admin/course-access-manager";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -138,6 +139,28 @@ export default async function AdminUserDetailPage({ params }: PageProps) {
         <MiniStat label="Cours créés" value={user._count.coursesAuthored} />
         <MiniStat label="Certificats" value={user._count.certificates} />
       </section>
+
+      {isTrainingCenterMode() ? (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Identifiants</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {/* On ne transmet au client que l'identifiant et la date : le reste
+                de `user` contient l'empreinte du mot de passe, qui n'a rien à
+                faire dans la charge utile envoyée au navigateur. */}
+            <AccountCredentials
+              userId={user.id}
+              email={user.email}
+              passwordChangedAt={
+                user.passwordChangedAt
+                  ? user.passwordChangedAt.toLocaleString("fr-FR")
+                  : null
+              }
+            />
+          </CardContent>
+        </Card>
+      ) : null}
 
       {/* Engagement apprentissage — pattern Udemy student profile */}
       <section
