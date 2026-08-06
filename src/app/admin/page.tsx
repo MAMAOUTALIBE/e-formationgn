@@ -88,14 +88,14 @@ export default async function AdminOverviewPage({ searchParams }: PageProps) {
       </header>
 
       {alerts.length > 0 ? (
-        <section className="rounded-lg border border-amber-300 bg-amber-50 p-4 dark:border-amber-900/50 dark:bg-amber-950/40">
+        <section className="rounded-lg border border-red-300 bg-red-50 p-4 dark:border-red-900/50 dark:bg-red-950/40">
           <div className="flex items-start gap-3">
-            <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-amber-700 dark:text-amber-300" aria-hidden />
+            <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-red-700 dark:text-red-300" aria-hidden />
             <div className="flex-1">
-              <p className="text-sm font-medium text-amber-900 dark:text-amber-100">
+              <p className="text-sm font-medium text-red-900 dark:text-red-100">
                 Actions requises
               </p>
-              <ul className="mt-2 grid gap-1.5 text-sm text-amber-900 dark:text-amber-100 sm:grid-cols-2">
+              <ul className="mt-2 grid gap-1.5 text-sm text-red-900 dark:text-red-100 sm:grid-cols-2">
                 {alerts.map((a) => (
                   <li key={a.kind}>
                     <Link
@@ -113,7 +113,10 @@ export default async function AdminOverviewPage({ searchParams }: PageProps) {
         </section>
       ) : null}
 
-      <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      {/* 9 cartes : en 4 colonnes elles occupent 3 rangées dont une quasi vide.
+          Une 5e colonne au-delà de xl les ramène à 2 rangées et rend une
+          rangée entière au contenu sous-jacent. */}
+      <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5">
         <KpiCard
           label="Revenu net plateforme"
           value={`${(financeHealth.netRevenueCents / 100).toLocaleString("fr-FR", { minimumFractionDigits: 2 })} €`}
