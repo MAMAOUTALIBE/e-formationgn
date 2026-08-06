@@ -153,6 +153,9 @@ export async function getAdminUserDetail(userId: string) {
         progressPercent: true,
         completedAt: true,
         enrolledAt: true,
+        // `source` distingue un accès attribué par le centre d'un achat : le
+        // retrait d'accès n'est autorisé que sur le premier.
+        source: true,
         course: { select: { id: true, title: true, slug: true } },
       },
     }),

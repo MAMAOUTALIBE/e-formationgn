@@ -21,6 +21,8 @@ declare module "next-auth" {
       role: UserRole;
       emailVerified: Date | null;
       preferredCurrency: Currency;
+      /** Compte créé par le centre avec un mot de passe provisoire. */
+      mustChangePassword?: boolean;
     };
   }
   interface User {
@@ -36,6 +38,7 @@ declare module "@auth/core/jwt" {
     role: UserRole;
     emailVerified: Date | null;
     preferredCurrency: Currency;
+    mustChangePassword?: boolean;
   }
 }
 
@@ -57,6 +60,9 @@ const PUBLIC_ROUTES = [
 ];
 
 // Routes d'authentification (un user déjà connecté est redirigé vers la home)
+/** Écran de changement du mot de passe provisoire posé par le centre. */
+const PASSWORD_CHANGE_ROUTE = "/changer-mot-de-passe";
+
 const AUTH_ROUTES = [
   "/connexion",
   "/inscription",
@@ -111,10 +117,15 @@ export const authConfig = {
           role?: UserRole;
           emailVerified?: Date | null;
           preferredCurrency?: Currency;
+          mustChangePassword?: boolean;
         };
         session.user.role = t.role ?? session.user.role ?? "STUDENT";
         session.user.emailVerified = t.emailVerified ?? null;
         session.user.preferredCurrency = t.preferredCurrency ?? "EUR";
+        // Recopié ici aussi : sans ce callback, l'edge voit une session
+        // incomplète et la garde de changement de mot de passe ne s'applique
+        // jamais (même piège que pour `role`).
+        session.user.mustChangePassword = t.mustChangePassword ?? false;
       }
       return session;
     },
@@ -167,6 +178,15 @@ export const authConfig = {
           return Response.redirect(new URL("/", nextUrl));
         }
         return true;
+      }
+
+      // Mot de passe provisoire posé par le centre : tant qu'il n'est pas
+      // remplacé, toute navigation est ramenée à l'écran de changement.
+      // Placé APRÈS les routes d'API et d'authentification pour ne pas casser
+      // la déconnexion ni les appels internes — sans quoi l'utilisateur serait
+      // enfermé dans une boucle de redirection sans pouvoir se déconnecter.
+      if (isLoggedIn && auth?.user?.mustChangePassword && pathname !== PASSWORD_CHANGE_ROUTE) {
+        return Response.redirect(new URL(PASSWORD_CHANGE_ROUTE, nextUrl));
       }
 
       // Routes formateur : login + rôle INSTRUCTOR (ou ADMIN)

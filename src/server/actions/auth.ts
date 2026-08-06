@@ -23,6 +23,7 @@ import {
 } from "@/lib/auth/rate-limit-ip";
 import { safeCallbackUrl } from "@/lib/auth/safe-redirect";
 import { verifyTurnstile } from "@/lib/auth/turnstile";
+import { isTrainingCenterMode } from "@/lib/platform-mode";
 import {
   emailVerificationExpiry,
   generateToken,
@@ -58,6 +59,17 @@ export async function registerUser(
   _prevState: ActionResult | undefined,
   formData: FormData,
 ): Promise<ActionResult> {
+  // En mode centre de formation, seuls des comptes créés depuis le CRM
+  // existent. Le refus est ici, côté serveur : masquer la page d'inscription
+  // n'empêcherait pas d'appeler l'action directement.
+  if (isTrainingCenterMode()) {
+    return {
+      success: false,
+      message:
+        "Les comptes sont créés par le centre de formation. Rapprochez-vous du secrétariat pour obtenir vos identifiants.",
+    };
+  }
+
   const rl = await checkIpRateLimit({
     prefix: "auth:register",
     windowMs: 60 * 60 * 1000,

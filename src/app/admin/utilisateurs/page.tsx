@@ -1,8 +1,10 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 
-import { Card, CardContent } from "@/components/ui/card";
+import { CreateAccountForm } from "@/components/features/admin/create-account-form";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { isTrainingCenterMode } from "@/lib/platform-mode";
 import { Select } from "@/components/ui/select";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { Button } from "@/components/ui/button";
@@ -57,6 +59,22 @@ export default async function AdminUsersPage({ searchParams }: PageProps) {
         </div>
         <ExportButton action={exportUsersCsv} />
       </header>
+
+      {isTrainingCenterMode() ? (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Créer un compte</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="mb-4 text-sm text-muted-foreground">
+              L&apos;inscription publique est fermée : les comptes élèves et
+              formateurs sont créés ici. Le mot de passe provisoire s&apos;affiche
+              une seule fois, à vous de le transmettre.
+            </p>
+            <CreateAccountForm />
+          </CardContent>
+        </Card>
+      ) : null}
 
       <Card>
         <CardContent className="p-4">

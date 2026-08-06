@@ -17,6 +17,7 @@ import { CourseIncludes } from "@/components/features/courses/course-includes";
 import { CourseInstructorCard } from "@/components/features/courses/course-instructor-card";
 import { CourseMoneyBack } from "@/components/features/courses/course-money-back";
 import { CoursePrice } from "@/components/features/courses/course-price";
+import { CourseAccessNotice } from "@/components/features/courses/course-access-notice";
 import { CoursePromoCountdown } from "@/components/features/courses/course-promo-countdown";
 import { CourseRatingDistribution } from "@/components/features/courses/course-rating-distribution";
 import { CourseReviewsList } from "@/components/features/courses/course-reviews-list";
@@ -33,6 +34,7 @@ import { Stars } from "@/components/ui/stars";
 import { getCourseBadges } from "@/lib/courses/badges";
 import { getCurrentCurrency } from "@/lib/currency";
 import { COURSE_LEVEL_LABELS, pluralize } from "@/lib/format/labels";
+import { isTrainingCenterMode } from "@/lib/platform-mode";
 import { prisma } from "@/lib/prisma";
 import { buildCourseJsonLd } from "@/lib/seo/json-ld";
 import {
@@ -104,6 +106,8 @@ export default async function CourseDetailPage({
 
   const isPreview = course.status !== "PUBLISHED";
   const currency = await getCurrentCurrency(session?.user.preferredCurrency ?? "EUR");
+
+  const trainingCenter = isTrainingCenterMode();
 
   // État de l'élève vis-à-vis du cours (inscrit ? au panier ? wishlist ?)
   let alreadyEnrolled = false;
@@ -194,42 +198,50 @@ export default async function CourseDetailPage({
           <CoursePromoCountdown endsAt={course.discountEndsAt.toISOString()} />
         ) : null}
 
-        <CoursePrice
-          priceEUR={Number(course.priceEUR)}
-          priceUSD={Number(course.priceUSD)}
-          discountPriceEUR={
-            course.discountPriceEUR != null ? Number(course.discountPriceEUR) : null
-          }
-          discountPriceUSD={
-            course.discountPriceUSD != null ? Number(course.discountPriceUSD) : null
-          }
-          currency={currency}
-          size="lg"
-        />
+        {trainingCenter ? (
+          /* Centre de formation : aucune vente à l'unité. On affiche l'état
+             d'accès réel plutôt qu'un prix et un bouton d'achat inopérants. */
+          <CourseAccessNotice alreadyEnrolled={alreadyEnrolled} slug={course.slug} />
+        ) : (
+          <>
+            <CoursePrice
+              priceEUR={Number(course.priceEUR)}
+              priceUSD={Number(course.priceUSD)}
+              discountPriceEUR={
+                course.discountPriceEUR != null ? Number(course.discountPriceEUR) : null
+              }
+              discountPriceUSD={
+                course.discountPriceUSD != null ? Number(course.discountPriceUSD) : null
+              }
+              currency={currency}
+              size="lg"
+            />
 
-        <div className="space-y-2">
-          <AddToCartButton
-            courseId={course.id}
-            fullWidth
-            size="lg"
-            alreadyEnrolled={alreadyEnrolled}
-            alreadyInCart={alreadyInCart}
-          />
-          <BuyNowButton
-            courseId={course.id}
-            fullWidth
-            alreadyEnrolled={alreadyEnrolled}
-          />
-          <WishlistButton
-            courseId={course.id}
-            fullWidth
-            initialActive={inWishlist}
-          />
-        </div>
+            <div className="space-y-2">
+              <AddToCartButton
+                courseId={course.id}
+                fullWidth
+                size="lg"
+                alreadyEnrolled={alreadyEnrolled}
+                alreadyInCart={alreadyInCart}
+              />
+              <BuyNowButton
+                courseId={course.id}
+                fullWidth
+                alreadyEnrolled={alreadyEnrolled}
+              />
+              <WishlistButton
+                courseId={course.id}
+                fullWidth
+                initialActive={inWishlist}
+              />
+            </div>
 
-        <CourseMoneyBack className="w-full justify-center" />
+            <CourseMoneyBack className="w-full justify-center" />
 
-        <CourseCouponInput courseId={course.id} currency={currency} />
+            <CourseCouponInput courseId={course.id} currency={currency} />
+          </>
+        )}
 
         <div className="border-t border-border pt-5">
           <CourseIncludes
@@ -536,7 +548,9 @@ export default async function CourseDetailPage({
         ) : null}
       </main>
 
-      {/* Barre fixe en bas (mobile uniquement) — prix + CTA toujours visibles */}
+      {/* Barre fixe en bas (mobile uniquement) — prix + CTA toujours visibles.
+          Pas de vente en mode centre de formation : la barre n'est pas rendue. */}
+      {trainingCenter ? null : (
       <CourseStickyBuyBar
         courseId={course.id}
         priceEUR={Number(course.priceEUR)}
@@ -551,6 +565,7 @@ export default async function CourseDetailPage({
         alreadyEnrolled={alreadyEnrolled}
         alreadyInCart={alreadyInCart}
       />
+      )}
 
       <SiteFooter />
     </>

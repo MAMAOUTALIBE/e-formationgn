@@ -59,6 +59,11 @@ model User {
   // callback : tout token émis AVANT cette date est considéré invalide
   // (force la déconnexion globale après reset password).
   passwordChangedAt   DateTime?
+  /// Compte créé par le centre de formation avec un mot de passe provisoire :
+  /// tant que ce drapeau est vrai, la navigation est redirigée vers l'écran de
+  /// changement de mot de passe. Le mot de passe initial transitant par email
+  /// en clair, le laisser en place indéfiniment reviendrait à publier l'accès.
+  mustChangePassword  Boolean   @default(false)
   name           String?
   firstName      String?
   lastName       String?

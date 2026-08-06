@@ -10,6 +10,8 @@ import type { PublicCourseListItem } from "@/server/queries/courses";
 
 import { CourseBadges } from "./course-badges";
 import { CourseCardHoverFlyout } from "./course-card-hover-flyout";
+import { isTrainingCenterMode } from "@/lib/platform-mode";
+
 import { CoursePrice } from "./course-price";
 
 interface CourseCardProps {
@@ -141,6 +143,10 @@ export function CourseCard({
           </Link>
         </div>
 
+        {/* Centre de formation : le bloc prix n'est pas rendu du tout. Le
+            masquer en CSS le laisserait lisible dans le HTML — un prix qui
+            n'a plus cours n'a pas à figurer dans la page. */}
+        {isTrainingCenterMode() ? null : (
         <div className="mt-auto pt-3">
           <CoursePrice
             priceEUR={Number(course.priceEUR)}
@@ -151,10 +157,11 @@ export function CourseCard({
             size="md"
           />
         </div>
+        )}
       </div>
 
       {hideFlyout ? null : (
-        <CourseCardHoverFlyout course={course} side={flyoutSide} />
+        <CourseCardHoverFlyout course={course} side={flyoutSide} trainingCenter={isTrainingCenterMode()} />
       )}
     </article>
   );

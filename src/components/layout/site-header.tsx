@@ -4,6 +4,7 @@ import { auth } from "@/auth";
 import { Logo } from "@/components/branding/logo";
 import { UserMenu } from "@/components/features/auth/user-menu";
 import { CartIcon } from "@/components/features/cart/cart-icon";
+import { isTrainingCenterMode } from "@/lib/platform-mode";
 import { HeaderSearch } from "@/components/features/courses/header-search";
 import { NotificationBell } from "@/components/features/notifications/notification-bell";
 import { CategoriesDropdown } from "@/components/layout/categories-dropdown";
@@ -74,7 +75,9 @@ export async function SiteHeader() {
           {user ? (
             <>
               <NotificationBell unreadCount={unreadNotifs} />
-              <CartIcon count={cartCount} />
+              {/* Pas de panier en mode centre de formation : aucune vente à
+                  l'unité, l'accès est attribué par le centre. */}
+              {isTrainingCenterMode() ? null : <CartIcon count={cartCount} />}
               <UserMenu
                 user={{
                   name: user.name,

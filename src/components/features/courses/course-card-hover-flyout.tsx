@@ -35,9 +35,16 @@ const fullDateFormatter = new Intl.DateTimeFormat("fr-FR", {
 interface CourseCardHoverFlyoutProps {
   course: PublicCourseListItem;
   side?: "left" | "right";
+  /**
+   * Mode centre de formation. Passé en propriété et non lu depuis
+   * l'environnement : ce composant est client, `process.env.PLATFORM_MODE`
+   * n'y est pas défini (variable non préfixée NEXT_PUBLIC).
+   */
+  trainingCenter?: boolean;
 }
 
 export function CourseCardHoverFlyout({
+  trainingCenter = false,
   course,
   side = "right",
 }: CourseCardHoverFlyoutProps) {
@@ -124,17 +131,21 @@ export function CourseCardHoverFlyout({
         </div>
       ) : null}
 
-      <div className="mt-4 grid grid-cols-[1fr_auto] gap-2">
-        <Button
-          type="button"
-          size="sm"
-          onClick={handleAddToCart}
-          disabled={pending}
-          className="w-full"
-        >
-          <ShoppingCart className="h-4 w-4" aria-hidden />
-          Ajouter au panier
-        </Button>
+      {/* Aucune vente à l'unité en mode centre de formation : le panier
+          disparaît, la wishlist garde son sens (marquer un intérêt). */}
+      <div className="mt-4 grid gap-2" style={{ gridTemplateColumns: trainingCenter ? "auto" : "1fr auto" }}>
+        {trainingCenter ? null : (
+          <Button
+            type="button"
+            size="sm"
+            onClick={handleAddToCart}
+            disabled={pending}
+            className="w-full"
+          >
+            <ShoppingCart className="h-4 w-4" aria-hidden />
+            Ajouter au panier
+          </Button>
+        )}
         <Button
           type="button"
           variant="outline"

@@ -2,10 +2,13 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
+import { CourseAccessManager } from "@/components/features/admin/course-access-manager";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { StatusBadge } from "@/components/ui/status-badge";
+import { isTrainingCenterMode } from "@/lib/platform-mode";
+import { prisma } from "@/lib/prisma";
 import {
   addAdminNoteOnUser,
   banUser,
@@ -33,6 +36,17 @@ export default async function AdminUserDetailPage({ params }: PageProps) {
   const { id } = await params;
   const data = await getAdminUserDetail(id);
   if (!data) notFound();
+
+  // Catalogue attribuable : uniquement les formations publiées — attribuer un
+  // brouillon donnerait un accès à un contenu incomplet.
+  const assignableCourses = isTrainingCenterMode()
+    ? await prisma.course.findMany({
+        where: { status: "PUBLISHED" },
+        orderBy: { title: "asc" },
+        select: { id: true, title: true },
+      })
+    : [];
+
   const {
     user,
     orders,
@@ -218,6 +232,27 @@ export default async function AdminUserDetailPage({ params }: PageProps) {
           )}
         </CardContent>
       </Card>
+
+      {isTrainingCenterMode() ? (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Accès aux formations</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <CourseAccessManager
+              userId={user.id}
+              granted={enrollments.map((e) => ({
+                id: e.id,
+                courseId: e.course.id,
+                title: e.course.title,
+                progressPercent: e.progressPercent,
+                source: e.source,
+              }))}
+              assignable={assignableCourses}
+            />
+          </CardContent>
+        </Card>
+      ) : null}
 
       <Card>
         <CardHeader>

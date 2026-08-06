@@ -161,6 +161,7 @@ export const {
             preferredCurrency: true,
             status: true,
             passwordChangedAt: true,
+            mustChangePassword: true,
           },
         })) as {
           id: string;
@@ -169,6 +170,7 @@ export const {
           preferredCurrency: import("@/generated/prisma/enums").Currency;
           status: import("@/generated/prisma/enums").AccountStatus;
           passwordChangedAt: Date | null;
+          mustChangePassword: boolean;
         } | null;
 
         if (!dbUser) return null;
@@ -182,6 +184,11 @@ export const {
         ) {
           return null;
         }
+
+        // Rafraîchi à CHAQUE passage, hors de la condition `trigger` : la
+        // garde de navigation s'appuie dessus, elle doit refléter la base sans
+        // attendre une reconnexion.
+        token.mustChangePassword = dbUser.mustChangePassword;
 
         if (trigger === "update" || !token.role) {
           token.id = dbUser.id;
@@ -199,6 +206,7 @@ export const {
         session.user.role = token.role;
         session.user.emailVerified = token.emailVerified;
         session.user.preferredCurrency = token.preferredCurrency ?? "EUR";
+        session.user.mustChangePassword = token.mustChangePassword ?? false;
       }
 
       // Impersonation : si l'admin a un cookie actif, on swap la session vers
