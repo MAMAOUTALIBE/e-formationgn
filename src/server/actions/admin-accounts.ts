@@ -9,8 +9,15 @@
 // Le mot de passe provisoire est renvoyé EN CLAIR à l'appelant, une seule
 // fois, pour être affiché à l'admin qui vient de créer le compte. Il n'est
 // jamais stocké en clair ni réaffichable ensuite : si l'admin le perd, il
-// regénère. C'est aussi pourquoi `mustChangePassword` est posé — un mot de
-// passe transmis par email en clair ne doit pas rester valable durablement.
+// regénère.
+//
+// Le changement au premier accès n'est PAS imposé (choix du centre) : l'élève
+// se connecte directement avec le mot de passe reçu. Le mécanisme existe
+// toujours — garde de navigation dans auth.config.ts et écran
+// /changer-mot-de-passe — il suffit de repasser `mustChangePassword` à `true`
+// ci-dessous pour l'activer. À garder en tête : ce mot de passe transite par
+// email en clair, il reste donc valable tant que l'élève ne le change pas de
+// lui-même depuis son profil.
 
 import { randomInt } from "node:crypto";
 
@@ -113,7 +120,12 @@ export async function createCenterAccount(
       // vérifié l'identité de la personne, pas une boucle email.
       status: "ACTIVE",
       emailVerified: new Date(),
-      mustChangePassword: true,
+      // Changement du mot de passe NON imposé, sur demande du centre : l'élève
+      // se connecte directement avec celui qu'on lui a transmis. Le mécanisme
+      // reste en place (garde de navigation, écran dédié) — passer cette
+      // valeur à `true` suffit à le réactiver, ici et dans la
+      // réinitialisation ci-dessous.
+      mustChangePassword: false,
     },
     select: { id: true, email: true },
   });
@@ -137,11 +149,12 @@ export async function createCenterAccount(
 }
 
 /**
- * Regénère un mot de passe provisoire (élève ayant perdu le sien).
+ * Regénère un mot de passe (compte dont le titulaire a perdu le sien).
  *
- * Repose `mustChangePassword` et met à jour `passwordChangedAt`, ce qui
- * invalide au passage toutes les sessions ouvertes du compte — voir le
- * callback JWT dans src/auth.ts.
+ * Met à jour `passwordChangedAt`, ce qui invalide au passage toutes les
+ * sessions ouvertes du compte — voir le callback JWT dans src/auth.ts. Utile
+ * au-delà du simple oubli : c'est aussi le geste qui coupe l'accès d'une
+ * personne dont les identifiants ont fuité.
  */
 export async function resetCenterAccountPassword(
   _prev: CreateAccountResult,
@@ -169,7 +182,8 @@ export async function resetCenterAccountPassword(
     where: { id: userId },
     data: {
       hashedPassword: await hashPassword(temporaryPassword),
-      mustChangePassword: true,
+      // Non imposé — cf. commentaire dans createCenterAccount.
+      mustChangePassword: false,
       passwordChangedAt: new Date(),
     },
   });

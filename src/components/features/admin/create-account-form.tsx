@@ -32,14 +32,14 @@ export function CreateAccountForm() {
           <AlertDescription>
             <p className="font-medium">Compte créé pour {state.createdEmail}</p>
             <p className="mt-2 text-sm">
-              Mot de passe provisoire — transmettez-le par email, il ne sera plus
-              affiché :
+              Mot de passe — transmettez-le par email, il ne sera plus affiché :
             </p>
             <code className="mt-1 block rounded-md bg-background px-3 py-2 font-mono text-base tracking-wide text-foreground">
               {state.temporaryPassword}
             </code>
             <p className="mt-2 text-xs">
-              L&apos;utilisateur devra le remplacer à sa première connexion.
+              Ce mot de passe reste valable tant que la personne ne le change
+              pas elle-même depuis son profil.
             </p>
           </AlertDescription>
         </Alert>
