@@ -9,9 +9,9 @@ import Link from "next/link";
  */
 export function AdminFooter({ role }: { role: string }) {
   return (
-    <footer className="flex h-10 shrink-0 items-center justify-between gap-4 border-t border-border bg-background px-4 text-xs text-muted-foreground lg:px-6">
+    <footer className="flex h-10 shrink-0 items-center justify-between gap-4 border-t border-[color:var(--admin-footer-border,var(--border))] bg-[color:var(--admin-footer-bg,var(--background))] px-4 text-xs text-[color:var(--admin-footer-muted,var(--muted-foreground))] lg:px-6">
       <p className="truncate">
-        <span className="font-medium text-foreground">Gandal</span>
+        <span className="font-medium text-[color:var(--admin-footer-fg,var(--foreground))]">Gandal</span>
         <span className="mx-1.5 text-border">·</span>
         CRM admin
         <span className="mx-1.5 hidden text-border sm:inline">·</span>

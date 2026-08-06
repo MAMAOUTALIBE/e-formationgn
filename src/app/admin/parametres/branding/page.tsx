@@ -2,11 +2,15 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 import { Logo } from "@/components/branding/logo";
+import { AdminThemeForm } from "@/components/features/admin/admin-theme-form";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { getAdminUiTheme } from "@/server/queries/admin-theme";
 
 export const metadata: Metadata = { title: "Branding" };
 
-export default function BrandingSettingsPage() {
+export default async function BrandingSettingsPage() {
+  const theme = await getAdminUiTheme();
+
   return (
     <div className="space-y-5">
       <header>
@@ -18,6 +22,20 @@ export default function BrandingSettingsPage() {
           <code>src/app/globals.css</code>.
         </p>
       </header>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Couleurs du CRM</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="mb-5 text-sm text-muted-foreground">
+            Personnalise le fond de la barre latérale, de l&apos;en-tête et du
+            pied de page du back-office. Ces couleurs ne s&apos;appliquent
+            qu&apos;au CRM — le site public reste inchangé.
+          </p>
+          <AdminThemeForm current={theme} />
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>

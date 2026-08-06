@@ -101,7 +101,7 @@ export function AdminSidebar({ badges }: AdminSidebarProps) {
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div>
-      <p className="mb-2 px-3 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/80">
+      <p className="mb-2 px-3 text-[10px] font-semibold uppercase tracking-wider text-[color:var(--admin-sidebar-muted,var(--muted-foreground))]">
         {title}
       </p>
       <div className="flex flex-col gap-0.5">{children}</div>

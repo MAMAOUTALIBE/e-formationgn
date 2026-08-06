@@ -1378,3 +1378,23 @@ model WebhookEvent {
   @@index([status, receivedAt])
   @@index([source, type])
 }
+
+/// Couleurs de la coquille du CRM admin (barre latérale, header, footer),
+/// réglables depuis /admin/parametres/branding.
+///
+/// Table à ligne unique : l'id est forcé à "singleton" côté applicatif, ce qui
+/// rend l'upsert trivial et interdit structurellement plusieurs thèmes
+/// concurrents. Les champs nuls signifient « garder la couleur par défaut de
+/// la charte » — on ne stocke donc que ce que l'admin a explicitement choisi.
+///
+/// Seule la couleur de FOND est stockée : la couleur de texte est déduite de
+/// la luminance à l'affichage, sinon un fond sombre choisi par l'admin
+/// rendrait le menu illisible.
+model AdminUiTheme {
+  id        String   @id @default("singleton")
+  sidebarBg String? // hex #RRGGBB
+  headerBg  String? // hex #RRGGBB
+  footerBg  String? // hex #RRGGBB
+  updatedAt DateTime @updatedAt
+  updatedBy String? // User.id de l'admin ayant modifié (pas de FK : purement informatif)
+}

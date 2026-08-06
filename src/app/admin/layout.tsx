@@ -10,6 +10,8 @@ import { AdminKeyboardShortcuts } from "@/components/features/admin/admin-keyboa
 import { AdminMobileSidebar } from "@/components/features/admin/admin-mobile-sidebar";
 import { AdminNotificationsBell } from "@/components/features/admin/admin-notifications-bell";
 import { AdminSectionNav } from "@/components/features/admin/admin-section-nav";
+import { adminThemeCssVars } from "@/lib/admin/theme";
+import { getAdminUiTheme } from "@/server/queries/admin-theme";
 import { AdminSidebar } from "@/components/features/admin/admin-sidebar";
 import { ThemeToggle } from "@/components/features/theme/theme-toggle";
 import { getAdminSidebarBadges } from "@/server/queries/admin-sidebar";
@@ -26,7 +28,16 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   if (!session?.user) redirect("/connexion?callbackUrl=/admin");
   if (!isAdminRole(session.user.role)) redirect("/");
 
-  const badges = await getAdminSidebarBadges();
+  const [badges, themeColors] = await Promise.all([
+    getAdminSidebarBadges(),
+    getAdminUiTheme(),
+  ]);
+
+  // Les couleurs choisies deviennent des variables CSS posées sur la coquille.
+  // Une surface non personnalisée n'émet aucune variable : les composants
+  // retombent sur leur valeur de repli, donc sur le thème par défaut (mode
+  // sombre compris).
+  const themeStyle = adminThemeCssVars(themeColors) as React.CSSProperties;
 
   return (
     // Coquille figée : la racine fait exactement la hauteur du viewport et ne
@@ -34,12 +45,15 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     // mobile n'ampute pas la vue. `minmax(0,1fr)` sur la rangée centrale est
     // indispensable : sans lui, un enfant de grille refuse de rétrécir sous la
     // taille de son contenu et déborderait malgré `overflow-hidden`.
-    <div className="grid h-[100dvh] grid-rows-[auto_minmax(0,1fr)_auto] overflow-hidden bg-muted/30">
+    <div
+      style={themeStyle}
+      className="grid h-[100dvh] grid-rows-[auto_minmax(0,1fr)_auto] overflow-hidden bg-muted/30"
+    >
       <AdminKeyboardShortcuts />
       {/* Liseré rouge d'identité : signale d'un coup d'œil qu'on est dans le
           back-office et non sur le site public, sans inonder la zone de
           travail — le rouge reste ainsi disponible pour signaler une alerte. */}
-      <header className="z-30 border-t-[3px] border-t-[color:var(--brand-danger)] border-b border-b-border bg-background">
+      <header className="z-30 border-t-[3px] border-t-[color:var(--brand-danger)] border-b border-b-[color:var(--admin-header-border,var(--border))] bg-[color:var(--admin-header-bg,var(--background))] text-[color:var(--admin-header-fg,var(--foreground))]">
         <div className="flex h-14 items-center justify-between gap-4 px-4 lg:px-6">
           <div className="flex items-center gap-2">
             <AdminMobileSidebar badges={badges} />
@@ -76,7 +90,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
             on utilise AdminMobileSidebar (drawer) déclenché depuis le header.
             `overflow-y-auto` : la navigation reste atteignable sur un écran
             court sans jamais faire défiler la coquille. */}
-        <aside className="hidden overflow-y-auto overscroll-contain bg-background lg:block lg:w-60 lg:shrink-0 lg:border-r lg:border-border">
+        <aside className="hidden overflow-y-auto overscroll-contain bg-[color:var(--admin-sidebar-bg,var(--background))] text-[color:var(--admin-sidebar-fg,var(--foreground))] lg:block lg:w-60 lg:shrink-0 lg:border-r lg:border-[color:var(--admin-sidebar-border,var(--border))]">
           <AdminSidebar badges={badges} />
         </aside>
 
