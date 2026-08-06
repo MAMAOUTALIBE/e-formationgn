@@ -9,6 +9,7 @@ import { AdminFooter } from "@/components/features/admin/admin-footer";
 import { AdminKeyboardShortcuts } from "@/components/features/admin/admin-keyboard-shortcuts";
 import { AdminMobileSidebar } from "@/components/features/admin/admin-mobile-sidebar";
 import { AdminNotificationsBell } from "@/components/features/admin/admin-notifications-bell";
+import { AdminSectionNav } from "@/components/features/admin/admin-section-nav";
 import { AdminSidebar } from "@/components/features/admin/admin-sidebar";
 import { ThemeToggle } from "@/components/features/theme/theme-toggle";
 import { getAdminSidebarBadges } from "@/server/queries/admin-sidebar";
@@ -35,14 +36,17 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     // taille de son contenu et déborderait malgré `overflow-hidden`.
     <div className="grid h-[100dvh] grid-rows-[auto_minmax(0,1fr)_auto] overflow-hidden bg-muted/30">
       <AdminKeyboardShortcuts />
-      <header className="z-30 border-b border-border bg-background">
+      {/* Liseré rouge d'identité : signale d'un coup d'œil qu'on est dans le
+          back-office et non sur le site public, sans inonder la zone de
+          travail — le rouge reste ainsi disponible pour signaler une alerte. */}
+      <header className="z-30 border-t-[3px] border-t-[color:var(--brand-danger)] border-b border-b-border bg-background">
         <div className="flex h-14 items-center justify-between gap-4 px-4 lg:px-6">
           <div className="flex items-center gap-2">
             <AdminMobileSidebar badges={badges} />
             <Link href="/" aria-label="Retour à l'accueil" className="hidden sm:block">
               <Logo width={140} priority />
             </Link>
-            <span className="hidden rounded-md bg-[color:var(--brand-primary)]/10 px-2 py-0.5 text-xs font-semibold uppercase tracking-wide text-[color:var(--brand-primary)] lg:inline">
+            <span className="hidden rounded-md bg-[color:var(--brand-danger)]/10 px-2 py-0.5 text-xs font-semibold uppercase tracking-wide text-[color:var(--brand-danger)] lg:inline">
               CRM admin
             </span>
           </div>
@@ -76,11 +80,17 @@ export default async function AdminLayout({ children }: { children: React.ReactN
           <AdminSidebar badges={badges} />
         </aside>
 
-        {/* Seule zone défilante de l'admin. `min-w-0` évite qu'un tableau large
-            élargisse la colonne et déborde horizontalement. */}
-        <main className="min-w-0 flex-1 overflow-y-auto overscroll-contain px-4 py-6 sm:px-6 lg:px-8">
-          {children}
-        </main>
+        {/* Colonne de droite : la sous-navigation reste fixe, seul le contenu
+            défile sous elle. */}
+        <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
+          <AdminSectionNav />
+
+          {/* Seule zone défilante de l'admin. `min-w-0` évite qu'un tableau
+              large élargisse la colonne et déborde horizontalement. */}
+          <main className="min-h-0 min-w-0 flex-1 overflow-y-auto overscroll-contain px-4 py-6 sm:px-6 lg:px-8">
+            {children}
+          </main>
+        </div>
       </div>
 
       <AdminFooter role={session.user.role} />

@@ -19,7 +19,18 @@ import {
   Wallet,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+
+import { ADMIN_PAGES } from "@/lib/admin/navigation";
+
+/** Compare sans tenir compte des accents ni de la casse : « securite » doit
+ *  trouver « Sécurité », sinon la recherche est inutilisable en français. */
+function normalize(value: string): string {
+  return value
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .toLowerCase();
+}
 
 interface SearchHit {
   type: "user" | "course" | "order" | "ticket";
@@ -82,6 +93,18 @@ export function AdminCommandMenu() {
 
   const visibleHits = query.trim().length >= 2 ? hits : [];
 
+  // Les 44 pages de l'admin deviennent recherchables. Auparavant la liste de
+  // navigation disparaissait dès la première frappe et seuls les résultats
+  // serveur (users/cours/commandes/tickets) restaient : taper « payouts » ne
+  // menait nulle part.
+  const matchingPages = useMemo(() => {
+    const q = normalize(query.trim());
+    if (q.length < 2) return [];
+    return ADMIN_PAGES.filter(
+      (p) => normalize(p.label).includes(q) || normalize(p.href).includes(q),
+    ).slice(0, 8);
+  }, [query]);
+
   function go(href: string) {
     setOpen(false);
     setQuery("");
@@ -139,6 +162,22 @@ export function AdminCommandMenu() {
                     >
                       <span className="text-muted-foreground">{link.icon}</span>
                       {link.label}
+                    </Command.Item>
+                  ))}
+                </Command.Group>
+              ) : null}
+
+              {matchingPages.length > 0 ? (
+                <Command.Group heading="Pages" className="px-2 text-xs text-muted-foreground [&_[cmdk-group-heading]]:px-2 [&_[cmdk-group-heading]]:py-1">
+                  {matchingPages.map((page) => (
+                    <Command.Item
+                      key={page.href}
+                      value={page.href}
+                      onSelect={() => go(page.href)}
+                      className="flex cursor-pointer items-center justify-between gap-3 rounded-md px-3 py-2 text-sm text-foreground data-[selected=true]:bg-muted"
+                    >
+                      <span>{page.label}</span>
+                      <span className="truncate text-xs text-muted-foreground">{page.href}</span>
                     </Command.Item>
                   ))}
                 </Command.Group>

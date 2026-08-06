@@ -6,6 +6,7 @@
 import { revalidatePath } from "next/cache";
 
 import { requireAdmin } from "@/lib/auth/authorization";
+import { checkUserRateLimit, rateLimitMessage } from "@/lib/auth/rate-limit-ip";
 import { csvResponseHeaders, rowsToCsv } from "@/lib/csv";
 import { prisma } from "@/lib/prisma";
 import { listAdminUsers } from "@/server/queries/admin-users";
@@ -113,11 +114,22 @@ export async function addAdminNoteOnUser(
 }
 
 export async function exportUsersCsv(): Promise<{ csv: string; filename: string } | { error: string }> {
+  let session;
   try {
-    await requireAdmin();
+    session = await requireAdmin();
   } catch {
     return { error: "Non autorisé." };
   }
+  // Export de masse de données personnelles : plafonné pour qu'une session
+  // admin compromise ne puisse pas aspirer le fichier en boucle.
+  const rl = await checkUserRateLimit({
+    prefix: "admin:export:users",
+    userId: session.userId,
+    windowMs: 10 * 60_000,
+    max: 5,
+  });
+  if (!rl.ok) return { error: rateLimitMessage(rl.resetAt) };
+
   const users = await prisma.user.findMany({
     orderBy: { createdAt: "desc" },
     take: 5000,
@@ -144,6 +156,17 @@ export async function exportUsersCsv(): Promise<{ csv: string; filename: string 
     createdAt: u.createdAt.toISOString(),
     lastLoginAt: u.lastLoginAt?.toISOString() ?? "",
   }));
+  // Export de masse de données personnelles : tracé au même titre qu'une
+  // mutation. Sans cette entrée, une exfiltration du fichier utilisateurs ne
+  // laisserait aucune trace dans AuditLog.
+  await createAuditLog({
+    actorId: session.userId,
+    action: "user.export_csv",
+    targetType: "User",
+    targetId: null,
+    metadata: { rowCount: rows.length },
+  });
+
   return { csv: rowsToCsv(rows), filename: `users-${new Date().toISOString().slice(0, 10)}.csv` };
 }
 

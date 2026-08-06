@@ -6,6 +6,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
 import { requireAdmin } from "@/lib/auth/authorization";
+import { checkUserRateLimit, rateLimitMessage } from "@/lib/auth/rate-limit-ip";
 import { rowsToCsv } from "@/lib/csv";
 import { prisma } from "@/lib/prisma";
 import { createAuditLog } from "@/server/services/audit-log";
@@ -104,11 +105,21 @@ export async function revokeAdminRole(userId: string): Promise<ActionResult> {
 export async function exportAuditLogCsv(): Promise<
   { csv: string; filename: string } | { error: string }
 > {
+  let session;
   try {
-    await requireAdmin();
+    session = await requireAdmin();
   } catch {
     return { error: "Non autorisé." };
   }
+  // Le journal d'audit est la pièce qu'un attaquant veut emporter en premier.
+  const rl = await checkUserRateLimit({
+    prefix: "admin:export:audit",
+    userId: session.userId,
+    windowMs: 10 * 60_000,
+    max: 5,
+  });
+  if (!rl.ok) return { error: rateLimitMessage(rl.resetAt) };
+
   const entries = await prisma.auditLog.findMany({
     orderBy: { createdAt: "desc" },
     take: 5000,
@@ -122,6 +133,16 @@ export async function exportAuditLogCsv(): Promise<
     targetId: e.targetId ?? "",
     metadata: e.metadata ? JSON.stringify(e.metadata) : "",
   }));
+  // Le registre d'audit s'auto-trace : sans cette entrée, aspirer la totalité
+  // du journal de traçabilité serait précisément l'acte qui n'y figure pas.
+  await createAuditLog({
+    actorId: session.userId,
+    action: "audit.export_csv",
+    targetType: "AuditLog",
+    targetId: null,
+    metadata: { rowCount: rows.length },
+  });
+
   return {
     csv: rowsToCsv(rows),
     filename: `audit-${new Date().toISOString().slice(0, 10)}.csv`,
