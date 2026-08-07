@@ -37,9 +37,49 @@ npm run lint
 echo "✅ Typage et lint OK."
 echo
 
+# Variables publiques : injectées AU BUILD, depuis .env.deploy.
+#
+# Next.js remplace chaque `process.env.NEXT_PUBLIC_*` par sa valeur littérale
+# pendant la compilation. Une variable posée seulement dans docker-compose
+# n'atteint donc jamais le navigateur — elle serait embarquée vide.
+#
+# La source est `.env.deploy` (non versionné), PAS `.env` : ce dernier porte
+# les valeurs de développement, et lire `localhost:3000` ici enverrait cette
+# adresse dans l'image de production. Sans `.env.deploy`, on retombe sur les
+# valeurs de production ci-dessous.
+if [ -f .env.deploy ]; then
+  eval "$(grep -E '^NEXT_PUBLIC_[A-Z0-9_]+=' .env.deploy | sed 's/^/export /')"
+fi
+: "${NEXT_PUBLIC_APP_URL:=https://gandal.org}"
+: "${NEXT_PUBLIC_APP_NAME:=Gandal}"
+: "${NEXT_PUBLIC_TURNSTILE_SITE_KEY:=}"
+: "${NEXT_PUBLIC_SENTRY_DSN:=}"
+
+echo "▶ Variables publiques embarquées dans l'image :"
+printf "    NEXT_PUBLIC_APP_URL            = %s\n" "${NEXT_PUBLIC_APP_URL}"
+printf "    NEXT_PUBLIC_TURNSTILE_SITE_KEY = %s\n" \
+  "$([ -n "${NEXT_PUBLIC_TURNSTILE_SITE_KEY}" ] && echo 'définie' || echo 'ABSENTE → aucun captcha sur connexion/inscription')"
+printf "    NEXT_PUBLIC_SENTRY_DSN         = %s\n" \
+  "$([ -n "${NEXT_PUBLIC_SENTRY_DSN}" ] && echo 'définie' || echo 'absente → pas de supervision client')"
+echo
+
+case "${NEXT_PUBLIC_APP_URL}" in
+  *localhost*|*127.0.0.1*|*placeholder*)
+    echo "❌ NEXT_PUBLIC_APP_URL = ${NEXT_PUBLIC_APP_URL}"
+    echo "   Cette adresse partirait telle quelle dans l'image de production :"
+    echo "   sitemap, canonical et liens de courriel la reprendraient."
+    echo "   Corrigez .env.deploy avant de relancer."
+    exit 1
+    ;;
+esac
+
 echo "▶ Build linux/amd64 → ${REPO}:latest + ${REPO}:${TAG}"
 docker buildx build \
   --platform linux/amd64 \
+  --build-arg NEXT_PUBLIC_APP_URL="${NEXT_PUBLIC_APP_URL}" \
+  --build-arg NEXT_PUBLIC_APP_NAME="${NEXT_PUBLIC_APP_NAME}" \
+  --build-arg NEXT_PUBLIC_TURNSTILE_SITE_KEY="${NEXT_PUBLIC_TURNSTILE_SITE_KEY}" \
+  --build-arg NEXT_PUBLIC_SENTRY_DSN="${NEXT_PUBLIC_SENTRY_DSN}" \
   -t "${REPO}:latest" \
   -t "${REPO}:${TAG}" \
   --push .

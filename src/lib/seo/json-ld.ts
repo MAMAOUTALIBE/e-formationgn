@@ -3,7 +3,7 @@
 
 import type { PublicCourseDetail } from "@/server/queries/courses";
 
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "https://gandal.gn";
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "https://gandal.org";
 const SITE_NAME = process.env.NEXT_PUBLIC_APP_NAME ?? "Gandal";
 
 interface BreadcrumbItem {

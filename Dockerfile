@@ -42,7 +42,19 @@ ENV NODE_OPTIONS="--max-old-space-size=1536"
 ENV DATABASE_URL="postgresql://placeholder:placeholder@placeholder:5432/placeholder?schema=public"
 ENV NEXTAUTH_SECRET="build_only_placeholder_secret_at_least_32_chars_long"
 ENV NEXTAUTH_URL="https://placeholder.local"
-ENV NEXT_PUBLIC_APP_URL="https://placeholder.local"
+# Variables NEXT_PUBLIC_* : Next.js les fige DANS LE BUNDLE au moment du build,
+# pas au démarrage du conteneur. Les poser seulement dans docker-compose est
+# sans effet — c'est ce qui avait silencieusement désactivé Turnstile et rempli
+# le sitemap de « placeholder.local » en production. Elles doivent donc entrer
+# ici, par --build-arg (scripts/deploy.sh les lit dans .env).
+ARG NEXT_PUBLIC_APP_URL="https://placeholder.local"
+ARG NEXT_PUBLIC_APP_NAME="Gandal"
+ARG NEXT_PUBLIC_TURNSTILE_SITE_KEY=""
+ARG NEXT_PUBLIC_SENTRY_DSN=""
+ENV NEXT_PUBLIC_APP_URL=${NEXT_PUBLIC_APP_URL}
+ENV NEXT_PUBLIC_APP_NAME=${NEXT_PUBLIC_APP_NAME}
+ENV NEXT_PUBLIC_TURNSTILE_SITE_KEY=${NEXT_PUBLIC_TURNSTILE_SITE_KEY}
+ENV NEXT_PUBLIC_SENTRY_DSN=${NEXT_PUBLIC_SENTRY_DSN}
 
 RUN npx prisma generate
 RUN npm run build

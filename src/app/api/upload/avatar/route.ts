@@ -12,9 +12,24 @@ export const runtime = "nodejs";
 // leur avatar (gaspillage stockage + bande passante).
 const MAX_BYTES = 2 * 1024 * 1024; // 2 MB
 
-// On accepte TOUT format d'image (image/*). Une vidéo n'a pas de sens en avatar.
+// SVG écarté : c'est un document XML porteur de script, qui s'exécute dans
+// l'origine du domaine de stockage quand on l'ouvre directement. Aucun avatar
+// n'en a besoin.
+const DENIED_TYPES = new Set([
+  "image/svg+xml",
+  "image/svg",
+  "text/html",
+  "application/xhtml+xml",
+]);
+
 function isAllowedType(contentType: string): boolean {
+  if (DENIED_TYPES.has(contentType.toLowerCase())) return false;
   return contentType.startsWith("image/");
+}
+
+/** Extensions dangereuses, indépendamment du type déclaré. */
+function hasDeniedExtension(filename: string): boolean {
+  return /\.(svgz?|html?|xhtml|js|mjs|php|phtml)$/i.test(filename.trim());
 }
 
 interface RequestBody {
@@ -44,6 +59,12 @@ export async function POST(request: Request) {
       { status: 400 },
     );
   }
+  if (hasDeniedExtension(filename ?? "")) {
+    return NextResponse.json(
+      { error: "Format non supporté." },
+      { status: 400 },
+    );
+  }
   if (!isAllowedType(contentType)) {
     return NextResponse.json(
       { error: "Format non supporté. Choisissez une image." },
@@ -66,7 +87,9 @@ export async function POST(request: Request) {
           prefix,
           filename,
           contentType,
-          maxSizeBytes: sizeBytes,
+          // Plafond du serveur, pas la taille annoncée : une URL signée sur
+          // la valeur du client accepterait n'importe quel volume.
+          maxSizeBytes: MAX_BYTES,
           expiresInSeconds: 60,
         })
       : createLocalUpload({ prefix, filename, expiresInSeconds: 60 });

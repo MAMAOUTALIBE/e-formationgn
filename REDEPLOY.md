@@ -2,7 +2,7 @@
 
 Comment livrer du code modifié en production.
 
-**Production en place :** https://gandal.org — VPS Hostinger `srv1643859.hstgr.cloud`.
+**Production en place :** https://gandal.org — VPS Hostinger `srv1768778.hstgr.cloud` (213.130.144.215).
 
 ---
 
@@ -11,7 +11,11 @@ Comment livrer du code modifié en production.
 - **Orchestration :** Docker Compose, projet `eformationgn`, dossier `/docker/e-formationgn/` sur le VPS.
 - **Conteneurs :** `db` (PostgreSQL 16) · `app` (Next.js) · `cron` (nettoyage quotidien). Pas de Caddy.
 - **Image :** `bahm2062/e-formationgn` sur Docker Hub. Buildée **sur le Mac** (Apple Silicon) en `linux/amd64`, **jamais sur le VPS** (VPS trop chargé).
-- **Reverse proxy / HTTPS :** Traefik mutualisé du VPS (`traefik-zcbs`), branché via les *labels* du service `app` ([docker-compose.yml](docker-compose.yml)). Certificat Let's Encrypt automatique.
+- **Reverse proxy / HTTPS :** **nginx** sur l'hôte (ports 80/443), qui relaie
+  vers `127.0.0.1:3300`. La documentation annonçait Traefik : c'est faux depuis
+  au moins la mise en ligne — un `docker compose ps` ne montre aucun Traefik et
+  `ss -tlnp` attribue 80/443 à nginx. Les labels Traefik du service `app` sont
+  donc inertes.
 - **Secrets :** `/docker/e-formationgn/.env` sur le VPS — **jamais commité**, jamais dans l'image.
 - **Migrations :** appliquées automatiquement au démarrage du conteneur `app` (`prisma migrate deploy` dans l'entrypoint). Aucune action manuelle.
 
@@ -55,7 +59,11 @@ docker compose ps
 
 > **Tout depuis le Mac en une commande :** configure un accès SSH par clé au VPS, puis :
 > ```bash
-> export VPS_SSH=root@srv1643859.hstgr.cloud
+> export VPS_SSH=root@213.130.144.215
+>
+> La clé par défaut est refusée par l'hôte : utiliser `~/.ssh/claude_deploy`
+> (ou `~/.ssh/deploy_key`). Exemple :
+> `ssh -i ~/.ssh/claude_deploy root@213.130.144.215`
 > npm run deploy
 > ```
 > Le script enchaîne alors automatiquement le `pull` + `up -d` sur le VPS.
@@ -109,7 +117,7 @@ Le [docker-compose.yml](docker-compose.yml) du repo est la **source de vérité*
 | `docker compose pull` : `denied` / `not found` | Pas connecté à Docker Hub | `docker login` sur le Mac |
 | `app` en `Restarting` après un deploy | Migration Prisma ou variable d'env | `docker logs --tail 80 eformationgn-app-1` |
 | `28P01 password authentication failed` | Mot de passe DB non URL-safe | Cf. note « hex uniquement » ci-dessus |
-| `502 Bad Gateway` sur le domaine | `app` pas `(healthy)` → Traefik ne route pas | `docker compose ps` puis logs `app` |
+| `502 Bad Gateway` sur le domaine | `app` pas `(healthy)` → nginx ne peut pas relayer | `docker compose ps` puis logs `app` |
 | Le site ne change pas après un deploy | Vieille image encore en cache | Vérifier que `docker compose pull` a bien tiré un nouveau digest |
 
 ---

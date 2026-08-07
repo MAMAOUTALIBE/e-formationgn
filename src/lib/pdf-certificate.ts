@@ -204,7 +204,7 @@ export async function generateCertificatePdf(
   });
 
   page.drawText(
-    `Vérifiez l'authenticité : ${process.env.NEXT_PUBLIC_APP_URL ?? "https://gandal.gn"}/certificat/${params.serialNumber}`,
+    `Vérifiez l'authenticité : ${process.env.NEXT_PUBLIC_APP_URL ?? "https://gandal.org"}/certificat/${params.serialNumber}`,
     {
       x: width - 460,
       y: 100,

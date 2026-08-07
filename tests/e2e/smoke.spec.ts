@@ -25,12 +25,14 @@ test.describe("Smoke — pages publiques", () => {
     expect(body.status).toBe("ok");
   });
 
-  test("inscription affiche le formulaire", async ({ page }) => {
+  test("inscription publique fermée en mode centre de formation", async ({ page }) => {
     await page.goto("/inscription");
-    // Les pages auth utilisent <CardTitle> (h3) — pas d'h1. On vérifie les
-    // champs du formulaire qui sont le signal réel « la page a chargé ».
-    await expect(page.getByLabel(/email/i).first()).toBeVisible();
-    await expect(page.getByLabel(/mot de passe/i).first()).toBeVisible();
+    // La plateforme tourne en `centre_formation` : les comptes sont créés
+    // depuis le CRM, jamais par le visiteur. Ce test vérifiait l'ancien
+    // formulaire d'inscription libre ; il vérifie maintenant que la page
+    // l'annonce et n'expose aucun champ de création de compte.
+    await expect(page.getByText(/centre de formation/i).first()).toBeVisible();
+    await expect(page.getByLabel(/mot de passe/i)).toHaveCount(0);
   });
 
   test("connexion affiche le formulaire", async ({ page }) => {

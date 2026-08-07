@@ -2,7 +2,7 @@ import type { MetadataRoute } from "next";
 
 import { prisma } from "@/lib/prisma";
 
-const BASE_URL = process.env.NEXT_PUBLIC_APP_URL ?? "https://gandal.gn";
+const BASE_URL = process.env.NEXT_PUBLIC_APP_URL ?? "https://gandal.org";
 
 export const dynamic = "force-dynamic";
 

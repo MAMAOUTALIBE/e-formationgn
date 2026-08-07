@@ -118,7 +118,7 @@ export async function GET(req: NextRequest) {
 
         {/* Footer : URL + rating éventuel */}
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-          <div style={{ fontSize: 24, color: PALETTE.textDim }}>gandal.gn</div>
+          <div style={{ fontSize: 24, color: PALETTE.textDim }}>gandal.org</div>
           {rating && Number(rating) > 0 ? (
             <div
               style={{

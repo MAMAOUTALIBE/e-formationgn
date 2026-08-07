@@ -6,16 +6,32 @@ import { createPresignedUpload, isR2Configured } from "@/lib/storage/r2";
 
 export const runtime = "nodejs";
 
-// 1 GB — couvre n'importe quelle image et les vidéos. R2 (prod) comme le
-// stockage local (dev) acceptent ce plafond.
-const MAX_BYTES = 1024 * 1024 * 1024;
+// Plafonds distincts. Une vignette de cours qui pèse un giga-octet n'existe
+// pas : le plafond unique de 1 Gio servait la vidéo et laissait, pour les
+// images, une marge dont seul un abus pouvait se servir.
+const MAX_IMAGE_BYTES = 12 * 1024 * 1024; // 12 Mio
+const MAX_VIDEO_BYTES = 1024 * 1024 * 1024; // 1 Gio
 
-// On accepte TOUT format d'image et de vidéo (image/*, video/*) plutôt qu'une
-// liste blanche figée.
+// Types refusés quel que soit le préfixe.
+//
+// SVG est un document XML : il peut porter du script, et servi depuis le
+// domaine de stockage il s'exécute dans l'origine de ce domaine. Aucune
+// vignette n'a besoin de ce format.
+const DENIED_TYPES = new Set([
+  "image/svg+xml",
+  "image/svg",
+  "text/html",
+  "application/xhtml+xml",
+]);
+
 function isAllowedType(contentType: string): boolean {
-  return (
-    contentType.startsWith("image/") || contentType.startsWith("video/")
-  );
+  if (DENIED_TYPES.has(contentType.toLowerCase())) return false;
+  return contentType.startsWith("image/") || contentType.startsWith("video/");
+}
+
+/** Extensions dangereuses, indépendamment du type déclaré. */
+function hasDeniedExtension(filename: string): boolean {
+  return /\.(svgz?|html?|xhtml|js|mjs|php|phtml)$/i.test(filename.trim());
 }
 
 interface RequestBody {
@@ -50,15 +66,18 @@ export async function POST(request: Request) {
       { status: 400 },
     );
   }
-  if (!isAllowedType(contentType)) {
+  if (!isAllowedType(contentType) || hasDeniedExtension(filename)) {
     return NextResponse.json(
       { error: "Format non supporté. Choisissez une image ou une vidéo." },
       { status: 400 },
     );
   }
-  if (sizeBytes <= 0 || sizeBytes > MAX_BYTES) {
+  const maxBytes = contentType.startsWith("video/")
+    ? MAX_VIDEO_BYTES
+    : MAX_IMAGE_BYTES;
+  if (sizeBytes <= 0 || sizeBytes > maxBytes) {
     return NextResponse.json(
-      { error: `Fichier trop lourd (max ${MAX_BYTES / (1024 * 1024)} MB).` },
+      { error: `Fichier trop lourd (max ${Math.round(maxBytes / (1024 * 1024))} Mo).` },
       { status: 400 },
     );
   }
@@ -72,7 +91,10 @@ export async function POST(request: Request) {
           prefix,
           filename,
           contentType,
-          maxSizeBytes: sizeBytes,
+          // Le plafond transmis à la signature est CELUI DU SERVEUR, pas la
+          // taille annoncée par le client : sinon un appelant déclarant 1 Ko
+          // obtiendrait une URL signée qui accepte n'importe quel volume.
+          maxSizeBytes: maxBytes,
           // Vidéos potentiellement lourdes → fenêtre d'upload large.
           expiresInSeconds: 600,
         })
