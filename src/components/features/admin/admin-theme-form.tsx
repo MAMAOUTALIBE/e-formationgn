@@ -6,9 +6,12 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { SubmitButton } from "@/components/ui/submit-button";
 import {
+  ADMIN_TEXT_SCALE_OPTIONS,
+  DEFAULT_ADMIN_TEXT_SCALE,
   isHexColor,
   mutedTextOn,
   readableTextOn,
+  type AdminTextScale,
   type AdminThemeColors,
 } from "@/lib/admin/theme";
 import { updateAdminUiTheme } from "@/server/actions/admin-theme";
@@ -41,7 +44,13 @@ const PRESETS = [
   { label: "Bordeaux", value: "#7f1d1d" },
 ];
 
-export function AdminThemeForm({ current }: { current: AdminThemeColors }) {
+export function AdminThemeForm({
+  current,
+  currentTextScale,
+}: {
+  current: AdminThemeColors;
+  currentTextScale: AdminTextScale;
+}) {
   const [state, formAction] = useActionState(updateAdminUiTheme, initialState);
   const errors = state.fieldErrors ?? {};
 
@@ -51,6 +60,7 @@ export function AdminThemeForm({ current }: { current: AdminThemeColors }) {
     headerBg: current.header ?? "",
     footerBg: current.footer ?? "",
   });
+  const [textScale, setTextScale] = useState<AdminTextScale>(currentTextScale);
 
   const set = (key: string, value: string) =>
     setValues((v) => ({ ...v, [key]: value }));
@@ -62,6 +72,69 @@ export function AdminThemeForm({ current }: { current: AdminThemeColors }) {
           <AlertDescription>{state.message}</AlertDescription>
         </Alert>
       ) : null}
+
+      <fieldset className="space-y-3">
+        <legend className="text-sm font-medium text-foreground">
+          Taille du texte
+        </legend>
+        <p className="text-xs text-muted-foreground">
+          S&apos;applique à tout le CRM. Le site public garde sa propre échelle.
+        </p>
+
+        <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+          {ADMIN_TEXT_SCALE_OPTIONS.map((option) => {
+            const active = textScale === option.value;
+            return (
+              <label
+                key={option.value}
+                className={`cursor-pointer rounded-md border p-3 transition-colors ${
+                  active
+                    ? "border-[color:var(--brand-secondary)] bg-[color:var(--brand-secondary)]/8"
+                    : "border-border hover:bg-muted"
+                }`}
+              >
+                <span className="flex items-center gap-2">
+                  <input
+                    type="radio"
+                    name="textScale"
+                    value={option.value}
+                    checked={active}
+                    onChange={() => setTextScale(option.value)}
+                    className="h-4 w-4"
+                  />
+                  <span className="text-sm font-medium text-foreground">
+                    {option.label}
+                  </span>
+                </span>
+                <span className="mt-1 block text-xs text-muted-foreground">
+                  {option.hint}
+                </span>
+              </label>
+            );
+          })}
+        </div>
+
+        {/* Aperçu réel : l'attribut data-admin-text sur ce bloc y applique
+            l'échelle choisie, exactement comme le layout l'applique au CRM.
+            Annoncer « 15 px » ne dit rien tant qu'on ne l'a pas sous les yeux. */}
+        <div
+          data-admin-text={textScale}
+          className="rounded-md border border-border bg-card p-4"
+        >
+          <p className="text-xs uppercase tracking-wide text-muted-foreground">
+            Aperçu — {ADMIN_TEXT_SCALE_OPTIONS.find((o) => o.value === textScale)?.label}
+          </p>
+          <p className="mt-1 text-base font-semibold text-foreground">
+            Fiche de Awa Diallo
+          </p>
+          <p className="text-sm text-foreground">
+            3 formations attribuées · dernière connexion il y a 2 jours
+          </p>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Libellé secondaire, comme sous les compteurs du tableau de bord.
+          </p>
+        </div>
+      </fieldset>
 
       <div className="grid gap-5 lg:grid-cols-3">
         {SURFACES.map((surface) => {
@@ -157,11 +230,14 @@ export function AdminThemeForm({ current }: { current: AdminThemeColors }) {
       </div>
 
       <div className="flex items-center gap-3">
-        <SubmitButton>Enregistrer les couleurs</SubmitButton>
+        <SubmitButton>Enregistrer l&apos;apparence</SubmitButton>
         <Button
           type="button"
           variant="ghost"
-          onClick={() => setValues({ sidebarBg: "", headerBg: "", footerBg: "" })}
+          onClick={() => {
+            setValues({ sidebarBg: "", headerBg: "", footerBg: "" });
+            setTextScale(DEFAULT_ADMIN_TEXT_SCALE);
+          }}
         >
           Tout remettre par défaut
         </Button>

@@ -28,7 +28,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   if (!session?.user) redirect("/connexion?callbackUrl=/admin");
   if (!isAdminRole(session.user.role)) redirect("/");
 
-  const [badges, themeColors] = await Promise.all([
+  const [badges, theme] = await Promise.all([
     getAdminSidebarBadges(),
     getAdminUiTheme(),
   ]);
@@ -37,7 +37,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   // Une surface non personnalisée n'émet aucune variable : les composants
   // retombent sur leur valeur de repli, donc sur le thème par défaut (mode
   // sombre compris).
-  const themeStyle = adminThemeCssVars(themeColors) as React.CSSProperties;
+  const themeStyle = adminThemeCssVars(theme.colors) as React.CSSProperties;
 
   return (
     // Coquille figée : la racine fait exactement la hauteur du viewport et ne
@@ -45,8 +45,13 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     // mobile n'ampute pas la vue. `minmax(0,1fr)` sur la rangée centrale est
     // indispensable : sans lui, un enfant de grille refuse de rétrécir sous la
     // taille de son contenu et déborderait malgré `overflow-hidden`.
+    // `data-admin-text` redéfinit les variables de taille de Tailwind pour
+    // tout le sous-arbre (blocs [data-admin-text=…] dans globals.css) : les
+    // ~400 `text-sm` / `text-xs` du CRM suivent sans être touchés, et le site
+    // public garde son échelle.
     <div
       style={themeStyle}
+      data-admin-text={theme.textScale}
       className="grid h-[100dvh] grid-rows-[auto_minmax(0,1fr)_auto] overflow-hidden bg-muted/30"
     >
       <AdminKeyboardShortcuts />

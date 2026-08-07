@@ -6,6 +6,74 @@
 // marine pour la barre latérale rendrait le menu (texte gris foncé) illisible,
 // et l'admin devrait régler six couleurs au lieu de trois.
 
+// ---------------------------------------------------------------------------
+// Taille du texte
+// ---------------------------------------------------------------------------
+
+/**
+ * Échelle typographique de la coquille admin.
+ *
+ * Le CRM est un poste de travail : on y passe la journée, contrairement au
+ * site public. Les quatre crans sont définis en CSS (blocs
+ * `[data-admin-text=…]` dans globals.css), l'attribut étant posé par le layout
+ * admin. Le confort dépend de la taille de l'écran et de la vue : ce n'est pas
+ * une valeur qu'on peut deviner à la place de l'utilisateur.
+ */
+export const ADMIN_TEXT_SCALES = [
+  "compact",
+  "normal",
+  "confortable",
+  "grand",
+] as const;
+
+export type AdminTextScale = (typeof ADMIN_TEXT_SCALES)[number];
+
+/**
+ * Un cran au-dessus de l'échelle Tailwind d'origine.
+ *
+ * C'est le défaut du CRM, y compris quand rien n'a jamais été réglé : le
+ * réglage sert à s'écarter de cette base, pas à obtenir un texte lisible.
+ */
+export const DEFAULT_ADMIN_TEXT_SCALE: AdminTextScale = "normal";
+
+export function isAdminTextScale(value: string): value is AdminTextScale {
+  return (ADMIN_TEXT_SCALES as readonly string[]).includes(value);
+}
+
+export interface AdminTextScaleOption {
+  value: AdminTextScale;
+  label: string;
+  /** Tailles réelles : « plus grand » ne dit rien, « 15 px » se vérifie. */
+  hint: string;
+}
+
+export const ADMIN_TEXT_SCALE_OPTIONS: readonly AdminTextScaleOption[] = [
+  {
+    value: "compact",
+    label: "Compact",
+    hint: "12 / 14 / 16 px — un maximum de lignes à l'écran.",
+  },
+  {
+    value: "normal",
+    label: "Normal",
+    hint: "13 / 15 / 17 px — le réglage par défaut du CRM.",
+  },
+  {
+    value: "confortable",
+    label: "Confortable",
+    hint: "14 / 16 / 18 px — pour une consultation prolongée.",
+  },
+  {
+    value: "grand",
+    label: "Grand",
+    hint: "15 / 17 / 19 px — écran éloigné, vue fatiguée, projection.",
+  },
+];
+
+// ---------------------------------------------------------------------------
+// Couleurs
+// ---------------------------------------------------------------------------
+
 /** Surfaces de la coquille admin dont le fond est réglable. */
 export const ADMIN_THEME_SURFACES = ["sidebar", "header", "footer"] as const;
 export type AdminThemeSurface = (typeof ADMIN_THEME_SURFACES)[number];

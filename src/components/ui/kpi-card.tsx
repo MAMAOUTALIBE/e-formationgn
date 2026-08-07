@@ -55,9 +55,14 @@ export function KpiCard({
         ) : null}
       </div>
 
-      <div className="flex items-end justify-between gap-3">
-        <div className="min-w-0">
-          <p className="text-2xl font-semibold tracking-tight text-foreground">
+      {/* Le chiffre prime sur la sparkline, qui est décorative : le bloc de
+          gauche garde sa largeur naturelle (pas de `min-w-0`, donc pas de
+          rétrécissement sous son contenu) tandis que la sparkline accepte de
+          se réduire. Sans cela, « 0,00 € » se coupait entre le nombre et le
+          symbole dès que le texte du CRM passait aux grandes échelles. */}
+      <div className="flex items-end justify-between gap-3 overflow-hidden">
+        <div>
+          <p className="whitespace-nowrap text-2xl font-semibold tracking-tight text-foreground">
             {formattedValue}
           </p>
           {hint ? (
@@ -65,7 +70,7 @@ export function KpiCard({
           ) : null}
         </div>
         {sparkline ? (
-          <div className="h-10 w-24 shrink-0 text-muted-foreground">
+          <div className="h-10 w-24 min-w-0 shrink text-muted-foreground">
             {sparkline}
           </div>
         ) : null}

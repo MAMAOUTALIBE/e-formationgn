@@ -25,15 +25,18 @@ export default async function BrandingSettingsPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Couleurs du CRM</CardTitle>
+          <CardTitle className="text-base">Apparence du CRM</CardTitle>
         </CardHeader>
         <CardContent>
           <p className="mb-5 text-sm text-muted-foreground">
-            Personnalise le fond de la barre latérale, de l&apos;en-tête et du
-            pied de page du back-office. Ces couleurs ne s&apos;appliquent
+            Taille du texte, et fond de la barre latérale, de l&apos;en-tête et
+            du pied de page du back-office. Ces réglages ne s&apos;appliquent
             qu&apos;au CRM — le site public reste inchangé.
           </p>
-          <AdminThemeForm current={theme} />
+          <AdminThemeForm
+            current={theme.colors}
+            currentTextScale={theme.textScale}
+          />
         </CardContent>
       </Card>
 

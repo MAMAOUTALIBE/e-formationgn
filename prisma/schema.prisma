@@ -1400,6 +1400,7 @@ model AdminUiTheme {
   sidebarBg String? // hex #RRGGBB
   headerBg  String? // hex #RRGGBB
   footerBg  String? // hex #RRGGBB
+  textScale String? // compact | normal | confortable | grand — null = normal
   updatedAt DateTime @updatedAt
   updatedBy String? // User.id de l'admin ayant modifié (pas de FK : purement informatif)
 }

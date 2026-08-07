@@ -1,13 +1,18 @@
 "use server";
 
-// Server Action : couleurs de la coquille du CRM admin (barre latérale,
-// header, footer), réglées depuis /admin/parametres/branding.
+// Server Action : apparence de la coquille du CRM admin — couleurs de la barre
+// latérale, du header et du footer, et taille du texte. Réglée depuis
+// /admin/parametres/branding.
 
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
 import { requireAdmin } from "@/lib/auth/authorization";
-import { HEX_COLOR_PATTERN } from "@/lib/admin/theme";
+import {
+  ADMIN_TEXT_SCALES,
+  DEFAULT_ADMIN_TEXT_SCALE,
+  HEX_COLOR_PATTERN,
+} from "@/lib/admin/theme";
 import { prisma } from "@/lib/prisma";
 import { ADMIN_THEME_ID } from "@/server/queries/admin-theme";
 import { createAuditLog } from "@/server/services/audit-log";
@@ -38,6 +43,10 @@ const themeSchema = z
     sidebarBg: optionalHex,
     headerBg: optionalHex,
     footerBg: optionalHex,
+    // Enum fermé plutôt que chaîne libre : la valeur devient un attribut
+    // `data-admin-text` dont dépend le choix de la règle CSS. Une valeur
+    // inconnue laisserait la coquille sans échelle typographique.
+    textScale: z.enum(ADMIN_TEXT_SCALES),
   })
   .strict();
 
@@ -56,12 +65,13 @@ export async function updateAdminUiTheme(
     sidebarBg: formData.get("sidebarBg") ?? "",
     headerBg: formData.get("headerBg") ?? "",
     footerBg: formData.get("footerBg") ?? "",
+    textScale: formData.get("textScale") ?? DEFAULT_ADMIN_TEXT_SCALE,
   });
 
   if (!parsed.success) {
     return {
       success: false,
-      message: "Couleur invalide.",
+      message: "Réglage invalide.",
       fieldErrors: parsed.error.flatten().fieldErrors,
     };
   }
@@ -89,5 +99,5 @@ export async function updateAdminUiTheme(
   // revalidées, pas seulement l'écran de réglage.
   revalidatePath("/admin", "layout");
 
-  return { success: true, message: "Couleurs enregistrées." };
+  return { success: true, message: "Apparence enregistrée." };
 }
