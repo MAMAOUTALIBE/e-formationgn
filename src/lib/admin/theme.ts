@@ -132,12 +132,34 @@ export function borderOn(backgroundHex: string): string {
     : "rgb(255 255 255 / 0.18)";
 }
 
-/** Fond de survol / d'état actif, lisible sur les deux extrêmes. */
+/** Fond de survol, lisible sur les deux extrêmes. */
 export function hoverOn(backgroundHex: string): string {
   return relativeLuminance(backgroundHex) > 0.5
     ? "rgb(15 23 42 / 0.06)"
     : "rgb(255 255 255 / 0.12)";
 }
+
+/**
+ * Fond de la pilule du menu actif.
+ *
+ * Sur une barre latérale sombre, un simple voile blanc à 12 % se confond avec
+ * le survol : on passe à une pastille blanche pleine, qui détache nettement la
+ * page courante. Sur un fond clair, la pastille pleine serait au contraire
+ * trop lourde — un voile foncé suffit.
+ */
+export function activeSurfaceOn(backgroundHex: string): string {
+  return relativeLuminance(backgroundHex) > 0.5
+    ? "rgb(15 23 42 / 0.08)"
+    : "#ffffff";
+}
+
+/**
+ * Texte de la pilule active.
+ *
+ * Constant dans les deux cas : voile foncé sur fond clair → la pilule reste
+ * claire ; pastille blanche sur fond sombre → elle est claire aussi.
+ */
+export const ACTIVE_PILL_TEXT = "#0f172a";
 
 /**
  * Traduit les couleurs choisies en variables CSS posées sur la coquille admin.
@@ -160,8 +182,8 @@ export function adminThemeCssVars(colors: AdminThemeColors): Record<string, stri
     vars[`--admin-${surface}-hover`] = hoverOn(bg);
     // État actif du menu : le bleu marine de la charte disparaîtrait sur une
     // barre latérale sombre. On le remplace par un contraste calculé.
-    vars[`--admin-${surface}-active-bg`] = hoverOn(bg);
-    vars[`--admin-${surface}-active-fg`] = readableTextOn(bg);
+    vars[`--admin-${surface}-active-bg`] = activeSurfaceOn(bg);
+    vars[`--admin-${surface}-active-fg`] = ACTIVE_PILL_TEXT;
   }
 
   return vars;

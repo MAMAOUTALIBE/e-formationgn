@@ -1,9 +1,11 @@
 "use client";
 
+import { ChevronDown } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 
 import { Avatar } from "@/components/ui/avatar";
+import { cn } from "@/lib/utils";
 import { logout } from "@/server/actions/auth";
 
 interface UserMenuProps {
@@ -13,12 +15,22 @@ interface UserMenuProps {
     image?: string | null;
     role: string;
   };
+  /**
+   * Affiche le nom et le rôle à côté de l'avatar (≥ lg).
+   *
+   * Réservé au CRM : sur le site public, la barre du haut est déjà chargée et
+   * l'avatar seul suffit.
+   */
+  showIdentity?: boolean;
 }
 
 const ROLE_LABELS: Record<string, string> = {
   STUDENT: "Élève",
   INSTRUCTOR: "Formateur",
   ADMIN: "Administrateur",
+  MODERATOR: "Modération",
+  SUPPORT: "Support",
+  FINANCE: "Finance",
 };
 
 const ROLE_DASHBOARD: Record<string, { href: string; label: string }> = {
@@ -27,7 +39,7 @@ const ROLE_DASHBOARD: Record<string, { href: string; label: string }> = {
   ADMIN: { href: "/admin", label: "Tableau de bord admin" },
 };
 
-export function UserMenu({ user }: UserMenuProps) {
+export function UserMenu({ user, showIdentity = false }: UserMenuProps) {
   const [open, setOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -60,12 +72,28 @@ export function UserMenu({ user }: UserMenuProps) {
       <button
         type="button"
         onClick={() => setOpen((current) => !current)}
-        className="flex items-center gap-2 rounded-full border border-transparent p-1 transition-colors hover:border-border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        className={cn(
+          "flex items-center gap-2 rounded-full border border-transparent p-1 transition-colors hover:border-border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+          showIdentity && "lg:pr-2.5",
+        )}
         aria-haspopup="menu"
         aria-expanded={open}
         aria-label="Menu utilisateur"
       >
         <Avatar src={user.image} alt={user.name ?? user.email} fallback={initials} size={36} />
+        {showIdentity ? (
+          <span className="hidden min-w-0 text-left lg:block">
+            <span className="block max-w-[10rem] truncate text-sm font-semibold leading-tight">
+              {user.name ?? user.email}
+            </span>
+            <span className="block text-xs leading-tight opacity-70">
+              {ROLE_LABELS[user.role] ?? user.role}
+            </span>
+          </span>
+        ) : null}
+        {showIdentity ? (
+          <ChevronDown className="hidden h-4 w-4 shrink-0 opacity-60 lg:block" aria-hidden />
+        ) : null}
       </button>
 
       {open ? (

@@ -46,6 +46,20 @@ export function parsePeriodParam(value: string | null): PeriodValue {
   return { preset, from, to };
 }
 
+/** Une période choisie reste valable un mois d'une visite à l'autre. */
+const PERIOD_COOKIE_MAX_AGE = 60 * 60 * 24 * 30;
+
+/**
+ * Mémorise la période choisie pour les autres écrans du CRM.
+ *
+ * Défini hors composant : le compilateur React interdit d'écrire sur une
+ * valeur extérieure (`document`) depuis le corps d'un composant.
+ */
+export function persistPeriodCookie(serialized: string): void {
+  if (typeof document === "undefined") return;
+  document.cookie = `${PERIOD_COOKIE_NAME}=${encodeURIComponent(serialized)}; Path=/; Max-Age=${PERIOD_COOKIE_MAX_AGE}; SameSite=Lax`;
+}
+
 export const PRESET_LABELS: Record<PeriodPreset, string> = {
   today: "Aujourd'hui",
   "7d": "7 derniers jours",

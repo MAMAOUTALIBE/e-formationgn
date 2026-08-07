@@ -15,16 +15,65 @@ export interface AdminNavItem {
   label: string;
 }
 
+/**
+ * Icône de la section, désignée par un nom et non par un composant : ce
+ * fichier est importé par du code client ET serveur, et un `.ts` ne peut pas
+ * porter de JSX. La correspondance nom → composant vit dans la sidebar.
+ */
+export type AdminIconName =
+  | "gauge"
+  | "chart"
+  | "wallet"
+  | "megaphone"
+  | "users"
+  | "graduation"
+  | "lifebuoy"
+  | "book"
+  | "alert"
+  | "settings"
+  | "shield";
+
+/** Compteurs de `AdminSidebarBadges` qu'une section agrège dans sa pastille. */
+export type AdminBadgeKey =
+  | "pendingCourses"
+  | "openTickets"
+  | "openDisputes"
+  | "pendingReports"
+  | "pendingGdpr";
+
+/**
+ * Groupes de la barre latérale.
+ *
+ * `null` = section hors groupe, épinglée tout en haut du menu (le tableau de
+ * bord). Les groupes sont repliables : leur ordre ici est leur ordre à
+ * l'écran.
+ */
+export const ADMIN_NAV_GROUPS = [
+  { id: "pilotage", label: "Pilotage business" },
+  { id: "communaute", label: "Gestion communauté" },
+  { id: "catalogue", label: "Catalogue et qualité" },
+  { id: "configuration", label: "Configuration" },
+] as const;
+
+export type AdminNavGroupId = (typeof ADMIN_NAV_GROUPS)[number]["id"];
+
 export interface AdminSection extends AdminNavItem {
   /** Sous-pages, toutes préfixées par `href` (la résolution est par préfixe). */
   children: AdminNavItem[];
+  icon: AdminIconName;
+  /** Absent = section épinglée hors groupe, en tête de menu. */
+  group?: AdminNavGroupId;
+  /** Compteurs additionnés dans la pastille de la section. */
+  badgeKeys?: AdminBadgeKey[];
 }
 
 export const ADMIN_SECTIONS: AdminSection[] = [
-  { href: "/admin", label: "Vue d'ensemble", children: [] },
+  { href: "/admin", label: "Tableau de bord", icon: "gauge", children: [] },
   {
     href: "/admin/analytics",
     label: "Analytics",
+    icon: "chart",
+    group: "pilotage",
     children: [
       { href: "/admin/analytics/revenus", label: "Revenus" },
       { href: "/admin/analytics/funnel", label: "Tunnel de conversion" },
@@ -36,6 +85,8 @@ export const ADMIN_SECTIONS: AdminSection[] = [
   {
     href: "/admin/finances",
     label: "Finances",
+    icon: "wallet",
+    group: "pilotage",
     children: [
       { href: "/admin/finances/transactions", label: "Transactions" },
       { href: "/admin/finances/remboursements", label: "Remboursements" },
@@ -46,6 +97,8 @@ export const ADMIN_SECTIONS: AdminSection[] = [
   {
     href: "/admin/marketing",
     label: "Marketing",
+    icon: "megaphone",
+    group: "pilotage",
     children: [
       { href: "/admin/marketing/promotions", label: "Promotions" },
       { href: "/admin/marketing/codes-promo", label: "Codes promo" },
@@ -54,11 +107,26 @@ export const ADMIN_SECTIONS: AdminSection[] = [
       { href: "/admin/marketing/seo", label: "SEO" },
     ],
   },
-  { href: "/admin/utilisateurs", label: "Utilisateurs", children: [] },
-  { href: "/admin/formateurs", label: "Formateurs", children: [] },
+  {
+    href: "/admin/utilisateurs",
+    label: "Utilisateurs",
+    icon: "users",
+    group: "communaute",
+    children: [],
+  },
+  {
+    href: "/admin/formateurs",
+    label: "Formateurs",
+    icon: "graduation",
+    group: "communaute",
+    children: [],
+  },
   {
     href: "/admin/support",
     label: "Support",
+    icon: "lifebuoy",
+    group: "communaute",
+    badgeKeys: ["openTickets", "openDisputes"],
     children: [
       { href: "/admin/support/tickets", label: "Tickets" },
       { href: "/admin/support/litiges", label: "Litiges" },
@@ -67,6 +135,9 @@ export const ADMIN_SECTIONS: AdminSection[] = [
   {
     href: "/admin/cours",
     label: "Cours",
+    icon: "book",
+    group: "catalogue",
+    badgeKeys: ["pendingCourses"],
     children: [
       { href: "/admin/cours/moderation", label: "À modérer" },
       { href: "/admin/cours/featured", label: "Mises en avant" },
@@ -75,6 +146,9 @@ export const ADMIN_SECTIONS: AdminSection[] = [
   {
     href: "/admin/moderation",
     label: "Modération",
+    icon: "alert",
+    group: "catalogue",
+    badgeKeys: ["pendingReports"],
     children: [
       { href: "/admin/moderation/signalements", label: "Signalements" },
       { href: "/admin/moderation/regles", label: "Règles" },
@@ -84,6 +158,8 @@ export const ADMIN_SECTIONS: AdminSection[] = [
   {
     href: "/admin/parametres",
     label: "Paramètres",
+    icon: "settings",
+    group: "configuration",
     children: [
       { href: "/admin/parametres/branding", label: "Identité visuelle" },
       { href: "/admin/parametres/commerce", label: "Commerce" },
@@ -94,6 +170,9 @@ export const ADMIN_SECTIONS: AdminSection[] = [
   {
     href: "/admin/securite",
     label: "Sécurité",
+    icon: "shield",
+    group: "configuration",
+    badgeKeys: ["pendingGdpr"],
     children: [
       { href: "/admin/securite/roles", label: "Rôles" },
       { href: "/admin/securite/sessions", label: "Sessions" },
@@ -115,6 +194,27 @@ export const ADMIN_STANDALONE_PAGES: AdminNavItem[] = [
   { href: "/admin/codes-promo", label: "Codes promo (global)" },
   { href: "/admin/cms", label: "Pages CMS" },
 ];
+
+/** Sections hors groupe, épinglées en tête de la barre latérale. */
+export const ADMIN_PINNED_SECTIONS: AdminSection[] = ADMIN_SECTIONS.filter(
+  (s) => !s.group,
+);
+
+/**
+ * Sections regroupées, dans l'ordre de `ADMIN_NAV_GROUPS`.
+ *
+ * Un groupe vide est omis : la barre latérale n'affiche jamais un en-tête
+ * qui ne coifferait aucun lien.
+ */
+export const ADMIN_GROUPED_SECTIONS: Array<{
+  id: AdminNavGroupId;
+  label: string;
+  sections: AdminSection[];
+}> = ADMIN_NAV_GROUPS.map((group) => ({
+  id: group.id,
+  label: group.label,
+  sections: ADMIN_SECTIONS.filter((s) => s.group === group.id),
+})).filter((g) => g.sections.length > 0);
 
 /** Toutes les pages admin à plat — alimente la recherche du ⌘K. */
 export const ADMIN_PAGES: AdminNavItem[] = [

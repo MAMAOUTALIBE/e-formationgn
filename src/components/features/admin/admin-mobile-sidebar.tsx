@@ -9,14 +9,19 @@ import { Menu, X } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 
-import { AdminSidebar } from "@/components/features/admin/admin-sidebar";
+import { AdminNav } from "@/components/features/admin/admin-nav";
+import type { AdminNavGroupId } from "@/lib/admin/navigation";
 import type { AdminSidebarBadges } from "@/server/queries/admin-sidebar";
 
 interface AdminMobileSidebarProps {
   badges: AdminSidebarBadges;
+  defaultClosedGroups: AdminNavGroupId[];
 }
 
-export function AdminMobileSidebar({ badges }: AdminMobileSidebarProps) {
+export function AdminMobileSidebar({
+  badges,
+  defaultClosedGroups,
+}: AdminMobileSidebarProps) {
   // On dérive `open` du couple (openedAtPath, pathname courant) plutôt que
   // de gérer la fermeture sur changement de route via un useEffect (anti-
   // pattern React 19 / React Compiler). Quand l'utilisateur clique un lien,
@@ -86,7 +91,7 @@ export function AdminMobileSidebar({ badges }: AdminMobileSidebarProps) {
               </button>
             </div>
             <div className="flex-1 overflow-y-auto">
-              <AdminSidebar badges={badges} />
+              <AdminNav badges={badges} defaultClosedGroups={defaultClosedGroups} />
             </div>
           </aside>
         </div>

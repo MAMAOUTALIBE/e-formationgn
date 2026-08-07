@@ -15,16 +15,26 @@ import {
   Users,
 } from "lucide-react";
 
+import { auth } from "@/auth";
+import { AdminActionQueueCard } from "@/components/features/admin/admin-action-queue";
+import {
+  AdminDashboardTabs,
+  DEFAULT_DASHBOARD_VIEW,
+  isDashboardView,
+  type DashboardView,
+} from "@/components/features/admin/admin-dashboard-tabs";
 import { CategoryDonut } from "@/components/features/admin/charts/category-donut";
 import { RevenueChart } from "@/components/features/admin/charts/revenue-chart";
 import { Sparkline } from "@/components/features/admin/charts/sparkline";
 import { LiveActivityFeed } from "@/components/features/admin/live-activity-feed";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DateRangePicker } from "@/components/ui/date-range-picker";
+import { PeriodSegments } from "@/components/ui/period-segments";
 import { periodToRange } from "@/lib/admin/period";
 import { readPeriod } from "@/lib/admin/period-server";
 import { KpiCard } from "@/components/ui/kpi-card";
 import { StatusBadge } from "@/components/ui/status-badge";
+import { getAdminActionQueue } from "@/server/queries/admin-action-queue";
 import {
   getAdminAlerts,
   getAdminOverviewKpis,
@@ -37,31 +47,73 @@ import {
 import { getFinanceHealthKpis } from "@/server/queries/admin-finances";
 
 export const metadata: Metadata = {
-  title: "Vue d'ensemble — CRM admin",
+  title: "Tableau de bord — CRM admin",
 };
 
 export const dynamic = "force-dynamic";
 
 interface PageProps {
-  searchParams: Promise<{ period?: string }>;
+  searchParams: Promise<{ period?: string; vue?: string }>;
 }
 
 export default async function AdminOverviewPage({ searchParams }: PageProps) {
   const params = await searchParams;
   const period = await readPeriod(params.period ?? null);
   const range = periodToRange(period);
+  const view: DashboardView =
+    params.vue && isDashboardView(params.vue) ? params.vue : DEFAULT_DASHBOARD_VIEW;
 
-  const [kpis, timeseries, topCourses, topInstructors, byCategory, alerts, activity, financeHealth] =
-    await Promise.all([
-      getAdminOverviewKpis(range),
-      getRevenueTimeseries(range),
-      getTopCoursesByRevenue(range, 5),
-      getTopInstructorsByRevenue(range, 5),
-      getRevenueByCategory(range),
-      getAdminAlerts(),
-      getRecentActivity(20),
-      getFinanceHealthKpis(range),
-    ]);
+  const session = await auth();
+  const firstName = session?.user?.name?.trim().split(/\s+/)[0] ?? "";
+  const today = new Intl.DateTimeFormat("fr-FR", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  }).format(new Date());
+
+  return (
+    <div className="space-y-6">
+      <header className="flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight text-foreground">
+            Bonjour {firstName || "à vous"} <span aria-hidden>👋</span>
+          </h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            {capitalize(today)} · Vue d&apos;ensemble de l&apos;activité de la
+            plateforme.
+          </p>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <PeriodSegments />
+          <DateRangePicker />
+        </div>
+      </header>
+
+      <AdminDashboardTabs current={view} period={params.period ?? null} />
+
+      {/* Chaque onglet ne déclenche que ses propres requêtes : ouvrir
+          « Pilotage » ne paie plus les agrégats des graphiques ni le flux
+          d'activité, qui représentaient l'essentiel du temps de chargement. */}
+      {view === "pilotage" ? <PilotageView range={range} /> : null}
+      {view === "analyse" ? <AnalyseView range={range} /> : null}
+      {view === "activite" ? <ActiviteView /> : null}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Pilotage — ce qu'il faut regarder et faire aujourd'hui
+// ---------------------------------------------------------------------------
+
+async function PilotageView({ range }: { range: { from: Date; to: Date } }) {
+  const [kpis, timeseries, alerts, financeHealth, queue] = await Promise.all([
+    getAdminOverviewKpis(range),
+    getRevenueTimeseries(range),
+    getAdminAlerts(),
+    getFinanceHealthKpis(range),
+    getAdminActionQueue(8),
+  ]);
 
   const revenueDeltaEur = computeDelta(
     kpis.revenueByCurrency.EUR,
@@ -74,23 +126,13 @@ export default async function AdminOverviewPage({ searchParams }: PageProps) {
 
   return (
     <div className="space-y-6">
-      <header className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-foreground">
-            Vue d&apos;ensemble
-          </h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Pilotage de la plateforme — toutes les métriques sont à jour à la
-            période sélectionnée.
-          </p>
-        </div>
-        <DateRangePicker />
-      </header>
-
       {alerts.length > 0 ? (
-        <section className="rounded-lg border border-red-300 bg-red-50 p-4 dark:border-red-900/50 dark:bg-red-950/40">
+        <section className="rounded-xl border border-red-300 bg-red-50 p-4 dark:border-red-900/50 dark:bg-red-950/40">
           <div className="flex items-start gap-3">
-            <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-red-700 dark:text-red-300" aria-hidden />
+            <AlertTriangle
+              className="mt-0.5 h-5 w-5 shrink-0 text-red-700 dark:text-red-300"
+              aria-hidden
+            />
             <div className="flex-1">
               <p className="text-sm font-medium text-red-900 dark:text-red-100">
                 Actions requises
@@ -113,6 +155,8 @@ export default async function AdminOverviewPage({ searchParams }: PageProps) {
         </section>
       ) : null}
 
+      <AdminActionQueueCard queue={queue} />
+
       {/* 9 cartes : en 4 colonnes elles occupent 3 rangées dont une quasi vide.
           Une 5e colonne au-delà de xl les ramène à 2 rangées et rend une
           rangée entière au contenu sous-jacent. */}
@@ -127,7 +171,8 @@ export default async function AdminOverviewPage({ searchParams }: PageProps) {
                 100
               : null
           }
-          icon={<PiggyBank className="h-4 w-4" />}
+          icon={<PiggyBank className="h-5 w-5" />}
+          tone="emerald"
           hint="Gross − refunds (EUR)"
           href="/admin/finances"
         />
@@ -135,7 +180,8 @@ export default async function AdminOverviewPage({ searchParams }: PageProps) {
           label="Revenus EUR"
           value={`${(kpis.revenueByCurrency.EUR / 100).toLocaleString("fr-FR", { minimumFractionDigits: 2 })} €`}
           delta={revenueDeltaEur}
-          icon={<Coins className="h-4 w-4" />}
+          icon={<Coins className="h-5 w-5" />}
+          tone="blue"
           hint="Période sélectionnée"
           sparkline={<Sparkline data={timeseries.map((p) => p.EUR)} color="#1E3A8A" />}
           href="/admin/analytics/revenus"
@@ -144,7 +190,8 @@ export default async function AdminOverviewPage({ searchParams }: PageProps) {
           label="Revenus USD"
           value={`${(kpis.revenueByCurrency.USD / 100).toLocaleString("fr-FR", { minimumFractionDigits: 2 })} $`}
           delta={revenueDeltaUsd}
-          icon={<Coins className="h-4 w-4" />}
+          icon={<Coins className="h-5 w-5" />}
+          tone="sky"
           hint="Période sélectionnée"
           sparkline={<Sparkline data={timeseries.map((p) => p.USD)} color="#0EA5E9" />}
           href="/admin/analytics/revenus"
@@ -152,42 +199,48 @@ export default async function AdminOverviewPage({ searchParams }: PageProps) {
         <KpiCard
           label="Commandes"
           value={kpis.ordersCount}
-          icon={<ShoppingCart className="h-4 w-4" />}
+          icon={<ShoppingCart className="h-5 w-5" />}
+          tone="amber"
           hint="Payées sur la période"
           href="/admin/finances/transactions"
         />
         <KpiCard
           label="Nouveaux inscrits"
           value={kpis.newSignups}
-          icon={<Users className="h-4 w-4" />}
+          icon={<Users className="h-5 w-5" />}
+          tone="sky"
           hint="Comptes créés"
           href="/admin/utilisateurs"
         />
         <KpiCard
           label="Cours publiés"
           value={kpis.newCourses}
-          icon={<BookOpenText className="h-4 w-4" />}
+          icon={<BookOpenText className="h-5 w-5" />}
+          tone="blue"
           hint="Sur la période"
           href="/admin/cours?status=PUBLISHED"
         />
         <KpiCard
           label="Élèves actifs"
           value={kpis.activeStudents30d}
-          icon={<Activity className="h-4 w-4" />}
+          icon={<Activity className="h-5 w-5" />}
+          tone="emerald"
           hint="Au moins 1 leçon ces 30 j"
           href="/admin/analytics/apprentissage"
         />
         <KpiCard
           label="Complétion moyenne"
           value={`${kpis.averageCompletionPercent} %`}
-          icon={<CheckCircle2 className="h-4 w-4" />}
+          icon={<CheckCircle2 className="h-5 w-5" />}
+          tone="emerald"
           hint="Inscriptions de la période"
           href="/admin/analytics/apprentissage"
         />
         <KpiCard
           label="En attente modération"
           value={kpis.pendingCoursesCount}
-          icon={<TrendingUp className="h-4 w-4" />}
+          icon={<TrendingUp className="h-5 w-5" />}
+          tone="rose"
           hint="Cours à examiner"
           href="/admin/cours?status=PENDING_REVIEW"
         />
@@ -196,7 +249,7 @@ export default async function AdminOverviewPage({ searchParams }: PageProps) {
       {/* Quick actions — accès rapide aux opérations courantes (pattern Stripe) */}
       <section
         aria-labelledby="quick-actions-heading"
-        className="rounded-lg border border-border bg-card p-4"
+        className="rounded-xl border border-border bg-card p-4"
       >
         <h2
           id="quick-actions-heading"
@@ -230,7 +283,24 @@ export default async function AdminOverviewPage({ searchParams }: PageProps) {
           />
         </div>
       </section>
+    </div>
+  );
+}
 
+// ---------------------------------------------------------------------------
+// Analyse — graphiques et classements
+// ---------------------------------------------------------------------------
+
+async function AnalyseView({ range }: { range: { from: Date; to: Date } }) {
+  const [timeseries, byCategory, topCourses, topInstructors] = await Promise.all([
+    getRevenueTimeseries(range),
+    getRevenueByCategory(range),
+    getTopCoursesByRevenue(range, 5),
+    getTopInstructorsByRevenue(range, 5),
+  ]);
+
+  return (
+    <div className="space-y-6">
       <div className="grid gap-6 lg:grid-cols-3">
         <Card className="lg:col-span-2">
           <CardHeader>
@@ -340,7 +410,19 @@ export default async function AdminOverviewPage({ searchParams }: PageProps) {
           </CardContent>
         </Card>
       </div>
+    </div>
+  );
+}
 
+// ---------------------------------------------------------------------------
+// Activité — flux temps réel et historique récent
+// ---------------------------------------------------------------------------
+
+async function ActiviteView() {
+  const activity = await getRecentActivity(20);
+
+  return (
+    <div className="space-y-6">
       <LiveActivityFeed />
 
       <Card>
@@ -408,11 +490,17 @@ export default async function AdminOverviewPage({ searchParams }: PageProps) {
   );
 }
 
+// ---------------------------------------------------------------------------
+
 function ActivityKindBadge({ kind }: { kind: "signup" | "order" | "course-published" | "audit" }) {
   if (kind === "signup") return <StatusBadge tone="info">Inscription</StatusBadge>;
   if (kind === "order") return <StatusBadge tone="success">Vente</StatusBadge>;
   if (kind === "course-published") return <StatusBadge tone="info">Publication</StatusBadge>;
   return <StatusBadge tone="neutral">Audit</StatusBadge>;
+}
+
+function capitalize(value: string): string {
+  return value.charAt(0).toUpperCase() + value.slice(1);
 }
 
 function formatRelative(date: Date): string {
@@ -445,7 +533,7 @@ function QuickAction({
   return (
     <Link
       href={href}
-      className="group flex items-center gap-3 rounded-md border border-border bg-background p-3 text-sm transition-colors hover:border-[color:var(--brand-secondary)] hover:bg-muted/50"
+      className="group flex items-center gap-3 rounded-lg border border-border bg-background p-3 text-sm transition-colors hover:border-[color:var(--brand-secondary)] hover:bg-muted/50"
     >
       <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground group-hover:bg-[color:var(--brand-secondary)]/10 group-hover:text-[color:var(--brand-secondary)]">
         {icon}

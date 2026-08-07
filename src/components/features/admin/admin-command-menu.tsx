@@ -41,7 +41,7 @@ interface SearchHit {
 }
 
 const QUICK_LINKS: Array<{ icon: React.ReactNode; label: string; href: string }> = [
-  { icon: <GaugeCircle className="h-4 w-4" />, label: "Vue d'ensemble", href: "/admin" },
+  { icon: <GaugeCircle className="h-4 w-4" />, label: "Tableau de bord", href: "/admin" },
   { icon: <BarChart3 className="h-4 w-4" />, label: "Analytics", href: "/admin/analytics" },
   { icon: <Wallet className="h-4 w-4" />, label: "Finances", href: "/admin/finances" },
   { icon: <Megaphone className="h-4 w-4" />, label: "Marketing", href: "/admin/marketing" },
@@ -113,14 +113,24 @@ export function AdminCommandMenu() {
 
   return (
     <>
+      {/* Faux champ de saisie : c'est un bouton (il ouvre une palette), mais
+          il en a l'apparence pour être identifié comme la recherche du CRM au
+          lieu d'un bouton de plus dans la barre du haut. */}
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="group inline-flex items-center gap-2 rounded-md border border-border bg-background px-3 py-1.5 text-sm text-muted-foreground hover:border-foreground/30"
+        aria-label="Rechercher dans le CRM"
+        aria-keyshortcuts="Meta+K Control+K"
+        className="group flex w-full items-center gap-2.5 rounded-xl border border-border bg-muted/50 px-3.5 py-2.5 text-left text-sm text-muted-foreground transition-colors hover:border-foreground/25 hover:bg-muted"
       >
-        <Search className="h-4 w-4" aria-hidden />
-        <span className="hidden sm:inline">Rechercher…</span>
-        <kbd className="ml-2 hidden rounded border border-border bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground sm:inline">
+        <Search className="h-4 w-4 shrink-0" aria-hidden />
+        {/* Deux libellés plutôt qu'un masqué : sur mobile, cacher le texte
+            laissait une barre vide sur toute la largeur. */}
+        <span className="flex-1 truncate sm:hidden">Rechercher…</span>
+        <span className="hidden flex-1 truncate sm:inline">
+          Rechercher un écran, un utilisateur, une commande…
+        </span>
+        <kbd className="ml-auto hidden shrink-0 rounded border border-border bg-background px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground sm:inline">
           ⌘K
         </kbd>
       </button>
