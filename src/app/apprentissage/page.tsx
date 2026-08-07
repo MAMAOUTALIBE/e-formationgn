@@ -11,8 +11,7 @@ import {
   LearningFilterTabs,
   type LearningFilter,
 } from "@/components/features/learning/learning-filter-tabs";
-import { SiteFooter } from "@/components/layout/site-footer";
-import { SiteHeader } from "@/components/layout/site-header";
+import { AccountShell } from "@/components/features/workspace/account-shell";
 import { Breadcrumbs } from "@/components/ui/breadcrumbs";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -153,12 +152,12 @@ export default async function LearningPage({ searchParams }: PageProps) {
           ? completed
           : []; // wishlist gérée séparément
 
+  // Coquille appliquée ICI et non par un layout : un layout couvrirait
+  // aussi le lecteur de leçon, qui est immersif et porte déjà sa propre
+  // colonne programme.
   return (
-    <>
-      <SiteHeader />
-
-      <main className="flex-1 bg-muted/20 py-8">
-        <Container className="space-y-6">
+    <AccountShell callbackUrl="/apprentissage">
+      <Container className="space-y-6">
           <Breadcrumbs
             items={[{ label: "Accueil", href: "/" }, { label: "Mon apprentissage" }]}
           />
@@ -278,10 +277,7 @@ export default async function LearningPage({ searchParams }: PageProps) {
               </CardContent>
             </Card>
           ) : null}
-        </Container>
-      </main>
-
-      <SiteFooter />
-    </>
+      </Container>
+    </AccountShell>
   );
 }

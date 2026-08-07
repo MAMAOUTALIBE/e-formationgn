@@ -5,8 +5,7 @@ import { Award, BookOpenText } from "lucide-react";
 
 import { auth } from "@/auth";
 import { LessonSidebar } from "@/components/features/learning/lesson-sidebar";
-import { SiteFooter } from "@/components/layout/site-footer";
-import { SiteHeader } from "@/components/layout/site-header";
+import { AccountShell } from "@/components/features/workspace/account-shell";
 import { Badge } from "@/components/ui/badge";
 import { Breadcrumbs } from "@/components/ui/breadcrumbs";
 import { Button } from "@/components/ui/button";
@@ -54,11 +53,12 @@ export default async function CourseLearningPage({ params }: PageProps) {
   const nextLesson = findNextLesson(course.sections, completedIds);
   const completed = stats.progressPercent === 100;
 
+  // Coquille appliquée ICI et non par un layout : un layout couvrirait
+  // aussi le lecteur de leçon, qui est immersif et porte déjà sa propre
+  // colonne programme.
   return (
-    <>
-      <SiteHeader />
-      <main className="flex-1 bg-muted/20 py-8">
-        <Container className="space-y-6">
+    <AccountShell callbackUrl="/apprentissage">
+      <Container className="space-y-6">
           <Breadcrumbs
             items={[
               { label: "Mon apprentissage", href: "/apprentissage" },
@@ -179,10 +179,8 @@ export default async function CourseLearningPage({ params }: PageProps) {
               </Card>
             </div>
           </div>
-        </Container>
-      </main>
-      <SiteFooter />
-    </>
+      </Container>
+    </AccountShell>
   );
 }
 

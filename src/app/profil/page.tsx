@@ -15,8 +15,6 @@ import { auth } from "@/auth";
 import { AvatarUploader } from "@/components/features/auth/avatar-uploader";
 import { ProfileForm } from "@/components/features/auth/profile-form";
 import { CurrencyToggle } from "@/components/features/preferences/currency-toggle";
-import { SiteFooter } from "@/components/layout/site-footer";
-import { SiteHeader } from "@/components/layout/site-header";
 import { Avatar } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Breadcrumbs } from "@/components/ui/breadcrumbs";
@@ -100,12 +98,10 @@ export default async function ProfilePage() {
   const enrollmentsCount = enrollmentStats._count._all;
   const avgProgress = Math.round(enrollmentStats._avg.progressPercent ?? 0);
 
+  // Le chrome (barre latérale, header, pied de page) vient de la coquille de
+  // l'espace — cf. profil/layout.tsx. La page ne rend plus que son contenu.
   return (
-    <>
-      <SiteHeader />
-
-      <main className="flex-1 bg-muted/20 py-8">
-        <Container className="space-y-6">
+    <Container className="space-y-6">
           <Breadcrumbs
             items={[{ label: "Accueil", href: "/" }, { label: "Mon profil" }]}
           />
@@ -289,11 +285,7 @@ export default async function ProfilePage() {
               </div>
             </CardContent>
           </Card>
-        </Container>
-      </main>
-
-      <SiteFooter />
-    </>
+    </Container>
   );
 }
 

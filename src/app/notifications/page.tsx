@@ -3,8 +3,6 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import { auth } from "@/auth";
-import { SiteFooter } from "@/components/layout/site-footer";
-import { SiteHeader } from "@/components/layout/site-header";
 import { Badge } from "@/components/ui/badge";
 import { Breadcrumbs } from "@/components/ui/breadcrumbs";
 import { Button } from "@/components/ui/button";
@@ -37,11 +35,9 @@ export default async function NotificationsPage() {
   });
   const unread = notifications.filter((n) => !n.isRead).length;
 
+  // Chrome fourni par la coquille de l'espace (cf. layout.tsx).
   return (
-    <>
-      <SiteHeader />
-      <main className="flex-1 bg-muted/20 py-8">
-        <Container className="max-w-3xl space-y-6">
+    <Container className="max-w-3xl space-y-6">
           <Breadcrumbs items={[{ label: "Accueil", href: "/" }, { label: "Notifications" }]} />
 
           <header className="flex flex-wrap items-center justify-between gap-3">
@@ -100,9 +96,6 @@ export default async function NotificationsPage() {
               ))}
             </ul>
           )}
-        </Container>
-      </main>
-      <SiteFooter />
-    </>
+    </Container>
   );
 }
