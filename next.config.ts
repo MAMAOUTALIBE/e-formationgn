@@ -67,8 +67,10 @@ const nextConfig: NextConfig = {
   // `npm run typecheck` et `npm run lint` nativement et refuse de construire
   // l'image si l'un des deux échoue. Le contrôle est le même, joué à l'endroit
   // rapide. Ne jamais construire l'image en contournant ce script.
+  //
+  // Pas de clé `eslint` ici : Next.js 16 l'a retirée de NextConfig en même
+  // temps que `next lint`, et `next build` n'exécute plus ESLint du tout.
   typescript: { ignoreBuildErrors: true },
-  eslint: { ignoreDuringBuilds: true },
 
   // Build standalone : produit /.next/standalone avec un mini server.js
   // autonome, indispensable pour l'image Docker minimale.
