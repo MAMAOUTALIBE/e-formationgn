@@ -62,9 +62,18 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   return (
     // Coquille figée : la racine fait exactement la hauteur du viewport et ne
     // déborde jamais. `100dvh` (et non `100vh`) pour que la barre d'adresse
-    // mobile n'ampute pas la vue. `minmax(0,1fr)` sur la rangée centrale est
-    // indispensable : sans lui, un enfant de grille refuse de rétrécir sous la
-    // taille de son contenu et déborderait malgré `overflow-hidden`.
+    // mobile n'ampute pas la vue.
+    //
+    // Deux colonnes, et non une bande d'en-tête au-dessus de tout : la barre
+    // latérale part du haut de l'écran et descend jusqu'en bas, header et
+    // footer compris. C'est ce qui met le bloc logo au sommet et donne au menu
+    // sa colonne pleine hauteur.
+    //
+    // Le liseré rouge d'identité est porté par la racine pour traverser toute
+    // la largeur : il signale d'un coup d'œil qu'on est dans le back-office et
+    // non sur le site public, sans inonder la zone de travail — le rouge reste
+    // ainsi disponible pour signaler une alerte.
+    //
     // `data-admin-text` redéfinit les variables de taille de Tailwind pour
     // tout le sous-arbre (blocs [data-admin-text=…] dans globals.css) : les
     // ~400 `text-sm` / `text-xs` du CRM suivent sans être touchés, et le site
@@ -72,75 +81,76 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     <div
       style={themeStyle}
       data-admin-text={theme.textScale}
-      className="grid h-[100dvh] grid-rows-[auto_minmax(0,1fr)_auto] overflow-hidden bg-muted/30"
+      className="flex h-[100dvh] overflow-hidden border-t-[3px] border-t-[color:var(--brand-danger)] bg-muted/30"
     >
       <AdminKeyboardShortcuts />
-      {/* Liseré rouge d'identité : signale d'un coup d'œil qu'on est dans le
-          back-office et non sur le site public, sans inonder la zone de
-          travail — le rouge reste ainsi disponible pour signaler une alerte. */}
-      <header className="z-30 border-t-[3px] border-t-[color:var(--brand-danger)] border-b border-b-[color:var(--admin-header-border,var(--border))] bg-[color:var(--admin-header-bg,var(--background))] text-[color:var(--admin-header-fg,var(--foreground))]">
-        {/* Sur ≥ lg le logo vit dans la barre latérale : le header commence
-            donc directement par la recherche, alignée avec la zone de travail.
-            En dessous de lg la barre latérale est masquée, et le logo revient
-            ici à côté du bouton d'ouverture du drawer. */}
-        <div className="flex h-16 items-center gap-3 px-4 lg:px-6">
-          <AdminMobileSidebar badges={badges} defaultClosedGroups={closedGroups} />
-          <Link
-            href="/"
-            aria-label="Retour à l'accueil"
-            className="hidden sm:block lg:hidden"
-          >
-            <Logo width={120} priority />
-          </Link>
 
-          <div className="min-w-0 flex-1 sm:max-w-xl">
-            <AdminCommandMenu />
+      {/* Sidebar visible uniquement à partir de lg. Sur mobile/tablette, on
+          utilise AdminMobileSidebar (drawer) déclenché depuis le header. Elle
+          rend son propre <aside> : c'est elle qui pilote sa largeur (menu
+          complet ou rail d'icônes). */}
+      <AdminSidebar
+        badges={badges}
+        defaultCollapsed={sidebarCollapsed}
+        defaultClosedGroups={closedGroups}
+      />
+
+      {/* Colonne de droite : header, sous-navigation et footer restent fixes,
+          seul le contenu défile entre eux. `min-w-0` est indispensable — sans
+          lui, un tableau large élargirait la colonne et déborderait de la
+          coquille malgré `overflow-hidden`. */}
+      <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
+        <header className="z-30 shrink-0 border-b border-b-[color:var(--admin-header-border,var(--border))] bg-[color:var(--admin-header-bg,var(--background))] text-[color:var(--admin-header-fg,var(--foreground))]">
+          {/* Grille en trois colonnes plutôt qu'un `flex` : les deux colonnes
+              latérales font `1fr` chacune, donc la recherche reste centrée sur
+              la zone de travail même si le bloc d'actions à droite est bien
+              plus large que le bloc de gauche. En `flex`, elle se collait à
+              gauche. La colonne centrale est bornée pour ne pas s'étirer sur
+              les très grands écrans. */}
+          <div className="grid h-16 grid-cols-[1fr_minmax(0,36rem)_1fr] items-center gap-3 px-4 lg:px-6">
+            {/* Sur ≥ lg le logo vit dans la barre latérale ; en dessous, elle
+                est masquée et le logo revient ici, à côté du hamburger. */}
+            <div className="flex min-w-0 items-center gap-2">
+              <AdminMobileSidebar badges={badges} defaultClosedGroups={closedGroups} />
+              <Link
+                href="/"
+                aria-label="Retour à l'accueil"
+                className="hidden sm:block lg:hidden"
+              >
+                <Logo width={120} priority />
+              </Link>
+            </div>
+
+            <div className="min-w-0">
+              <AdminCommandMenu />
+            </div>
+
+            <div className="flex shrink-0 items-center gap-2 justify-self-end">
+              {assistantEnabled ? <AdminAssistant /> : null}
+              <ThemeToggle className="hidden md:inline-flex" />
+              <AdminNotificationsBell badges={badges} />
+              <UserMenu
+                showIdentity
+                user={{
+                  name: session.user.name,
+                  email: session.user.email,
+                  image: session.user.image,
+                  role: session.user.role,
+                }}
+              />
+            </div>
           </div>
+        </header>
 
-          <div className="ml-auto flex shrink-0 items-center gap-2">
-            {assistantEnabled ? <AdminAssistant /> : null}
-            <ThemeToggle className="hidden md:inline-flex" />
-            <AdminNotificationsBell badges={badges} />
-            <UserMenu
-              showIdentity
-              user={{
-                name: session.user.name,
-                email: session.user.email,
-                image: session.user.image,
-                role: session.user.role,
-              }}
-            />
-          </div>
-        </div>
-      </header>
+        <AdminSectionNav />
 
-      {/* Rangée centrale : `min-h-0` autorise les deux colonnes à défiler
-          indépendamment au lieu de pousser la grille au-delà du viewport. */}
-      <div className="flex min-h-0 overflow-hidden">
-        {/* Sidebar visible uniquement à partir de lg. Sur mobile/tablette,
-            on utilise AdminMobileSidebar (drawer) déclenché depuis le header.
-            Elle rend son propre <aside> : c'est elle qui pilote sa largeur
-            (menu complet ou rail d'icônes). */}
-        <AdminSidebar
-          badges={badges}
-          defaultCollapsed={sidebarCollapsed}
-          defaultClosedGroups={closedGroups}
-        />
+        {/* Seule zone défilante de l'admin. */}
+        <main className="min-h-0 min-w-0 flex-1 overflow-y-auto overscroll-contain px-4 py-6 sm:px-6 lg:px-8">
+          {children}
+        </main>
 
-        {/* Colonne de droite : la sous-navigation reste fixe, seul le contenu
-            défile sous elle. */}
-        <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
-          <AdminSectionNav />
-
-          {/* Seule zone défilante de l'admin. `min-w-0` évite qu'un tableau
-              large élargisse la colonne et déborde horizontalement. */}
-          <main className="min-h-0 min-w-0 flex-1 overflow-y-auto overscroll-contain px-4 py-6 sm:px-6 lg:px-8">
-            {children}
-          </main>
-        </div>
+        <AdminFooter role={session.user.role} />
       </div>
-
-      <AdminFooter role={session.user.role} />
     </div>
   );
 }
