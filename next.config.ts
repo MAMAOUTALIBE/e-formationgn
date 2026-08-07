@@ -56,6 +56,20 @@ const nextConfig: NextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
 
+  // Typage et lint : vérifiés AVANT le build, pas pendant.
+  //
+  // L'image de production est construite en `linux/amd64` sur un Mac ARM, donc
+  // sous émulation QEMU. Dans ce contexte la passe « Running TypeScript » de
+  // `next build` dépassait l'heure, alors que le même `tsc --noEmit` prend
+  // quelques secondes en natif. On la sort donc du build Docker.
+  //
+  // Ce n'est PAS un relâchement du contrôle : scripts/deploy.sh exécute
+  // `npm run typecheck` et `npm run lint` nativement et refuse de construire
+  // l'image si l'un des deux échoue. Le contrôle est le même, joué à l'endroit
+  // rapide. Ne jamais construire l'image en contournant ce script.
+  typescript: { ignoreBuildErrors: true },
+  eslint: { ignoreDuringBuilds: true },
+
   // Build standalone : produit /.next/standalone avec un mini server.js
   // autonome, indispensable pour l'image Docker minimale.
   output: "standalone",

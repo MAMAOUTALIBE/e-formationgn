@@ -23,6 +23,20 @@ if ! git diff --quiet 2>/dev/null || ! git diff --cached --quiet 2>/dev/null; th
   echo "⚠️  Modifications non commitées : elles seront incluses dans l'image (tag $TAG)."
 fi
 
+# Typage + lint AVANT le build, en natif.
+#
+# `next.config.ts` désactive ces deux passes à l'intérieur de `next build` :
+# émulées en amd64 sur un Mac ARM, elles dépassaient l'heure pour un travail
+# qui prend quelques secondes ici. Ce bloc est donc ce qui empêche une erreur
+# de typage de partir en production — `set -e` interrompt le script avant le
+# build si l'une des deux échoue. Ne pas le retirer sans réactiver les
+# contrôles dans next.config.ts.
+echo "▶ Vérifications natives (typage + lint) avant build…"
+npm run typecheck
+npm run lint
+echo "✅ Typage et lint OK."
+echo
+
 echo "▶ Build linux/amd64 → ${REPO}:latest + ${REPO}:${TAG}"
 docker buildx build \
   --platform linux/amd64 \
