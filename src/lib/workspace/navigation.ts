@@ -37,7 +37,8 @@ export type WorkspaceIconName =
   | "certificate"
   | "heart"
   | "bell"
-  | "play";
+  | "play"
+  | "building";
 
 export interface WorkspaceNavItem {
   href: string;

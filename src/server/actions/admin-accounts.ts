@@ -38,9 +38,19 @@ const createAccountSchema = z
     email: z.string().trim().toLowerCase().email("Email invalide."),
     firstName: z.string().trim().min(1, "Prénom requis.").max(80),
     lastName: z.string().trim().min(1, "Nom requis.").max(80),
+    phone: z.string().trim().max(40).optional().default(""),
     role: z.enum(CREATABLE_ROLES),
+    // Identifiant d'une société EXISTANTE, jamais un nom saisi librement :
+    // deux orthographes du même client fausseraient tout regroupement
+    // (facturation, dossier OPCO, statistiques). Vide pour un formateur, qui
+    // n'appartient à aucune société cliente.
+    companyId: z.string().trim().optional().default(""),
   })
-  .strict();
+  .strict()
+  .refine((v) => v.role !== "STUDENT" || v.companyId !== "", {
+    message: "Sélectionnez la société de rattachement.",
+    path: ["companyId"],
+  });
 
 export interface CreateAccountResult extends ActionResult {
   /** Mot de passe provisoire, affiché une seule fois. */
@@ -63,7 +73,9 @@ export async function createCenterAccount(
     email: formData.get("email"),
     firstName: formData.get("firstName"),
     lastName: formData.get("lastName"),
+    phone: formData.get("phone") ?? "",
     role: formData.get("role"),
+    companyId: formData.get("companyId") ?? "",
   });
 
   if (!parsed.success) {
@@ -74,7 +86,7 @@ export async function createCenterAccount(
     };
   }
 
-  const { email, firstName, lastName, role } = parsed.data;
+  const { email, firstName, lastName, phone, role, companyId } = parsed.data;
 
   const existing = await prisma.user.findUnique({
     where: { email },
@@ -88,6 +100,23 @@ export async function createCenterAccount(
     };
   }
 
+  // La société est vérifiée côté serveur : le `<select>` ne prouve rien, on
+  // reçoit un identifiant que n'importe qui peut forger. On refuse aussi une
+  // société archivée — on ne rattache pas un nouvel élève à un client clos.
+  if (companyId) {
+    const company = await prisma.company.findUnique({
+      where: { id: companyId },
+      select: { id: true, status: true },
+    });
+    if (!company || company.status === "ARCHIVED") {
+      return {
+        success: false,
+        message: "Société invalide ou archivée.",
+        fieldErrors: { companyId: ["Sélectionnez une société active."] },
+      };
+    }
+  }
+
   const temporaryPassword = generateTemporaryPassword();
 
   const user = await prisma.user.create({
@@ -96,8 +125,12 @@ export async function createCenterAccount(
       firstName,
       lastName,
       name: `${firstName} ${lastName}`,
+      phone: phone || null,
       hashedPassword: await hashPassword(temporaryPassword),
       role,
+      // Un formateur n'appartient à aucune société cliente : le champ reste
+      // null pour lui, et le schéma n'exige la société que pour un élève.
+      companyId: companyId || null,
       isInstructor: role === "INSTRUCTOR",
       // Le compte est immédiatement utilisable : c'est le centre qui a
       // vérifié l'identité de la personne, pas une boucle email.
@@ -118,7 +151,7 @@ export async function createCenterAccount(
     action: "user.create_by_center",
     targetType: "User",
     targetId: user.id,
-    metadata: { email: user.email, role },
+    metadata: { email: user.email, role, companyId: companyId || null },
   });
 
   revalidatePath("/admin/utilisateurs");

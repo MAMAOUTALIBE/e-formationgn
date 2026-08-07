@@ -77,6 +77,14 @@ export const ADMIN_NAV: WorkspaceNavigation = {
       ],
     },
     {
+      href: "/admin/societes",
+      label: "Sociétés",
+      icon: "building",
+      group: "communaute",
+      roles: COMMUNITY_SIDE,
+      children: [{ href: "/admin/societes/nouvelle", label: "Nouvelle société" }],
+    },
+    {
       href: "/admin/utilisateurs",
       label: "Utilisateurs",
       icon: "users",

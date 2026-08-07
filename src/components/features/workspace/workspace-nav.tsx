@@ -12,6 +12,7 @@ import {
   BarChart3,
   Bell,
   BookOpenText,
+  Building2,
   CalendarDays,
   ChevronDown,
   CircleHelp,
@@ -68,6 +69,7 @@ const ICONS: Record<WorkspaceIconName, LucideIcon> = {
   heart: Heart,
   bell: Bell,
   play: PlayCircle,
+  building: Building2,
 };
 
 /** Compteurs affichés en pastille, indexés par les `badgeKeys` du registre. */

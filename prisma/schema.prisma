@@ -70,6 +70,11 @@ model User {
   image          String?
   bio            String?   @db.Text
   headline       String?
+  /// Téléphone de la personne. Champ libre et non contraint : les élèves d'une
+  /// société peuvent être joignables sur un numéro français, étranger ou un
+  /// poste interne, et un format imposé bloquerait la saisie plus qu'il ne
+  /// fiabiliserait la donnée.
+  phone          String?
   websiteUrl     String?
   linkedinUrl    String?
   twitterUrl     String?
@@ -143,11 +148,19 @@ model User {
   impersonationsAsTarget  ImpersonationSession[] @relation("ImpersonationTarget")
   loginAttempts           LoginAttempt[]
 
+  // Rattachement à une société cliente (mode centre de formation).
+  // `onDelete: Restrict` : on ne doit jamais perdre des élèves parce qu'une
+  // société a été supprimée par erreur. L'archivage se fait via
+  // `Company.status`, pas par suppression.
+  companyId String?
+  company   Company? @relation("CompanyStudents", fields: [companyId], references: [id], onDelete: Restrict)
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@index([role])
   @@index([status])
+  @@index([companyId])
 }
 
 model Account {
@@ -320,6 +333,17 @@ model Course {
   announcements   CourseAnnouncement[]
   tags            Tag[]             @relation("CourseTags")
 
+  /// Index de recherche plein texte, alimenté par un trigger SQL — voir la
+  /// migration `1_course_search`. Prisma ne connaît pas le type `tsvector`,
+  /// d'où `Unsupported` : la colonne n'est pas lisible via le client (la
+  /// recherche passe par du SQL brut dans src/server/queries/courses.ts), mais
+  /// elle est DÉCLARÉE.
+  ///
+  /// Cette déclaration n'est pas cosmétique : sans elle, Prisma considère la
+  /// colonne comme orpheline et tout `migrate dev` génère un `DROP COLUMN`
+  /// silencieux qui casserait la recherche de cours.
+  searchVector Unsupported("tsvector")?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -327,6 +351,13 @@ model Course {
   @@index([categoryId])
   @@index([status])
   @@index([slug])
+  // Les deux index suivants existent en base depuis des migrations SQL brutes
+  // (`3_admin_crm` et `1_course_search`). Ils sont déclarés ici pour la même
+  // raison que `searchVector` : non déclarés, Prisma les prend pour des
+  // orphelins et chaque `migrate dev` génère un `DROP INDEX` qui dégraderait
+  // silencieusement la mise en avant des cours et la recherche plein texte.
+  @@index([isFeatured, featuredOrder])
+  @@index([searchVector(ops: raw("tsvector_ops"))], type: Gin)
 }
 
 model Tag {
@@ -1403,4 +1434,69 @@ model AdminUiTheme {
   textScale String? // compact | normal | confortable | grand — null = normal
   updatedAt DateTime @updatedAt
   updatedBy String? // User.id de l'admin ayant modifié (pas de FK : purement informatif)
+}
+
+// ---------------------------------------------------------------------------
+// Gestion des sociétés clientes (mode centre de formation)
+// ---------------------------------------------------------------------------
+
+/// Société cliente à laquelle des élèves sont rattachés.
+///
+/// Première brique de l'enchaînement Société → Élèves → Inscriptions →
+/// Sessions → Formations → Cours → Accès. Une société DOIT exister avant
+/// qu'un élève puisse lui être rattaché : c'est pour ça que `User.companyId`
+/// pointe ici et jamais l'inverse, et que l'interface impose un choix dans une
+/// liste plutôt qu'une saisie libre — deux orthographes du même client
+/// rendraient tout regroupement (facturation, dossier OPCO, statistiques)
+/// faux.
+model Company {
+  id         String        @id @default(cuid())
+  name       String
+  /// Identifiant légal français. Unique quand il est renseigné : deux fiches
+  /// portant le même SIRET sont forcément un doublon. Nullable car un client
+  /// étranger ou une administration peut ne pas en avoir.
+  siret      String?       @unique
+  siren      String?
+  vatNumber  String?
+
+  addressLine1 String?
+  addressLine2 String?
+  postalCode   String?
+  city         String?
+  country      String  @default("France")
+
+  /// Interlocuteur : la personne qu'on appelle, pas nécessairement un compte
+  /// de la plateforme — d'où des champs libres et non une relation vers User.
+  contactName  String?
+  contactEmail String?
+  contactPhone String?
+
+  /// Opérateur de compétences finançant les formations. Champ libre pour
+  /// l'instant : la liste des OPCO est courte mais évolue par arrêté, et la
+  /// figer dans un enum imposerait une migration à chaque changement.
+  opco          String?
+  /// Numéro d'adhérent / de dossier auprès de l'OPCO.
+  opcoReference String?
+
+  notes    String?       @db.Text
+  status   CompanyStatus @default(ACTIVE)
+
+  students User[]        @relation("CompanyStudents")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([status])
+  @@index([name])
+}
+
+/// Cycle de vie d'une société cliente.
+///
+/// Pas de suppression physique : une société archivée garde ses élèves, leurs
+/// inscriptions et leur historique — supprimer la ligne effacerait la
+/// traçabilité exigée d'un organisme de formation.
+enum CompanyStatus {
+  ACTIVE
+  INACTIVE
+  ARCHIVED
 }

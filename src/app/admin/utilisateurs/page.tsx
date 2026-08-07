@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 import { CreateAccountForm } from "@/components/features/admin/create-account-form";
+import { listSelectableCompanies } from "@/server/queries/admin-companies";
 import { ImportStudentsForm } from "@/components/features/admin/import-students-form";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -44,7 +45,11 @@ export default async function AdminUsersPage({ searchParams }: PageProps) {
     page: params.page ? Number(params.page) : 1,
     pageSize: 50,
   };
-  const { rows, total, page, pageSize } = await listAdminUsers(filters);
+  // Les deux lectures sont indépendantes : en parallèle plutôt qu'en série.
+  const [{ rows, total, page, pageSize }, companies] = await Promise.all([
+    listAdminUsers(filters),
+    listSelectableCompanies(),
+  ]);
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
 
   // Formations proposées à l'import : publiées uniquement — ouvrir un
@@ -83,7 +88,7 @@ export default async function AdminUsersPage({ searchParams }: PageProps) {
               formateurs sont créés ici. Le mot de passe provisoire s&apos;affiche
               une seule fois, à vous de le transmettre.
             </p>
-            <CreateAccountForm />
+            <CreateAccountForm companies={companies} />
           </CardContent>
         </Card>
       ) : null}
