@@ -80,29 +80,28 @@ export function KpiCard({
         </span>
       ) : null}
 
-      {/* `min-w-0` : sans lui, un libellé long élargirait la carte au lieu
-          d'être tronqué, et la grille de KPI déborderait. */}
+      {/* `min-w-0` : sans lui, un libellé long élargirait la carte et la
+          grille de KPI déborderait. */}
       <div className="flex min-w-0 flex-1 flex-col gap-1">
-        <div className="flex items-start justify-between gap-3 overflow-hidden">
-          <div className="min-w-0">
-            {/* Le chiffre prime : il ne se coupe jamais (`whitespace-nowrap`),
-                sinon « 0,00 € » se scinde entre le nombre et le symbole dès
-                que le CRM passe aux grandes échelles de texte. */}
-            <p className="whitespace-nowrap text-2xl font-semibold tracking-tight text-foreground">
-              {formattedValue}
-            </p>
-            <p className="truncate text-sm font-medium text-muted-foreground">
-              {label}
-            </p>
-          </div>
-          {sparkline ? (
-            <div className="h-10 w-20 min-w-0 shrink text-muted-foreground">
-              {sparkline}
-            </div>
-          ) : null}
-        </div>
+        {/* Le chiffre prime : il ne se coupe jamais (`whitespace-nowrap`),
+            sinon « 0,00 € » se scinde entre le nombre et le symbole dès que
+            le CRM passe aux grandes échelles de texte. */}
+        <p className="whitespace-nowrap text-2xl font-semibold tracking-tight text-foreground">
+          {formattedValue}
+        </p>
+        {/* Le libellé passe à la ligne au lieu d'être tronqué : en 5 colonnes,
+            « Revenu net plateforme » et « En attente modération » se coupaient
+            en « Revenu net plat… », illisible sur la carte la plus regardée du
+            tableau de bord. */}
+        <p className="text-sm font-medium text-muted-foreground">{label}</p>
 
         {hint ? <p className="text-xs text-muted-foreground">{hint}</p> : null}
+
+        {/* Sparkline en pleine largeur sous le texte, et non à côté : en
+            colonne, elle prenait la place du libellé. */}
+        {sparkline ? (
+          <div className="mt-1 h-8 w-full text-muted-foreground">{sparkline}</div>
+        ) : null}
 
         {delta !== null && delta !== undefined ? <DeltaBadge delta={delta} /> : null}
       </div>

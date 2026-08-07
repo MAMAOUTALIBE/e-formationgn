@@ -80,8 +80,11 @@ export default async function AdminOverviewPage({ searchParams }: PageProps) {
             Bonjour {firstName || "à vous"} <span aria-hidden>👋</span>
           </h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            {capitalize(today)} · Vue d&apos;ensemble de l&apos;activité de la
-            plateforme.
+            {/* Séparateur explicite : en JSX, l'espace entre l'expression et
+                le texte suivant se perd au rendu (« 2026· Vue »). */}
+            {capitalize(today)}
+            {" · "}
+            Vue d&apos;ensemble de l&apos;activité de la plateforme.
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
