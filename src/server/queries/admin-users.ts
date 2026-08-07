@@ -9,6 +9,8 @@ import { prisma } from "@/lib/prisma";
 export interface AdminUsersFilters {
   q?: string;
   role?: UserRole;
+  /** Société de rattachement — le filtre central de la liste des apprenants. */
+  companyId?: string;
   status?: AccountStatus;
   banned?: boolean;
   country?: string;
@@ -24,6 +26,8 @@ export interface AdminUserRow {
   role: UserRole;
   status: AccountStatus;
   country: string | null;
+  companyId: string | null;
+  companyName: string | null;
   isInstructor: boolean;
   bannedAt: Date | null;
   lastLoginAt: Date | null;
@@ -51,6 +55,7 @@ export async function listAdminUsers(
     );
   }
   if (filters.role) where.role = filters.role;
+  if (filters.companyId) where.companyId = filters.companyId;
   if (filters.status) where.status = filters.status;
   if (filters.country) where.country = filters.country;
   if (filters.banned === true) where.bannedAt = { not: null };
@@ -74,6 +79,8 @@ export async function listAdminUsers(
         role: true,
         status: true,
         country: true,
+        companyId: true,
+        company: { select: { name: true } },
         isInstructor: true,
         bannedAt: true,
         lastLoginAt: true,
@@ -100,8 +107,9 @@ export async function listAdminUsers(
   }
 
   return {
-    rows: rows.map((u) => ({
+    rows: rows.map(({ company, ...u }) => ({
       ...u,
+      companyName: company?.name ?? null,
       ordersCount: aggMap.get(u.id)?.orders ?? 0,
       totalSpentCentsEur: aggMap.get(u.id)?.spentEur ?? 0,
     })),

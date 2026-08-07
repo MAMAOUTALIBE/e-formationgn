@@ -27,7 +27,9 @@ export const dynamic = "force-dynamic";
 interface PageProps {
   searchParams: Promise<{
     q?: string;
-    role?: UserRole;
+    /** `ALL` élargit à tous les comptes ; absent = apprenants. */
+    role?: UserRole | "ALL";
+    companyId?: string;
     status?: AccountStatus;
     banned?: string;
     page?: string;
@@ -38,7 +40,11 @@ export default async function AdminUsersPage({ searchParams }: PageProps) {
   const params = await searchParams;
   const filters = {
     q: params.q,
-    role: params.role,
+    // L'écran s'appelle « Apprenants » : il montre donc des élèves par défaut,
+    // sinon le compteur annoncerait un effectif incluant formateurs et
+    // administrateurs. `role=ALL` élargit explicitement à tous les comptes.
+    role: params.role === "ALL" ? undefined : ((params.role as UserRole) ?? "STUDENT"),
+    companyId: params.companyId,
     status: params.status,
     banned:
       params.banned === "1" ? true : params.banned === "0" ? false : undefined,
@@ -51,6 +57,17 @@ export default async function AdminUsersPage({ searchParams }: PageProps) {
     listSelectableCompanies(),
   ]);
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
+
+  // Le mot suit le filtre : « apprenants » quand on regarde des élèves,
+  // « comptes » quand la liste mélange les rôles.
+  const isLearnerView = !params.role || params.role === "STUDENT";
+
+  const countLabel = isLearnerView
+    ? `apprenant${total > 1 ? "s" : ""}`
+    : `compte${total > 1 ? "s" : ""}`;
+  const companyLabel = params.companyId
+    ? (companies.find((c) => c.id === params.companyId)?.name ?? null)
+    : null;
 
   // Formations proposées à l'import : publiées uniquement — ouvrir un
   // brouillon donnerait accès à un programme vide.
@@ -67,11 +84,18 @@ export default async function AdminUsersPage({ searchParams }: PageProps) {
       <header className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight text-foreground">
-            Utilisateurs
+            Apprenants
           </h1>
           <p className="text-sm text-muted-foreground">
-            {total.toLocaleString("fr-FR")} compte{total > 1 ? "s" : ""} — page{" "}
-            {page} / {totalPages}
+            {/* Le compteur reflète le filtre courant : « 12 apprenants » après
+                avoir choisi une société, c'est l'effectif de cette société —
+                l'information qu'on vient chercher. */}
+            <span className="font-medium text-foreground">
+              {total.toLocaleString("fr-FR")}
+            </span>{" "}
+            {countLabel}
+            {companyLabel ? ` chez ${companyLabel}` : ""} — page {page} /{" "}
+            {totalPages}
           </p>
         </div>
         <ExportButton action={exportUsersCsv} />
@@ -106,7 +130,7 @@ export default async function AdminUsersPage({ searchParams }: PageProps) {
 
       <Card>
         <CardContent className="p-4">
-          <form className="grid gap-3 sm:grid-cols-5">
+          <form className="grid gap-3 sm:grid-cols-6">
             <div className="sm:col-span-2">
               <Input
                 name="q"
@@ -114,14 +138,32 @@ export default async function AdminUsersPage({ searchParams }: PageProps) {
                 defaultValue={params.q ?? ""}
               />
             </div>
-            <Select name="role" defaultValue={params.role ?? ""} aria-label="Rôle">
-              <option value="">Tous les rôles</option>
+            <Select
+              name="companyId"
+              defaultValue={params.companyId ?? ""}
+              aria-label="Société"
+            >
+              <option value="">Toutes les sociétés</option>
+              {companies.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                  {c.city ? ` — ${c.city}` : ""}
+                </option>
+              ))}
+            </Select>
+            <Select
+              name="role"
+              defaultValue={params.role ?? "STUDENT"}
+              aria-label="Rôle"
+            >
+              <option value="ALL">Tous les comptes</option>
               <option value="STUDENT">Élève</option>
               <option value="INSTRUCTOR">Formateur</option>
               <option value="ADMIN">Administrateur</option>
               <option value="MODERATOR">Modérateur</option>
               <option value="SUPPORT">Support</option>
               <option value="FINANCE">Finance</option>
+              <option value="MANAGER">Gestionnaire</option>
             </Select>
             <Select
               name="status"
@@ -143,7 +185,7 @@ export default async function AdminUsersPage({ searchParams }: PageProps) {
               <option value="1">Bannis uniquement</option>
               <option value="0">Non-bannis uniquement</option>
             </Select>
-            <div className="sm:col-span-5">
+            <div className="sm:col-span-6">
               <Button type="submit">Filtrer</Button>
             </div>
           </form>
@@ -155,7 +197,8 @@ export default async function AdminUsersPage({ searchParams }: PageProps) {
           <table className="w-full min-w-[720px] text-sm">
             <thead className="border-b border-border bg-muted/40 text-left text-xs uppercase tracking-wide text-muted-foreground">
               <tr>
-                <th className="px-4 py-3">Utilisateur</th>
+                <th className="px-4 py-3">Apprenant</th>
+                <th className="px-4 py-3">Société</th>
                 <th className="px-4 py-3">Rôle</th>
                 <th className="px-4 py-3">Statut</th>
                 <th className="hidden px-4 py-3 sm:table-cell">Pays</th>
@@ -168,10 +211,10 @@ export default async function AdminUsersPage({ searchParams }: PageProps) {
               {rows.length === 0 ? (
                 <tr>
                   <td
-                    colSpan={7}
+                    colSpan={8}
                     className="px-4 py-10 text-center text-sm text-muted-foreground"
                   >
-                    Aucun utilisateur ne correspond à ces filtres.
+                    Aucun apprenant ne correspond à ces filtres.
                   </td>
                 </tr>
               ) : (
@@ -182,6 +225,18 @@ export default async function AdminUsersPage({ searchParams }: PageProps) {
                         {u.name ?? u.email}
                       </p>
                       <p className="text-xs text-muted-foreground">{u.email}</p>
+                    </td>
+                    <td className="px-4 py-3">
+                      {u.companyId && u.companyName ? (
+                        <Link
+                          href={`/admin/societes/${u.companyId}`}
+                          className="text-foreground hover:underline"
+                        >
+                          {u.companyName}
+                        </Link>
+                      ) : (
+                        <span className="text-muted-foreground">—</span>
+                      )}
                     </td>
                     <td className="px-4 py-3">
                       <RoleBadge role={u.role} />

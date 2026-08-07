@@ -92,7 +92,10 @@ export const ADMIN_NAV: WorkspaceNavigation = {
     },
     {
       href: "/admin/utilisateurs",
-      label: "Utilisateurs",
+      // « Apprenants » et non « Utilisateurs » : cet écran sert à suivre les
+      // élèves d'une société. Les formateurs ont leur propre entrée, et les
+      // comptes administratifs se gèrent dans Sécurité → Rôles.
+      label: "Apprenants",
       icon: "users",
       group: "communaute",
       roles: COMMUNITY_SIDE,
