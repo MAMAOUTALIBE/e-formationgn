@@ -43,6 +43,7 @@ const ROLE_LABELS: Record<string, string> = {
   MODERATOR: "Modérateur",
   SUPPORT: "Support",
   FINANCE: "Finance",
+  MANAGER: "Gestionnaire",
 };
 
 const fullDateFormatter = new Intl.DateTimeFormat("fr-FR", {

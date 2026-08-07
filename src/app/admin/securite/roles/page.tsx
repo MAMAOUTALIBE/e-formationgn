@@ -35,6 +35,7 @@ export default async function AdminRolesPage() {
     MODERATOR: "Modération des cours, avis, Q&A et signalements.",
     SUPPORT: "Tickets de support, litiges, communications utilisateurs.",
     FINANCE: "Transactions, payouts, remboursements, rapports comptables.",
+    MANAGER: "Gestionnaire",
   };
 
   return (

@@ -9,10 +9,16 @@
 
 import type { WorkspaceNavigation } from "@/lib/workspace/navigation";
 
-const ALL_ADMIN = ["ADMIN", "MODERATOR", "SUPPORT", "FINANCE"] as const;
+const ALL_ADMIN = ["ADMIN", "MODERATOR", "SUPPORT", "FINANCE", "MANAGER"] as const;
+// Périmètre du gestionnaire de formation : sociétés, élèves, formations et
+// sessions — il est présent dans COMMUNITY_SIDE et CATALOG_SIDE. Il reste
+// tenu à l'écart des finances, de la sécurité et de la configuration : son
+// métier est le suivi pédagogique et administratif.
 const FINANCE_SIDE = ["ADMIN", "FINANCE"] as const;
-const COMMUNITY_SIDE = ["ADMIN", "SUPPORT", "MODERATOR"] as const;
+const COMMUNITY_SIDE = ["ADMIN", "SUPPORT", "MODERATOR", "MANAGER"] as const;
 const MODERATION_SIDE = ["ADMIN", "MODERATOR"] as const;
+/// Catalogue pédagogique : le modérateur y veille, le gestionnaire y compose.
+const CATALOG_SIDE = ["ADMIN", "MODERATOR", "MANAGER"] as const;
 const SUPPORT_SIDE = ["ADMIN", "SUPPORT"] as const;
 /** Configuration et sécurité : réservées à l'administrateur complet. */
 const ADMIN_ONLY = ["ADMIN"] as const;
@@ -117,7 +123,7 @@ export const ADMIN_NAV: WorkspaceNavigation = {
       label: "Formations",
       icon: "certificate",
       group: "catalogue",
-      roles: MODERATION_SIDE,
+      roles: CATALOG_SIDE,
       children: [{ href: "/admin/formations/nouvelle", label: "Nouvelle formation" }],
     },
     {
@@ -125,7 +131,7 @@ export const ADMIN_NAV: WorkspaceNavigation = {
       label: "Cours",
       icon: "book",
       group: "catalogue",
-      roles: MODERATION_SIDE,
+      roles: CATALOG_SIDE,
       badgeKeys: ["pendingCourses"],
       children: [
         { href: "/admin/cours/moderation", label: "À modérer" },

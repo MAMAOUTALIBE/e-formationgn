@@ -3,6 +3,7 @@
 // Server Actions admin pour la gestion des utilisateurs.
 // Toutes vérifient le rôle ADMIN et loggent dans AuditLog.
 
+import type { UserRole } from "@/generated/prisma/enums";
 import { revalidatePath } from "next/cache";
 
 import { requireAdmin } from "@/lib/auth/authorization";
@@ -82,7 +83,7 @@ export async function forceVerifyEmail(userId: string): Promise<ActionResult> {
 
 export async function changeUserRole(
   userId: string,
-  role: "STUDENT" | "INSTRUCTOR" | "ADMIN" | "MODERATOR" | "SUPPORT" | "FINANCE",
+  role: UserRole,
 ): Promise<ActionResult> {
   const admin = await requireAdmin();
   await prisma.user.update({

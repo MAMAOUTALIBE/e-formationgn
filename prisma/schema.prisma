@@ -30,6 +30,12 @@ enum UserRole {
   MODERATOR
   SUPPORT
   FINANCE
+  /// Gestionnaire de formation : suit les sociétés clientes, les élèves, les
+  /// formations et les inscriptions. Volontairement tenu à l'écart des
+  /// finances, de la sécurité et de la configuration de la plateforme — son
+  /// métier est le suivi pédagogique et administratif, pas l'exploitation
+  /// technique ni la comptabilité.
+  MANAGER
 }
 
 enum AccountStatus {
@@ -147,6 +153,7 @@ model User {
   impersonationsAsAdmin   ImpersonationSession[] @relation("ImpersonationAdmin")
   impersonationsAsTarget  ImpersonationSession[] @relation("ImpersonationTarget")
   loginAttempts           LoginAttempt[]
+  registrations           Registration[]  @relation("StudentRegistrations")
 
   // Rattachement à une société cliente (mode centre de formation).
   // `onDelete: Restrict` : on ne doit jamais perdre des élèves parce qu'une
@@ -1579,6 +1586,8 @@ model TrainingSession {
   status    SessionStatus @default(PLANNED)
   notes     String?       @db.Text
 
+  registrations Registration[]
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -1602,6 +1611,58 @@ enum ProgramStatus {
 enum SessionStatus {
   PLANNED
   ACTIVE
+  COMPLETED
+  CANCELLED
+}
+
+/// Inscription : rattachement d'un élève à une session de formation.
+///
+/// Pivot de l'enchaînement. C'est elle qui porte les statuts métier et qui
+/// COMMANDE les accès : passer une inscription à `ACTIVE` crée les
+/// `Enrollment` de tous les cours du programme, la suspendre les retire.
+///
+/// Pourquoi dériver plutôt que remplacer `Enrollment` : les six points de
+/// contrôle d'accès de l'application interrogent déjà `Enrollment`. En faisant
+/// de l'inscription un pilote et non un substitut, aucun de ces contrôles n'a
+/// besoin d'être modifié — donc aucun risque d'en oublier un et de laisser une
+/// porte ouverte. La progression n'est pas perdue au passage : `LessonProgress`
+/// est indexé par `[userId, lessonId]` et survit à la suppression d'un
+/// `Enrollment`, ce qui permet de recalculer l'avancement à la réactivation.
+model Registration {
+  id        String             @id @default(cuid())
+  studentId String
+  student   User               @relation("StudentRegistrations", fields: [studentId], references: [id], onDelete: Cascade)
+  sessionId String
+  session   TrainingSession    @relation(fields: [sessionId], references: [id], onDelete: Restrict)
+  status    RegistrationStatus @default(PENDING)
+
+  registeredAt DateTime  @default(now())
+  activatedAt  DateTime?
+  suspendedAt  DateTime?
+  completedAt  DateTime?
+  cancelledAt  DateTime?
+  notes        String?   @db.Text
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  /// Un élève ne s'inscrit qu'une fois à une session donnée.
+  @@unique([studentId, sessionId])
+  @@index([studentId])
+  @@index([sessionId])
+  @@index([status])
+}
+
+/// Statuts d'une inscription — les cinq états demandés au cahier des charges.
+///
+/// Seul `ACTIVE` ouvre les accès. `PENDING` couvre l'inscription enregistrée
+/// mais non encore ouverte (accord de financement en attente, session à
+/// venir) ; `SUSPENDED` la coupe temporairement ; `COMPLETED` et `CANCELLED`
+/// la referment, la première au terme du parcours, la seconde avant.
+enum RegistrationStatus {
+  PENDING
+  ACTIVE
+  SUSPENDED
   COMPLETED
   CANCELLED
 }

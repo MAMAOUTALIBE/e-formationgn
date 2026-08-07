@@ -14,7 +14,7 @@ import type { ActionResult } from "@/server/actions/auth";
 
 const initialState: ActionResult = { success: false };
 
-const ASSIGNABLE_ROLES = ["MODERATOR", "SUPPORT", "FINANCE", "ADMIN"] as const;
+const ASSIGNABLE_ROLES = ["MANAGER", "MODERATOR", "SUPPORT", "FINANCE", "ADMIN"] as const;
 
 /** Formulaire : attribuer un rôle administratif à un compte par email. */
 export function RoleAssignForm() {

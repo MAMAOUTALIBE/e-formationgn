@@ -1,5 +1,6 @@
 "use client";
 
+import type { UserRole } from "@/generated/prisma/enums";
 import { Menu, X } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -11,7 +12,9 @@ import { cn } from "@/lib/utils";
 
 interface MobileMenuProps {
   isLoggedIn: boolean;
-  role?: "STUDENT" | "INSTRUCTOR" | "ADMIN" | "MODERATOR" | "SUPPORT" | "FINANCE";
+  /** Rôle issu de la session. Typé sur l'enum Prisma et non sur une liste
+   *  figée : une union recopiée diverge au premier rôle ajouté. */
+  role?: UserRole;
 }
 
 export function MobileMenu({ isLoggedIn, role }: MobileMenuProps) {

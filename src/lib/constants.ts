@@ -21,7 +21,17 @@ export const ALL_ROLES = [
 ] as const satisfies readonly UserRole[];
 
 /** Rôles avec accès admin (full ou sous-rôle CRM). */
-export const ADMIN_ROLES = ["ADMIN", "MODERATOR", "SUPPORT", "FINANCE"] as const;
+// Rôles ayant accès au CRM. MANAGER (gestionnaire de formation) en fait
+// partie : il travaille dans le back-office. Ce qu'il y voit est décidé
+// section par section dans le registre de navigation, qui sert aussi de garde
+// de route — cf. src/lib/workspace/admin-nav.ts.
+export const ADMIN_ROLES = [
+  "ADMIN",
+  "MODERATOR",
+  "SUPPORT",
+  "FINANCE",
+  "MANAGER",
+] as const;
 export type AdminRole = (typeof ADMIN_ROLES)[number];
 
 /** Rôles autorisés sur l'espace formateur (CRUD cours, lessons). */

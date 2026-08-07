@@ -31,6 +31,7 @@ const ROLE_LABELS: Record<string, string> = {
   MODERATOR: "Modération",
   SUPPORT: "Support",
   FINANCE: "Finance",
+  MANAGER: "Gestionnaire",
 };
 
 const ROLE_DASHBOARD: Record<string, { href: string; label: string }> = {

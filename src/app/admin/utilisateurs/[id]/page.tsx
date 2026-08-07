@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 
 import { AccountCredentials } from "@/components/features/admin/account-credentials";
 import { CourseAccessManager } from "@/components/features/admin/course-access-manager";
+import { StudentRegistrations } from "@/components/features/admin/student-registrations";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -22,6 +23,10 @@ import {
 } from "@/server/actions/admin-users";
 import { startImpersonation } from "@/server/actions/admin-impersonation";
 import { getAdminUserDetail } from "@/server/queries/admin-users";
+import {
+  getStudentRegistrations,
+  listOpenSessions,
+} from "@/server/queries/admin-registrations";
 
 export const metadata: Metadata = {
   title: "Fiche utilisateur — CRM admin",
@@ -47,6 +52,20 @@ export default async function AdminUserDetailPage({ params }: PageProps) {
         select: { id: true, title: true },
       })
     : [];
+
+  // Inscriptions : seuls les élèves en ont. Les deux lectures sont
+  // indépendantes, donc en parallèle.
+  //
+  // Les tableaux vides sont annotés explicitement : sans ça le ternaire
+  // produit une union de types tableau, et TypeScript refuse d'appeler `.map`
+  // sur une union de signatures.
+  const [registrations, openSessions]: [
+    Awaited<ReturnType<typeof getStudentRegistrations>>,
+    Awaited<ReturnType<typeof listOpenSessions>>,
+  ] =
+    data.user.role === "STUDENT"
+      ? await Promise.all([getStudentRegistrations(id), listOpenSessions()])
+      : [[], []];
 
   const {
     user,
@@ -139,6 +158,38 @@ export default async function AdminUserDetailPage({ params }: PageProps) {
         <MiniStat label="Cours créés" value={user._count.coursesAuthored} />
         <MiniStat label="Certificats" value={user._count.certificates} />
       </section>
+
+      {user.role === "STUDENT" ? (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">
+              Inscriptions — formations et sessions
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {/* Le statut d'inscription pilote les accès réels : activer ouvre
+                les cours du programme, suspendre les retire. */}
+            <StudentRegistrations
+              studentId={user.id}
+              registrations={registrations.map((r) => ({
+                id: r.id,
+                status: r.status,
+                programTitle: r.session.program.title,
+                sessionReference: r.session.reference,
+                startDate: r.session.startDate.toLocaleDateString("fr-FR"),
+                endDate: r.session.endDate.toLocaleDateString("fr-FR"),
+                courseCount: r.session.program._count.courses,
+              }))}
+              sessions={openSessions.map((s) => ({
+                id: s.id,
+                label: s.label,
+                full: s.full,
+                seatsLeft: s.seatsLeft,
+              }))}
+            />
+          </CardContent>
+        </Card>
+      ) : null}
 
       {isTrainingCenterMode() ? (
         <Card>
