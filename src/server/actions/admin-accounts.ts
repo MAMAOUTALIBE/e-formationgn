@@ -56,6 +56,15 @@ export interface CreateAccountResult extends ActionResult {
   /** Mot de passe provisoire, affiché une seule fois. */
   temporaryPassword?: string;
   createdEmail?: string;
+  /**
+   * Valeurs reçues, renvoyées en cas d'échec.
+   *
+   * React 19 réinitialise le formulaire dès que l'action a répondu : sans ce
+   * renvoi, une adresse déjà utilisée ferait repartir le prénom, le nom, le
+   * téléphone et la société à vide. Le formulaire s'en sert comme
+   * `defaultValue`, donc la réinitialisation restaure la saisie.
+   */
+  values?: Record<string, string>;
 }
 
 export async function createCenterAccount(
@@ -69,20 +78,23 @@ export async function createCenterAccount(
     return { success: false, message: "Non autorisé." };
   }
 
-  const parsed = createAccountSchema.safeParse({
-    email: formData.get("email"),
-    firstName: formData.get("firstName"),
-    lastName: formData.get("lastName"),
-    phone: formData.get("phone") ?? "",
-    role: formData.get("role"),
-    companyId: formData.get("companyId") ?? "",
-  });
+  const raw = {
+    email: String(formData.get("email") ?? ""),
+    firstName: String(formData.get("firstName") ?? ""),
+    lastName: String(formData.get("lastName") ?? ""),
+    phone: String(formData.get("phone") ?? ""),
+    role: String(formData.get("role") ?? "STUDENT"),
+    companyId: String(formData.get("companyId") ?? ""),
+  };
+
+  const parsed = createAccountSchema.safeParse(raw);
 
   if (!parsed.success) {
     return {
       success: false,
-      message: "Formulaire incomplet.",
+      message: "Formulaire incomplet. Votre saisie est conservée.",
       fieldErrors: parsed.error.flatten().fieldErrors,
+      values: raw,
     };
   }
 
@@ -97,6 +109,7 @@ export async function createCenterAccount(
       success: false,
       message: "Un compte existe déjà avec cet email.",
       fieldErrors: { email: ["Cet email est déjà utilisé."] },
+      values: raw,
     };
   }
 
@@ -113,6 +126,7 @@ export async function createCenterAccount(
         success: false,
         message: "Société invalide ou archivée.",
         fieldErrors: { companyId: ["Sélectionnez une société active."] },
+        values: raw,
       };
     }
   }

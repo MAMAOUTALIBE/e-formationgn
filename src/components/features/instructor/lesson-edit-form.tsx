@@ -2,6 +2,7 @@
 
 import { useActionState, useState } from "react";
 
+import { FormDraft } from "@/components/ui/form-draft";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Checkbox } from "@/components/ui/checkbox";
 import { FormField } from "@/components/ui/form-field";
@@ -37,6 +38,10 @@ export function LessonEditForm({ lessonId, defaults }: LessonEditFormProps) {
 
   return (
     <form action={formAction} className="space-y-6">
+      {/* Brouillon local : la saisie survit à un échec d'enregistrement,
+          à un rafraîchissement ou à un onglet fermé. */}
+      <FormDraft storageKey={`lecon:${lessonId}`} clearWhen={state.success} signal={state} />
+
       {state.success && state.message ? (
         <Alert variant="success">
           <AlertDescription>{state.message}</AlertDescription>

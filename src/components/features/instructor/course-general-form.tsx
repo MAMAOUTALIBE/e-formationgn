@@ -2,6 +2,7 @@
 
 import { useActionState } from "react";
 
+import { FormDraft } from "@/components/ui/form-draft";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { FormField } from "@/components/ui/form-field";
 import { Input } from "@/components/ui/input";
@@ -46,6 +47,10 @@ export function CourseGeneralForm({
 
   return (
     <form action={formAction} className="space-y-6">
+      {/* Brouillon local : la saisie survit à un échec d'enregistrement,
+          à un rafraîchissement ou à un onglet fermé. */}
+      <FormDraft storageKey={`cours-general:${courseId}`} clearWhen={state.success} signal={state} />
+
       {state.success && state.message ? (
         <Alert variant="success">
           <AlertDescription>{state.message}</AlertDescription>

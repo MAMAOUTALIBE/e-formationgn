@@ -18,6 +18,14 @@ export interface ProgramActionResult {
   message?: string;
   programId?: string;
   fieldErrors?: Record<string, string>;
+  /**
+   * Valeurs reçues, renvoyées en cas d'échec.
+   *
+   * React 19 réinitialise le formulaire dès que l'action a répondu : sans ce
+   * renvoi, la saisie repart à vide au premier champ mal rempli. Le formulaire
+   * s'en sert comme `defaultValue`, ce qui la restaure.
+   */
+  values?: Record<string, string>;
 }
 
 function toFieldErrors(issues: { path: PropertyKey[]; message: string }[]) {
@@ -51,12 +59,14 @@ export async function createProgram(
     return { success: false, message: "Accès refusé." };
   }
 
-  const parsed = programSchema.safeParse(readProgramForm(formData));
+  const raw = readProgramForm(formData);
+  const parsed = programSchema.safeParse(raw);
   if (!parsed.success) {
     return {
       success: false,
-      message: "Corrigez les champs signalés.",
+      message: "Corrigez les champs signalés. Votre saisie est conservée.",
       fieldErrors: toFieldErrors(parsed.error.issues),
+      values: raw,
     };
   }
 
@@ -72,6 +82,7 @@ export async function createProgram(
         success: false,
         message: `Ce code est déjà utilisé par « ${clash.title} ».`,
         fieldErrors: { code: "Code déjà utilisé." },
+        values: raw,
       };
     }
   }
@@ -108,12 +119,14 @@ export async function updateProgram(
   });
   if (!current) return { success: false, message: "Formation introuvable." };
 
-  const parsed = programSchema.safeParse(readProgramForm(formData));
+  const raw = readProgramForm(formData);
+  const parsed = programSchema.safeParse(raw);
   if (!parsed.success) {
     return {
       success: false,
-      message: "Corrigez les champs signalés.",
+      message: "Corrigez les champs signalés. Votre saisie est conservée.",
       fieldErrors: toFieldErrors(parsed.error.issues),
+      values: raw,
     };
   }
 
@@ -127,6 +140,7 @@ export async function updateProgram(
         success: false,
         message: `Ce code est déjà utilisé par « ${clash.title} ».`,
         fieldErrors: { code: "Code déjà utilisé." },
+        values: raw,
       };
     }
   }
@@ -255,12 +269,14 @@ export async function createTrainingSession(
     return { success: false, message: "Accès refusé." };
   }
 
-  const parsed = sessionSchema.safeParse(readSessionForm(formData));
+  const raw = readSessionForm(formData);
+  const parsed = sessionSchema.safeParse(raw);
   if (!parsed.success) {
     return {
       success: false,
-      message: "Corrigez les champs signalés.",
+      message: "Corrigez les champs signalés. Votre saisie est conservée.",
       fieldErrors: toFieldErrors(parsed.error.issues),
+      values: raw,
     };
   }
 
@@ -273,6 +289,7 @@ export async function createTrainingSession(
       success: false,
       message: "Formation invalide ou archivée.",
       fieldErrors: { programId: "Sélectionnez une formation active." },
+      values: raw,
     };
   }
 

@@ -2,6 +2,7 @@
 
 import { useActionState, useRef, useState, useTransition } from "react";
 
+import { FormDraft } from "@/components/ui/form-draft";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { FormField } from "@/components/ui/form-field";
@@ -79,6 +80,10 @@ export function CourseSeoForm({
 
   return (
     <form action={formAction} className="space-y-6">
+      {/* Brouillon local : la saisie survit à un échec d'enregistrement,
+          à un rafraîchissement ou à un onglet fermé. */}
+      <FormDraft storageKey={`cours-seo:${courseId}`} clearWhen={state.success} signal={state} />
+
       {aiAvailable ? (
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-dashed border-border bg-muted/40 p-3">
           <div>

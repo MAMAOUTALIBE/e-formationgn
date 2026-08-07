@@ -20,6 +20,16 @@ export interface CompanyActionResult {
   companyId?: string;
   /** Erreurs par champ, pour un affichage au bon endroit du formulaire. */
   fieldErrors?: Record<string, string>;
+  /**
+   * Valeurs telles que reçues, renvoyées en cas d'échec.
+   *
+   * React 19 réinitialise un formulaire après l'exécution d'une action, y
+   * compris quand elle échoue : sans ce renvoi, une fiche société longuement
+   * remplie repart à vide sur un SIRET mal saisi. Le formulaire s'en sert
+   * comme `defaultValue`, donc la réinitialisation restaure la saisie au lieu
+   * de l'effacer.
+   */
+  values?: Record<string, string>;
 }
 
 /** FormData → objet brut, avant validation Zod. */
@@ -65,12 +75,14 @@ export async function createCompany(
     return { success: false, message: "Accès refusé." };
   }
 
-  const parsed = companySchema.safeParse(readCompanyForm(formData));
+  const raw = readCompanyForm(formData);
+  const parsed = companySchema.safeParse(raw);
   if (!parsed.success) {
     return {
       success: false,
-      message: "Corrigez les champs signalés.",
+      message: "Corrigez les champs signalés. Votre saisie est conservée.",
       fieldErrors: toFieldErrors(parsed.error.issues),
+      values: raw,
     };
   }
 
@@ -87,6 +99,7 @@ export async function createCompany(
         success: false,
         message: `Ce SIRET est déjà enregistré pour « ${existing.name} ».`,
         fieldErrors: { siret: "SIRET déjà utilisé." },
+        values: raw,
       };
     }
   }
@@ -123,12 +136,14 @@ export async function updateCompany(
   });
   if (!current) return { success: false, message: "Société introuvable." };
 
-  const parsed = companySchema.safeParse(readCompanyForm(formData));
+  const raw = readCompanyForm(formData);
+  const parsed = companySchema.safeParse(raw);
   if (!parsed.success) {
     return {
       success: false,
-      message: "Corrigez les champs signalés.",
+      message: "Corrigez les champs signalés. Votre saisie est conservée.",
       fieldErrors: toFieldErrors(parsed.error.issues),
+      values: raw,
     };
   }
 
@@ -142,6 +157,7 @@ export async function updateCompany(
         success: false,
         message: `Ce SIRET est déjà enregistré pour « ${clash.name} ».`,
         fieldErrors: { siret: "SIRET déjà utilisé." },
+        values: raw,
       };
     }
   }

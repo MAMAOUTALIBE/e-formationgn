@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useActionState } from "react";
 
 import { Button } from "@/components/ui/button";
+import { FormDraft } from "@/components/ui/form-draft";
 import { FormField } from "@/components/ui/form-field";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -49,8 +50,19 @@ export function ProgramForm({
   const [state, formAction] = useActionState(action, initialState);
   const err = (f: string) => state.fieldErrors?.[f];
 
+  // React 19 réinitialise le formulaire dès que l'action a répondu, même sur
+  // un échec : les champs reprennent leur `defaultValue`. On y met donc ce que
+  // l'action vient de recevoir, pour restaurer la saisie au lieu de l'effacer.
+  const values: ProgramFormValues = { ...defaultValues, ...(state.values ?? {}) };
+
   return (
     <form action={formAction} className="space-y-4 rounded-xl border border-border bg-card p-4">
+      {/* Brouillon local : survit à un rafraîchissement ou à un onglet fermé. */}
+      <FormDraft
+        storageKey={programId ? `formation:${programId}` : "formation:nouvelle"}
+        clearWhen={state.success}
+        signal={state}
+      />
       {state.message ? (
         <p
           role="status"
@@ -65,7 +77,7 @@ export function ProgramForm({
       ) : null}
 
       <FormField id="title" label="Intitulé de la formation" required error={err("title")}>
-        <Input id="title" name="title" defaultValue={defaultValues.title} required maxLength={200} />
+        <Input id="title" name="title" defaultValue={values.title} required maxLength={200} />
       </FormField>
 
       <div className="grid gap-4 sm:grid-cols-3">
@@ -75,7 +87,7 @@ export function ProgramForm({
           error={err("code")}
           hint="Référence portée sur les conventions."
         >
-          <Input id="code" name="code" defaultValue={defaultValues.code} maxLength={40} />
+          <Input id="code" name="code" defaultValue={values.code} maxLength={40} />
         </FormField>
         <FormField
           id="durationHours"
@@ -87,11 +99,11 @@ export function ProgramForm({
             id="durationHours"
             name="durationHours"
             inputMode="numeric"
-            defaultValue={defaultValues.durationHours}
+            defaultValue={values.durationHours}
           />
         </FormField>
         <FormField id="status" label="Statut" error={err("status")}>
-          <Select id="status" name="status" defaultValue={defaultValues.status}>
+          <Select id="status" name="status" defaultValue={values.status}>
             <option value="DRAFT">Brouillon</option>
             <option value="ACTIVE">Active</option>
             <option value="ARCHIVED">Archivée</option>
@@ -105,7 +117,7 @@ export function ProgramForm({
           id="description"
           name="description"
           rows={4}
-          defaultValue={defaultValues.description}
+          defaultValue={values.description}
         />
       </div>
 

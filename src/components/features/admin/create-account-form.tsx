@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useActionState, useState } from "react";
 
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { FormDraft } from "@/components/ui/form-draft";
 import { FormField } from "@/components/ui/form-field";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
@@ -30,8 +31,20 @@ export interface CompanyOption {
  */
 export function CreateAccountForm({ companies }: { companies: CompanyOption[] }) {
   const [state, formAction] = useActionState(createCenterAccount, initialState);
-  const [role, setRole] = useState("STUDENT");
   const errors = state.fieldErrors ?? {};
+
+  // React 19 réinitialise le formulaire dès que l'action a répondu, même sur
+  // un échec. Les champs reprennent leur `defaultValue` : en y mettant ce que
+  // l'action vient de recevoir, la réinitialisation restaure la saisie.
+  const sent = state.values;
+  const submittedRole = sent?.role;
+
+  // Le type de compte pilote l'affichage de la société. Il se déduit plutôt
+  // qu'il ne se synchronise : le choix explicite s'il y en a eu un, sinon ce
+  // qui vient d'être soumis — sans quoi, après un échec, le formulaire
+  // réaffiché ne correspondrait plus au choix de la personne.
+  const [chosenRole, setRole] = useState<string | null>(null);
+  const role = chosenRole ?? submittedRole ?? "STUDENT";
 
   // Sans société enregistrée, aucun élève ne peut être créé : le rattachement
   // est obligatoire et se fait dans une liste. On le dit plutôt que de laisser
@@ -40,6 +53,9 @@ export function CreateAccountForm({ companies }: { companies: CompanyOption[] })
 
   return (
     <form action={formAction} className="space-y-4">
+      {/* Brouillon local : survit à un rafraîchissement ou à un onglet fermé.
+          Aucun mot de passe n'y transite — FormDraft ignore ces champs. */}
+      <FormDraft storageKey="compte:nouveau" clearWhen={state.success} signal={state} />
       {state.success && state.temporaryPassword ? (
         <Alert variant="success">
           <AlertDescription>
@@ -66,10 +82,10 @@ export function CreateAccountForm({ companies }: { companies: CompanyOption[] })
 
       <div className="grid gap-3 sm:grid-cols-2">
         <FormField id="firstName" label="Prénom" error={errors.firstName?.[0]}>
-          <Input id="firstName" name="firstName" required maxLength={80} />
+          <Input id="firstName" name="firstName" defaultValue={sent?.firstName ?? ""} required maxLength={80} />
         </FormField>
         <FormField id="lastName" label="Nom" error={errors.lastName?.[0]}>
-          <Input id="lastName" name="lastName" required maxLength={80} />
+          <Input id="lastName" name="lastName" defaultValue={sent?.lastName ?? ""} required maxLength={80} />
         </FormField>
       </div>
 
@@ -79,6 +95,7 @@ export function CreateAccountForm({ companies }: { companies: CompanyOption[] })
             id="email"
             name="email"
             type="email"
+            defaultValue={sent?.email ?? ""}
             required
             placeholder="eleve@exemple.com"
           />
@@ -87,7 +104,7 @@ export function CreateAccountForm({ companies }: { companies: CompanyOption[] })
           <Select
             id="role"
             name="role"
-            defaultValue="STUDENT"
+            defaultValue={submittedRole ?? "STUDENT"}
             required
             onChange={(e) => setRole(e.target.value)}
           >
@@ -104,7 +121,7 @@ export function CreateAccountForm({ companies }: { companies: CompanyOption[] })
           hint="Facultatif."
           error={errors.phone?.[0]}
         >
-          <Input id="phone" name="phone" type="tel" maxLength={40} />
+          <Input id="phone" name="phone" defaultValue={sent?.phone ?? ""} type="tel" maxLength={40} />
         </FormField>
 
         {/* Société obligatoire pour un élève, sans objet pour un formateur :
@@ -121,7 +138,13 @@ export function CreateAccountForm({ companies }: { companies: CompanyOption[] })
                 : "Choix dans la liste : la saisie libre créerait des doublons de client."
             }
           >
-            <Select id="companyId" name="companyId" required disabled={noCompany} defaultValue="">
+            <Select
+              id="companyId"
+              name="companyId"
+              required
+              disabled={noCompany}
+              defaultValue={sent?.companyId ?? ""}
+            >
               <option value="" disabled>
                 {noCompany ? "Aucune société enregistrée" : "Sélectionner une société…"}
               </option>
