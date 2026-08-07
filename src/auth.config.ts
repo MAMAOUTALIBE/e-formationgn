@@ -8,6 +8,12 @@ import type { NextAuthConfig } from "next-auth";
 import Google from "next-auth/providers/google";
 
 import { ADMIN_ROLES } from "@/lib/constants";
+// Registre de navigation admin : données pures, sans Prisma ni API Node — donc
+// consommable ici, sur l'edge. C'est lui qui déclare quels rôles voient quelle
+// section, et cette garde s'y adosse pour que le menu et l'accès réel ne
+// puissent pas diverger.
+import { ADMIN_NAV } from "@/lib/workspace/admin-nav";
+import { sectionRolesForPath } from "@/lib/workspace/navigation";
 import type { Currency, UserRole } from "@/generated/prisma/enums";
 
 // On étend les types NextAuth pour exposer le rôle dans la session/token.
@@ -214,6 +220,17 @@ export const authConfig = {
         }
         if (!role || !(ADMIN_ROLES as readonly string[]).includes(role)) {
           return Response.redirect(new URL("/", nextUrl));
+        }
+        // Restriction par sous-rôle, déclarée une seule fois dans ADMIN_NAV :
+        // un écran absent du menu d'un rôle lui est aussi refusé par URL.
+        // Un chemin non couvert par le registre renvoie `null` et reste
+        // ouvert à tous les rôles admin — on ne ferme que sur déclaration.
+        const allowedRoles = sectionRolesForPath(ADMIN_NAV, pathname);
+        if (allowedRoles && !allowedRoles.includes(role)) {
+          // Renvoi vers le tableau de bord et non l'accueil : la personne a
+          // bien sa place dans le CRM, c'est cet écran-là qui ne la concerne
+          // pas.
+          return Response.redirect(new URL("/admin", nextUrl));
         }
         return true;
       }

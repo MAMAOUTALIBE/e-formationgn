@@ -4,13 +4,19 @@
 
 import { prisma } from "@/lib/prisma";
 
-export interface AdminSidebarBadges {
+/**
+ * Alias de type et non `interface` : la coquille attend un
+ * `Record<string, number>` (les compteurs sont indexés par les `badgeKeys` du
+ * registre de navigation), et TypeScript n'accorde de signature d'index
+ * implicite qu'aux alias, jamais aux interfaces.
+ */
+export type AdminSidebarBadges = {
   pendingCourses: number;
   openTickets: number;
   openDisputes: number;
   pendingReports: number;
   pendingGdpr: number;
-}
+};
 
 export async function getAdminSidebarBadges(): Promise<AdminSidebarBadges> {
   const [pendingCourses, openTickets, openDisputes, pendingReports, pendingGdpr] =

@@ -1,25 +1,29 @@
 "use client";
 
+// Barre de sous-navigation de la section courante.
+//
+// Sans elle, arrivé sur /admin/finances/payouts, rien n'indiquerait
+// l'existence des pages sœurs (transactions, remboursements, rapports) — on y
+// revenait au bouton retour.
+//
+// Ne rend rien si la section n'a pas de sous-pages : inutile d'occuper une
+// bande de hauteur, d'autant que la coquille est à hauteur de viewport fixe.
+
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
+import {
+  findWorkspaceSection,
+  type ResolvedWorkspaceNav,
+} from "@/lib/workspace/navigation";
 import { cn } from "@/lib/utils";
-import { findAdminSection } from "@/lib/admin/navigation";
 
-/**
- * Barre de sous-navigation de la section admin courante.
- *
- * Avant, l'admin n'avait qu'un seul layout : arrivé sur
- * /admin/finances/payouts, rien n'indiquait l'existence des pages sœurs
- * (transactions, remboursements, rapports) — on y revenait au bouton retour.
- *
- * Ne rend rien si la section n'a pas de sous-pages : inutile d'occuper une
- * bande de hauteur sur /admin ou /admin/utilisateurs, d'autant que la
- * coquille du layout est à hauteur de viewport fixe.
- */
-export function AdminSectionNav() {
+export function WorkspaceSectionNav({ nav }: { nav: ResolvedWorkspaceNav }) {
   const pathname = usePathname();
-  const section = findAdminSection(pathname);
+  // On cherche dans les sections VISIBLES uniquement : une sous-navigation ne
+  // doit jamais exposer une section que le menu masque pour ce rôle.
+  const sections = [...nav.pinned, ...nav.groups.flatMap((g) => g.sections)];
+  const section = findWorkspaceSection(sections, pathname);
 
   if (!section || section.children.length === 0) return null;
 

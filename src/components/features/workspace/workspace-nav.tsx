@@ -1,21 +1,31 @@
 "use client";
 
-// Liste de navigation du CRM, partagée par la barre latérale (desktop) et le
-// drawer mobile. Elle est entièrement pilotée par le registre
-// `ADMIN_SECTIONS` : ajouter une section là-bas la fait apparaître ici, dans
-// son groupe, avec son icône et sa pastille.
+// Liste de navigation d'un espace de travail, partagée par la barre latérale
+// (desktop) et le drawer mobile, quel que soit l'espace.
+//
+// Elle ne connaît aucun espace en particulier : tout vient de la navigation
+// résolue qu'on lui passe, déjà filtrée pour le rôle courant.
 
 import {
+  Award,
   AlertTriangle,
   BarChart3,
+  Bell,
   BookOpenText,
+  CalendarDays,
   ChevronDown,
+  CircleHelp,
   GaugeCircle,
   GraduationCap,
+  Heart,
   LifeBuoy,
+  Link as LinkIcon,
   Megaphone,
+  PlayCircle,
   Settings2,
   Shield,
+  Star,
+  Tag,
   Users,
   Wallet,
   type LucideIcon,
@@ -25,21 +35,19 @@ import { usePathname } from "next/navigation";
 import { useState } from "react";
 
 import {
-  ADMIN_GROUPED_SECTIONS,
-  ADMIN_PINNED_SECTIONS,
-  type AdminIconName,
-  type AdminNavGroupId,
-  type AdminSection,
-} from "@/lib/admin/navigation";
+  isNavItemActive,
+  type ResolvedWorkspaceNav,
+  type WorkspaceIconName,
+  type WorkspaceSection,
+} from "@/lib/workspace/navigation";
 import {
-  SIDEBAR_CLOSED_GROUPS_COOKIE,
+  closedGroupsCookieName,
   persistSidebarCookie,
   serializeClosedGroups,
-} from "@/lib/admin/sidebar-preferences";
+} from "@/lib/workspace/preferences";
 import { cn } from "@/lib/utils";
-import type { AdminSidebarBadges } from "@/server/queries/admin-sidebar";
 
-const ICONS: Record<AdminIconName, LucideIcon> = {
+const ICONS: Record<WorkspaceIconName, LucideIcon> = {
   gauge: GaugeCircle,
   chart: BarChart3,
   wallet: Wallet,
@@ -51,51 +59,69 @@ const ICONS: Record<AdminIconName, LucideIcon> = {
   alert: AlertTriangle,
   settings: Settings2,
   shield: Shield,
+  calendar: CalendarDays,
+  star: Star,
+  tag: Tag,
+  link: LinkIcon,
+  help: CircleHelp,
+  certificate: Award,
+  heart: Heart,
+  bell: Bell,
+  play: PlayCircle,
 };
 
-interface AdminNavProps {
-  badges: AdminSidebarBadges;
+/** Compteurs affichés en pastille, indexés par les `badgeKeys` du registre. */
+export type WorkspaceBadges = Record<string, number>;
+
+interface WorkspaceNavProps {
+  nav: ResolvedWorkspaceNav;
+  badges: WorkspaceBadges;
   /** Rail d'icônes seules — le libellé passe en infobulle native. */
   collapsed?: boolean;
   /** Groupes repliés au premier rendu (issus du cookie, lu côté serveur). */
-  defaultClosedGroups?: AdminNavGroupId[];
+  defaultClosedGroups?: string[];
 }
 
-export function AdminNav({
+export function WorkspaceNav({
+  nav,
   badges,
   collapsed = false,
   defaultClosedGroups = [],
-}: AdminNavProps) {
+}: WorkspaceNavProps) {
   const pathname = usePathname();
-  const [closedGroups, setClosedGroups] = useState<AdminNavGroupId[]>(defaultClosedGroups);
+  const [closedGroups, setClosedGroups] = useState<string[]>(defaultClosedGroups);
 
-  function toggleGroup(id: AdminNavGroupId) {
+  function toggleGroup(id: string) {
     const next = closedGroups.includes(id)
       ? closedGroups.filter((g) => g !== id)
       : [...closedGroups, id];
     setClosedGroups(next);
-    persistSidebarCookie(SIDEBAR_CLOSED_GROUPS_COOKIE, serializeClosedGroups(next));
+    persistSidebarCookie(closedGroupsCookieName(nav.id), serializeClosedGroups(next));
   }
 
   return (
     <nav
       className={cn("flex flex-col gap-1 py-4 text-sm", collapsed ? "px-2" : "px-3")}
-      aria-label="Navigation admin"
+      aria-label={`Navigation ${nav.label}`}
     >
-      {ADMIN_PINNED_SECTIONS.map((section) => (
-        <AdminNavLink
+      {nav.pinned.map((section) => (
+        <WorkspaceNavLink
           key={section.href}
           section={section}
+          rootHref={nav.pinned[0]?.href ?? section.href}
           badges={badges}
           pathname={pathname}
           collapsed={collapsed}
         />
       ))}
 
-      {ADMIN_GROUPED_SECTIONS.map((group) => {
+      {nav.groups.map((group) => {
         // Un groupe replié qui contient la page courante resterait invisible
         // alors qu'il est actif : on le force ouvert dans ce cas.
-        const holdsActive = group.sections.some((s) => isActive(s, pathname));
+        const rootHref = nav.pinned[0]?.href ?? "";
+        const holdsActive = group.sections.some((s) =>
+          isNavItemActive(s.href, pathname, rootHref),
+        );
         const open = holdsActive || !closedGroups.includes(group.id);
 
         return (
@@ -128,9 +154,10 @@ export function AdminNav({
             {open ? (
               <div className="flex flex-col gap-0.5">
                 {group.sections.map((section) => (
-                  <AdminNavLink
+                  <WorkspaceNavLink
                     key={section.href}
                     section={section}
+                    rootHref={rootHref}
                     badges={badges}
                     pathname={pathname}
                     collapsed={collapsed}
@@ -145,26 +172,25 @@ export function AdminNav({
   );
 }
 
-/** `/admin` ne matche qu'exactement, sinon il serait actif sur tout le CRM. */
-function isActive(section: AdminSection, pathname: string): boolean {
-  if (section.href === "/admin") return pathname === "/admin";
-  return pathname === section.href || pathname.startsWith(`${section.href}/`);
-}
-
-function AdminNavLink({
+function WorkspaceNavLink({
   section,
+  rootHref,
   badges,
   pathname,
   collapsed,
 }: {
-  section: AdminSection;
-  badges: AdminSidebarBadges;
+  section: WorkspaceSection;
+  rootHref: string;
+  badges: WorkspaceBadges;
   pathname: string;
   collapsed: boolean;
 }) {
-  const active = isActive(section, pathname);
+  const active = isNavItemActive(section.href, pathname, rootHref);
   const Icon = ICONS[section.icon];
-  const badge = (section.badgeKeys ?? []).reduce((total, key) => total + badges[key], 0);
+  const badge = (section.badgeKeys ?? []).reduce(
+    (total, key) => total + (badges[key] ?? 0),
+    0,
+  );
 
   return (
     <Link

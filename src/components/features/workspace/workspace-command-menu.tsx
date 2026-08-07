@@ -1,27 +1,18 @@
 "use client";
 
-// Recherche globale admin (Cmd+K). Pour l'instant : navigation rapide vers
-// les pages admin + déclenche un search côté serveur via `/api/admin/search`
-// quand l'utilisateur tape (debounced 200ms).
+// Recherche globale d'un espace (⌘K) : navigation rapide vers ses écrans, et
+// — quand l'espace en expose un — résultats métier renvoyés par un point
+// d'API dédié.
+//
+// Les écrans proposés viennent de la navigation déjà filtrée pour le rôle :
+// la recherche ne peut donc jamais mener à un écran que le menu masque.
 
 import { Command } from "cmdk";
-import {
-  BarChart3,
-  BookOpenText,
-  GaugeCircle,
-  GraduationCap,
-  LifeBuoy,
-  Megaphone,
-  Search,
-  Settings2,
-  Shield,
-  Users,
-  Wallet,
-} from "lucide-react";
+import { Search } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 
-import { ADMIN_PAGES } from "@/lib/admin/navigation";
+import type { ResolvedWorkspaceNav } from "@/lib/workspace/navigation";
 
 /** Compare sans tenir compte des accents ni de la casse : « securite » doit
  *  trouver « Sécurité », sinon la recherche est inutilisable en français. */
@@ -40,20 +31,28 @@ interface SearchHit {
   href: string;
 }
 
-const QUICK_LINKS: Array<{ icon: React.ReactNode; label: string; href: string }> = [
-  { icon: <GaugeCircle className="h-4 w-4" />, label: "Tableau de bord", href: "/admin" },
-  { icon: <BarChart3 className="h-4 w-4" />, label: "Analytics", href: "/admin/analytics" },
-  { icon: <Wallet className="h-4 w-4" />, label: "Finances", href: "/admin/finances" },
-  { icon: <Megaphone className="h-4 w-4" />, label: "Marketing", href: "/admin/marketing" },
-  { icon: <Users className="h-4 w-4" />, label: "Utilisateurs", href: "/admin/utilisateurs" },
-  { icon: <GraduationCap className="h-4 w-4" />, label: "Formateurs", href: "/admin/formateurs" },
-  { icon: <LifeBuoy className="h-4 w-4" />, label: "Support", href: "/admin/support" },
-  { icon: <BookOpenText className="h-4 w-4" />, label: "Cours", href: "/admin/cours" },
-  { icon: <Settings2 className="h-4 w-4" />, label: "Paramètres", href: "/admin/parametres" },
-  { icon: <Shield className="h-4 w-4" />, label: "Sécurité", href: "/admin/securite" },
-];
+const TYPE_LABEL: Record<SearchHit["type"], string> = {
+  user: "Utilisateur",
+  course: "Cours",
+  order: "Commande",
+  ticket: "Ticket",
+};
 
-export function AdminCommandMenu() {
+interface WorkspaceCommandMenuProps {
+  nav: ResolvedWorkspaceNav;
+  /**
+   * Point d'API de recherche métier (`?q=`). Absent = recherche d'écrans
+   * seulement — c'est le cas des espaces qui n'ont pas d'index dédié.
+   */
+  searchEndpoint?: string;
+  placeholder: string;
+}
+
+export function WorkspaceCommandMenu({
+  nav,
+  searchEndpoint,
+  placeholder,
+}: WorkspaceCommandMenuProps) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
@@ -72,13 +71,13 @@ export function AdminCommandMenu() {
   }, []);
 
   useEffect(() => {
-    if (!open) return;
+    if (!open || !searchEndpoint) return;
     const term = query.trim();
     if (term.length < 2) return;
     const timer = setTimeout(async () => {
       setLoading(true);
       try {
-        const res = await fetch(`/api/admin/search?q=${encodeURIComponent(term)}`);
+        const res = await fetch(`${searchEndpoint}?q=${encodeURIComponent(term)}`);
         if (!res.ok) return;
         const data = (await res.json()) as { hits: SearchHit[] };
         setHits(data.hits);
@@ -89,21 +88,17 @@ export function AdminCommandMenu() {
       }
     }, 200);
     return () => clearTimeout(timer);
-  }, [query, open]);
+  }, [query, open, searchEndpoint]);
 
-  const visibleHits = query.trim().length >= 2 ? hits : [];
+  const visibleHits = searchEndpoint && query.trim().length >= 2 ? hits : [];
 
-  // Les 44 pages de l'admin deviennent recherchables. Auparavant la liste de
-  // navigation disparaissait dès la première frappe et seuls les résultats
-  // serveur (users/cours/commandes/tickets) restaient : taper « payouts » ne
-  // menait nulle part.
   const matchingPages = useMemo(() => {
     const q = normalize(query.trim());
     if (q.length < 2) return [];
-    return ADMIN_PAGES.filter(
-      (p) => normalize(p.label).includes(q) || normalize(p.href).includes(q),
-    ).slice(0, 8);
-  }, [query]);
+    return nav.pages
+      .filter((p) => normalize(p.label).includes(q) || normalize(p.href).includes(q))
+      .slice(0, 8);
+  }, [query, nav.pages]);
 
   function go(href: string) {
     setOpen(false);
@@ -114,12 +109,12 @@ export function AdminCommandMenu() {
   return (
     <>
       {/* Faux champ de saisie : c'est un bouton (il ouvre une palette), mais
-          il en a l'apparence pour être identifié comme la recherche du CRM au
-          lieu d'un bouton de plus dans la barre du haut. */}
+          il en a l'apparence pour être identifié comme la recherche de
+          l'espace au lieu d'un bouton de plus dans la barre du haut. */}
       <button
         type="button"
         onClick={() => setOpen(true)}
-        aria-label="Rechercher dans le CRM"
+        aria-label="Rechercher"
         aria-keyshortcuts="Meta+K Control+K"
         className="group flex w-full items-center gap-2.5 rounded-xl border border-border bg-muted/50 px-3.5 py-2.5 text-left text-sm text-muted-foreground transition-colors hover:border-foreground/25 hover:bg-muted"
       >
@@ -127,16 +122,18 @@ export function AdminCommandMenu() {
         {/* Deux libellés plutôt qu'un masqué : sur mobile, cacher le texte
             laissait une barre vide sur toute la largeur. */}
         <span className="flex-1 truncate sm:hidden">Rechercher…</span>
-        <span className="hidden flex-1 truncate sm:inline">
-          Rechercher un écran, un utilisateur, une commande…
-        </span>
+        <span className="hidden flex-1 truncate sm:inline">{placeholder}</span>
         <kbd className="ml-auto hidden shrink-0 rounded border border-border bg-background px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground sm:inline">
           ⌘K
         </kbd>
       </button>
 
       {open ? (
-        <div className="fixed inset-0 z-50 flex items-start justify-center pt-[10vh]" role="dialog" aria-modal="true">
+        <div
+          className="fixed inset-0 z-50 flex items-start justify-center pt-[10vh]"
+          role="dialog"
+          aria-modal="true"
+        >
           <button
             type="button"
             aria-label="Fermer"
@@ -144,7 +141,7 @@ export function AdminCommandMenu() {
             className="absolute inset-0 bg-black/40"
           />
           <Command
-            label="Recherche admin"
+            label="Recherche"
             className="relative z-10 w-full max-w-xl overflow-hidden rounded-lg border border-border bg-background shadow-2xl"
             shouldFilter={false}
           >
@@ -153,32 +150,42 @@ export function AdminCommandMenu() {
               <Command.Input
                 value={query}
                 onValueChange={setQuery}
-                placeholder="Utilisateur, cours, commande, ticket…"
+                placeholder={placeholder}
                 className="h-12 w-full bg-transparent text-sm outline-none placeholder:text-muted-foreground"
               />
             </div>
             <Command.List className="max-h-[400px] overflow-y-auto py-2">
               <Command.Empty className="px-4 py-6 text-center text-sm text-muted-foreground">
-                {loading ? "Recherche…" : query.length < 2 ? "Tape au moins 2 caractères pour chercher." : "Aucun résultat."}
+                {loading
+                  ? "Recherche…"
+                  : query.length < 2
+                    ? "Tapez au moins 2 caractères pour chercher."
+                    : "Aucun résultat."}
               </Command.Empty>
 
               {query.length < 2 ? (
-                <Command.Group heading="Navigation rapide" className="px-2 text-xs text-muted-foreground [&_[cmdk-group-heading]]:px-2 [&_[cmdk-group-heading]]:py-1">
-                  {QUICK_LINKS.map((link) => (
+                <Command.Group
+                  heading="Navigation rapide"
+                  className="px-2 text-xs text-muted-foreground [&_[cmdk-group-heading]]:px-2 [&_[cmdk-group-heading]]:py-1"
+                >
+                  {nav.pinned.concat(nav.groups.flatMap((g) => g.sections)).map((s) => (
                     <Command.Item
-                      key={link.href}
-                      onSelect={() => go(link.href)}
+                      key={s.href}
+                      value={s.href}
+                      onSelect={() => go(s.href)}
                       className="flex cursor-pointer items-center gap-3 rounded-md px-3 py-2 text-sm text-foreground data-[selected=true]:bg-muted"
                     >
-                      <span className="text-muted-foreground">{link.icon}</span>
-                      {link.label}
+                      {s.label}
                     </Command.Item>
                   ))}
                 </Command.Group>
               ) : null}
 
               {matchingPages.length > 0 ? (
-                <Command.Group heading="Pages" className="px-2 text-xs text-muted-foreground [&_[cmdk-group-heading]]:px-2 [&_[cmdk-group-heading]]:py-1">
+                <Command.Group
+                  heading="Écrans"
+                  className="px-2 text-xs text-muted-foreground [&_[cmdk-group-heading]]:px-2 [&_[cmdk-group-heading]]:py-1"
+                >
                   {matchingPages.map((page) => (
                     <Command.Item
                       key={page.href}
@@ -187,14 +194,19 @@ export function AdminCommandMenu() {
                       className="flex cursor-pointer items-center justify-between gap-3 rounded-md px-3 py-2 text-sm text-foreground data-[selected=true]:bg-muted"
                     >
                       <span>{page.label}</span>
-                      <span className="truncate text-xs text-muted-foreground">{page.href}</span>
+                      <span className="truncate text-xs text-muted-foreground">
+                        {page.href}
+                      </span>
                     </Command.Item>
                   ))}
                 </Command.Group>
               ) : null}
 
               {visibleHits.length > 0 ? (
-                <Command.Group heading="Résultats" className="px-2 text-xs text-muted-foreground [&_[cmdk-group-heading]]:px-2 [&_[cmdk-group-heading]]:py-1">
+                <Command.Group
+                  heading="Résultats"
+                  className="px-2 text-xs text-muted-foreground [&_[cmdk-group-heading]]:px-2 [&_[cmdk-group-heading]]:py-1"
+                >
                   {visibleHits.map((hit) => (
                     <Command.Item
                       key={`${hit.type}-${hit.id}`}
@@ -202,7 +214,9 @@ export function AdminCommandMenu() {
                       className="flex cursor-pointer flex-col gap-0.5 rounded-md px-3 py-2 text-sm text-foreground data-[selected=true]:bg-muted"
                     >
                       <span className="flex items-center gap-2">
-                        <TypeBadge type={hit.type} />
+                        <span className="rounded bg-muted px-1.5 py-0.5 text-[10px] uppercase tracking-wide text-muted-foreground">
+                          {TYPE_LABEL[hit.type]}
+                        </span>
                         <span className="truncate font-medium">{hit.title}</span>
                       </span>
                       {hit.subtitle ? (
@@ -217,19 +231,5 @@ export function AdminCommandMenu() {
         </div>
       ) : null}
     </>
-  );
-}
-
-function TypeBadge({ type }: { type: SearchHit["type"] }) {
-  const map: Record<SearchHit["type"], string> = {
-    user: "Utilisateur",
-    course: "Cours",
-    order: "Commande",
-    ticket: "Ticket",
-  };
-  return (
-    <span className="rounded bg-muted px-1.5 py-0.5 text-[10px] uppercase tracking-wide text-muted-foreground">
-      {map[type]}
-    </span>
   );
 }
