@@ -30,6 +30,12 @@ COPY . .
 
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV NODE_ENV=production
+# Plafond de tas explicite. Sans lui, Node dimensionne son tas d'après la
+# mémoire vue dans le conteneur et peut réclamer plus que ce que la VM Docker
+# peut donner — le noyau tue alors le processus (SIGKILL) au lieu de laisser V8
+# déclencher un ramasse-miettes. Complète `experimental.cpus` dans
+# next.config.ts, qui limite le NOMBRE de workers ; ici on borne CHACUN.
+ENV NODE_OPTIONS="--max-old-space-size=1536"
 # Variables factices pour le build : Next.js exécute du code serveur
 # (genre `import "server-only"`) qui peut tenter de lire env. Les vraies
 # valeurs seront injectées au runtime par docker-compose.
