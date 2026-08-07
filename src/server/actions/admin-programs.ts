@@ -1,0 +1,338 @@
+"use server";
+
+// Server Actions des formations (programmes) et de leurs sessions.
+//
+// Comme pour les sociétés, aucune suppression n'est exposée : une formation
+// archivée ou une session annulée ont pu porter des inscriptions et des
+// engagements de financement. On change leur statut, on ne les efface pas.
+
+import { revalidatePath } from "next/cache";
+
+import { requireAnyAdminRole } from "@/lib/auth/authorization";
+import { prisma } from "@/lib/prisma";
+import { programSchema, sessionSchema } from "@/lib/validators/program";
+import { createAuditLog } from "@/server/services/audit-log";
+
+export interface ProgramActionResult {
+  success: boolean;
+  message?: string;
+  programId?: string;
+  fieldErrors?: Record<string, string>;
+}
+
+function toFieldErrors(issues: { path: PropertyKey[]; message: string }[]) {
+  const out: Record<string, string> = {};
+  for (const issue of issues) {
+    const key = String(issue.path[0] ?? "");
+    if (key && !out[key]) out[key] = issue.message;
+  }
+  return out;
+}
+
+function readProgramForm(formData: FormData) {
+  const get = (k: string) => (formData.get(k) as string | null) ?? "";
+  return {
+    title: get("title"),
+    code: get("code"),
+    description: get("description"),
+    durationHours: get("durationHours"),
+    status: get("status") || "DRAFT",
+  };
+}
+
+export async function createProgram(
+  _prev: ProgramActionResult,
+  formData: FormData,
+): Promise<ProgramActionResult> {
+  let actor;
+  try {
+    actor = await requireAnyAdminRole();
+  } catch {
+    return { success: false, message: "Accès refusé." };
+  }
+
+  const parsed = programSchema.safeParse(readProgramForm(formData));
+  if (!parsed.success) {
+    return {
+      success: false,
+      message: "Corrigez les champs signalés.",
+      fieldErrors: toFieldErrors(parsed.error.issues),
+    };
+  }
+
+  // Le code figure sur les conventions et les dossiers de financement : deux
+  // formations partageant le même rendraient les documents ambigus.
+  if (parsed.data.code) {
+    const clash = await prisma.program.findUnique({
+      where: { code: parsed.data.code },
+      select: { title: true },
+    });
+    if (clash) {
+      return {
+        success: false,
+        message: `Ce code est déjà utilisé par « ${clash.title} ».`,
+        fieldErrors: { code: "Code déjà utilisé." },
+      };
+    }
+  }
+
+  const program = await prisma.program.create({ data: parsed.data });
+
+  await createAuditLog({
+    actorId: actor.userId,
+    action: "program.create",
+    targetType: "Program",
+    targetId: program.id,
+    metadata: { title: program.title, code: program.code },
+  });
+
+  revalidatePath("/admin/formations");
+  return { success: true, programId: program.id, message: "Formation créée." };
+}
+
+export async function updateProgram(
+  programId: string,
+  _prev: ProgramActionResult,
+  formData: FormData,
+): Promise<ProgramActionResult> {
+  let actor;
+  try {
+    actor = await requireAnyAdminRole();
+  } catch {
+    return { success: false, message: "Accès refusé." };
+  }
+
+  const current = await prisma.program.findUnique({
+    where: { id: programId },
+    select: { id: true, code: true, status: true },
+  });
+  if (!current) return { success: false, message: "Formation introuvable." };
+
+  const parsed = programSchema.safeParse(readProgramForm(formData));
+  if (!parsed.success) {
+    return {
+      success: false,
+      message: "Corrigez les champs signalés.",
+      fieldErrors: toFieldErrors(parsed.error.issues),
+    };
+  }
+
+  if (parsed.data.code && parsed.data.code !== current.code) {
+    const clash = await prisma.program.findUnique({
+      where: { code: parsed.data.code },
+      select: { id: true, title: true },
+    });
+    if (clash && clash.id !== programId) {
+      return {
+        success: false,
+        message: `Ce code est déjà utilisé par « ${clash.title} ».`,
+        fieldErrors: { code: "Code déjà utilisé." },
+      };
+    }
+  }
+
+  await prisma.program.update({ where: { id: programId }, data: parsed.data });
+
+  await createAuditLog({
+    actorId: actor.userId,
+    action: "program.update",
+    targetType: "Program",
+    targetId: programId,
+    metadata: {
+      title: parsed.data.title,
+      statusFrom: current.status,
+      statusTo: parsed.data.status,
+    },
+  });
+
+  revalidatePath("/admin/formations");
+  revalidatePath(`/admin/formations/${programId}`);
+  return { success: true, programId, message: "Formation mise à jour." };
+}
+
+/** Ajoute un cours à la composition d'une formation. */
+export async function addCourseToProgram(
+  programId: string,
+  courseId: string,
+): Promise<ProgramActionResult> {
+  let actor;
+  try {
+    actor = await requireAnyAdminRole();
+  } catch {
+    return { success: false, message: "Accès refusé." };
+  }
+
+  const [program, course] = await Promise.all([
+    prisma.program.findUnique({ where: { id: programId }, select: { id: true, title: true } }),
+    prisma.course.findUnique({ where: { id: courseId }, select: { id: true, title: true } }),
+  ]);
+  if (!program || !course) return { success: false, message: "Formation ou cours introuvable." };
+
+  // Position = fin de liste. `_max` plutôt qu'un count : après un retrait, le
+  // nombre d'éléments ne correspond plus à la dernière position utilisée, et
+  // deux cours se retrouveraient au même rang.
+  const last = await prisma.programCourse.aggregate({
+    where: { programId },
+    _max: { position: true },
+  });
+
+  await prisma.programCourse.create({
+    data: { programId, courseId, position: (last._max.position ?? -1) + 1 },
+  });
+
+  await createAuditLog({
+    actorId: actor.userId,
+    action: "program.course_add",
+    targetType: "Program",
+    targetId: programId,
+    metadata: { program: program.title, course: course.title },
+  });
+
+  revalidatePath(`/admin/formations/${programId}`);
+  return { success: true, programId, message: `« ${course.title} » ajouté.` };
+}
+
+/** Retire un cours de la composition d'une formation. */
+export async function removeCourseFromProgram(
+  programId: string,
+  courseId: string,
+): Promise<ProgramActionResult> {
+  let actor;
+  try {
+    actor = await requireAnyAdminRole();
+  } catch {
+    return { success: false, message: "Accès refusé." };
+  }
+
+  const link = await prisma.programCourse.findUnique({
+    where: { programId_courseId: { programId, courseId } },
+    include: { course: { select: { title: true } } },
+  });
+  if (!link) return { success: false, message: "Ce cours ne fait pas partie de la formation." };
+
+  await prisma.programCourse.delete({
+    where: { programId_courseId: { programId, courseId } },
+  });
+
+  await createAuditLog({
+    actorId: actor.userId,
+    action: "program.course_remove",
+    targetType: "Program",
+    targetId: programId,
+    metadata: { course: link.course.title },
+  });
+
+  revalidatePath(`/admin/formations/${programId}`);
+  return { success: true, programId, message: `« ${link.course.title} » retiré.` };
+}
+
+// ---------------------------------------------------------------------------
+// Sessions
+// ---------------------------------------------------------------------------
+
+function readSessionForm(formData: FormData) {
+  const get = (k: string) => (formData.get(k) as string | null) ?? "";
+  return {
+    programId: get("programId"),
+    reference: get("reference"),
+    startDate: get("startDate"),
+    endDate: get("endDate"),
+    location: get("location"),
+    capacity: get("capacity"),
+    status: get("status") || "PLANNED",
+    notes: get("notes"),
+  };
+}
+
+export async function createTrainingSession(
+  _prev: ProgramActionResult,
+  formData: FormData,
+): Promise<ProgramActionResult> {
+  let actor;
+  try {
+    actor = await requireAnyAdminRole();
+  } catch {
+    return { success: false, message: "Accès refusé." };
+  }
+
+  const parsed = sessionSchema.safeParse(readSessionForm(formData));
+  if (!parsed.success) {
+    return {
+      success: false,
+      message: "Corrigez les champs signalés.",
+      fieldErrors: toFieldErrors(parsed.error.issues),
+    };
+  }
+
+  const program = await prisma.program.findUnique({
+    where: { id: parsed.data.programId },
+    select: { id: true, title: true, status: true },
+  });
+  if (!program || program.status === "ARCHIVED") {
+    return {
+      success: false,
+      message: "Formation invalide ou archivée.",
+      fieldErrors: { programId: "Sélectionnez une formation active." },
+    };
+  }
+
+  const session = await prisma.trainingSession.create({
+    data: {
+      programId: parsed.data.programId,
+      reference: parsed.data.reference,
+      startDate: new Date(parsed.data.startDate),
+      endDate: new Date(parsed.data.endDate),
+      location: parsed.data.location,
+      capacity: parsed.data.capacity,
+      status: parsed.data.status,
+      notes: parsed.data.notes,
+    },
+  });
+
+  await createAuditLog({
+    actorId: actor.userId,
+    action: "session.create",
+    targetType: "TrainingSession",
+    targetId: session.id,
+    metadata: {
+      program: program.title,
+      reference: session.reference,
+      startDate: session.startDate.toISOString(),
+      endDate: session.endDate.toISOString(),
+    },
+  });
+
+  revalidatePath(`/admin/formations/${parsed.data.programId}`);
+  return { success: true, programId: parsed.data.programId, message: "Session créée." };
+}
+
+export async function setSessionStatus(
+  sessionId: string,
+  status: "PLANNED" | "ACTIVE" | "COMPLETED" | "CANCELLED",
+): Promise<ProgramActionResult> {
+  let actor;
+  try {
+    actor = await requireAnyAdminRole();
+  } catch {
+    return { success: false, message: "Accès refusé." };
+  }
+
+  const session = await prisma.trainingSession.findUnique({
+    where: { id: sessionId },
+    select: { id: true, programId: true, status: true, reference: true },
+  });
+  if (!session) return { success: false, message: "Session introuvable." };
+
+  await prisma.trainingSession.update({ where: { id: sessionId }, data: { status } });
+
+  await createAuditLog({
+    actorId: actor.userId,
+    action: "session.status",
+    targetType: "TrainingSession",
+    targetId: sessionId,
+    metadata: { reference: session.reference, from: session.status, to: status },
+  });
+
+  revalidatePath(`/admin/formations/${session.programId}`);
+  return { success: true, programId: session.programId, message: "Statut mis à jour." };
+}

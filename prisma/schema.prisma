@@ -332,6 +332,9 @@ model Course {
   affiliateClicks AffiliateClick[]
   announcements   CourseAnnouncement[]
   tags            Tag[]             @relation("CourseTags")
+  /// Formations qui intègrent ce cours. `Restrict` côté ProgramCourse : on ne
+  /// supprime pas un cours encore utilisé par un programme.
+  programs        ProgramCourse[]
 
   /// Index de recherche plein texte, alimenté par un trigger SQL — voir la
   /// migration `1_course_search`. Prisma ne connaît pas le type `tsvector`,
@@ -1499,4 +1502,106 @@ enum CompanyStatus {
   ACTIVE
   INACTIVE
   ARCHIVED
+}
+
+// ---------------------------------------------------------------------------
+// Formations (programmes) et sessions
+// ---------------------------------------------------------------------------
+
+/// Formation : un programme pédagogique regroupant plusieurs cours.
+///
+/// Distincte de `Course`, qui reste l'unité de contenu (sections, leçons,
+/// progression, certificat). Une formation assemble ces briques en un parcours
+/// vendable et finançable — « Titre pro Développeur web » peut réunir six
+/// cours. C'est le niveau auquel un OPCO raisonne, pas le cours isolé.
+model Program {
+  id          String        @id @default(cuid())
+  /// Référence interne du catalogue (ex. « TP-DEV-2026 »). Unique quand elle
+  /// est renseignée : c'est elle qui figure sur les conventions et les
+  /// dossiers de financement.
+  code        String?       @unique
+  title       String
+  description String?       @db.Text
+  /// Durée officielle en heures — donnée réglementaire d'une convention de
+  /// formation, indépendante de la durée des vidéos.
+  durationHours Int?
+  status      ProgramStatus @default(DRAFT)
+
+  courses  ProgramCourse[]
+  sessions TrainingSession[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([status])
+  @@index([title])
+}
+
+/// Composition d'une formation : quels cours, dans quel ordre.
+///
+/// Table de liaison explicite plutôt qu'une relation implicite : elle porte
+/// `position`, l'ordre pédagogique du parcours, qu'une relation many-to-many
+/// Prisma ne saurait pas stocker.
+model ProgramCourse {
+  id        String  @id @default(cuid())
+  programId String
+  program   Program @relation(fields: [programId], references: [id], onDelete: Cascade)
+  courseId  String
+  course    Course  @relation(fields: [courseId], references: [id], onDelete: Restrict)
+  position  Int     @default(0)
+
+  createdAt DateTime @default(now())
+
+  /// Un même cours ne peut figurer qu'une fois dans une formation.
+  @@unique([programId, courseId])
+  @@index([programId])
+  @@index([courseId])
+}
+
+/// Session : instance datée d'une formation, à laquelle on inscrit des élèves.
+///
+/// Les dates ne sont pas décoratives : une convention de formation, une
+/// demande de prise en charge OPCO et une feuille d'émargement exigent toutes
+/// une période. C'est pourquoi l'inscription passe obligatoirement par une
+/// session et jamais directement par une formation.
+model TrainingSession {
+  id        String        @id @default(cuid())
+  programId String
+  program   Program       @relation(fields: [programId], references: [id], onDelete: Restrict)
+  /// Référence de session (ex. « 2026-S1-LYON »), reprise sur les documents.
+  reference String?
+  startDate DateTime
+  endDate   DateTime
+  /// Lieu ou modalité (« Distanciel », « Lyon — salle B »).
+  location  String?
+  /// Places disponibles. Null = pas de limite.
+  capacity  Int?
+  status    SessionStatus @default(PLANNED)
+  notes     String?       @db.Text
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([programId])
+  @@index([status])
+  @@index([startDate])
+}
+
+/// Cycle de vie d'une formation au catalogue.
+enum ProgramStatus {
+  DRAFT
+  ACTIVE
+  ARCHIVED
+}
+
+/// Cycle de vie d'une session.
+///
+/// `CANCELLED` est distinct de la suppression : une session annulée a pu
+/// porter des inscriptions et des engagements de financement, son historique
+/// doit rester consultable.
+enum SessionStatus {
+  PLANNED
+  ACTIVE
+  COMPLETED
+  CANCELLED
 }

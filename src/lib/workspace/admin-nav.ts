@@ -113,6 +113,14 @@ export const ADMIN_NAV: WorkspaceNavigation = {
       ],
     },
     {
+      href: "/admin/formations",
+      label: "Formations",
+      icon: "certificate",
+      group: "catalogue",
+      roles: MODERATION_SIDE,
+      children: [{ href: "/admin/formations/nouvelle", label: "Nouvelle formation" }],
+    },
+    {
       href: "/admin/cours",
       label: "Cours",
       icon: "book",
