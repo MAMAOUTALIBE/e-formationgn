@@ -24,7 +24,7 @@ export default async function NewCoursePage() {
       </Link>
       <Card>
         <CardHeader>
-          <CardTitle>Créer un nouveau cours</CardTitle>
+          <CardTitle as="h1">Créer un nouveau cours</CardTitle>
           <CardDescription>
             Donnez un titre et choisissez une catégorie pour démarrer. Vous pourrez tout
             modifier ensuite, et le cours restera en brouillon jusqu&apos;à la soumission.
