@@ -7,7 +7,8 @@
 import { NextResponse } from "next/server";
 
 import { auth } from "@/auth";
-import { ADMIN_ROLES } from "@/lib/constants";
+import { ADMIN_NAV } from "@/lib/workspace/admin-nav";
+import { sectionRolesForPath } from "@/lib/workspace/navigation";
 import { csvResponseHeaders, rowsToCsv } from "@/lib/csv";
 import { listAdminTransactions } from "@/server/queries/admin-finances";
 import type {
@@ -17,7 +18,19 @@ import type {
 
 const MAX_ROWS = 10_000;
 
-const ALLOWED_ROLES = [...ADMIN_ROLES, "FINANCE"] as readonly string[];
+// Rôles lus dans le registre de navigation, comme la garde de route.
+//
+// La liste précédente — `[...ADMIN_ROLES, "FINANCE"]` — ouvrait cet export à
+// TOUS les rôles administratifs : `ADMIN_ROLES` contient déjà FINANCE,
+// MODERATOR, SUPPORT et MANAGER, si bien que l'ajout de "FINANCE" ne
+// restreignait rien. Un modérateur ou un agent de support, à qui l'écran
+// /admin/finances est refusé, pouvait ainsi télécharger jusqu'à 10 000 lignes
+// de transactions avec le nom et l'adresse e-mail de chaque client.
+//
+// En lisant la déclaration de l'écran qui propose cet export, l'API et la
+// route ne peuvent plus diverger.
+const ALLOWED_ROLES =
+  sectionRolesForPath(ADMIN_NAV, "/admin/finances/transactions") ?? [];
 
 export async function GET(request: Request) {
   const session = await auth();
