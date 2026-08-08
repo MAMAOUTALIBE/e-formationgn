@@ -133,7 +133,7 @@ export default async function PublicInstructorPage({ params }: PageProps) {
     name,
     description: instructor.headline ?? instructor.bio?.slice(0, 200),
     image: instructor.image ?? undefined,
-    url: `https://gandal.gn/formateurs/${instructor.affiliateCode}`,
+    url: `${process.env.NEXT_PUBLIC_APP_URL ?? "https://gandal.org"}/formateurs/${instructor.affiliateCode}`,
     sameAs: [
       instructor.websiteUrl,
       instructor.linkedinUrl,

@@ -52,3 +52,6 @@ pexels-videos.json
 # Playwright (artefacts d'exécution : traces, screenshots, vidéos d'erreur)
 test-results/
 playwright-report/
+
+# Valeurs publiques du build de production (non versionnées)
+.env.deploy

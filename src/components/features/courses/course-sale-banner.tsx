@@ -31,17 +31,25 @@ function formatRemaining(ms: number): string {
 
 export function CourseSaleBanner({ endsAt, coursesCount }: CourseSaleBannerProps) {
   const endsAtTs = React.useMemo(() => new Date(endsAt).getTime(), [endsAt]);
-  const [remaining, setRemaining] = React.useState(() => endsAtTs - Date.now());
+
+  // `null` jusqu'au montage, volontairement.
+  //
+  // Le décompte partait de `Date.now()` dès le premier rendu : le serveur
+  // calculait « 3j 4h 12min », le navigateur recalculait quelques secondes
+  // plus tard, et React refusait l'hydratation (erreur #418 en production).
+  // Le temps restant n'a de sens que côté client — on ne l'affiche donc qu'une
+  // fois monté, ce qui rend les deux rendus identiques.
+  const [remaining, setRemaining] = React.useState<number | null>(null);
 
   React.useEffect(() => {
+    const tick = () => setRemaining(endsAtTs - Date.now());
+    tick();
     // Tick chaque seconde. Léger : un seul interval, pas de re-render des cards.
-    const id = window.setInterval(() => {
-      setRemaining(endsAtTs - Date.now());
-    }, 1000);
+    const id = window.setInterval(tick, 1000);
     return () => window.clearInterval(id);
   }, [endsAtTs]);
 
-  if (remaining <= 0) return null;
+  if (remaining === null || remaining <= 0) return null;
 
   return (
     <aside

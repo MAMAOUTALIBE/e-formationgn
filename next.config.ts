@@ -9,12 +9,27 @@ import type { NextConfig } from "next";
 // Procédure de durcissement recommandée :
 //   1. Laisser `report-only` 7 jours en prod, surveiller la console.
 //   2. Quand zéro violation pendant 48 h → CSP_MODE=enforce.
-const cspMode = (process.env.CSP_MODE ?? "report-only").toLowerCase();
+// Par défaut on APPLIQUE la politique. Elle est restée en `report-only`
+// plusieurs mois : le site n'avait donc aucune protection effective, seulement
+// des rapports que personne ne lisait. `CSP_MODE=report-only` reste possible
+// pour revalider après un changement de politique.
+const cspMode = (process.env.CSP_MODE ?? "enforce").toLowerCase();
+
+// `unsafe-eval` n'est nécessaire QU'EN DÉVELOPPEMENT : React s'en sert pour
+// reconstruire les piles d'appels serveur dans le navigateur. Ni React ni
+// Next.js n'y recourent en production (doc Next.js, guide CSP).
+const isDev = process.env.NODE_ENV !== "production";
 const cspPolicy = [
   "default-src 'self'",
   // 'unsafe-inline' nécessaire pour Next.js (hydration scripts) — à durcir avec
   // un nonce dans une étape ultérieure (cf. Next.js 16 + nonce headers).
-  "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://*.stripe.com https://*.mux.com https://*.sentry.io",
+  // `unsafe-inline` demeure : le retirer suppose de passer par un nonce généré
+  // par requête, ce qui force le rendu dynamique de TOUTES les pages et
+  // supprimerait la génération statique du catalogue. C'est un chantier à part
+  // entière — voir SECURITY.md. La politique ci-dessous bloque déjà le
+  // chargement de scripts hébergés ailleurs, l'exfiltration par formulaire
+  // (`form-action`), la réécriture de base (`base-uri`) et les objets.
+  `script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ""} https://*.stripe.com https://*.mux.com https://*.sentry.io`,
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data: blob: https:",
   "font-src 'self' data:",
@@ -111,6 +126,16 @@ const nextConfig: NextConfig = {
   // les vraies pages racines plutôt que de servir un 404.
   async redirects() {
     return [
+      // www → apex. Les cookies de session portent le préfixe `__Host-`, donc
+      // ils sont liés à un hôte unique : un visiteur arrivé par www.gandal.org
+      // ne pouvait pas rester connecté. La redirection supprime aussi le
+      // contenu dupliqué vu par les moteurs.
+      {
+        source: "/:path*",
+        has: [{ type: "host", value: "www.gandal.org" }],
+        destination: "https://gandal.org/:path*",
+        permanent: true,
+      },
       { source: "/admin/dashboard", destination: "/admin", permanent: false },
       {
         source: "/formateur/dashboard",

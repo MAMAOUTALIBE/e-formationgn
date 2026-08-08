@@ -94,7 +94,13 @@ Endpoints / actions protégées (en plus de l'auth) :
 - `X-Content-Type-Options: nosniff`
 - `Referrer-Policy: strict-origin-when-cross-origin`
 - `Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=(self)`
-- `Content-Security-Policy-Report-Only` (whitelist Stripe / Mux / Sentry / R2)
+- `Content-Security-Policy` **appliquée** (whitelist Stripe / Mux / Sentry / R2).
+  `unsafe-eval` retiré en production — React ne s'en sert qu'en développement.
+  `unsafe-inline` demeure sur `script-src` : le retirer suppose un nonce généré
+  par requête, ce qui force le rendu dynamique de toutes les pages et supprime
+  la génération statique du catalogue. Chantier identifié, non fait.
+  `CSP_MODE=report-only` permet de repasser en observation après un changement
+  de politique.
 
 API sensibles (`/api/admin/search`) : `Cache-Control: private, no-store, max-age=0`
 
@@ -140,7 +146,9 @@ les upstreams patcheront sans rupture API. Tracking :
 
 - [ ] **2FA / TOTP** pour les comptes admin (perte mot de passe = compte volé)
 - [ ] **Notification de connexion depuis nouveau device/IP** (email)
-- [ ] **CSP en mode `enforce`** (actuellement `report-only`) après 48 h
+- [x] **CSP en mode `enforce`** — fait. Reste : remplacer `unsafe-inline` par
+      un nonce (implique le rendu dynamique de toutes les pages).
+- [ ] ~~CSP en mode `enforce` après 48 h~~
   sans violation observée
 - [ ] **Rotate `NEXTAUTH_SECRET`** tous les 6-12 mois
   (déconnecte tous les utilisateurs — communiquer)

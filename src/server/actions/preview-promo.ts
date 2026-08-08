@@ -8,7 +8,10 @@
 // instructeur, contraintes devise) est exactement celle de
 // `tryApplyPromo` (lib panier) — on délègue pour rester DRY.
 
+import { headers } from "next/headers";
+
 import { amountToMinor, formatMinor } from "@/lib/payments/currency";
+import { checkRateLimit, clientKey } from "@/lib/rate-limit";
 import { prisma } from "@/lib/prisma";
 import { promoCodeSchema } from "@/lib/validators/checkout";
 import { tryApplyPromo } from "@/server/queries/cart";
@@ -31,6 +34,24 @@ export async function previewCoursePromo(input: {
   code: string;
   currency: Currency;
 }): Promise<PreviewPromoResult> {
+  // Cette action est publique par nature : elle sert à vérifier un code AVANT
+  // d'avoir un compte. Sans limite, elle constitue un oracle — on peut lui
+  // soumettre des codes en série jusqu'à en trouver un valide, et les remises
+  // ainsi découvertes sont réellement utilisables. Vingt essais par quart
+  // d'heure laissent passer l'usage normal (un code reçu par courriel, une
+  // faute de frappe) et rendent l'énumération sans objet.
+  const rl = await checkRateLimit({
+    key: clientKey(await headers(), "promo:preview"),
+    windowMs: 15 * 60 * 1000,
+    max: 20,
+  });
+  if (!rl.ok) {
+    return {
+      ok: false,
+      message: "Trop de codes essayés. Réessayez dans quelques minutes.",
+    };
+  }
+
   const parsedCode = promoCodeSchema.safeParse({ code: input.code });
   if (!parsedCode.success) {
     return { ok: false, message: "Code promo invalide." };

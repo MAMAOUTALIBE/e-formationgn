@@ -19,8 +19,14 @@ const inter = Inter({
   display: "swap",
 });
 
+// Domaine canonique. Il était écrit en dur sur « gandal.gn », un domaine qui
+// ne résout pas : les balises canonical et og:url de tout le site désignaient
+// donc une adresse inexistante, ce qui suffit à faire désindexer les pages.
+// Il vient maintenant de l'environnement, comme le sitemap et le JSON-LD.
+const SITE_URL = process.env.NEXT_PUBLIC_APP_URL ?? "https://gandal.org";
+
 export const metadata: Metadata = {
-  metadataBase: new URL("https://gandal.gn"),
+  metadataBase: new URL(SITE_URL),
   title: {
     default: "Gandal — Plateforme de formation en ligne",
     template: "%s · Gandal",
@@ -56,7 +62,7 @@ export const metadata: Metadata = {
     type: "website",
     locale: "fr_FR",
     alternateLocale: ["fr_BE", "fr_CA", "fr_CI", "fr_SN"],
-    url: "https://gandal.gn",
+    url: SITE_URL,
     siteName: "Gandal",
     title: "Gandal — Plateforme de formation en ligne",
     description:
