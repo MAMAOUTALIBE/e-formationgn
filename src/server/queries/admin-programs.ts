@@ -13,9 +13,12 @@ export interface ProgramListRow {
   status: string;
   courseCount: number;
   sessionCount: number;
+  registrationCount: number;
+  upcomingSessionCount: number;
+  revenueCentsEUR: number;
 }
 
-export async function listPrograms(params: { search?: string; status?: string } = {}): Promise<
+export async function listPrograms(params: { search?: string; status?: string; duration?: string } = {}): Promise<
   ProgramListRow[]
 > {
   const search = params.search?.trim();
@@ -32,6 +35,13 @@ export async function listPrograms(params: { search?: string; status?: string } 
           ],
         }
       : {}),
+    ...(params.duration === "short"
+      ? { durationHours: { lt: 40 } }
+      : params.duration === "medium"
+        ? { durationHours: { gte: 40, lte: 100 } }
+        : params.duration === "long"
+          ? { durationHours: { gt: 100 } }
+          : {}),
   };
 
   const programs = await prisma.program.findMany({
@@ -43,9 +53,31 @@ export async function listPrograms(params: { search?: string; status?: string } 
       durationHours: true,
       status: true,
       _count: { select: { courses: true, sessions: true } },
+      courses: { select: { courseId: true } },
+      sessions: {
+        select: {
+          startDate: true,
+          status: true,
+          _count: { select: { registrations: true } },
+        },
+      },
     },
     orderBy: [{ status: "asc" }, { title: "asc" }],
   });
+
+  const courseIds = [...new Set(programs.flatMap((program) => program.courses.map((course) => course.courseId)))];
+  const revenue = courseIds.length
+    ? await prisma.orderItem.groupBy({
+        by: ["courseId", "currency"],
+        where: { courseId: { in: courseIds }, order: { status: "PAID" } },
+        _sum: { totalCents: true },
+      })
+    : [];
+  const revenueByCourse = new Map<string, number>();
+  for (const row of revenue) {
+    if (row.currency === "EUR") revenueByCourse.set(row.courseId, row._sum.totalCents ?? 0);
+  }
+  const now = new Date();
 
   return programs.map((p) => ({
     id: p.id,
@@ -55,7 +87,23 @@ export async function listPrograms(params: { search?: string; status?: string } 
     status: p.status,
     courseCount: p._count.courses,
     sessionCount: p._count.sessions,
+    registrationCount: p.sessions.reduce((sum, session) => sum + session._count.registrations, 0),
+    upcomingSessionCount: p.sessions.filter((session) => session.startDate >= now && session.status !== "CANCELLED").length,
+    revenueCentsEUR: p.courses.reduce((sum, course) => sum + (revenueByCourse.get(course.courseId) ?? 0), 0),
   }));
+}
+
+export async function getProgramsDashboardStats() {
+  const now = new Date();
+  const [total, active, draft, archived, upcomingSessions, registrations] = await Promise.all([
+    prisma.program.count(),
+    prisma.program.count({ where: { status: "ACTIVE" } }),
+    prisma.program.count({ where: { status: "DRAFT" } }),
+    prisma.program.count({ where: { status: "ARCHIVED" } }),
+    prisma.trainingSession.count({ where: { startDate: { gte: now }, status: { in: ["PLANNED", "ACTIVE"] } } }),
+    prisma.registration.count(),
+  ]);
+  return { total, active, draft, archived, upcomingSessions, registrations };
 }
 
 /** Fiche formation : sa composition et ses sessions. */
