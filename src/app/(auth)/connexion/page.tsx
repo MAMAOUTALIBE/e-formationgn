@@ -27,7 +27,7 @@ export default async function ConnexionPage({ searchParams }: PageProps) {
   return (
     <Card>
       <CardHeader className="text-center">
-        <CardTitle className="text-2xl">Bon retour</CardTitle>
+        <CardTitle as="h1" className="text-2xl">Bon retour</CardTitle>
         <CardDescription>Connectez-vous pour reprendre votre apprentissage.</CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">

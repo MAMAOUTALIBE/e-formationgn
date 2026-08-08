@@ -20,7 +20,7 @@ export default async function ResetPasswordPage({ searchParams }: PageProps) {
     return (
       <Card>
         <CardHeader className="text-center">
-          <CardTitle className="text-2xl">Lien invalide</CardTitle>
+          <CardTitle as="h1" className="text-2xl">Lien invalide</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <Alert variant="destructive">

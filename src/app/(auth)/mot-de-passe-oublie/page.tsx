@@ -13,7 +13,7 @@ export default function ForgotPasswordPage() {
   return (
     <Card>
       <CardHeader className="text-center">
-        <CardTitle className="text-2xl">Mot de passe oublié</CardTitle>
+        <CardTitle as="h1" className="text-2xl">Mot de passe oublié</CardTitle>
         <CardDescription>
           Saisissez votre adresse email pour recevoir un lien de réinitialisation.
         </CardDescription>

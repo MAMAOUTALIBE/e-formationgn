@@ -24,7 +24,7 @@ export default function InscriptionPage() {
     return (
       <Card>
         <CardHeader className="text-center">
-          <CardTitle className="text-2xl">Accès réservé</CardTitle>
+          <CardTitle as="h1" className="text-2xl">Accès réservé</CardTitle>
           <CardDescription>
             Les comptes sont créés par le centre de formation.
           </CardDescription>

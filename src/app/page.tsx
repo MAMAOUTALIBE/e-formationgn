@@ -95,7 +95,7 @@ export default async function HomePage() {
                 </Badge>
 
                 <h1 className="text-balance text-3xl font-bold leading-[1.1] tracking-tight text-white sm:text-4xl md:text-5xl">
-                  {t.hero.headline1}
+                  {t.hero.headline1}{" "}
                   <span className="mt-1 block text-[color:var(--brand-mint)]">
                     {t.hero.headline2}
                   </span>

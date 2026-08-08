@@ -179,3 +179,16 @@ test.describe("Sécurité — cache PWA", () => {
     }
   });
 });
+
+// Régression : l'export des transactions doit rester réservé aux rôles que
+// l'écran Finances déclare. Il a été ouvert à tous les rôles administratifs
+// par une liste `[...ADMIN_ROLES, "FINANCE"]` qui, ADMIN_ROLES contenant déjà
+// FINANCE, ne restreignait rien — un modérateur téléchargeait noms, adresses
+// e-mail et montants.
+test.describe("Sécurité — export des transactions", () => {
+  test("refuse un accès non authentifié", async ({ request }) => {
+    const r = await request.get("/api/admin/transactions-csv", { maxRedirects: 0 });
+    expect([401, 403, 302, 307]).toContain(r.status());
+    if (r.status() === 200) throw new Error("export accessible sans session");
+  });
+});
