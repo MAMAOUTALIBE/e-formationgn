@@ -3,6 +3,7 @@
 import type { Prisma } from "@/generated/prisma/client";
 import type { CourseStatus } from "@/generated/prisma/enums";
 import { prisma } from "@/lib/prisma";
+import { computeQualityScore } from "@/lib/courses/quality-score";
 
 export interface AdminCoursesFilters {
   q?: string;
@@ -108,4 +109,60 @@ export async function listFeaturedCoursesAdmin(): Promise<AdminCourseRow[]> {
     },
   });
   return rows.map((r) => ({ ...r, priceEUR: Number(r.priceEUR) }));
+}
+
+export async function getAdminCoursesDashboardData() {
+  const courses = await prisma.course.findMany({
+    select: {
+      status: true,
+      isFeatured: true,
+      averageRating: true,
+      totalRatings: true,
+      totalEnrollments: true,
+      categoryId: true,
+      category: { select: { name: true } },
+    },
+  });
+  const instructors = await prisma.user.findMany({
+    where: { isInstructor: true },
+    select: { id: true, name: true, email: true },
+    orderBy: [{ name: "asc" }, { email: "asc" }],
+  });
+  const ratings = courses.filter((course) => course.totalRatings > 0);
+  const scored = courses
+    .map((course) => computeQualityScore(course))
+    .filter((result) => result.tier !== "indéfini");
+  const categoryMap = new Map<string, { id: string; name: string; count: number }>();
+  for (const course of courses) {
+    const current = categoryMap.get(course.categoryId) ?? {
+      id: course.categoryId,
+      name: course.category.name,
+      count: 0,
+    };
+    current.count += 1;
+    categoryMap.set(course.categoryId, current);
+  }
+  return {
+    stats: {
+      total: courses.length,
+      published: courses.filter((course) => course.status === "PUBLISHED").length,
+      pending: courses.filter((course) => course.status === "PENDING_REVIEW").length,
+      draft: courses.filter((course) => course.status === "DRAFT").length,
+      archived: courses.filter((course) => course.status === "ARCHIVED").length,
+      rejected: courses.filter((course) => course.status === "REJECTED").length,
+      featured: courses.filter((course) => course.isFeatured).length,
+      enrollments: courses.reduce((sum, course) => sum + course.totalEnrollments, 0),
+      averageRating: ratings.length
+        ? ratings.reduce((sum, course) => sum + course.averageRating, 0) / ratings.length
+        : 0,
+      averageQuality: scored.length
+        ? Math.round(scored.reduce((sum, result) => sum + result.score, 0) / scored.length)
+        : null,
+      scoredCount: scored.length,
+    },
+    instructors,
+    topCategories: [...categoryMap.values()]
+      .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name))
+      .slice(0, 5),
+  };
 }
