@@ -3,15 +3,11 @@ import Link from "next/link";
 import {
   Activity,
   AlertTriangle,
-  BookOpenText,
-  CheckCircle2,
-  Coins,
-  Megaphone,
-  PiggyBank,
-  Send,
-  ShieldCheck,
+  CalendarDays,
+  ClipboardCheck,
+  CreditCard,
+  GraduationCap,
   ShoppingCart,
-  TrendingUp,
   Users,
 } from "lucide-react";
 
@@ -25,7 +21,6 @@ import {
 } from "@/components/features/admin/admin-dashboard-tabs";
 import { CategoryDonut } from "@/components/features/admin/charts/category-donut";
 import { RevenueChart } from "@/components/features/admin/charts/revenue-chart";
-import { Sparkline } from "@/components/features/admin/charts/sparkline";
 import { LiveActivityFeed } from "@/components/features/admin/live-activity-feed";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DateRangePicker } from "@/components/ui/date-range-picker";
@@ -38,13 +33,15 @@ import { getAdminActionQueue } from "@/server/queries/admin-action-queue";
 import {
   getAdminAlerts,
   getAdminOverviewKpis,
+  getCrmDashboardSnapshot,
   getRecentActivity,
   getRevenueByCategory,
   getRevenueTimeseries,
   getTopCoursesByRevenue,
   getTopInstructorsByRevenue,
 } from "@/server/queries/admin-overview";
-import { getFinanceHealthKpis } from "@/server/queries/admin-finances";
+import type { ActivityItem, CrmDashboardSnapshot } from "@/server/queries/admin-overview";
+import { cn } from "@/lib/utils";
 
 export const metadata: Metadata = {
   title: "Tableau de bord — CRM admin",
@@ -110,37 +107,39 @@ export default async function AdminOverviewPage({ searchParams }: PageProps) {
 // ---------------------------------------------------------------------------
 
 async function PilotageView({ range }: { range: { from: Date; to: Date } }) {
-  const [kpis, timeseries, alerts, financeHealth, queue] = await Promise.all([
+  const [kpis, timeseries, alerts, queue, crm, byCategory, activity] = await Promise.all([
     getAdminOverviewKpis(range),
     getRevenueTimeseries(range),
     getAdminAlerts(),
-    getFinanceHealthKpis(range),
-    getAdminActionQueue(8),
+    getAdminActionQueue(5),
+    getCrmDashboardSnapshot(range),
+    getRevenueByCategory(range),
+    getRecentActivity(6),
   ]);
 
   const revenueDeltaEur = computeDelta(
     kpis.revenueByCurrency.EUR,
     kpis.revenuePreviousByCurrency.EUR,
   );
-  const revenueDeltaUsd = computeDelta(
-    kpis.revenueByCurrency.USD,
-    kpis.revenuePreviousByCurrency.USD,
+  const registrationDelta = computeDelta(
+    crm.registrationRatePercent,
+    crm.previousRegistrationRatePercent,
   );
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5" data-testid="crm-dashboard">
       {alerts.length > 0 ? (
-        <section className="rounded-xl border border-red-300 bg-red-50 p-4 dark:border-red-900/50 dark:bg-red-950/40">
+        <section className="rounded-2xl border border-amber-200 bg-amber-50/80 px-4 py-3 dark:border-amber-900/50 dark:bg-amber-950/30">
           <div className="flex items-start gap-3">
             <AlertTriangle
               className="mt-0.5 h-5 w-5 shrink-0 text-red-700 dark:text-red-300"
               aria-hidden
             />
             <div className="flex-1">
-              <p className="text-sm font-medium text-red-900 dark:text-red-100">
-                Actions requises
+              <p className="text-sm font-semibold text-amber-950 dark:text-amber-100">
+                Points d&apos;attention
               </p>
-              <ul className="mt-2 grid gap-1.5 text-sm text-red-900 dark:text-red-100 sm:grid-cols-2">
+              <ul className="mt-1.5 grid gap-1 text-sm text-amber-900 dark:text-amber-100 sm:grid-cols-2 xl:grid-cols-3">
                 {alerts.map((a) => (
                   <li key={a.kind}>
                     <Link
@@ -158,153 +157,214 @@ async function PilotageView({ range }: { range: { from: Date; to: Date } }) {
         </section>
       ) : null}
 
-      <section aria-label="Indicateurs stratégiques" className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+      <section aria-label="Indicateurs stratégiques" className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <KpiCard
-          label="Revenu net plateforme"
-          value={`${(financeHealth.netRevenueCents / 100).toLocaleString("fr-FR", { minimumFractionDigits: 2 })} €`}
-          delta={
-            financeHealth.netRevenuePreviousCents > 0
-              ? ((financeHealth.netRevenueCents - financeHealth.netRevenuePreviousCents) /
-                  financeHealth.netRevenuePreviousCents) *
-                100
-              : null
-          }
-          icon={<PiggyBank className="h-5 w-5" />}
-          tone="emerald"
-          hint="Gross − refunds (EUR)"
-          href="/admin/finances"
-          featured
-          className="md:col-span-2 xl:col-span-2"
-        />
-        <KpiCard
-          label="Commandes"
-          value={kpis.ordersCount}
-          icon={<ShoppingCart className="h-5 w-5" />}
-          tone="amber"
-          hint="Payées sur la période"
-          href="/admin/finances/transactions"
-          featured
-        />
-        <KpiCard
-          label="Nouveaux inscrits"
-          value={kpis.newSignups}
+          label="Nouvelles inscriptions"
+          value={crm.registrationsCount}
           icon={<Users className="h-5 w-5" />}
-          tone="sky"
-          hint="Comptes créés"
+          tone="blue"
+          hint="sur la période sélectionnée"
           href="/admin/utilisateurs"
-          featured
+          appearance="crm"
+        />
+        <KpiCard
+          label="Sessions planifiées"
+          value={crm.plannedSessions}
+          icon={<CalendarDays className="h-5 w-5" />}
+          tone="emerald"
+          hint={`${crm.activePrograms} formation${crm.activePrograms > 1 ? "s" : ""} active${crm.activePrograms > 1 ? "s" : ""}`}
+          href="/admin/formations"
+          appearance="crm"
+        />
+        <KpiCard
+          label="Taux d'inscription"
+          value={`${crm.registrationRatePercent.toLocaleString("fr-FR")} %`}
+          delta={registrationDelta}
+          icon={<ClipboardCheck className="h-5 w-5" />}
+          tone="sky"
+          hint="places réservées"
+          href="/admin/analytics/funnel"
+          appearance="crm"
+        />
+        <KpiCard
+          label="Chiffre d'affaires"
+          value={`${(kpis.revenueByCurrency.EUR / 100).toLocaleString("fr-FR", { maximumFractionDigits: 0 })} €`}
+          delta={revenueDeltaEur}
+          icon={<CreditCard className="h-5 w-5" />}
+          tone="amber"
+          hint="commandes payées en EUR"
+          href="/admin/finances"
+          appearance="crm"
         />
       </section>
 
-      <div className="grid gap-4 xl:grid-cols-[minmax(0,1.45fr)_minmax(22rem,0.9fr)]">
-        <section aria-labelledby="secondary-kpis-heading" className="rounded-2xl border border-border/70 bg-muted/20 p-3 sm:p-4">
-          <div className="mb-3 flex items-center justify-between gap-3 px-1">
-            <div>
-              <h2 id="secondary-kpis-heading" className="text-sm font-semibold text-foreground">Santé de la plateforme</h2>
-              <p className="text-xs text-muted-foreground">Les signaux clés de la période sélectionnée</p>
-            </div>
-            <Link href="/admin/analytics" className="text-xs font-semibold text-[color:var(--brand-primary)] hover:underline">
-              Voir l’analyse
-            </Link>
-          </div>
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-        <KpiCard
-          label="Revenus EUR"
-          value={`${(kpis.revenueByCurrency.EUR / 100).toLocaleString("fr-FR", { minimumFractionDigits: 2 })} €`}
-          delta={revenueDeltaEur}
-          icon={<Coins className="h-5 w-5" />}
-          tone="blue"
-          hint="Période sélectionnée"
-          sparkline={<Sparkline data={timeseries.map((p) => p.EUR)} color="#1E3A8A" />}
-          href="/admin/analytics/revenus"
-        />
-        <KpiCard
-          label="Revenus USD"
-          value={`${(kpis.revenueByCurrency.USD / 100).toLocaleString("fr-FR", { minimumFractionDigits: 2 })} $`}
-          delta={revenueDeltaUsd}
-          icon={<Coins className="h-5 w-5" />}
-          tone="sky"
-          hint="Période sélectionnée"
-          sparkline={<Sparkline data={timeseries.map((p) => p.USD)} color="#0EA5E9" />}
-          href="/admin/analytics/revenus"
-        />
-        <KpiCard
-          label="Cours publiés"
-          value={kpis.newCourses}
-          icon={<BookOpenText className="h-5 w-5" />}
-          tone="blue"
-          hint="Sur la période"
-          href="/admin/cours?status=PUBLISHED"
-        />
-        <KpiCard
-          label="Élèves actifs"
-          value={kpis.activeStudents30d}
-          icon={<Activity className="h-5 w-5" />}
-          tone="emerald"
-          hint="Au moins 1 leçon ces 30 j"
-          href="/admin/analytics/apprentissage"
-        />
-        <KpiCard
-          label="Complétion moyenne"
-          value={`${kpis.averageCompletionPercent} %`}
-          icon={<CheckCircle2 className="h-5 w-5" />}
-          tone="emerald"
-          hint="Inscriptions de la période"
-          href="/admin/analytics/apprentissage"
-        />
-        <KpiCard
-          label="En attente modération"
-          value={kpis.pendingCoursesCount}
-          icon={<TrendingUp className="h-5 w-5" />}
-          tone="rose"
-          hint="Cours à examiner"
-          href="/admin/cours?status=PENDING_REVIEW"
-        />
-          </div>
-        </section>
-
-        <AdminActionQueueCard queue={queue} />
+      <div className="grid gap-4 xl:grid-cols-12">
+        <DashboardPanel className="xl:col-span-6" title="Évolution du chiffre d'affaires" href="/admin/analytics/revenus">
+          <RevenueChart data={timeseries} />
+        </DashboardPanel>
+        <DashboardPanel className="xl:col-span-3" title="Revenus par formation" href="/admin/analytics">
+          <CategoryDonut data={byCategory.slice(0, 6)} />
+          <CategoryLegend data={byCategory.slice(0, 5)} />
+        </DashboardPanel>
+        <DashboardPanel className="xl:col-span-3" title="Sessions à venir" href="/admin/formations">
+          <UpcomingSessions sessions={crm.upcomingSessions} />
+        </DashboardPanel>
       </div>
 
-      {/* Quick actions — accès rapide aux opérations courantes (pattern Stripe) */}
-      <section
-        aria-labelledby="quick-actions-heading"
-        className="rounded-2xl border border-border/70 bg-card p-4 shadow-[0_8px_28px_rgba(15,23,42,0.05)]"
-      >
-        <h2
-          id="quick-actions-heading"
-          className="mb-3 text-xs font-semibold uppercase tracking-[0.1em] text-muted-foreground"
-        >
-          Actions rapides
-        </h2>
-        <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
-          <QuickAction
-            href="/admin/cours?status=PENDING_REVIEW"
-            icon={<TrendingUp className="h-4 w-4" />}
-            label="Modérer les cours en attente"
-            count={kpis.pendingCoursesCount}
-          />
-          <QuickAction
-            href="/admin/finances/payouts?status=PENDING"
-            icon={<Send className="h-4 w-4" />}
-            label="Payouts en attente"
-            count={undefined}
-          />
-          <QuickAction
-            href="/admin/support/litiges"
-            icon={<ShieldCheck className="h-4 w-4" />}
-            label="Litiges / chargebacks"
-            count={financeHealth.chargebackCount}
-          />
-          <QuickAction
-            href="/admin/marketing/campagnes-email"
-            icon={<Megaphone className="h-4 w-4" />}
-            label="Campagnes email"
-          />
-        </div>
+      <div className="grid gap-4 xl:grid-cols-12">
+        <DashboardPanel className="xl:col-span-6" title="Inscriptions récentes" href="/admin/utilisateurs">
+          <RecentRegistrations registrations={crm.recentRegistrations} />
+        </DashboardPanel>
+        <section className="xl:col-span-3"><AdminActionQueueCard queue={queue} /></section>
+        <DashboardPanel className="xl:col-span-3" title="Activité récente" href="/admin?vue=activite">
+          <RecentActivity activity={activity} />
+        </DashboardPanel>
+      </div>
+
+      <section aria-label="Indicateurs complémentaires" className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <CompactMetric label="Comptes créés" value={kpis.newSignups} icon={<Users />} href="/admin/utilisateurs" />
+        <CompactMetric label="Élèves actifs" value={kpis.activeStudents30d} icon={<Activity />} href="/admin/analytics/apprentissage" />
+        <CompactMetric label="Paiements reçus" value={kpis.ordersCount} icon={<ShoppingCart />} href="/admin/finances/transactions" />
+        <CompactMetric label="Inscriptions à valider" value={crm.pendingRegistrations} icon={<GraduationCap />} href="/admin/formations" />
       </section>
     </div>
   );
+}
+
+function DashboardPanel({
+  title,
+  href,
+  className,
+  children,
+}: {
+  title: string;
+  href: string;
+  className?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <section
+      className={cn(
+        "min-w-0 overflow-hidden rounded-2xl border border-border/75 bg-card shadow-[0_1px_2px_rgba(15,23,42,0.03),0_12px_32px_rgba(15,23,42,0.045)]",
+        className,
+      )}
+    >
+      <header className="flex items-center justify-between gap-3 border-b border-border/60 px-4 py-3.5">
+        <h2 className="text-sm font-semibold tracking-tight text-foreground sm:text-base">{title}</h2>
+        <Link href={href} className="shrink-0 text-xs font-semibold text-[color:var(--brand-primary)] hover:underline">
+          Voir tout
+        </Link>
+      </header>
+      <div className="p-4">{children}</div>
+    </section>
+  );
+}
+
+// Même ordre que le donut client afin que chaque légende conserve sa couleur.
+const CATEGORY_COLORS = ["#1E3A8A", "#7c3aed", "#0EA5E9", "#10b981", "#f59e0b"];
+
+function CategoryLegend({ data }: { data: Array<{ categoryId: string; categoryName: string; revenueCents: number }> }) {
+  const total = data.reduce((sum, row) => sum + row.revenueCents, 0);
+  if (total === 0) return null;
+  return (
+    <ul className="space-y-2 border-t border-border/60 pt-3">
+      {data.map((row, index) => (
+        <li key={row.categoryId} className="flex items-center gap-2 text-xs">
+          <span className="h-2 w-2 rounded-full" style={{ backgroundColor: CATEGORY_COLORS[index % CATEGORY_COLORS.length] }} aria-hidden />
+          <span className="min-w-0 flex-1 truncate text-muted-foreground">{row.categoryName}</span>
+          <span className="font-semibold text-foreground">{Math.round((row.revenueCents / total) * 100)} %</span>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+function UpcomingSessions({ sessions }: { sessions: CrmDashboardSnapshot["upcomingSessions"] }) {
+  if (sessions.length === 0) return <EmptyDashboardState label="Aucune session planifiée." />;
+  return (
+    <ul className="divide-y divide-border/60">
+      {sessions.map((session) => {
+        const remaining = session.capacity === null ? null : Math.max(session.capacity - session.registrationsCount, 0);
+        return (
+          <li key={session.id} className="flex gap-3 py-3 first:pt-0 last:pb-0">
+            <time dateTime={session.startDate.toISOString()} className="flex h-12 w-12 shrink-0 flex-col items-center justify-center rounded-xl bg-blue-50 text-blue-700 dark:bg-blue-500/10 dark:text-blue-300">
+              <span className="text-base font-bold leading-none">{session.startDate.getDate()}</span>
+              <span className="mt-0.5 text-[9px] font-bold uppercase">{new Intl.DateTimeFormat("fr-FR", { month: "short" }).format(session.startDate)}</span>
+            </time>
+            <div className="min-w-0 flex-1">
+              <Link href={`/admin/formations?session=${session.id}`} className="block truncate text-sm font-semibold hover:underline">{session.title}</Link>
+              <p className="mt-0.5 truncate text-xs text-muted-foreground">{session.location ?? session.reference ?? "Lieu à préciser"}</p>
+            </div>
+            {remaining !== null ? <span className="h-fit shrink-0 rounded-full bg-emerald-50 px-2 py-1 text-[10px] font-semibold text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300">{remaining} place{remaining > 1 ? "s" : ""}</span> : null}
+          </li>
+        );
+      })}
+    </ul>
+  );
+}
+
+const REGISTRATION_STATUS = {
+  PENDING: ["En attente", "bg-amber-50 text-amber-700 dark:bg-amber-500/10 dark:text-amber-300"],
+  ACTIVE: ["Active", "bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300"],
+  SUSPENDED: ["Suspendue", "bg-orange-50 text-orange-700 dark:bg-orange-500/10 dark:text-orange-300"],
+  COMPLETED: ["Terminée", "bg-blue-50 text-blue-700 dark:bg-blue-500/10 dark:text-blue-300"],
+  CANCELLED: ["Annulée", "bg-red-50 text-red-700 dark:bg-red-500/10 dark:text-red-300"],
+} as const;
+
+function RecentRegistrations({ registrations }: { registrations: CrmDashboardSnapshot["recentRegistrations"] }) {
+  if (registrations.length === 0) return <EmptyDashboardState label="Aucune inscription récente." />;
+  return (
+    <div className="overflow-x-auto">
+      <table className="w-full min-w-[42rem] text-left text-xs">
+        <thead className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+          <tr><th className="pb-3">Apprenant</th><th className="pb-3">Formation</th><th className="pb-3">Session</th><th className="pb-3">Statut</th><th className="pb-3 text-right">Date</th></tr>
+        </thead>
+        <tbody className="divide-y divide-border/60">
+          {registrations.map((registration) => {
+            const [label, tone] = REGISTRATION_STATUS[registration.status];
+            return (
+              <tr key={registration.id}>
+                <td className="py-2.5 pr-4"><Link href={`/admin/utilisateurs/${registration.studentId}`} className="font-semibold text-foreground hover:underline">{registration.studentName}</Link><span className="block max-w-40 truncate text-[10px] text-muted-foreground">{registration.studentEmail}</span></td>
+                <td className="max-w-48 truncate py-2.5 pr-4 font-medium">{registration.programTitle}</td>
+                <td className="py-2.5 pr-4 text-muted-foreground">{registration.sessionReference ?? "—"}</td>
+                <td className="py-2.5 pr-4"><span className={cn("rounded-full px-2 py-1 font-semibold", tone)}>{label}</span></td>
+                <td className="whitespace-nowrap py-2.5 text-right text-muted-foreground">{new Intl.DateTimeFormat("fr-FR").format(registration.registeredAt)}</td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+function RecentActivity({ activity }: { activity: ActivityItem[] }) {
+  if (activity.length === 0) return <EmptyDashboardState label="Aucune activité récente." />;
+  return (
+    <ul className="space-y-1">
+      {activity.map((item) => (
+        <li key={item.id}>
+          <Link href={item.href ?? "/admin?vue=activite"} className="group flex items-start gap-3 rounded-xl px-2 py-2.5 hover:bg-muted/50">
+            <span className="mt-1 h-2 w-2 shrink-0 rounded-full bg-[color:var(--brand-primary)] ring-4 ring-[color:var(--brand-primary)]/10" aria-hidden />
+            <span className="min-w-0 flex-1"><span className="block truncate text-xs font-semibold text-foreground">{item.title}</span><span className="mt-0.5 block truncate text-[10px] text-muted-foreground">{item.subtitle ?? "Gandal"} · {formatRelative(item.createdAt)}</span></span>
+          </Link>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+function CompactMetric({ label, value, icon, href }: { label: string; value: number; icon: React.ReactNode; href: string }) {
+  return (
+    <Link href={href} className="group flex items-center gap-3 rounded-2xl border border-border/70 bg-card p-3.5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
+      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[color:var(--brand-primary)]/8 text-[color:var(--brand-primary)] [&_svg]:h-4 [&_svg]:w-4" aria-hidden>{icon}</span>
+      <span className="min-w-0 flex-1"><span className="block text-xl font-bold tracking-tight">{value.toLocaleString("fr-FR")}</span><span className="block truncate text-xs text-muted-foreground">{label}</span></span>
+    </Link>
+  );
+}
+
+function EmptyDashboardState({ label }: { label: string }) {
+  return <p className="flex min-h-40 items-center justify-center rounded-xl border border-dashed border-border px-4 text-center text-sm text-muted-foreground">{label}</p>;
 }
 
 // ---------------------------------------------------------------------------
@@ -537,33 +597,4 @@ function formatRelative(date: Date): string {
 function computeDelta(current: number, previous: number): number | null {
   if (previous === 0) return current > 0 ? 100 : null;
   return ((current - previous) / previous) * 100;
-}
-
-function QuickAction({
-  href,
-  icon,
-  label,
-  count,
-}: {
-  href: string;
-  icon: React.ReactNode;
-  label: string;
-  count?: number;
-}) {
-  return (
-    <Link
-      href={href}
-      className="group flex items-center gap-3 rounded-lg border border-border bg-background p-3 text-sm transition-colors hover:border-[color:var(--brand-secondary)] hover:bg-muted/50"
-    >
-      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground group-hover:bg-[color:var(--brand-secondary)]/10 group-hover:text-[color:var(--brand-secondary)]">
-        {icon}
-      </div>
-      <span className="min-w-0 flex-1 font-medium text-foreground">{label}</span>
-      {typeof count === "number" && count > 0 ? (
-        <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-[color:var(--brand-warning)] px-1.5 text-[10px] font-bold text-white">
-          {count}
-        </span>
-      ) : null}
-    </Link>
-  );
 }

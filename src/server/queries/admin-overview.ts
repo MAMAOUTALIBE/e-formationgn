@@ -21,6 +21,140 @@ interface PeriodRange {
   to: Date;
 }
 
+export interface CrmDashboardSnapshot {
+  registrationsCount: number;
+  plannedSessions: number;
+  activePrograms: number;
+  pendingRegistrations: number;
+  registrationRatePercent: number;
+  previousRegistrationRatePercent: number;
+  upcomingSessions: Array<{
+    id: string;
+    title: string;
+    reference: string | null;
+    startDate: Date;
+    location: string | null;
+    capacity: number | null;
+    registrationsCount: number;
+  }>;
+  recentRegistrations: Array<{
+    id: string;
+    studentId: string;
+    studentName: string;
+    studentEmail: string;
+    programTitle: string;
+    sessionReference: string | null;
+    status: "PENDING" | "ACTIVE" | "SUSPENDED" | "COMPLETED" | "CANCELLED";
+    registeredAt: Date;
+  }>;
+}
+
+/** Données CRM propres au centre de formation, sans valeur de démonstration. */
+export async function getCrmDashboardSnapshot(
+  range: PeriodRange,
+): Promise<CrmDashboardSnapshot> {
+  const periodLength = range.to.getTime() - range.from.getTime();
+  const previousFrom = new Date(range.from.getTime() - periodLength);
+  const now = new Date();
+
+  const [
+    plannedSessions,
+    activePrograms,
+    pendingRegistrations,
+    currentRegistrations,
+    previousRegistrations,
+    currentCapacity,
+    previousCapacity,
+    upcomingSessions,
+    recentRegistrations,
+  ] = await Promise.all([
+    prisma.trainingSession.count({
+      where: { status: "PLANNED", startDate: { gte: now } },
+    }),
+    prisma.program.count({ where: { status: "ACTIVE" } }),
+    prisma.registration.count({ where: { status: "PENDING" } }),
+    prisma.registration.count({
+      where: { registeredAt: { gte: range.from, lte: range.to } },
+    }),
+    prisma.registration.count({
+      where: { registeredAt: { gte: previousFrom, lt: range.from } },
+    }),
+    prisma.trainingSession.aggregate({
+      _sum: { capacity: true },
+      where: { startDate: { gte: range.from, lte: range.to }, status: { not: "CANCELLED" } },
+    }),
+    prisma.trainingSession.aggregate({
+      _sum: { capacity: true },
+      where: { startDate: { gte: previousFrom, lt: range.from }, status: { not: "CANCELLED" } },
+    }),
+    prisma.trainingSession.findMany({
+      where: { startDate: { gte: now }, status: "PLANNED" },
+      orderBy: { startDate: "asc" },
+      take: 4,
+      select: {
+        id: true,
+        reference: true,
+        startDate: true,
+        location: true,
+        capacity: true,
+        program: { select: { title: true } },
+        _count: { select: { registrations: true } },
+      },
+    }),
+    prisma.registration.findMany({
+      orderBy: { registeredAt: "desc" },
+      take: 5,
+      select: {
+        id: true,
+        studentId: true,
+        status: true,
+        registeredAt: true,
+        student: { select: { name: true, firstName: true, lastName: true, email: true } },
+        session: {
+          select: {
+            reference: true,
+            program: { select: { title: true } },
+          },
+        },
+      },
+    }),
+  ]);
+
+  const rate = (registrations: number, capacity: number | null | undefined) =>
+    capacity && capacity > 0 ? Math.round((registrations / capacity) * 1000) / 10 : 0;
+
+  return {
+    registrationsCount: currentRegistrations,
+    plannedSessions,
+    activePrograms,
+    pendingRegistrations,
+    registrationRatePercent: rate(currentRegistrations, currentCapacity._sum.capacity),
+    previousRegistrationRatePercent: rate(previousRegistrations, previousCapacity._sum.capacity),
+    upcomingSessions: upcomingSessions.map((session) => ({
+      id: session.id,
+      title: session.program.title,
+      reference: session.reference,
+      startDate: session.startDate,
+      location: session.location,
+      capacity: session.capacity,
+      registrationsCount: session._count.registrations,
+    })),
+    recentRegistrations: recentRegistrations.map((registration) => ({
+      id: registration.id,
+      studentId: registration.studentId,
+      studentName:
+        registration.student.name ??
+        ([registration.student.firstName, registration.student.lastName].filter(Boolean).join(" ") ||
+          registration.student.email),
+      studentEmail: registration.student.email,
+      programTitle: registration.session.program.title,
+      sessionReference: registration.session.reference,
+      status: registration.status,
+      registeredAt: registration.registeredAt,
+    })),
+  };
+}
+
 export async function getAdminOverviewKpis(
   range: PeriodRange,
 ): Promise<AdminOverviewKpis> {

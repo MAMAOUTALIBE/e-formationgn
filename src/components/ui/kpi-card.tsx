@@ -50,6 +50,8 @@ interface KpiCardProps {
   href?: string;
   /** Mise en avant pour un indicateur stratégique du tableau de bord. */
   featured?: boolean;
+  /** Disposition CRM : libellé et valeur à gauche, icône en haut à droite. */
+  appearance?: "default" | "crm";
 }
 
 const numberFormatter = new Intl.NumberFormat("fr-FR");
@@ -65,6 +67,7 @@ export function KpiCard({
   className,
   href,
   featured = false,
+  appearance = "default",
 }: KpiCardProps) {
   const formattedValue =
     typeof value === "number" ? numberFormatter.format(value) : value;
@@ -80,7 +83,7 @@ export function KpiCard({
       />
       <div className="flex items-start justify-between gap-3">
         <div className="flex min-w-0 items-start gap-3">
-          {icon ? (
+          {icon && appearance !== "crm" ? (
             <span
               aria-hidden
               className={cn(
@@ -107,7 +110,19 @@ export function KpiCard({
           </div>
         </div>
 
-        {href ? (
+        {icon && appearance === "crm" ? (
+          <span
+            aria-hidden
+            className={cn(
+              "inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl shadow-sm ring-1 ring-inset ring-white/40",
+              TONE_CLASS[tone],
+            )}
+          >
+            {icon}
+          </span>
+        ) : null}
+
+        {href && appearance !== "crm" ? (
           <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-border/70 bg-background/70 text-muted-foreground transition group-hover:border-foreground/20 group-hover:text-foreground">
             <ArrowUpRightIcon className="h-3.5 w-3.5" aria-hidden />
           </span>
@@ -129,6 +144,7 @@ export function KpiCard({
 
   const classes = cn(
     "group relative flex min-h-36 flex-col overflow-hidden rounded-2xl border border-border/80 bg-card p-4 shadow-[0_1px_2px_rgba(15,23,42,0.04),0_8px_24px_rgba(15,23,42,0.04)] transition duration-200",
+    appearance === "crm" && "min-h-32",
     href &&
       "hover:-translate-y-0.5 hover:border-foreground/15 hover:shadow-[0_12px_32px_rgba(15,23,42,0.10)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
     featured && "min-h-40 bg-gradient-to-br from-card via-card to-muted/50",
