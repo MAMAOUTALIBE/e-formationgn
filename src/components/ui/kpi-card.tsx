@@ -1,4 +1,5 @@
-import { ArrowDownRight, ArrowUpRight, Minus } from "lucide-react";
+import Link from "next/link";
+import { ArrowDownRight, ArrowUpRight, ArrowUpRightIcon, Minus } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 
@@ -22,6 +23,15 @@ const TONE_CLASS: Record<KpiTone, string> = {
   rose: "bg-rose-100 text-rose-700 dark:bg-rose-400/15 dark:text-rose-300",
 };
 
+const ACCENT_CLASS: Record<KpiTone, string> = {
+  slate: "from-slate-500/70 via-slate-400/20",
+  blue: "from-blue-600/80 via-blue-400/20",
+  sky: "from-sky-500/80 via-sky-400/20",
+  emerald: "from-emerald-500/80 via-emerald-400/20",
+  amber: "from-amber-500/80 via-amber-400/20",
+  rose: "from-rose-500/80 via-rose-400/20",
+};
+
 interface KpiCardProps {
   label: string;
   value: string | number;
@@ -38,6 +48,8 @@ interface KpiCardProps {
   className?: string;
   /** Si fourni, la carte devient cliquable (lien). */
   href?: string;
+  /** Mise en avant pour un indicateur stratégique du tableau de bord. */
+  featured?: boolean;
 }
 
 const numberFormatter = new Intl.NumberFormat("fr-FR");
@@ -52,60 +64,85 @@ export function KpiCard({
   sparkline,
   className,
   href,
+  featured = false,
 }: KpiCardProps) {
   const formattedValue =
     typeof value === "number" ? numberFormatter.format(value) : value;
 
-  const Wrapper = href ? "a" : "div";
+  const content = (
+    <>
+      <span
+        aria-hidden
+        className={cn(
+          "pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r to-transparent",
+          ACCENT_CLASS[tone],
+        )}
+      />
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex min-w-0 items-start gap-3">
+          {icon ? (
+            <span
+              aria-hidden
+              className={cn(
+                "inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl shadow-sm ring-1 ring-inset ring-white/40 transition-transform duration-200 group-hover:-translate-y-0.5",
+                TONE_CLASS[tone],
+              )}
+            >
+              {icon}
+            </span>
+          ) : null}
 
-  return (
-    <Wrapper
-      {...(href ? { href } : {})}
-      className={cn(
-        "group relative flex items-start gap-3 rounded-xl border border-border bg-card p-4 shadow-sm transition-shadow",
-        href &&
-          "hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-        className,
-      )}
-    >
-      {icon ? (
-        <span
-          aria-hidden
-          className={cn(
-            "inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl",
-            TONE_CLASS[tone],
-          )}
-        >
-          {icon}
-        </span>
-      ) : null}
+          <div className="min-w-0">
+            <p className="text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">
+              {label}
+            </p>
+            <p
+              className={cn(
+                "mt-1 whitespace-nowrap font-semibold tracking-[-0.035em] text-foreground",
+                featured ? "text-3xl" : "text-2xl",
+              )}
+            >
+              {formattedValue}
+            </p>
+          </div>
+        </div>
 
-      {/* `min-w-0` : sans lui, un libellé long élargirait la carte et la
-          grille de KPI déborderait. */}
-      <div className="flex min-w-0 flex-1 flex-col gap-1">
-        {/* Le chiffre prime : il ne se coupe jamais (`whitespace-nowrap`),
-            sinon « 0,00 € » se scinde entre le nombre et le symbole dès que
-            le CRM passe aux grandes échelles de texte. */}
-        <p className="whitespace-nowrap text-2xl font-semibold tracking-tight text-foreground">
-          {formattedValue}
-        </p>
-        {/* Le libellé passe à la ligne au lieu d'être tronqué : en 5 colonnes,
-            « Revenu net plateforme » et « En attente modération » se coupaient
-            en « Revenu net plat… », illisible sur la carte la plus regardée du
-            tableau de bord. */}
-        <p className="text-sm font-medium text-muted-foreground">{label}</p>
+        {href ? (
+          <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-border/70 bg-background/70 text-muted-foreground transition group-hover:border-foreground/20 group-hover:text-foreground">
+            <ArrowUpRightIcon className="h-3.5 w-3.5" aria-hidden />
+          </span>
+        ) : null}
+      </div>
 
-        {hint ? <p className="text-xs text-muted-foreground">{hint}</p> : null}
-
-        {/* Sparkline en pleine largeur sous le texte, et non à côté : en
-            colonne, elle prenait la place du libellé. */}
+      <div className="mt-auto pt-3">
         {sparkline ? (
-          <div className="mt-1 h-8 w-full text-muted-foreground">{sparkline}</div>
+          <div className="mb-2 h-9 w-full text-muted-foreground">{sparkline}</div>
         ) : null}
 
-        {delta !== null && delta !== undefined ? <DeltaBadge delta={delta} /> : null}
+        <div className="flex flex-wrap items-center gap-2">
+          {delta !== null && delta !== undefined ? <DeltaBadge delta={delta} /> : null}
+          {hint ? <p className="text-xs text-muted-foreground">{hint}</p> : null}
+        </div>
       </div>
-    </Wrapper>
+    </>
+  );
+
+  const classes = cn(
+    "group relative flex min-h-36 flex-col overflow-hidden rounded-2xl border border-border/80 bg-card p-4 shadow-[0_1px_2px_rgba(15,23,42,0.04),0_8px_24px_rgba(15,23,42,0.04)] transition duration-200",
+    href &&
+      "hover:-translate-y-0.5 hover:border-foreground/15 hover:shadow-[0_12px_32px_rgba(15,23,42,0.10)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+    featured && "min-h-40 bg-gradient-to-br from-card via-card to-muted/50",
+    className,
+  );
+
+  return href ? (
+    <Link href={href} className={classes}>
+      {content}
+    </Link>
+  ) : (
+    <div className={classes}>
+      {content}
+    </div>
   );
 }
 

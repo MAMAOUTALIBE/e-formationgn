@@ -54,9 +54,11 @@ fi
 : "${NEXT_PUBLIC_APP_NAME:=Gandal}"
 : "${NEXT_PUBLIC_TURNSTILE_SITE_KEY:=}"
 : "${NEXT_PUBLIC_SENTRY_DSN:=}"
+: "${NEXT_PUBLIC_PLATFORM_MODE:=marketplace}"
 
 echo "▶ Variables publiques embarquées dans l'image :"
 printf "    NEXT_PUBLIC_APP_URL            = %s\n" "${NEXT_PUBLIC_APP_URL}"
+printf "    NEXT_PUBLIC_PLATFORM_MODE      = %s\n" "${NEXT_PUBLIC_PLATFORM_MODE}"
 printf "    NEXT_PUBLIC_TURNSTILE_SITE_KEY = %s\n" \
   "$([ -n "${NEXT_PUBLIC_TURNSTILE_SITE_KEY}" ] && echo 'définie' || echo 'ABSENTE → aucun captcha sur connexion/inscription')"
 printf "    NEXT_PUBLIC_SENTRY_DSN         = %s\n" \
@@ -80,6 +82,7 @@ docker buildx build \
   --build-arg NEXT_PUBLIC_APP_NAME="${NEXT_PUBLIC_APP_NAME}" \
   --build-arg NEXT_PUBLIC_TURNSTILE_SITE_KEY="${NEXT_PUBLIC_TURNSTILE_SITE_KEY}" \
   --build-arg NEXT_PUBLIC_SENTRY_DSN="${NEXT_PUBLIC_SENTRY_DSN}" \
+  --build-arg NEXT_PUBLIC_PLATFORM_MODE="${NEXT_PUBLIC_PLATFORM_MODE}" \
   -t "${REPO}:latest" \
   -t "${REPO}:${TAG}" \
   --push .

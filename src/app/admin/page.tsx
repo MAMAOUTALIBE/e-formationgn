@@ -158,12 +158,7 @@ async function PilotageView({ range }: { range: { from: Date; to: Date } }) {
         </section>
       ) : null}
 
-      <AdminActionQueueCard queue={queue} />
-
-      {/* 9 cartes : en 4 colonnes elles occupent 3 rangées dont une quasi vide.
-          Une 5e colonne au-delà de xl les ramène à 2 rangées et rend une
-          rangée entière au contenu sous-jacent. */}
-      <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5">
+      <section aria-label="Indicateurs stratégiques" className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <KpiCard
           label="Revenu net plateforme"
           value={`${(financeHealth.netRevenueCents / 100).toLocaleString("fr-FR", { minimumFractionDigits: 2 })} €`}
@@ -178,7 +173,41 @@ async function PilotageView({ range }: { range: { from: Date; to: Date } }) {
           tone="emerald"
           hint="Gross − refunds (EUR)"
           href="/admin/finances"
+          featured
+          className="md:col-span-2 xl:col-span-2"
         />
+        <KpiCard
+          label="Commandes"
+          value={kpis.ordersCount}
+          icon={<ShoppingCart className="h-5 w-5" />}
+          tone="amber"
+          hint="Payées sur la période"
+          href="/admin/finances/transactions"
+          featured
+        />
+        <KpiCard
+          label="Nouveaux inscrits"
+          value={kpis.newSignups}
+          icon={<Users className="h-5 w-5" />}
+          tone="sky"
+          hint="Comptes créés"
+          href="/admin/utilisateurs"
+          featured
+        />
+      </section>
+
+      <div className="grid gap-4 xl:grid-cols-[minmax(0,1.45fr)_minmax(22rem,0.9fr)]">
+        <section aria-labelledby="secondary-kpis-heading" className="rounded-2xl border border-border/70 bg-muted/20 p-3 sm:p-4">
+          <div className="mb-3 flex items-center justify-between gap-3 px-1">
+            <div>
+              <h2 id="secondary-kpis-heading" className="text-sm font-semibold text-foreground">Santé de la plateforme</h2>
+              <p className="text-xs text-muted-foreground">Les signaux clés de la période sélectionnée</p>
+            </div>
+            <Link href="/admin/analytics" className="text-xs font-semibold text-[color:var(--brand-primary)] hover:underline">
+              Voir l’analyse
+            </Link>
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         <KpiCard
           label="Revenus EUR"
           value={`${(kpis.revenueByCurrency.EUR / 100).toLocaleString("fr-FR", { minimumFractionDigits: 2 })} €`}
@@ -198,22 +227,6 @@ async function PilotageView({ range }: { range: { from: Date; to: Date } }) {
           hint="Période sélectionnée"
           sparkline={<Sparkline data={timeseries.map((p) => p.USD)} color="#0EA5E9" />}
           href="/admin/analytics/revenus"
-        />
-        <KpiCard
-          label="Commandes"
-          value={kpis.ordersCount}
-          icon={<ShoppingCart className="h-5 w-5" />}
-          tone="amber"
-          hint="Payées sur la période"
-          href="/admin/finances/transactions"
-        />
-        <KpiCard
-          label="Nouveaux inscrits"
-          value={kpis.newSignups}
-          icon={<Users className="h-5 w-5" />}
-          tone="sky"
-          hint="Comptes créés"
-          href="/admin/utilisateurs"
         />
         <KpiCard
           label="Cours publiés"
@@ -247,16 +260,20 @@ async function PilotageView({ range }: { range: { from: Date; to: Date } }) {
           hint="Cours à examiner"
           href="/admin/cours?status=PENDING_REVIEW"
         />
-      </section>
+          </div>
+        </section>
+
+        <AdminActionQueueCard queue={queue} />
+      </div>
 
       {/* Quick actions — accès rapide aux opérations courantes (pattern Stripe) */}
       <section
         aria-labelledby="quick-actions-heading"
-        className="rounded-xl border border-border bg-card p-4"
+        className="rounded-2xl border border-border/70 bg-card p-4 shadow-[0_8px_28px_rgba(15,23,42,0.05)]"
       >
         <h2
           id="quick-actions-heading"
-          className="mb-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground"
+          className="mb-3 text-xs font-semibold uppercase tracking-[0.1em] text-muted-foreground"
         >
           Actions rapides
         </h2>
