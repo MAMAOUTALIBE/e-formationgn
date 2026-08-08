@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Users } from "lucide-react";
+import { Building2, CalendarDays, Landmark, MapPin, Users, UsersRound } from "lucide-react";
 
 import {
   CompanyForm,
@@ -58,24 +58,47 @@ export default async function CompanyDetailPage({
         items={[{ label: "Sociétés", href: "/admin/societes" }, { label: company.name }]}
       />
 
-      <header className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-foreground">{company.name}</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
+      <header className="flex flex-wrap items-center justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-emerald-100 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300">
+            <Building2 className="h-6 w-6" aria-hidden />
+          </span>
+          <div>
+            <div className="flex flex-wrap items-center gap-2">
+              <h1 className="text-2xl font-semibold tracking-tight text-foreground">{company.name}</h1>
+              <StatusBadge tone={company.status === "ACTIVE" ? "success" : company.status === "INACTIVE" ? "warning" : "neutral"}>
+                {company.status === "ACTIVE" ? "Active" : company.status === "INACTIVE" ? "Inactive" : "Archivée"}
+              </StatusBadge>
+            </div>
+            <p className="mt-1 text-sm text-muted-foreground">
             {company.students.length} élève{company.students.length > 1 ? "s" : ""} rattaché
             {company.students.length > 1 ? "s" : ""}
             {company.siret ? ` · SIRET ${company.siret}` : ""}
-          </p>
+            </p>
+          </div>
         </div>
       </header>
 
+      <section aria-label="Résumé de la société" className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <SummaryCard icon={<UsersRound />} label="Apprenants" value={String(company.students.length)} />
+        <SummaryCard icon={<MapPin />} label="Localisation" value={[company.postalCode, company.city].filter(Boolean).join(" ") || "Non renseignée"} />
+        <SummaryCard icon={<Landmark />} label="Financement" value={company.opco ?? "OPCO non renseigné"} />
+        <SummaryCard icon={<CalendarDays />} label="Client depuis" value={new Intl.DateTimeFormat("fr-FR", { month: "long", year: "numeric" }).format(company.createdAt)} />
+      </section>
+
       {/* Les élèves d'abord : c'est ce qu'on vient chercher en ouvrant une
           fiche société. Le formulaire de modification vient ensuite. */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Élèves rattachés</CardTitle>
+      <Card className="overflow-hidden rounded-2xl border-border/75 shadow-[0_10px_35px_rgba(15,23,42,0.05)]">
+        <CardHeader className="border-b border-border/60 bg-muted/20 p-4 sm:p-5">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <CardTitle className="text-base">Apprenants rattachés</CardTitle>
+              <p className="mt-1 text-xs text-muted-foreground">Comptes et accès pédagogiques associés à cette société.</p>
+            </div>
+            <Link href={`/admin/utilisateurs?companyId=${company.id}`} className="text-xs font-semibold text-[color:var(--brand-primary)] hover:underline">Voir les apprenants</Link>
+          </div>
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-4 sm:p-5">
           {company.students.length === 0 ? (
             <EmptyState
               icon={<Users className="h-6 w-6" aria-hidden />}
@@ -83,9 +106,9 @@ export default async function CompanyDetailPage({
               description="Rattachez un élève depuis sa fiche, ou lors de la création de son compte."
             />
           ) : (
-            <div className="overflow-x-auto">
+            <div className="overflow-x-auto rounded-xl border border-border/70">
               <table className="w-full text-sm">
-                <thead className="border-b border-border text-left text-xs uppercase tracking-wide text-muted-foreground">
+                <thead className="border-b border-border bg-muted/30 text-left text-xs uppercase tracking-wide text-muted-foreground">
                   <tr>
                     <th className="px-2 py-2 font-medium">Nom</th>
                     <th className="px-2 py-2 font-medium">E-mail</th>
@@ -102,7 +125,7 @@ export default async function CompanyDetailPage({
                     const displayName =
                       [s.firstName, s.lastName].filter(Boolean).join(" ") || s.name || "—";
                     return (
-                      <tr key={s.id} className="border-b border-border last:border-0">
+                      <tr key={s.id} className="border-b border-border last:border-0 hover:bg-muted/30">
                         <td className="px-2 py-2">
                           <Link
                             href={`/admin/utilisateurs/${s.id}`}
@@ -126,14 +149,26 @@ export default async function CompanyDetailPage({
         </CardContent>
       </Card>
 
-      <section className="max-w-3xl space-y-4">
-        <h2 className="text-lg font-semibold text-foreground">Informations</h2>
+      <section className="space-y-4">
+        <div>
+          <h2 className="text-lg font-semibold text-foreground">Modifier la société</h2>
+          <p className="mt-1 text-sm text-muted-foreground">Mettez à jour les coordonnées, le financement et le statut de la relation.</p>
+        </div>
         <CompanyForm
           companyId={company.id}
           defaultValues={values}
           cancelHref="/admin/societes"
         />
       </section>
+    </div>
+  );
+}
+
+function SummaryCard({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
+  return (
+    <div className="flex min-w-0 items-center gap-3 rounded-2xl border border-border/75 bg-card p-4 shadow-sm">
+      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-[color:var(--brand-primary)] dark:bg-blue-500/10 [&_svg]:h-4 [&_svg]:w-4" aria-hidden>{icon}</span>
+      <span className="min-w-0"><span className="block text-xs text-muted-foreground">{label}</span><span className="mt-0.5 block truncate text-sm font-semibold text-foreground">{value}</span></span>
     </div>
   );
 }

@@ -13,6 +13,7 @@ import { prisma } from "@/lib/prisma";
 export interface CompanyListParams {
   search?: string;
   status?: "ACTIVE" | "INACTIVE" | "ARCHIVED";
+  city?: string;
   page?: number;
   pageSize?: number;
 }
@@ -41,6 +42,7 @@ export async function listCompanies(params: CompanyListParams = {}): Promise<{
 
   const where: Prisma.CompanyWhereInput = {
     ...(params.status ? { status: params.status } : {}),
+    ...(params.city ? { city: params.city } : {}),
     ...(search
       ? {
           OR: [
@@ -90,6 +92,49 @@ export async function listCompanies(params: CompanyListParams = {}): Promise<{
     total,
     page,
     pageSize,
+  };
+}
+
+export interface CompanyDashboardStats {
+  total: number;
+  active: number;
+  inactive: number;
+  archived: number;
+  studentsAttached: number;
+  createdThisMonth: number;
+  cities: string[];
+}
+
+/** Agrégats réels de l'espace Sociétés, calculés en parallèle avec la liste. */
+export async function getCompanyDashboardStats(): Promise<CompanyDashboardStats> {
+  const startOfMonth = new Date();
+  startOfMonth.setDate(1);
+  startOfMonth.setHours(0, 0, 0, 0);
+
+  const [total, active, inactive, archived, studentsAttached, createdThisMonth, cityRows] =
+    await Promise.all([
+      prisma.company.count(),
+      prisma.company.count({ where: { status: "ACTIVE" } }),
+      prisma.company.count({ where: { status: "INACTIVE" } }),
+      prisma.company.count({ where: { status: "ARCHIVED" } }),
+      prisma.user.count({ where: { companyId: { not: null } } }),
+      prisma.company.count({ where: { createdAt: { gte: startOfMonth } } }),
+      prisma.company.findMany({
+        where: { city: { not: null } },
+        distinct: ["city"],
+        select: { city: true },
+        orderBy: { city: "asc" },
+      }),
+    ]);
+
+  return {
+    total,
+    active,
+    inactive,
+    archived,
+    studentsAttached,
+    createdThisMonth,
+    cities: cityRows.flatMap((row) => (row.city ? [row.city] : [])),
   };
 }
 
