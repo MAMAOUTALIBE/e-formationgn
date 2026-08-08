@@ -30,6 +30,11 @@ declare module "next-auth" {
       /** Compte créé par le centre avec un mot de passe provisoire. */
       mustChangePassword?: boolean;
     };
+    impersonation?: {
+      adminId: string;
+      adminEmail: string;
+      sessionRecordId: string;
+    };
   }
   interface User {
     role?: UserRole;
@@ -107,7 +112,6 @@ export const authConfig = {
           Google({
             clientId: process.env.GOOGLE_CLIENT_ID,
             clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-            allowDangerousEmailAccountLinking: true,
           }),
         ]
       : []),

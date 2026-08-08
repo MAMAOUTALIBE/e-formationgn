@@ -1,37 +1,31 @@
-// Helpers cookie pour le mode impersonation admin.
-// Le cookie est lu côté serveur uniquement (HttpOnly).
-// La logique de swap effective dans `auth()` est ajoutée par le module
-// Sécurité (Phase 5) — ici on stocke uniquement l'état pour afficher la
-// bannière et désactiver le mode.
+// Le cookie d'impersonation est un pointeur opaque vers le registre serveur.
+// Il ne contient jamais l'identité de la cible : admin, cible et validité sont
+// systématiquement relus depuis ImpersonationSession avant utilisation.
 
 import { cookies } from "next/headers";
 
 const COOKIE_NAME = "admin_impersonation";
+export const IMPERSONATION_MAX_AGE_MS = 4 * 60 * 60 * 1000;
 
 interface ImpersonationCookie {
   sessionId: string;
-  targetUserId: string;
 }
 
 export async function readImpersonation(): Promise<ImpersonationCookie | null> {
   const store = await cookies();
-  const raw = store.get(COOKIE_NAME)?.value;
-  if (!raw) return null;
-  try {
-    return JSON.parse(raw) as ImpersonationCookie;
-  } catch {
-    return null;
-  }
+  const sessionId = store.get(COOKIE_NAME)?.value.trim();
+  if (!sessionId || sessionId.length > 191) return null;
+  return { sessionId };
 }
 
 export async function writeImpersonation(value: ImpersonationCookie): Promise<void> {
   const store = await cookies();
-  store.set(COOKIE_NAME, JSON.stringify(value), {
+  store.set(COOKIE_NAME, value.sessionId, {
     httpOnly: true,
     sameSite: "lax",
     secure: process.env.NODE_ENV === "production",
     path: "/",
-    maxAge: 60 * 60 * 4, // 4 heures
+    maxAge: IMPERSONATION_MAX_AGE_MS / 1000,
   });
 }
 

@@ -1,28 +1,21 @@
 import { LogOut, UserCog } from "lucide-react";
 
+import { auth } from "@/auth";
 import { Button } from "@/components/ui/button";
-import { readImpersonation } from "@/lib/admin/impersonation";
-import { prisma } from "@/lib/prisma";
 import { stopImpersonation } from "@/server/actions/admin-impersonation";
 
 export async function ImpersonationBanner() {
-  const cookie = await readImpersonation();
-  if (!cookie) return null;
-
-  const target = await prisma.user.findUnique({
-    where: { id: cookie.targetUserId },
-    select: { email: true, name: true, role: true },
-  });
-  if (!target) return null;
+  const session = await auth();
+  if (!session?.impersonation) return null;
 
   return (
     <div className="flex flex-wrap items-center justify-between gap-3 border-b-2 border-amber-500 bg-amber-100 px-4 py-2 text-sm text-amber-900 dark:bg-amber-950 dark:text-amber-200">
       <span className="inline-flex items-center gap-2">
         <UserCog className="h-4 w-4" aria-hidden />
         <strong>Mode impersonation actif</strong> · vous interagissez en tant que{" "}
-        <span className="font-medium">{target.name ?? target.email}</span>
+        <span className="font-medium">{session.user.name ?? session.user.email}</span>
         <span className="text-amber-700/80 dark:text-amber-300/80">
-          ({target.role})
+          ({session.user.role})
         </span>
       </span>
       <form

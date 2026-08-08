@@ -10,6 +10,7 @@ import { requireAdmin } from "@/lib/auth/authorization";
 import { prisma } from "@/lib/prisma";
 import {
   clearImpersonation,
+  IMPERSONATION_MAX_AGE_MS,
   readImpersonation,
   writeImpersonation,
 } from "@/lib/admin/impersonation";
@@ -23,6 +24,13 @@ export async function startImpersonation(
   targetUserId: string,
   reason?: string,
 ): Promise<ActionResult> {
+  const currentSession = await auth();
+  if (currentSession?.impersonation) {
+    return {
+      success: false,
+      message: "Quittez l'impersonation en cours avant d'en démarrer une autre.",
+    };
+  }
   const admin = await requireAdminUser();
   if (admin.userId === targetUserId) {
     return { success: false, message: "Impossible de s'impersonner soi-même." };
@@ -30,9 +38,15 @@ export async function startImpersonation(
 
   const target = await prisma.user.findUnique({
     where: { id: targetUserId },
-    select: { id: true, email: true, role: true },
+    select: { id: true, email: true, role: true, status: true },
   });
   if (!target) return { success: false, message: "Utilisateur introuvable." };
+  if (target.status !== "ACTIVE") {
+    return {
+      success: false,
+      message: "Seul un compte actif peut être impersonné.",
+    };
+  }
 
   const sessionRecord = await prisma.impersonationSession.create({
     data: {
@@ -42,10 +56,7 @@ export async function startImpersonation(
     },
   });
 
-  await writeImpersonation({
-    sessionId: sessionRecord.id,
-    targetUserId: target.id,
-  });
+  await writeImpersonation({ sessionId: sessionRecord.id });
 
   await createAuditLog({
     actorId: admin.userId,
@@ -68,17 +79,40 @@ export async function stopImpersonation(): Promise<ActionResult> {
     return { success: true, message: "Aucune impersonation active." };
   }
 
-  await prisma.impersonationSession.update({
-    where: { id: cookie.sessionId },
+  const realAdminId =
+    session.impersonation?.adminId ??
+    (session.user.role === "ADMIN" ? session.user.id : null);
+  if (!realAdminId) {
+    await clearImpersonation();
+    return { success: false, message: "Session d'impersonation invalide." };
+  }
+
+  const record = await prisma.impersonationSession.findFirst({
+    where: {
+      id: cookie.sessionId,
+      adminId: realAdminId,
+      endedAt: null,
+      startedAt: { gte: new Date(Date.now() - IMPERSONATION_MAX_AGE_MS) },
+    },
+    select: { id: true, adminId: true, targetUserId: true },
+  });
+  if (!record) {
+    await clearImpersonation();
+    return { success: true, message: "Aucune impersonation active." };
+  }
+
+  await prisma.impersonationSession.updateMany({
+    where: { id: record.id, adminId: record.adminId, endedAt: null },
     data: { endedAt: new Date() },
   });
   await clearImpersonation();
 
   await createAuditLog({
-    actorId: session.user.id,
+    actorId: record.adminId,
     action: "admin.impersonation.stop",
     targetType: "User",
-    targetId: cookie.targetUserId,
+    targetId: record.targetUserId,
+    metadata: { sessionRecordId: record.id },
   });
 
   revalidatePath("/admin");

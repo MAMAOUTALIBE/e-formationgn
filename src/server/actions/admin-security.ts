@@ -149,17 +149,44 @@ export async function exportAuditLogCsv(): Promise<
   };
 }
 
-export async function revokeSession(sessionId: string): Promise<ActionResult> {
+const disconnectUserSchema = z.string().trim().min(1).max(191);
+
+export async function disconnectUserEverywhere(userId: string): Promise<ActionResult> {
   const admin = await requireAdmin();
-  await prisma.session.delete({ where: { id: sessionId } });
+  const parsed = disconnectUserSchema.safeParse(userId);
+  if (!parsed.success) {
+    return { success: false, message: "Identifiant utilisateur invalide." };
+  }
+  if (parsed.data === admin.userId) {
+    return {
+      success: false,
+      message: "Vous ne pouvez pas déconnecter votre propre session depuis cet écran.",
+    };
+  }
+
+  const user = await prisma.user.findUnique({
+    where: { id: parsed.data },
+    select: { id: true, email: true },
+  });
+  if (!user) return { success: false, message: "Compte introuvable." };
+
+  const revokedAt = new Date();
+  await prisma.user.update({
+    where: { id: user.id },
+    data: { passwordChangedAt: revokedAt },
+  });
   await createAuditLog({
     actorId: admin.userId,
-    action: "session.revoke",
-    targetType: "Session",
-    targetId: sessionId,
+    action: "user.sessions.revoke_all",
+    targetType: "User",
+    targetId: user.id,
+    metadata: { email: user.email, revokedAt: revokedAt.toISOString(), strategy: "jwt" },
   });
   revalidatePath("/admin/securite/sessions");
-  return { success: true, message: "Session révoquée." };
+  return {
+    success: true,
+    message: "Toutes les connexions de ce compte ont été invalidées.",
+  };
 }
 
 export async function banIp(ipHash: string, reason?: string): Promise<ActionResult> {

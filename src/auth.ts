@@ -16,7 +16,10 @@ import Credentials from "next-auth/providers/credentials";
 import { PrismaAdapter } from "@auth/prisma-adapter";
 
 import { authConfig } from "@/auth.config";
-import { readImpersonation } from "@/lib/admin/impersonation";
+import {
+  IMPERSONATION_MAX_AGE_MS,
+  readImpersonation,
+} from "@/lib/admin/impersonation";
 import { isAutoVerifyEmailEnabled } from "@/lib/auth/auto-verify";
 import { recordLoginAttempt } from "@/lib/auth/login-attempts";
 import { fakeVerifyPassword, verifyPassword } from "@/lib/auth/password";
@@ -38,6 +41,13 @@ export const {
   adapter: PrismaAdapter(prisma as unknown as AdapterPrismaClient),
   session: { strategy: "jwt" },
   events: {
+    async signIn({ user }) {
+      if (!user.id) return;
+      await prisma.user.updateMany({
+        where: { id: user.id },
+        data: { lastLoginAt: new Date() },
+      });
+    },
     async linkAccount({ user }) {
       // Quand un compte OAuth (Google) est lié : Google a déjà vérifié
       // l'email, on marque le compte comme vérifié et actif.
@@ -134,7 +144,7 @@ export const {
   ],
   callbacks: {
     ...authConfig.callbacks,
-    async jwt({ token, user, trigger }) {
+    async jwt({ token, user }) {
       // Au login : on injecte les infos métier dans le JWT
       if (user) {
         token.id = user.id ?? token.sub ?? "";
@@ -185,17 +195,14 @@ export const {
           return null;
         }
 
-        // Rafraîchi à CHAQUE passage, hors de la condition `trigger` : la
-        // garde de navigation s'appuie dessus, elle doit refléter la base sans
-        // attendre une reconnexion.
+        // Rafraîchis à CHAQUE passage : les gardes serveur et edge doivent
+        // refléter immédiatement une révocation de rôle, une suspension ou une
+        // modification des attributs de session, sans attendre une reconnexion.
+        token.id = dbUser.id;
+        token.role = dbUser.role;
+        token.emailVerified = dbUser.emailVerified;
+        token.preferredCurrency = dbUser.preferredCurrency;
         token.mustChangePassword = dbUser.mustChangePassword;
-
-        if (trigger === "update" || !token.role) {
-          token.id = dbUser.id;
-          token.role = dbUser.role;
-          token.emailVerified = dbUser.emailVerified;
-          token.preferredCurrency = dbUser.preferredCurrency;
-        }
       }
 
       return token;
@@ -214,21 +221,35 @@ export const {
       // dans `session.impersonation` pour que l'UI puisse afficher la bannière.
       if (session.user && token.role === "ADMIN") {
         const cookie = await readImpersonation().catch(() => null);
-        if (cookie && cookie.targetUserId !== token.id) {
-          const target = await prisma.user.findUnique({
-            where: { id: cookie.targetUserId },
+        if (cookie) {
+          const impersonation = await prisma.impersonationSession.findFirst({
+            where: {
+              id: cookie.sessionId,
+              adminId: token.id,
+              endedAt: null,
+              startedAt: {
+                gte: new Date(Date.now() - IMPERSONATION_MAX_AGE_MS),
+              },
+              targetUserId: { not: token.id },
+            },
             select: {
               id: true,
-              email: true,
-              name: true,
-              image: true,
-              role: true,
-              emailVerified: true,
-              preferredCurrency: true,
-              status: true,
+              targetUser: {
+                select: {
+                  id: true,
+                  email: true,
+                  name: true,
+                  image: true,
+                  role: true,
+                  emailVerified: true,
+                  preferredCurrency: true,
+                  status: true,
+                },
+              },
             },
           });
-          if (target && target.status !== "DELETED") {
+          const target = impersonation?.targetUser;
+          if (impersonation && target?.status === "ACTIVE") {
             const realAdminId = session.user.id;
             const realAdminEmail = session.user.email;
             session.user.id = target.id;
@@ -238,10 +259,10 @@ export const {
             session.user.role = target.role;
             session.user.emailVerified = target.emailVerified;
             session.user.preferredCurrency = target.preferredCurrency;
-            (session as { impersonation?: unknown }).impersonation = {
+            session.impersonation = {
               adminId: realAdminId,
               adminEmail: realAdminEmail,
-              sessionRecordId: cookie.sessionId,
+              sessionRecordId: impersonation.id,
             };
           }
         }
