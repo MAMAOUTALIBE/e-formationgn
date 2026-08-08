@@ -57,10 +57,15 @@ TAG="$(git rev-parse --short HEAD)"
 # de typage de partir en production — `set -e` interrompt le script avant le
 # build si l'une des deux échoue. Ne pas le retirer sans réactiver les
 # contrôles dans next.config.ts.
-echo "▶ Vérifications natives (typage + lint) avant build…"
+echo "▶ Vérifications natives (typage + lint + tests) avant build…"
 npm run typecheck
 npm run lint
-echo "✅ Typage et lint OK."
+# Les tests unitaires couvrent la validation des verdicts CinetPay — le code
+# qui décide si un paiement est réputé encaissé. Ils existaient sans qu'aucune
+# commande ne les exécute ; ils gardent maintenant le build, comme le typage.
+npm run test:unit
+npm run test:scripts
+echo "✅ Typage, lint et tests OK."
 echo
 
 # Variables publiques : injectées AU BUILD, depuis .env.deploy.

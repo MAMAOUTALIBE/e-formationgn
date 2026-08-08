@@ -116,7 +116,7 @@ export function WorkspaceCommandMenu({
         onClick={() => setOpen(true)}
         aria-label="Rechercher"
         aria-keyshortcuts="Meta+K Control+K"
-        className="group flex w-full items-center gap-2.5 rounded-xl border border-border bg-muted/50 px-3.5 py-2.5 text-left text-sm text-muted-foreground transition-colors hover:border-foreground/25 hover:bg-muted"
+        className="group flex w-full items-center gap-2.5 rounded-full border border-border bg-muted/50 px-3.5 py-2.5 text-left text-sm text-muted-foreground transition-colors hover:border-foreground/25 hover:bg-muted"
       >
         <Search className="h-4 w-4 shrink-0" aria-hidden />
         {/* Deux libellés plutôt qu'un masqué : sur mobile, cacher le texte
