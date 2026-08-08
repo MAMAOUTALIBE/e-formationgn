@@ -59,7 +59,10 @@ ENV NEXT_PUBLIC_SENTRY_DSN=${NEXT_PUBLIC_SENTRY_DSN}
 ENV NEXT_PUBLIC_PLATFORM_MODE=${NEXT_PUBLIC_PLATFORM_MODE}
 
 RUN npx prisma generate
-RUN npm run build
+# Turbopack sous émulation linux/amd64 sur Mac ARM conserve un pic mémoire
+# important pendant la collecte finale des traces, même avec un seul worker.
+# Webpack produit le même standalone Next.js et reste sous l'enveloppe Docker.
+RUN npx next build --webpack
 
 # ---------- 4. runner : image finale ----------
 FROM node:20-alpine AS runner
