@@ -33,6 +33,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     description:
       category.description ??
       `Tous les cours de la catégorie ${category.name} sur Gandal.`,
+    alternates: { canonical: `/categories/${category.slug}` },
   };
 }
 

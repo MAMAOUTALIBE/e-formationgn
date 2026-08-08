@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { Award, Search, Sparkles, Target, Users } from "lucide-react";
 
@@ -29,6 +30,21 @@ import {
 } from "@/server/queries/courses";
 import { listFeaturedInstructors } from "@/server/queries/instructors-public";
 import { getPublicStats } from "@/server/queries/stats";
+
+export const metadata: Metadata = {
+  alternates: {
+    canonical: "/",
+    languages: {
+      "fr-FR": "/",
+      "fr-BE": "/",
+      "fr-CA": "/",
+      "fr-CI": "/",
+      "fr-SN": "/",
+      "fr-GN": "/",
+      "x-default": "/",
+    },
+  },
+};
 
 export default async function HomePage() {
   const session = await auth();
@@ -428,4 +444,3 @@ function Bullet({ icon, label }: { icon: React.ReactNode; label: string }) {
     </li>
   );
 }
-

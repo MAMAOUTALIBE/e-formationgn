@@ -1,33 +1,30 @@
-// Service worker minimal pour E-FormationGN.
-// Stratégies :
-//   - Network-first pour les pages HTML (toujours essayer le réseau, fallback
-//     cache si offline)
-//   - Cache-first pour les assets statiques (/_next/static, fonts, images)
-//   - On évite de cacher les routes API et les pages d'authentification
+// Service worker volontairement conservateur : seules les ressources publiques
+// explicitement listées ci-dessous peuvent être conservées hors ligne.
 
-const CACHE_VERSION = "efgn-v1";
+const CACHE_VERSION = "efgn-v2";
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
-const PAGES_CACHE = `${CACHE_VERSION}-pages`;
+const PAGES_CACHE = `${CACHE_VERSION}-public-pages`;
 
-const OFFLINE_FALLBACK_URL = "/";
-
-const STATIC_PREFIXES = ["/_next/static/", "/_next/image"];
-const SKIP_PREFIXES = [
-  "/api/",
-  "/connexion",
-  "/inscription",
-  "/admin",
-  "/formateur",
-];
+const PUBLIC_PAGE_ALLOWLIST = new Set([
+  "/",
+  "/a-propos",
+  "/aide",
+  "/categories",
+  "/cgv",
+  "/confidentialite",
+  "/contact",
+  "/cookies",
+  "/cours",
+  "/credits",
+  "/devenir-formateur",
+  "/mentions-legales",
+]);
 
 self.addEventListener("install", (event) => {
-  event.waitUntil(
-    caches
-      .open(PAGES_CACHE)
-      .then((cache) => cache.add(OFFLINE_FALLBACK_URL))
-      .catch(() => {})
-      .then(() => self.skipWaiting()),
-  );
+  // Ne précharge aucune page HTML : l'installation peut avoir lieu pendant
+  // une session connectée. Une page n'entre dans le cache qu'après validation
+  // de sa réponse par `isCacheableResponse`.
+  event.waitUntil(self.skipWaiting());
 });
 
 self.addEventListener("activate", (event) => {
@@ -37,8 +34,10 @@ self.addEventListener("activate", (event) => {
       .then((keys) =>
         Promise.all(
           keys
-            .filter((k) => !k.startsWith(CACHE_VERSION))
-            .map((k) => caches.delete(k)),
+            .filter(
+              (key) => key.startsWith("efgn-") && !key.startsWith(CACHE_VERSION),
+            )
+            .map((key) => caches.delete(key)),
         ),
       )
       .then(() => self.clients.claim()),
@@ -48,46 +47,63 @@ self.addEventListener("activate", (event) => {
 self.addEventListener("fetch", (event) => {
   const request = event.request;
   if (request.method !== "GET") return;
+
   const url = new URL(request.url);
   if (url.origin !== self.location.origin) return;
-  if (SKIP_PREFIXES.some((p) => url.pathname.startsWith(p))) return;
 
-  // Cache-first pour les assets statiques
-  if (STATIC_PREFIXES.some((p) => url.pathname.startsWith(p))) {
-    event.respondWith(cacheFirst(request, STATIC_CACHE));
+  // Les bundles Next portent une empreinte de contenu et ne contiennent pas de
+  // données utilisateur. Aucun autre asset ou endpoint n'est mis en cache.
+  if (url.pathname.startsWith("/_next/static/")) {
+    event.respondWith(cacheFirstStatic(request));
     return;
   }
 
-  // Network-first pour les pages HTML
-  if (request.mode === "navigate" || request.destination === "document") {
-    event.respondWith(networkFirst(request));
-    return;
+  const isDocument = request.mode === "navigate" || request.destination === "document";
+  const isAllowlistedPage =
+    isDocument && url.search === "" && PUBLIC_PAGE_ALLOWLIST.has(url.pathname);
+
+  if (isAllowlistedPage) {
+    event.respondWith(networkFirstPublicPage(request));
   }
 });
 
-async function cacheFirst(request, cacheName) {
-  const cache = await caches.open(cacheName);
+function isCacheableResponse(response, expectedContentType) {
+  if (!response.ok || response.redirected || response.type !== "basic") return false;
+
+  const cacheControl = (response.headers.get("cache-control") || "").toLowerCase();
+  if (cacheControl.includes("private") || cacheControl.includes("no-store")) return false;
+
+  if (!expectedContentType) return true;
+  const contentType = (response.headers.get("content-type") || "").toLowerCase();
+  return contentType.includes(expectedContentType);
+}
+
+async function cacheFirstStatic(request) {
+  const cache = await caches.open(STATIC_CACHE);
   const cached = await cache.match(request);
   if (cached) return cached;
+
   try {
     const response = await fetch(request);
-    if (response.ok) cache.put(request, response.clone());
+    if (isCacheableResponse(response)) {
+      await cache.put(request, response.clone());
+    }
     return response;
   } catch {
-    return cached ?? Response.error();
+    return Response.error();
   }
 }
 
-async function networkFirst(request) {
+async function networkFirstPublicPage(request) {
   const cache = await caches.open(PAGES_CACHE);
+
   try {
     const response = await fetch(request);
-    if (response.ok) cache.put(request, response.clone());
+    if (isCacheableResponse(response, "text/html")) {
+      await cache.put(request, response.clone());
+    }
     return response;
   } catch {
-    const cached = await cache.match(request);
-    if (cached) return cached;
-    const fallback = await cache.match(OFFLINE_FALLBACK_URL);
-    return fallback ?? Response.error();
+    return (await cache.match(request)) ?? Response.error();
   }
 }

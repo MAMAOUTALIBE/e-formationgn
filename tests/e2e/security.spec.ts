@@ -158,3 +158,24 @@ test.describe("Sécurité — en-têtes HTTP globaux", () => {
     expect(headers["content-security-policy-report-only"]).toBeTruthy();
   });
 });
+
+test.describe("Sécurité — cache PWA", () => {
+  test("le service worker applique une allowlist publique stricte", async ({
+    request,
+  }) => {
+    const response = await request.get("/sw.js");
+    expect(response.status()).toBe(200);
+    expect(response.headers()["content-type"]).toContain("javascript");
+
+    const source = await response.text();
+    expect(source).toContain('const CACHE_VERSION = "efgn-v2"');
+    expect(source).toContain("PUBLIC_PAGE_ALLOWLIST.has(url.pathname)");
+    expect(source).toContain('cacheControl.includes("private")');
+    expect(source).toContain('cacheControl.includes("no-store")');
+
+    // Les familles privées ne doivent jamais devenir des préfixes cacheables.
+    for (const privatePrefix of ["/admin", "/formateur", "/api/", "/connexion"]) {
+      expect(source).not.toContain(`url.pathname.startsWith("${privatePrefix}")`);
+    }
+  });
+});

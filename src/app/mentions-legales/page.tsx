@@ -7,7 +7,7 @@ export const dynamic = "force-dynamic";
 
 export async function generateMetadata(): Promise<Metadata> {
   const page = await getCmsPage("mentions-legales");
-  return { title: page.title };
+  return { title: page.title, alternates: { canonical: "/mentions-legales" } };
 }
 
 export default async function MentionsLegalesPage() {

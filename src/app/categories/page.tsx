@@ -10,6 +10,7 @@ import { listCategories } from "@/server/queries/categories";
 export const metadata: Metadata = {
   title: "Catégories",
   description: "Toutes les catégories de cours sur Gandal.",
+  alternates: { canonical: "/categories" },
 };
 
 // Les catégories peuvent évoluer (admin, nouveaux cours) — on rend la page

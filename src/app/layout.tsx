@@ -47,7 +47,6 @@ export const metadata: Metadata = {
   // x-default + fr-* pointent tous vers la même langue). Quand un domaine
   // local sera lancé (gandal.fr, gandal.ci, …), on remplacera ces valeurs.
   alternates: {
-    canonical: "/",
     languages: {
       "fr-FR": "/",
       "fr-BE": "/",

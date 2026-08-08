@@ -7,7 +7,7 @@ export const dynamic = "force-dynamic";
 
 export async function generateMetadata(): Promise<Metadata> {
   const page = await getCmsPage("cookies");
-  return { title: page.title };
+  return { title: page.title, alternates: { canonical: "/cookies" } };
 }
 
 export default async function CookiesPage() {

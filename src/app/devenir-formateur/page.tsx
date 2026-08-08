@@ -21,6 +21,7 @@ export const metadata: Metadata = {
   title: "Devenir formateur",
   description:
     "Partagez votre savoir auprès de la communauté Gandal et bénéficiez d'un taux préférentiel à 15% sur les ventes que vous générez vous-même.",
+  alternates: { canonical: "/devenir-formateur" },
 };
 
 export default async function BecomeInstructorPage() {

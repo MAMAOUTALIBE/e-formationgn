@@ -5,6 +5,11 @@
 import { expect, test } from "@playwright/test";
 
 const COURSE_SLUG = "nextjs-fondamentaux-2026";
+const CATEGORY_SLUG = "developpement";
+
+function extractCanonical(html: string): string | undefined {
+  return html.match(/<link rel="canonical" href="([^"]+)"/)?.[1];
+}
 
 function extractJsonLd(html: string): Array<Record<string, unknown>> {
   // Récupère tous les blocs JSON-LD inline (encodés `<` pour les `<`).
@@ -89,6 +94,25 @@ test.describe("SEO — hreflang multi-pays", () => {
     expect(canonical).toBeTruthy();
     expect(canonical).toMatch(/^https?:\/\//);
     expect(canonical).toContain(`/cours/${COURSE_SLUG}`);
+  });
+
+  test("les pages publiques principales ont des canonicals absolus et distincts", async ({
+    request,
+  }) => {
+    const routes = ["/", "/cours", "/categories", `/categories/${CATEGORY_SLUG}`];
+    const canonicals: string[] = [];
+
+    for (const route of routes) {
+      const response = await request.get(route);
+      expect(response.status(), route).toBe(200);
+      const canonical = extractCanonical(await response.text());
+      expect(canonical, route).toBeTruthy();
+      const url = new URL(canonical!);
+      expect(url.pathname, route).toBe(route);
+      canonicals.push(url.href);
+    }
+
+    expect(new Set(canonicals).size).toBe(routes.length);
   });
 });
 
