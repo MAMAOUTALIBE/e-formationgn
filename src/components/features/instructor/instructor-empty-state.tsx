@@ -27,7 +27,7 @@ const STEPS = [
  */
 export function InstructorEmptyState() {
   return (
-    <section className="overflow-hidden rounded-xl border border-border bg-card">
+    <section data-slot="card" className="overflow-hidden rounded-xl border border-border bg-card">
       <div className="border-b border-border bg-[color:var(--brand-primary)]/5 p-8 text-center">
         <span className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-[color:var(--brand-primary)]/10 text-[color:var(--brand-primary)]">
           <Rocket className="h-7 w-7" aria-hidden />

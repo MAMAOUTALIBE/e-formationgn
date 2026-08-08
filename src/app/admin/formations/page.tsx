@@ -80,7 +80,7 @@ export default async function ProgramsPage({
           }
         />
       ) : (
-        <div className="overflow-x-auto rounded-xl border border-border bg-card">
+        <div data-slot="card" className="overflow-x-auto rounded-xl border border-border bg-card">
           <table className="w-full text-sm">
             <thead className="border-b border-border bg-muted/40 text-left text-xs uppercase tracking-wide text-muted-foreground">
               <tr>

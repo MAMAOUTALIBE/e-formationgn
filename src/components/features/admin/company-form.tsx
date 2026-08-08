@@ -106,7 +106,7 @@ export function CompanyForm({
         </p>
       ) : null}
 
-      <section className="space-y-4 rounded-xl border border-border bg-card p-4">
+      <section data-slot="card" className="space-y-4 rounded-xl border border-border bg-card p-4">
         <h2 className="text-sm font-semibold text-foreground">Identité</h2>
 
         <FormField id="name" label="Raison sociale" required error={err("name")}>
@@ -132,7 +132,7 @@ export function CompanyForm({
         </FormField>
       </section>
 
-      <section className="space-y-4 rounded-xl border border-border bg-card p-4">
+      <section data-slot="card" className="space-y-4 rounded-xl border border-border bg-card p-4">
         <h2 className="text-sm font-semibold text-foreground">Adresse</h2>
         <FormField id="addressLine1" label="Adresse" error={err("addressLine1")}>
           <Input id="addressLine1" name="addressLine1" defaultValue={values.addressLine1} />
@@ -153,7 +153,7 @@ export function CompanyForm({
         </div>
       </section>
 
-      <section className="space-y-4 rounded-xl border border-border bg-card p-4">
+      <section data-slot="card" className="space-y-4 rounded-xl border border-border bg-card p-4">
         <h2 className="text-sm font-semibold text-foreground">Responsable</h2>
         <div className="grid gap-4 sm:grid-cols-3">
           <FormField id="contactName" label="Nom" error={err("contactName")}>
@@ -173,7 +173,7 @@ export function CompanyForm({
         </div>
       </section>
 
-      <section className="space-y-4 rounded-xl border border-border bg-card p-4">
+      <section data-slot="card" className="space-y-4 rounded-xl border border-border bg-card p-4">
         <h2 className="text-sm font-semibold text-foreground">Financement</h2>
         <div className="grid gap-4 sm:grid-cols-2">
           <FormField
@@ -194,7 +194,7 @@ export function CompanyForm({
         </div>
       </section>
 
-      <section className="space-y-4 rounded-xl border border-border bg-card p-4">
+      <section data-slot="card" className="space-y-4 rounded-xl border border-border bg-card p-4">
         <h2 className="text-sm font-semibold text-foreground">Suivi</h2>
         <FormField
           id="status"

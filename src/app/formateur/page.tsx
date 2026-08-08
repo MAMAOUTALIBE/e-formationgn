@@ -189,7 +189,7 @@ export default async function InstructorDashboardPage() {
           "Phase 4" maintenant que Stripe est actif). */}
       <section
         aria-labelledby="revenue-heading"
-        className="space-y-4 rounded-xl border border-border bg-card p-5"
+        data-slot="card" className="space-y-4 rounded-xl border border-border bg-card p-5"
       >
         <header className="flex flex-wrap items-center justify-between gap-3">
           <div>

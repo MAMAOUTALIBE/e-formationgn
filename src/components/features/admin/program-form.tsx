@@ -56,7 +56,7 @@ export function ProgramForm({
   const values: ProgramFormValues = { ...defaultValues, ...(state.values ?? {}) };
 
   return (
-    <form action={formAction} className="space-y-4 rounded-xl border border-border bg-card p-4">
+    <form action={formAction} data-slot="card" className="space-y-4 rounded-xl border border-border bg-card p-4">
       {/* Brouillon local : survit à un rafraîchissement ou à un onglet fermé. */}
       <FormDraft
         storageKey={programId ? `formation:${programId}` : "formation:nouvelle"}
