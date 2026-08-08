@@ -20,6 +20,7 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { logError, logInfo, logWarning } from "@/lib/logger";
 import { checkTransaction, isCinetPayConfigured } from "@/lib/payments/cinetpay";
+import { validateCinetPayAcceptedPayment } from "@/lib/payments/cinetpay-validation";
 import { prisma } from "@/lib/prisma";
 import { getStripeClient, isStripeConfigured } from "@/lib/stripe";
 import { finalizeStripeOrder } from "@/server/services/stripe-finalize";
@@ -52,6 +53,8 @@ export async function GET(request: NextRequest) {
       id: true,
       stripeCheckoutSessionId: true,
       stripePaymentIntentId: true,
+      totalCents: true,
+      currency: true,
       // Note : CinetPay utilise l'id de l'Order comme transactionId.
     },
     take: MAX_PER_RUN,
@@ -104,7 +107,22 @@ export async function GET(request: NextRequest) {
       if (isCinetPayConfigured()) {
         const verdict = await checkTransaction(order.id);
         if (verdict.status === "ACCEPTED") {
-          // On marque l'Order PAID — le finalize complet (Enrollment etc.) est
+          const validation = validateCinetPayAcceptedPayment(verdict, {
+            id: order.id,
+            totalCents: order.totalCents,
+            currency: order.currency,
+            siteId: process.env.CINETPAY_SITE_ID,
+          });
+          if (!validation.ok) {
+            errors++;
+            logWarning("reconcile-orders", "Verdict CinetPay non conforme", {
+              orderId: order.id,
+              reason: validation.reason,
+            });
+            continue;
+          }
+          // On signale l'Order comme à finaliser — le finalize complet
+          // (Enrollment etc.) est
           // dans le webhook handler CinetPay, qui sera ré-essayé via
           // `/api/cron/process-webhooks` ou re-déclenché si CinetPay rejoue.
           // Ici on se contente de la transition d'état pour ne pas dupliquer

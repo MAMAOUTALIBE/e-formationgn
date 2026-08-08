@@ -168,6 +168,7 @@ export async function initTransaction(
 export interface CinetPayCheckResult {
   /** Statut canonique. */
   status: "ACCEPTED" | "REFUSED" | "PENDING";
+  transactionId: string;
   /** Montant confirmé par CinetPay (en unité entière, devise CinetPay). */
   amount?: number;
   currency?: string;
@@ -177,6 +178,8 @@ export interface CinetPayCheckResult {
   phoneNumber?: string;
   /** Nom payeur si fourni. */
   operatorId?: string;
+  siteId?: string;
+  metadata?: string;
   raw: unknown;
 }
 
@@ -191,6 +194,8 @@ interface CinetPayCheckApiResponse {
     payment_date?: string;
     description?: string;
     metadata?: string;
+    transaction_id?: string;
+    site_id?: string | number;
     operator_id?: string;
     payment_phone_number?: string;
     [key: string]: unknown;
@@ -237,11 +242,15 @@ export async function checkTransaction(
 
   return {
     status,
+    transactionId: data.data?.transaction_id ?? transactionId,
     amount: data.data?.amount,
     currency: data.data?.currency,
     paymentMethod: data.data?.payment_method,
     phoneNumber: data.data?.payment_phone_number,
     operatorId: data.data?.operator_id,
+    siteId:
+      data.data?.site_id === undefined ? undefined : String(data.data.site_id),
+    metadata: data.data?.metadata,
     raw: data,
   };
 }

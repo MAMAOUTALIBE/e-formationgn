@@ -18,6 +18,7 @@ import {
 } from "@/lib/payments/cinetpay";
 import { logError } from "@/lib/logger";
 import { isCinetPaySupported } from "@/lib/payments/currency";
+import { cinetPayAmountFromMinor } from "@/lib/payments/cinetpay-validation";
 import { prisma } from "@/lib/prisma";
 import { buildCheckoutOrder } from "@/server/services/checkout-order-builder";
 
@@ -109,10 +110,7 @@ export async function startCinetPayCheckout(
       // CinetPay attend la valeur en unité entière, dans la devise de l'order.
       // Notre totalCents est déjà en minor units : 1 pour GNF/XOF, 100 pour EUR/USD
       // → on divise donc seulement pour EUR/USD.
-      amount:
-        currency === "EUR" || currency === "USD"
-          ? Math.round(totalCents / 100)
-          : totalCents,
+      amount: cinetPayAmountFromMinor(totalCents, currency),
       currency: currency as CinetPayCurrency,
       description,
       returnUrl: `${APP_URL}/commande/${orderId}/confirmation`,

@@ -22,6 +22,7 @@ import { sendTransactionalEmail } from "@/lib/email/client";
 import { renderBrandedEmail } from "@/lib/email/templates";
 import { logError, logWarning } from "@/lib/logger";
 import { formatMinor } from "@/lib/payments/currency";
+import { validateCinetPayAcceptedPayment } from "@/lib/payments/cinetpay-validation";
 import { prisma } from "@/lib/prisma";
 import { createAuditLog } from "@/server/services/audit-log";
 
@@ -137,6 +138,47 @@ export async function POST(request: Request) {
       );
     }
 
+    const orderExpectation = await prisma.order.findUnique({
+      where: { id: transactionId },
+      select: { id: true, totalCents: true, currency: true },
+    });
+    const validation = orderExpectation
+      ? validateCinetPayAcceptedPayment(verdict, {
+          ...orderExpectation,
+          siteId: process.env.CINETPAY_SITE_ID,
+        })
+      : { ok: false as const, reason: "transaction_id" as const };
+    if (!validation.ok) {
+      await prisma.$transaction([
+        prisma.order.updateMany({
+          where: { id: transactionId, status: "PENDING" },
+          data: { status: "PROCESSING" },
+        }),
+        prisma.webhookEvent.update({
+          where: { id: eventId },
+          data: {
+            status: "FAILED",
+            processedAt: new Date(),
+            lastError: `PAYMENT_VERIFICATION_MISMATCH:${validation.reason}`,
+          },
+        }),
+      ]);
+      logWarning("cinetpay-webhook", "Paiement accepté non conforme", {
+        orderId: transactionId,
+        reason: validation.reason,
+      });
+      await createAuditLog({
+        action: "cinetpay.payment_verification_mismatch",
+        targetType: "Order",
+        targetId: orderExpectation?.id ?? null,
+        metadata: { reason: validation.reason, eventId },
+      });
+      return NextResponse.json(
+        { received: true, status: "REVIEW_REQUIRED" },
+        { headers: { "Cache-Control": PRIVATE_NO_STORE } },
+      );
+    }
+
     // ACCEPTED : on traite comme un checkout completed Stripe.
     await handleAccepted(transactionId);
 
@@ -186,11 +228,12 @@ async function handleAccepted(orderId: string) {
   }
   if (order.status === "PAID") return; // idempotence
 
-  await prisma.$transaction(async (tx) => {
-    await tx.order.update({
-      where: { id: order.id },
+  const finalized = await prisma.$transaction(async (tx) => {
+    const claim = await tx.order.updateMany({
+      where: { id: order.id, status: { in: ["PENDING", "PROCESSING"] } },
       data: { status: "PAID", paidAt: new Date() },
     });
+    if (claim.count !== 1) return false;
 
     for (const item of order.items) {
       await tx.enrollment.upsert({
@@ -220,7 +263,9 @@ async function handleAccepted(orderId: string) {
     }
 
     await tx.cartItem.deleteMany({ where: { userId: order.userId } });
+    return true;
   });
+  if (!finalized) return;
 
   // Email confirmation — best-effort, n'échoue pas le webhook si l'envoi rate.
   if (order.user.email) {
