@@ -92,12 +92,12 @@ const nextConfig: NextConfig = {
   // Par défaut Next en lance un par cœur — 7 sur cette machine. Chaque worker
   // porte son propre tas Node, et l'image de production se construit dans une
   // VM Docker limitée à 3,8 Go sur un Mac qui n'a que 8 Go : le build s'est
-  // fait tuer (SIGKILL, « cannot allocate memory »). Deux workers suffisent
-  // largement pour ~50 routes et tiennent dans l'enveloppe.
+  // fait tuer (SIGKILL, « cannot allocate memory »). Un seul worker évite que
+  // deux tas Node plafonnés à 1,5 Go se cumulent pendant la collecte des pages.
   //
   // À relever si le build migre un jour sur une machine plus dotée : c'est un
   // compromis mémoire/vitesse, pas une correction de bug.
-  experimental: { cpus: 2 },
+  experimental: { cpus: 1 },
 
   // Build standalone : produit /.next/standalone avec un mini server.js
   // autonome, indispensable pour l'image Docker minimale.
