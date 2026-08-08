@@ -12,10 +12,8 @@ Comment livrer du code modifié en production.
 - **Conteneurs :** `db` (PostgreSQL 16) · `app` (Next.js) · `cron` (nettoyage quotidien). Pas de Caddy.
 - **Image :** `bahm2062/e-formationgn` sur Docker Hub. Buildée **sur le Mac** (Apple Silicon) en `linux/amd64`, **jamais sur le VPS** (VPS trop chargé).
 - **Reverse proxy / HTTPS :** **nginx** sur l'hôte (ports 80/443), qui relaie
-  vers `127.0.0.1:3300`. La documentation annonçait Traefik : c'est faux depuis
-  au moins la mise en ligne — un `docker compose ps` ne montre aucun Traefik et
-  `ss -tlnp` attribue 80/443 à nginx. Les labels Traefik du service `app` sont
-  donc inertes.
+  vers le port applicatif lié uniquement à `127.0.0.1:3300`. Aucun Caddy ni
+  Traefik ne participe au routage de cette stack.
 - **Secrets :** `/docker/e-formationgn/.env` sur le VPS — **jamais commité**, jamais dans l'image.
 - **Migrations :** appliquées automatiquement au démarrage du conteneur `app` (`prisma migrate deploy` dans l'entrypoint). Aucune action manuelle.
 
@@ -44,15 +42,27 @@ npm run deploy            # = ./scripts/deploy.sh
 
 Le script build l'image `linux/amd64` et la pousse sur Docker Hub sous deux tags : `latest` **et** le SHA git court (pour le rollback). Durée : ~3-8 min.
 
+Le script refuse de construire si le dépôt contient un changement non commité
+ou un fichier non suivi, si `HEAD` est détaché, ou si le commit courant n'est
+pas exactement celui publié sur `origin/<branche>`.
+
+`.env.deploy` doit définir explicitement `NEXT_PUBLIC_APP_URL` et
+`NEXT_PUBLIC_PLATFORM_MODE`. Si `VPS_SSH` est fourni, un préflight distant
+contrôle avant le build les variables runtime obligatoires, la correspondance
+du mode public/serveur, la paire Upstash et le secret Turnstile lorsque sa clé
+publique est activée. Les valeurs et secrets ne sont jamais affichés.
+
 ### 2. VPS — pull + redémarrage
 
 Dans le Terminal Hostinger :
 
 ```bash
 cd /docker/e-formationgn
-docker compose pull
-docker compose up -d
+docker compose pull app
+docker compose up -d app
 docker compose ps
+curl -fsS http://127.0.0.1:3300/api/health
+curl -fsS -o /dev/null http://127.0.0.1:3300/
 ```
 
 `up -d` ne recrée que le conteneur `app` (nouvelle image). `db` et son volume ne sont **pas** touchés. Les migrations Prisma s'appliquent au boot.
@@ -66,7 +76,9 @@ docker compose ps
 > `ssh -i ~/.ssh/claude_deploy root@213.130.144.215`
 > npm run deploy
 > ```
-> Le script enchaîne alors automatiquement le `pull` + `up -d` sur le VPS.
+> Le script enchaîne alors le `pull` + `up -d` du service `app`, attend son
+> healthcheck (180 s maximum), puis teste `/api/health` et la page d'accueil.
+> En cas d'échec, il affiche l'état et les logs du conteneur puis s'arrête.
 
 ### 3. Vérifier
 
@@ -80,6 +92,11 @@ curl -sI https://gandal.org | head -1      # HTTP/2 200
 ## Rollback (revenir à une version précédente)
 
 Chaque build est taggé avec le SHA git. Tags disponibles : https://hub.docker.com/r/bahm2062/e-formationgn/tags
+
+> **Ne pas automatiser le rollback applicatif après un démarrage échoué.**
+> L'entrypoint peut avoir appliqué des migrations Prisma avant l'échec du
+> healthcheck. Confirme d'abord que le schéma reste compatible avec l'ancien
+> binaire et restaure la sauvegarde pré-déploiement si la migration ne l'est pas.
 
 Sur le VPS :
 ```bash

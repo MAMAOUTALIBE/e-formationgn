@@ -1,8 +1,9 @@
 # Déploiement E-FormationGN — VPS Hostinger + Docker
 
 > ⚠️ **Ce guide décrit l'installation initiale d'origine (stack autonome avec Caddy).**
-> La production actuelle — https://gandal.org — tourne derrière le **Traefik mutualisé**
-> du VPS, **sans Caddy**, avec une image tirée de Docker Hub.
+> La production actuelle — https://gandal.org — tourne derrière **nginx sur l'hôte**,
+> qui relaie vers `127.0.0.1:3300`, **sans Caddy ni Traefik**, avec une image
+> tirée de Docker Hub.
 > Pour **redéployer du code modifié**, c'est [REDEPLOY.md](REDEPLOY.md) qui fait foi.
 
 Guide complet pour déployer en production sur un VPS Hostinger (Ubuntu 22.04+).

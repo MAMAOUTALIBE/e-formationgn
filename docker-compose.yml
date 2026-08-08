@@ -30,14 +30,16 @@ services:
       - internal
 
   # -------- Application Next.js --------
-  # Image tirée de Docker Hub. Routée par le Traefik mutualisé du VPS via les labels.
+  # Image tirée de Docker Hub. nginx tourne sur l'hôte et relaie le trafic
+  # HTTPS vers 127.0.0.1:3300 ; le port applicatif n'est jamais exposé sur
+  # l'interface publique du VPS.
   app:
     image: bahm2062/e-formationgn:latest
     restart: unless-stopped
     env_file:
       - .env
-    expose:
-      - "3000"
+    ports:
+      - "127.0.0.1:3300:3000"
     # Persiste les fichiers uploadés sur disque (couvertures, vidéos de leçon,
     # avatars) quand Cloudflare R2 n'est PAS configuré — sinon ils sont perdus
     # à chaque `docker compose up -d`. Inutile si R2 est configuré (les uploads
@@ -53,13 +55,6 @@ services:
       timeout: 5s
       retries: 5
       start_period: 40s
-    labels:
-      - "traefik.enable=true"
-      - "traefik.docker.network=eformationgn_internal"
-      - "traefik.http.routers.eformationgn.rule=Host(`gandal.org`) || Host(`www.gandal.org`)"
-      - "traefik.http.routers.eformationgn.entrypoints=websecure"
-      - "traefik.http.routers.eformationgn.tls.certresolver=letsencrypt"
-      - "traefik.http.services.eformationgn.loadbalancer.server.port=3000"
     networks:
       - internal
 
