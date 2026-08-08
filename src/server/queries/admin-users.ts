@@ -228,6 +228,41 @@ export interface CountryFacet {
   count: number;
 }
 
+export interface AdminUsersDashboardStats {
+  total: number;
+  students: number;
+  instructors: number;
+  createdLast30Days: number;
+  active: number;
+  pending: number;
+  suspended: number;
+  banned: number;
+  deleted: number;
+}
+
+/** Indicateurs de l'espace apprenants, calculés sur les comptes métier uniquement. */
+export async function getAdminUsersDashboardStats(): Promise<AdminUsersDashboardStats> {
+  const audience: Prisma.UserWhereInput = {
+    role: { in: ["STUDENT", "INSTRUCTOR"] },
+  };
+  const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+
+  const [total, students, instructors, createdLast30Days, active, pending, suspended, banned, deleted] =
+    await Promise.all([
+      prisma.user.count({ where: audience }),
+      prisma.user.count({ where: { role: "STUDENT" } }),
+      prisma.user.count({ where: { role: "INSTRUCTOR" } }),
+      prisma.user.count({ where: { ...audience, createdAt: { gte: thirtyDaysAgo } } }),
+      prisma.user.count({ where: { ...audience, status: "ACTIVE", bannedAt: null } }),
+      prisma.user.count({ where: { ...audience, status: "PENDING_VERIFICATION", bannedAt: null } }),
+      prisma.user.count({ where: { ...audience, status: "SUSPENDED", bannedAt: null } }),
+      prisma.user.count({ where: { ...audience, bannedAt: { not: null } } }),
+      prisma.user.count({ where: { ...audience, status: "DELETED", bannedAt: null } }),
+    ]);
+
+  return { total, students, instructors, createdLast30Days, active, pending, suspended, banned, deleted };
+}
+
 export async function listUserCountries(): Promise<CountryFacet[]> {
   const rows = await prisma.user.groupBy({
     by: ["country"],
