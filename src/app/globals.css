@@ -236,6 +236,31 @@ body {
   --text-3xl--line-height: 2.5rem;
 }
 
+/* Finition des surfaces dans les espaces de travail. `data-slot` permet de
+ * faire évoluer toutes les cartes métier sans toucher au site public ni
+ * répéter les mêmes classes dans chaque écran. */
+[data-admin-text] [data-slot="card"] {
+  border-radius: 1rem;
+  border-color: color-mix(in srgb, var(--border) 82%, transparent);
+  box-shadow:
+    0 1px 2px rgb(15 23 42 / 0.035),
+    0 10px 30px rgb(15 23 42 / 0.045);
+}
+
+[data-admin-text] [data-slot="card-header"] {
+  padding-bottom: 1rem;
+}
+
+[data-admin-text] [data-slot="card-title"] {
+  letter-spacing: -0.015em;
+}
+
+.dark [data-admin-text] [data-slot="card"] {
+  box-shadow:
+    0 1px 2px rgb(0 0 0 / 0.16),
+    0 14px 34px rgb(0 0 0 / 0.12);
+}
+
 /* Mode focus apprentissage : la classe `learning-focus` est posée sur <body>
  * par <FocusModeProvider>. La sidebar (aside data-learning-sidebar) se cache,
  * et la grille passe en une seule colonne pour donner toute la largeur au
