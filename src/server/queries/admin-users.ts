@@ -17,7 +17,17 @@ export interface AdminUsersFilters {
   inactiveDays?: number; // dernier login il y a plus de X jours
   page?: number;
   pageSize?: number;
+  sort?: AdminUsersSort;
+  direction?: "asc" | "desc";
 }
+
+export type AdminUsersSort =
+  | "name"
+  | "company"
+  | "role"
+  | "status"
+  | "country"
+  | "createdAt";
 
 export interface AdminUserRow {
   id: string;
@@ -34,6 +44,7 @@ export interface AdminUserRow {
   createdAt: Date;
   ordersCount: number;
   totalSpentCentsEur: number;
+  enrollmentsCount: number;
 }
 
 export async function listAdminUsers(
@@ -66,10 +77,19 @@ export async function listAdminUsers(
   }
   if (ors.length > 0) where.OR = ors;
 
+  const direction = filters.direction === "asc" ? "asc" : "desc";
+  const orderBy: Prisma.UserOrderByWithRelationInput =
+    filters.sort === "name" ? { name: direction }
+    : filters.sort === "company" ? { company: { name: direction } }
+    : filters.sort === "role" ? { role: direction }
+    : filters.sort === "status" ? { status: direction }
+    : filters.sort === "country" ? { country: direction }
+    : { createdAt: direction };
+
   const [rows, total] = await Promise.all([
     prisma.user.findMany({
       where,
-      orderBy: { createdAt: "desc" },
+      orderBy,
       skip,
       take: pageSize,
       select: {
@@ -85,6 +105,7 @@ export async function listAdminUsers(
         bannedAt: true,
         lastLoginAt: true,
         createdAt: true,
+        _count: { select: { enrollments: true } },
       },
     }),
     prisma.user.count({ where }),
@@ -107,9 +128,10 @@ export async function listAdminUsers(
   }
 
   return {
-    rows: rows.map(({ company, ...u }) => ({
+    rows: rows.map(({ company, _count, ...u }) => ({
       ...u,
       companyName: company?.name ?? null,
+      enrollmentsCount: _count.enrollments,
       ordersCount: aggMap.get(u.id)?.orders ?? 0,
       totalSpentCentsEur: aggMap.get(u.id)?.spentEur ?? 0,
     })),

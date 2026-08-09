@@ -41,14 +41,14 @@ export function ConfirmDialog({
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center" role="dialog" aria-modal="true">
+    <div className="fixed inset-0 z-50 flex items-stretch justify-center sm:items-center sm:p-4" role="dialog" aria-modal="true">
       <button
         type="button"
         aria-label="Fermer"
         onClick={onClose}
         className="absolute inset-0 bg-black/40"
       />
-      <div className="relative w-full max-w-md rounded-lg border border-border bg-background p-5 shadow-xl">
+      <div className="relative flex h-[100dvh] w-full max-w-md flex-col justify-center overflow-y-auto border border-border bg-background p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] pt-[max(1.25rem,env(safe-area-inset-top))] shadow-xl sm:h-auto sm:rounded-lg">
         <h2 className="text-base font-semibold tracking-tight text-foreground">
           {title}
         </h2>

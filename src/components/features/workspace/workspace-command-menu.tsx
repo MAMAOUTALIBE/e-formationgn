@@ -116,13 +116,12 @@ export function WorkspaceCommandMenu({
         onClick={() => setOpen(true)}
         aria-label="Rechercher"
         aria-keyshortcuts="Meta+K Control+K"
-        className="group flex w-full items-center gap-2.5 rounded-full border border-border bg-muted/50 px-3.5 py-2.5 text-left text-sm text-muted-foreground transition-colors hover:border-foreground/25 hover:bg-muted"
+        className="group flex h-11 w-11 items-center justify-center gap-2.5 rounded-full border border-border bg-muted/50 p-0 text-left text-sm text-muted-foreground transition-colors hover:border-foreground/25 hover:bg-muted sm:h-auto sm:w-full sm:justify-start sm:px-3.5 sm:py-2.5"
       >
         <Search className="h-4 w-4 shrink-0" aria-hidden />
         {/* Deux libellés plutôt qu'un masqué : sur mobile, cacher le texte
             laissait une barre vide sur toute la largeur. */}
-        <span className="flex-1 truncate sm:hidden">Rechercher…</span>
-        <span className="hidden flex-1 truncate sm:inline">{placeholder}</span>
+        <span className="sr-only sm:not-sr-only sm:flex-1 sm:truncate">{placeholder}</span>
         <kbd className="ml-auto hidden shrink-0 rounded border border-border bg-background px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground sm:inline">
           ⌘K
         </kbd>
@@ -130,7 +129,7 @@ export function WorkspaceCommandMenu({
 
       {open ? (
         <div
-          className="fixed inset-0 z-50 flex items-start justify-center pt-[10vh]"
+          className="fixed inset-0 z-50 flex items-stretch justify-center sm:items-start sm:p-4 sm:pt-[10dvh]"
           role="dialog"
           aria-modal="true"
         >
@@ -142,7 +141,7 @@ export function WorkspaceCommandMenu({
           />
           <Command
             label="Recherche"
-            className="relative z-10 w-full max-w-xl overflow-hidden rounded-lg border border-border bg-background shadow-2xl"
+            className="relative z-10 flex h-[100dvh] w-full flex-col overflow-hidden border border-border bg-background pb-[env(safe-area-inset-bottom)] pt-[env(safe-area-inset-top)] shadow-2xl sm:h-auto sm:max-h-[80dvh] sm:max-w-xl sm:rounded-lg sm:p-0"
             shouldFilter={false}
           >
             <div className="flex items-center gap-2 border-b border-border px-3">
@@ -154,7 +153,7 @@ export function WorkspaceCommandMenu({
                 className="h-12 w-full bg-transparent text-sm outline-none placeholder:text-muted-foreground"
               />
             </div>
-            <Command.List className="max-h-[400px] overflow-y-auto py-2">
+            <Command.List className="min-h-0 flex-1 overflow-y-auto py-2 sm:max-h-[400px]">
               <Command.Empty className="px-4 py-6 text-center text-sm text-muted-foreground">
                 {loading
                   ? "Recherche…"

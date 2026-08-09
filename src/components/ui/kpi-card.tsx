@@ -143,8 +143,8 @@ export function KpiCard({
   );
 
   const classes = cn(
-    "group relative flex min-h-36 flex-col overflow-hidden rounded-2xl border border-border/80 bg-card p-4 shadow-[0_1px_2px_rgba(15,23,42,0.04),0_8px_24px_rgba(15,23,42,0.04)] transition duration-200",
-    appearance === "crm" && "min-h-32",
+    "group relative flex min-h-28 min-w-0 flex-col overflow-hidden rounded-2xl border border-border/80 bg-card p-3 sm:min-h-32 sm:p-4 shadow-[0_1px_2px_rgba(15,23,42,0.04),0_8px_24px_rgba(15,23,42,0.04)] transition duration-200",
+    appearance === "crm" && "min-h-28 sm:min-h-32",
     href &&
       "hover:-translate-y-0.5 hover:border-foreground/15 hover:shadow-[0_12px_32px_rgba(15,23,42,0.10)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
     featured && "min-h-40 bg-gradient-to-br from-card via-card to-muted/50",

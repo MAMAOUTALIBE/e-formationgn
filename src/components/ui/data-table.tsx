@@ -78,10 +78,10 @@ export function DataTable<T extends { id: string }>({
   return (
     <div className="overflow-x-auto rounded-lg border border-border bg-card">
       <table
-        className="w-full text-sm"
+        className="hidden w-full text-sm md:table"
         style={{ minWidth: `${minWidth}px` }}
       >
-        <thead className="border-b border-border bg-muted/40 text-left text-xs uppercase tracking-wide text-muted-foreground">
+        <thead className="sticky top-0 z-10 border-b border-border bg-card text-left text-xs uppercase tracking-wide text-muted-foreground shadow-[0_1px_0_var(--border)]">
           {table.getHeaderGroups().map((headerGroup) => (
             <tr key={headerGroup.id}>
               {enableSelection ? (
@@ -159,6 +159,54 @@ export function DataTable<T extends { id: string }>({
           )}
         </tbody>
       </table>
+
+      {/* Sur téléphone, les mêmes lignes et cellules deviennent des cartes.
+          Il n'existe donc aucune copie des données, actions ou permissions. */}
+      <div className="divide-y divide-border md:hidden">
+        {table.getRowModel().rows.length === 0 ? (
+          <p className="px-4 py-10 text-center text-sm text-muted-foreground">
+            {emptyMessage}
+          </p>
+        ) : (
+          table.getRowModel().rows.map((row) => (
+            <article key={row.id} className="grid min-w-0 gap-3 p-4 hover:bg-muted/30">
+              {enableSelection ? (
+                <label className="flex min-h-11 items-center gap-3 text-sm font-medium">
+                  <input
+                    type="checkbox"
+                    aria-label="Sélectionner la ligne"
+                    checked={row.getIsSelected()}
+                    onChange={(e) => row.toggleSelected(e.target.checked)}
+                  />
+                  Sélectionner
+                </label>
+              ) : null}
+              <dl className="grid min-w-0 gap-2">
+                {row.getVisibleCells().map((cell) => {
+                  const header = cell.column.columnDef.header;
+                  const label = typeof header === "string" ? header : undefined;
+                  return (
+                    <div
+                      key={cell.id}
+                      className="grid min-w-0 grid-cols-[minmax(5.5rem,0.75fr)_minmax(0,1.25fr)] items-start gap-3"
+                    >
+                      <dt className="text-xs font-medium text-muted-foreground">
+                        {label ?? "Information"}
+                      </dt>
+                      <dd className="min-w-0 break-words text-right text-sm">
+                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                      </dd>
+                    </div>
+                  );
+                })}
+              </dl>
+            </article>
+          ))
+        )}
+      </div>
     </div>
   );
 }
+
+/** Nom explicite pour les nouveaux écrans, sans casser les imports existants. */
+export const ResponsiveDataTable = DataTable;

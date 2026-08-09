@@ -105,7 +105,7 @@ export async function WorkspaceShell({
     <div
       style={themeStyle}
       data-admin-text={theme.textScale}
-      className="flex h-[100dvh] overflow-hidden border-t-[3px] border-t-[color:var(--brand-danger)] bg-muted/30"
+      className="workspace-shell flex h-[100dvh] min-w-0 overflow-hidden border-t-[3px] border-t-[color:var(--brand-danger)] bg-muted/30"
     >
       {extras}
 
@@ -121,14 +121,14 @@ export async function WorkspaceShell({
           lui, un tableau large élargirait la colonne et déborderait de la
           coquille malgré `overflow-hidden`. */}
       <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
-        <header className="z-30 shrink-0 border-b border-b-[color:var(--admin-header-border,var(--border))] bg-[color:var(--admin-header-bg,var(--background))] text-[color:var(--admin-header-fg,var(--foreground))]">
+        <header className="workspace-header sticky top-0 z-40 shrink-0 border-b border-b-[color:var(--admin-header-border,var(--border))] bg-[color:var(--admin-header-bg,var(--background))] text-[color:var(--admin-header-fg,var(--foreground))]">
           {/* Grille en trois colonnes plutôt qu'un `flex` : les deux colonnes
               latérales font `1fr` chacune, donc la recherche reste centrée sur
               la zone de travail même si le bloc d'actions à droite est bien
               plus large que le bloc de gauche. En `flex`, elle se collait à
               gauche. La colonne centrale est bornée pour ne pas s'étirer sur
               les très grands écrans. */}
-          <div className="grid h-16 grid-cols-[1fr_minmax(0,36rem)_1fr] items-center gap-3 px-4 lg:px-6">
+          <div className="grid min-h-16 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 px-3 py-2 sm:gap-3 sm:px-4 lg:grid-cols-[1fr_minmax(16rem,36rem)_1fr] lg:px-6">
             {/* Sur ≥ lg le logo vit dans la barre latérale ; en dessous, elle
                 est masquée et le logo revient ici, à côté du hamburger. */}
             <div className="flex min-w-0 items-center gap-2">
@@ -140,7 +140,7 @@ export async function WorkspaceShell({
               <Link
                 href={navigation.homeHref}
                 aria-label="Retour à l'accueil"
-                className="hidden sm:block lg:hidden"
+                className="hidden md:block lg:hidden"
               >
                 <Logo width={120} priority />
               </Link>
@@ -154,7 +154,7 @@ export async function WorkspaceShell({
               />
             </div>
 
-            <div className="flex shrink-0 items-center gap-2 justify-self-end">
+            <div className="flex min-w-0 shrink-0 items-center gap-1 sm:gap-2 justify-self-end">
               {headerActions}
               <ThemeToggle className="hidden md:inline-flex" />
               <UserMenu showIdentity user={user} />
@@ -165,8 +165,10 @@ export async function WorkspaceShell({
         <WorkspaceSectionNav nav={nav} />
 
         {/* Seule zone défilante de l'espace. */}
-        <main className="min-h-0 min-w-0 flex-1 overflow-y-auto overscroll-contain bg-[radial-gradient(circle_at_top_right,color-mix(in_srgb,var(--brand-primary)_4%,transparent),transparent_24rem)] px-4 py-6 sm:px-6 lg:px-8">
-          {children}
+        <main className="workspace-main min-h-0 min-w-0 flex-1 overflow-y-auto overflow-x-hidden overscroll-contain bg-[radial-gradient(circle_at_top_right,color-mix(in_srgb,var(--brand-primary)_4%,transparent),transparent_24rem)]">
+          <div className="workspace-content mx-auto min-w-0 w-full max-w-[2400px] px-[clamp(0.75rem,2vw,2.5rem)] py-[clamp(1rem,2vw,2rem)]">
+            {children}
+          </div>
         </main>
 
         <WorkspaceFooter

@@ -52,6 +52,47 @@ export async function reactivateUser(userId: string): Promise<ActionResult> {
   return { success: true, message: "Compte réactivé." };
 }
 
+export async function bulkSetUserState(
+  userIds: string[],
+  state: "ACTIVE" | "SUSPENDED" | "BANNED" | "DELETED",
+): Promise<ActionResult> {
+  const admin = await requireAdmin();
+  const ids = [...new Set(userIds)].slice(0, 100);
+  if (ids.length === 0) return { success: false, message: "Aucun compte sélectionné." };
+  const data = state === "BANNED"
+    ? { status: "SUSPENDED" as const, bannedAt: new Date(), bannedReason: "Action groupée administrateur" }
+    : state === "ACTIVE"
+      ? { status: "ACTIVE" as const, bannedAt: null, bannedReason: null }
+      : { status: state };
+  await prisma.user.updateMany({ where: { id: { in: ids } }, data });
+  await Promise.all(ids.map((id) => audit(admin.userId, `user.bulk-${state.toLowerCase()}`, id)));
+  revalidatePath("/admin/utilisateurs");
+  return { success: true, message: `${ids.length} compte${ids.length > 1 ? "s" : ""} mis à jour.` };
+}
+
+export async function bulkAssignCompany(userIds: string[], companyId: string): Promise<ActionResult> {
+  const admin = await requireAdmin();
+  const ids = [...new Set(userIds)].slice(0, 100);
+  if (!ids.length || !companyId) return { success: false, message: "Sélection et société requises." };
+  const company = await prisma.company.findUnique({ where: { id: companyId }, select: { id: true, status: true } });
+  if (!company || company.status === "ARCHIVED") return { success: false, message: "Société invalide ou archivée." };
+  await prisma.user.updateMany({ where: { id: { in: ids } }, data: { companyId } });
+  await Promise.all(ids.map((id) => audit(admin.userId, "user.assign-company", id, { companyId })));
+  revalidatePath("/admin/utilisateurs");
+  return { success: true, message: `${ids.length} compte${ids.length > 1 ? "s" : ""} affecté${ids.length > 1 ? "s" : ""}.` };
+}
+
+export async function exportSelectedUsersCsv(userIds: string[]): Promise<{ csv: string; filename: string } | { error: string }> {
+  try { await requireAdmin(); } catch { return { error: "Non autorisé." }; }
+  const ids = [...new Set(userIds)].slice(0, 100);
+  if (!ids.length) return { error: "Aucun compte sélectionné." };
+  const users = await prisma.user.findMany({ where: { id: { in: ids } }, select: { id: true, name: true, email: true, role: true, status: true, country: true, createdAt: true } });
+  return {
+    csv: rowsToCsv(users.map((user) => ({ ...user, name: user.name ?? "", country: user.country ?? "", createdAt: user.createdAt.toISOString() }))),
+    filename: `apprenants-selection-${new Date().toISOString().slice(0, 10)}.csv`,
+  };
+}
+
 export async function banUser(userId: string, reason: string): Promise<ActionResult> {
   const admin = await requireAdmin();
   await prisma.user.update({

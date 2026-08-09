@@ -57,7 +57,7 @@ export function DetailDrawer({
       />
       <aside
         className={cn(
-          "absolute right-0 top-0 flex h-full w-full flex-col bg-background shadow-xl",
+          "absolute right-0 top-0 flex h-[100dvh] w-full flex-col bg-background pb-[env(safe-area-inset-bottom)] pt-[env(safe-area-inset-top)] shadow-xl",
           SIZE_CLASS[size],
         )}
       >
@@ -73,7 +73,7 @@ export function DetailDrawer({
           <button
             type="button"
             onClick={onClose}
-            className="inline-flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"
+            className="inline-flex h-11 w-11 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"
             aria-label="Fermer le panneau"
           >
             <X className="h-4 w-4" aria-hidden />

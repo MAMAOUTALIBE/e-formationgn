@@ -48,7 +48,7 @@ export function WorkspaceSidebar({
     <aside
       className={cn(
         "hidden shrink-0 flex-col overflow-hidden border-r border-[color:var(--admin-sidebar-border,var(--border))] bg-[color:var(--admin-sidebar-bg,var(--background))] text-[color:var(--admin-sidebar-fg,var(--foreground))] transition-[width] duration-200 lg:flex",
-        collapsed ? "lg:w-[4.75rem]" : "lg:w-64",
+        collapsed ? "lg:w-[4.75rem]" : "lg:w-64 2xl:w-72",
       )}
     >
       {/* Le logo est posé sur une carte blanche : la barre latérale est
