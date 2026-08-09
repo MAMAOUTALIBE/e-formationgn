@@ -7,6 +7,7 @@ import { revalidatePath, updateTag } from "next/cache";
 import { requireAnyAdminRole } from "@/lib/auth/authorization";
 import { failedCriteriaLabels } from "@/lib/validators/course-publish";
 import { prisma } from "@/lib/prisma";
+import { nanoid } from "nanoid";
 import {
   COURSE_NOT_DELETABLE_MESSAGE,
   getCourseDeletionStatus,
@@ -153,6 +154,92 @@ export async function bulkUnpublish(courseIds: string[]): Promise<ActionResult> 
     success: true,
     message: `${courseIds.length} cours archivés.`,
   };
+}
+
+export async function bulkPublish(courseIds: string[]): Promise<ActionResult> {
+  if (courseIds.length === 0) return { success: false, message: "Aucun cours sélectionné." };
+  for (const id of courseIds) {
+    const result = await approveCourse(id);
+    if (!result.success) return result;
+  }
+  return { success: true, message: `${courseIds.length} cours publiés.` };
+}
+
+export async function duplicateCourse(courseId: string): Promise<ActionResult> {
+  const admin = await requireAdmin();
+  const source = await prisma.course.findUnique({
+    where: { id: courseId },
+    include: {
+      tags: { select: { id: true } },
+      sections: {
+        orderBy: { displayOrder: "asc" },
+        include: {
+          lessons: {
+            orderBy: { displayOrder: "asc" },
+            include: { resources: true },
+          },
+        },
+      },
+    },
+  });
+  if (!source) return { success: false, message: "Cours introuvable." };
+
+  const copy = await prisma.course.create({
+    data: {
+      slug: `${source.slug}-copie-${nanoid(6).toLowerCase()}`,
+      title: `${source.title} — copie`,
+      subtitle: source.subtitle,
+      description: source.description,
+      thumbnailUrl: source.thumbnailUrl,
+      level: source.level,
+      language: source.language,
+      durationSeconds: source.durationSeconds,
+      priceEUR: source.priceEUR,
+      priceUSD: source.priceUSD,
+      priceGNF: source.priceGNF,
+      priceXOF: source.priceXOF,
+      metaTitle: source.metaTitle,
+      metaDescription: source.metaDescription,
+      whatYouWillLearn: source.whatYouWillLearn,
+      requirements: source.requirements,
+      targetAudience: source.targetAudience,
+      status: "DRAFT",
+      instructorId: source.instructorId,
+      categoryId: source.categoryId,
+      tags: { connect: source.tags },
+      sections: {
+        create: source.sections.map((section) => ({
+          title: section.title,
+          description: section.description,
+          displayOrder: section.displayOrder,
+          lessons: {
+            create: section.lessons.map((lesson) => ({
+              title: lesson.title,
+              description: lesson.description,
+              type: lesson.type,
+              displayOrder: lesson.displayOrder,
+              isFreePreview: lesson.isFreePreview,
+              externalVideoUrl: lesson.externalVideoUrl,
+              textContent: lesson.textContent,
+              resourceUrl: lesson.resourceUrl,
+              resourceFileName: lesson.resourceFileName,
+              transcript: lesson.transcript,
+              resources: {
+                create: lesson.resources.map((resource) => ({
+                  title: resource.title,
+                  url: resource.url,
+                  fileSizeBytes: resource.fileSizeBytes,
+                })),
+              },
+            })),
+          },
+        })),
+      },
+    },
+  });
+  await audit(admin.userId, "course.duplicate", copy.id, { sourceId: courseId });
+  revalidatePath("/admin/cours");
+  return { success: true, message: "Cours dupliqué en brouillon." };
 }
 
 export async function bulkChangeCategory(

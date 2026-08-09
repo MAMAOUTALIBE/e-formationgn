@@ -3,7 +3,6 @@
 import type { Prisma } from "@/generated/prisma/client";
 import type { CourseStatus } from "@/generated/prisma/enums";
 import { prisma } from "@/lib/prisma";
-import { computeQualityScore } from "@/lib/courses/quality-score";
 
 export interface AdminCoursesFilters {
   q?: string;
@@ -13,7 +12,17 @@ export interface AdminCoursesFilters {
   featured?: boolean;
   page?: number;
   pageSize?: number;
+  sort?: AdminCoursesSort;
+  direction?: "asc" | "desc";
 }
+
+export type AdminCoursesSort =
+  | "title"
+  | "status"
+  | "instructor"
+  | "category"
+  | "enrollments"
+  | "updatedAt";
 
 export interface AdminCourseRow {
   id: string;
@@ -53,10 +62,19 @@ export async function listAdminCourses(
   if (filters.featured === true) where.isFeatured = true;
   if (filters.featured === false) where.isFeatured = false;
 
+  const direction = filters.direction === "asc" ? "asc" : "desc";
+  const orderBy: Prisma.CourseOrderByWithRelationInput =
+    filters.sort === "title" ? { title: direction }
+    : filters.sort === "status" ? { status: direction }
+    : filters.sort === "instructor" ? { instructor: { name: direction } }
+    : filters.sort === "category" ? { category: { name: direction } }
+    : filters.sort === "enrollments" ? { totalEnrollments: direction }
+    : { updatedAt: direction };
+
   const [rows, total] = await Promise.all([
     prisma.course.findMany({
       where,
-      orderBy: { updatedAt: "desc" },
+      orderBy,
       skip,
       take: pageSize,
       select: {
@@ -112,57 +130,30 @@ export async function listFeaturedCoursesAdmin(): Promise<AdminCourseRow[]> {
 }
 
 export async function getAdminCoursesDashboardData() {
-  const courses = await prisma.course.findMany({
-    select: {
-      status: true,
-      isFeatured: true,
-      averageRating: true,
-      totalRatings: true,
-      totalEnrollments: true,
-      categoryId: true,
-      category: { select: { name: true } },
-    },
-  });
-  const instructors = await prisma.user.findMany({
-    where: { isInstructor: true },
-    select: { id: true, name: true, email: true },
-    orderBy: [{ name: "asc" }, { email: "asc" }],
-  });
-  const ratings = courses.filter((course) => course.totalRatings > 0);
-  const scored = courses
-    .map((course) => computeQualityScore(course))
-    .filter((result) => result.tier !== "indéfini");
-  const categoryMap = new Map<string, { id: string; name: string; count: number }>();
-  for (const course of courses) {
-    const current = categoryMap.get(course.categoryId) ?? {
-      id: course.categoryId,
-      name: course.category.name,
-      count: 0,
-    };
-    current.count += 1;
-    categoryMap.set(course.categoryId, current);
-  }
+  const [statusCounts, totals, instructors] = await Promise.all([
+    prisma.course.groupBy({ by: ["status"], _count: { _all: true } }),
+    prisma.course.aggregate({
+      _count: { _all: true },
+      _sum: { totalEnrollments: true },
+    }),
+    prisma.user.findMany({
+      where: { isInstructor: true },
+      select: { id: true, name: true, email: true },
+      orderBy: [{ name: "asc" }, { email: "asc" }],
+    }),
+  ]);
+  const count = (status: CourseStatus) =>
+    statusCounts.find((item) => item.status === status)?._count._all ?? 0;
   return {
     stats: {
-      total: courses.length,
-      published: courses.filter((course) => course.status === "PUBLISHED").length,
-      pending: courses.filter((course) => course.status === "PENDING_REVIEW").length,
-      draft: courses.filter((course) => course.status === "DRAFT").length,
-      archived: courses.filter((course) => course.status === "ARCHIVED").length,
-      rejected: courses.filter((course) => course.status === "REJECTED").length,
-      featured: courses.filter((course) => course.isFeatured).length,
-      enrollments: courses.reduce((sum, course) => sum + course.totalEnrollments, 0),
-      averageRating: ratings.length
-        ? ratings.reduce((sum, course) => sum + course.averageRating, 0) / ratings.length
-        : 0,
-      averageQuality: scored.length
-        ? Math.round(scored.reduce((sum, result) => sum + result.score, 0) / scored.length)
-        : null,
-      scoredCount: scored.length,
+      total: totals._count._all,
+      published: count("PUBLISHED"),
+      pending: count("PENDING_REVIEW"),
+      draft: count("DRAFT"),
+      archived: count("ARCHIVED"),
+      rejected: count("REJECTED"),
+      enrollments: totals._sum.totalEnrollments ?? 0,
     },
     instructors,
-    topCategories: [...categoryMap.values()]
-      .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name))
-      .slice(0, 5),
   };
 }
