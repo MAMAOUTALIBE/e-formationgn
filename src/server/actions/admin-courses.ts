@@ -132,6 +132,7 @@ export async function toggleFeaturedCourse(
   });
   await audit(admin.userId, "course.feature", courseId, { featured });
   revalidatePath("/admin/cours");
+  revalidatePath(`/admin/cours/${courseId}`);
   revalidatePath("/admin/cours/featured");
   invalidateCatalogCaches();
   return { success: true, message: featured ? "Cours mis en avant." : "Retiré de la vitrine." };

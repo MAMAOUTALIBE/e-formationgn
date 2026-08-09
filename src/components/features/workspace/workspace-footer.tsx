@@ -19,7 +19,7 @@ export function WorkspaceFooter({
   settingsHref?: string;
 }) {
   return (
-    <footer className="flex h-10 shrink-0 items-center justify-between gap-4 border-t border-[color:var(--admin-footer-border,var(--border))] bg-[color:var(--admin-footer-bg,var(--background))] px-4 text-xs text-[color:var(--admin-footer-muted,var(--muted-foreground))] lg:px-6">
+    <footer className="workspace-footer flex h-10 shrink-0 items-center justify-between gap-4 border-t border-[color:var(--admin-footer-border,var(--border))] bg-[color:var(--admin-footer-bg,var(--background))] px-4 text-xs text-[color:var(--admin-footer-muted,var(--muted-foreground))] lg:px-6">
       <p className="truncate">
         <span className="font-medium text-[color:var(--admin-footer-fg,var(--foreground))]">
           Gandal

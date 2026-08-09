@@ -17,6 +17,8 @@ interface CourseDeleteButtonProps {
   /** Faux si le cours a des ventes/certificats → suppression définitive impossible. */
   deletable: boolean;
   enrollments: number;
+  /** Affichage compact dans un menu d’actions, sans changer la confirmation. */
+  presentation?: "button" | "menu-item";
 }
 
 export function CourseDeleteButton({
@@ -25,6 +27,7 @@ export function CourseDeleteButton({
   mode,
   deletable,
   enrollments,
+  presentation = "button",
 }: CourseDeleteButtonProps) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -61,10 +64,16 @@ export function CourseDeleteButton({
 
       <Button
         type="button"
-        variant="outline"
+        variant={presentation === "menu-item" ? "ghost" : "outline"}
+        role={presentation === "menu-item" ? "menuitem" : undefined}
         disabled={!deletable || pending}
         onClick={() => setOpen(true)}
-        className="border-[color:var(--brand-danger)]/40 text-[color:var(--brand-danger)] hover:bg-[color:var(--brand-danger)]/10"
+        title={!deletable ? "Suppression indisponible pour ce cours" : undefined}
+        className={
+          presentation === "menu-item"
+            ? "h-9 w-full justify-start px-2 text-[color:var(--brand-danger)] hover:bg-[color:var(--brand-danger)]/10"
+            : "border-[color:var(--brand-danger)]/40 text-[color:var(--brand-danger)] hover:bg-[color:var(--brand-danger)]/10"
+        }
       >
         <Trash2 className="h-4 w-4" />
         Supprimer le cours

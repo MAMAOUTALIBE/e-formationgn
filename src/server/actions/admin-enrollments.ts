@@ -12,6 +12,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
+import type { Prisma } from "@/generated/prisma/client";
 import { requireAdmin } from "@/lib/auth/authorization";
 import { prisma } from "@/lib/prisma";
 import { createAuditLog } from "@/server/services/audit-log";
@@ -151,6 +152,91 @@ const grantToUsersSchema = z
     userIds: z.array(z.string().min(1)).min(1, "Sélectionnez au moins un compte."),
   })
   .strict();
+
+const grantCandidatesPageSchema = z
+  .object({
+    courseId: z.string().min(1),
+    query: z.string().trim().max(100).default(""),
+    offset: z.number().int().min(0).default(0),
+    limit: z.number().int().min(1).max(100).default(50),
+  })
+  .strict();
+
+export interface CourseGrantCandidatePage {
+  success: boolean;
+  candidates: Array<{
+    id: string;
+    name: string;
+    email: string;
+    alreadyEnrolled: boolean;
+  }>;
+  total: number;
+  message?: string;
+}
+
+/** Recherche et pagination serveur des comptes ouvrables à une formation. */
+export async function loadCourseGrantCandidates(input: {
+  courseId: string;
+  query?: string;
+  offset?: number;
+  limit?: number;
+}): Promise<CourseGrantCandidatePage> {
+  try {
+    await requireAdmin();
+  } catch {
+    return { success: false, candidates: [], total: 0, message: "Non autorisé." };
+  }
+
+  const parsed = grantCandidatesPageSchema.safeParse(input);
+  if (!parsed.success) {
+    return { success: false, candidates: [], total: 0, message: "Recherche invalide." };
+  }
+
+  const { courseId, query, offset, limit } = parsed.data;
+  const where: Prisma.UserWhereInput = {
+    status: "ACTIVE",
+    role: { in: ["STUDENT", "INSTRUCTOR"] },
+    ...(query
+      ? {
+          OR: [
+            { name: { contains: query, mode: "insensitive" } },
+            { email: { contains: query, mode: "insensitive" } },
+          ],
+        }
+      : {}),
+  };
+
+  const [rows, total] = await Promise.all([
+    prisma.user.findMany({
+      where,
+      orderBy: [{ lastName: "asc" }, { email: "asc" }],
+      skip: offset,
+      take: limit,
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        enrollments: {
+          where: { courseId },
+          select: { id: true },
+          take: 1,
+        },
+      },
+    }),
+    prisma.user.count({ where }),
+  ]);
+
+  return {
+    success: true,
+    total,
+    candidates: rows.map((user) => ({
+      id: user.id,
+      name: user.name ?? user.email,
+      email: user.email,
+      alreadyEnrolled: user.enrollments.length > 0,
+    })),
+  };
+}
 
 /**
  * Attribue UNE formation à plusieurs comptes — le geste inverse du précédent.
