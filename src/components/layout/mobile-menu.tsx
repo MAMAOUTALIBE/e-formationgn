@@ -7,6 +7,7 @@ import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 
 import { HeaderSearch } from "@/components/features/courses/header-search";
+import { ThemeToggle } from "@/components/features/theme/theme-toggle";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -42,7 +43,7 @@ export function MobileMenu({ isLoggedIn, role }: MobileMenuProps) {
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="inline-flex h-11 w-11 items-center justify-center rounded-md border border-border bg-background text-foreground shadow-sm transition-colors hover:bg-muted active:bg-muted md:hidden"
+        className="inline-flex h-11 w-11 items-center justify-center rounded-md border border-border bg-background text-foreground shadow-sm transition-colors hover:bg-muted active:bg-muted lg:hidden"
         aria-label="Ouvrir le menu"
         aria-expanded={open}
         aria-controls="mobile-menu-drawer"
@@ -51,7 +52,7 @@ export function MobileMenu({ isLoggedIn, role }: MobileMenuProps) {
       </button>
 
       {open ? (
-        <div className="fixed inset-0 z-50 md:hidden" role="dialog" aria-modal="true">
+        <div className="fixed inset-0 z-50 lg:hidden" role="dialog" aria-modal="true">
           <button
             type="button"
             aria-label="Fermer le menu"
@@ -159,6 +160,11 @@ export function MobileMenu({ isLoggedIn, role }: MobileMenuProps) {
                   </>
                 ) : null}
               </nav>
+
+              <div className="mt-6 flex items-center justify-between gap-3 border-t border-border pt-4">
+                <span className="text-sm font-medium text-foreground">Apparence</span>
+                <ThemeToggle />
+              </div>
             </div>
 
             {!isLoggedIn ? (

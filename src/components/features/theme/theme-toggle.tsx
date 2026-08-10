@@ -1,6 +1,7 @@
 "use client";
 
-// Toggle clair/sombre/auto. Utilisé dans le UserMenu et l'header admin.
+// Toggle clair/sombre/auto. Utilisé dans les headers et menus mobiles du site
+// public comme des espaces de travail.
 // Gating "mounted" indispensable : `useTheme()` retourne `undefined` côté
 // serveur (pas d'accès à localStorage), puis la vraie valeur après mount.
 // Sans gate, les `aria-checked` divergent entre SSR et client → hydration

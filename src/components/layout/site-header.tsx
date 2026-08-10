@@ -4,6 +4,7 @@ import { auth } from "@/auth";
 import { Logo } from "@/components/branding/logo";
 import { UserMenu } from "@/components/features/auth/user-menu";
 import { CartIcon } from "@/components/features/cart/cart-icon";
+import { ThemeToggle } from "@/components/features/theme/theme-toggle";
 import { isTrainingCenterMode } from "@/lib/platform-mode";
 import { HeaderSearch } from "@/components/features/courses/header-search";
 import { NotificationBell } from "@/components/features/notifications/notification-bell";
@@ -52,7 +53,7 @@ export async function SiteHeader() {
         </Link>
 
         <nav
-          className="hidden items-center gap-6 md:flex"
+          className="hidden items-center gap-6 lg:flex"
           aria-label="Navigation principale"
         >
           <CategoriesDropdown
@@ -67,11 +68,12 @@ export async function SiteHeader() {
           )}
         </nav>
 
-        <div className="hidden flex-1 max-w-md md:block">
+        <div className="hidden flex-1 max-w-md lg:block">
           <HeaderSearch />
         </div>
 
         <div className="flex items-center gap-1 md:gap-2">
+          <ThemeToggle className="hidden md:inline-flex" />
           {user ? (
             <>
               <NotificationBell unreadCount={unreadNotifs} />

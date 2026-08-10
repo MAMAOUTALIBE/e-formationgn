@@ -13,6 +13,7 @@ import {
   WorkspaceNav,
   type WorkspaceBadges,
 } from "@/components/features/workspace/workspace-nav";
+import { ThemeToggle } from "@/components/features/theme/theme-toggle";
 import type { ResolvedWorkspaceNav } from "@/lib/workspace/navigation";
 
 interface WorkspaceMobileSidebarProps {
@@ -94,6 +95,10 @@ export function WorkspaceMobileSidebar({
                 badges={badges}
                 defaultClosedGroups={defaultClosedGroups}
               />
+            </div>
+            <div className="flex items-center justify-between gap-3 border-t border-border px-4 py-3 md:hidden">
+              <span className="text-sm font-medium text-foreground">Apparence</span>
+              <ThemeToggle />
             </div>
           </aside>
         </div>
