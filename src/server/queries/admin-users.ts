@@ -1,14 +1,13 @@
 // Requêtes liste/fiche utilisateurs côté admin.
-// Filtres : rôle, statut, q (email/nom), pays, dernière connexion, banni.
+// Filtres apprenants : statut, q (email/nom), pays, dernière connexion, banni.
 // Pagination cursor-less (offset) — adaptée jusqu'à ~50 k users.
 
 import type { Prisma } from "@/generated/prisma/client";
-import type { AccountStatus, UserRole } from "@/generated/prisma/enums";
+import type { AccountStatus } from "@/generated/prisma/enums";
 import { prisma } from "@/lib/prisma";
 
 export interface AdminUsersFilters {
   q?: string;
-  role?: UserRole;
   /** Société de rattachement — le filtre central de la liste des apprenants. */
   companyId?: string;
   status?: AccountStatus;
@@ -24,7 +23,6 @@ export interface AdminUsersFilters {
 export type AdminUsersSort =
   | "name"
   | "company"
-  | "role"
   | "status"
   | "country"
   | "createdAt";
@@ -33,7 +31,6 @@ export interface AdminUserRow {
   id: string;
   email: string;
   name: string | null;
-  role: UserRole;
   status: AccountStatus;
   country: string | null;
   companyId: string | null;
@@ -54,7 +51,9 @@ export async function listAdminUsers(
   const pageSize = Math.min(100, Math.max(10, filters.pageSize ?? 50));
   const skip = (page - 1) * pageSize;
 
-  const where: Prisma.UserWhereInput = {};
+  // Cette requête alimente exclusivement l'espace Apprenants. La frontière
+  // est imposée ici, côté serveur, et ne dépend donc pas d'un filtre d'URL.
+  const where: Prisma.UserWhereInput = { role: "STUDENT" };
   const ors: Prisma.UserWhereInput[] = [];
   if (filters.q && filters.q.trim().length > 0) {
     const q = filters.q.trim();
@@ -65,7 +64,6 @@ export async function listAdminUsers(
       { lastName: { contains: q, mode: "insensitive" } },
     );
   }
-  if (filters.role) where.role = filters.role;
   if (filters.companyId) where.companyId = filters.companyId;
   if (filters.status) where.status = filters.status;
   if (filters.country) where.country = filters.country;
@@ -81,7 +79,6 @@ export async function listAdminUsers(
   const orderBy: Prisma.UserOrderByWithRelationInput =
     filters.sort === "name" ? { name: direction }
     : filters.sort === "company" ? { company: { name: direction } }
-    : filters.sort === "role" ? { role: direction }
     : filters.sort === "status" ? { status: direction }
     : filters.sort === "country" ? { country: direction }
     : { createdAt: direction };
@@ -96,7 +93,6 @@ export async function listAdminUsers(
         id: true,
         email: true,
         name: true,
-        role: true,
         status: true,
         country: true,
         companyId: true,
@@ -252,8 +248,7 @@ export interface CountryFacet {
 
 export interface AdminUsersDashboardStats {
   total: number;
-  students: number;
-  instructors: number;
+  withCompany: number;
   createdLast30Days: number;
   active: number;
   pending: number;
@@ -262,18 +257,17 @@ export interface AdminUsersDashboardStats {
   deleted: number;
 }
 
-/** Indicateurs de l'espace apprenants, calculés sur les comptes métier uniquement. */
+/** Indicateurs de l'espace apprenants, calculés uniquement sur les élèves. */
 export async function getAdminUsersDashboardStats(): Promise<AdminUsersDashboardStats> {
   const audience: Prisma.UserWhereInput = {
-    role: { in: ["STUDENT", "INSTRUCTOR"] },
+    role: "STUDENT",
   };
   const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
 
-  const [total, students, instructors, createdLast30Days, active, pending, suspended, banned, deleted] =
+  const [total, withCompany, createdLast30Days, active, pending, suspended, banned, deleted] =
     await Promise.all([
       prisma.user.count({ where: audience }),
-      prisma.user.count({ where: { role: "STUDENT" } }),
-      prisma.user.count({ where: { role: "INSTRUCTOR" } }),
+      prisma.user.count({ where: { ...audience, companyId: { not: null } } }),
       prisma.user.count({ where: { ...audience, createdAt: { gte: thirtyDaysAgo } } }),
       prisma.user.count({ where: { ...audience, status: "ACTIVE", bannedAt: null } }),
       prisma.user.count({ where: { ...audience, status: "PENDING_VERIFICATION", bannedAt: null } }),
@@ -282,13 +276,13 @@ export async function getAdminUsersDashboardStats(): Promise<AdminUsersDashboard
       prisma.user.count({ where: { ...audience, status: "DELETED", bannedAt: null } }),
     ]);
 
-  return { total, students, instructors, createdLast30Days, active, pending, suspended, banned, deleted };
+  return { total, withCompany, createdLast30Days, active, pending, suspended, banned, deleted };
 }
 
 export async function listUserCountries(): Promise<CountryFacet[]> {
   const rows = await prisma.user.groupBy({
     by: ["country"],
-    where: { country: { not: null } },
+    where: { role: "STUDENT", country: { not: null } },
     _count: { _all: true },
     orderBy: { _count: { country: "desc" } },
     take: 50,

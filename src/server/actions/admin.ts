@@ -130,6 +130,22 @@ export async function applyUserAction(formData: FormData): Promise<ActionResult>
     return { success: false, message: "Vous ne pouvez pas modifier votre propre compte." };
   }
 
+  const target = await prisma.user.findUnique({
+    where: { id: parsed.data.userId },
+    select: { role: true },
+  });
+  if (!target) return { success: false, message: "Compte introuvable." };
+  if (
+    target.role === "STUDENT" &&
+    (parsed.data.action === "promote_admin" || parsed.data.action === "demote_admin")
+  ) {
+    return {
+      success: false,
+      message:
+        "Les rôles internes ne s’appliquent pas aux apprenants. Créez un compte interne séparé.",
+    };
+  }
+
   switch (parsed.data.action) {
     case "suspend":
       await prisma.user.update({
@@ -152,13 +168,15 @@ export async function applyUserAction(formData: FormData): Promise<ActionResult>
     case "demote_admin":
       await prisma.user.update({
         where: { id: parsed.data.userId },
-        data: { role: "STUDENT" },
+        // Retirer un accès interne ne transforme jamais la personne en élève.
+        data: { status: "SUSPENDED", passwordChangedAt: new Date() },
       });
       break;
   }
 
   await audit(admin.userId, `user.${parsed.data.action}`, "User", parsed.data.userId);
   revalidatePath("/admin/utilisateurs");
+  revalidatePath("/admin/equipe");
   return { success: true, message: "Action appliquée." };
 }
 

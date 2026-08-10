@@ -12,7 +12,6 @@ export interface ParsedStudentRow {
   firstName: string;
   lastName: string;
   email: string;
-  role: "STUDENT" | "INSTRUCTOR";
 }
 
 export interface CsvParseResult {
@@ -74,9 +73,8 @@ function looksLikeHeader(cells: string[]): boolean {
 /**
  * Analyse le contenu collé.
  *
- * Colonnes attendues : prénom, nom, email, et éventuellement le rôle
- * (`formateur` pour créer un compte formateur, sinon élève). Une ligne
- * d'en-tête est détectée et ignorée automatiquement.
+ * Colonnes attendues : prénom, nom, email. Les comptes internes sont créés
+ * depuis l'espace « Équipe & accès », jamais depuis un import d'apprenants.
  */
 export function parseStudentCsv(raw: string): CsvParseResult {
   const rows: ParsedStudentRow[] = [];
@@ -129,6 +127,14 @@ export function parseStudentCsv(raw: string): CsvParseResult {
       errors.push({ line: lineNumber, reason: `Email invalide : « ${email} ».` });
       continue;
     }
+    if (roleCell && /formateur|instructor|admin|gestionnaire|manager|support|finance|moderateur|modérateur/i.test(roleCell)) {
+      errors.push({
+        line: lineNumber,
+        reason:
+          "Un compte interne ne peut pas être importé comme apprenant. Utilisez « Équipe & accès ».",
+      });
+      continue;
+    }
     // Doublon interne au fichier : le signaler ici évite un échec obscur de
     // contrainte d'unicité au milieu de l'import.
     if (seen.has(normalizedEmail)) {
@@ -140,14 +146,11 @@ export function parseStudentCsv(raw: string): CsvParseResult {
     }
     seen.add(normalizedEmail);
 
-    const isInstructor = /formateur|instructor/i.test(roleCell ?? "");
-
     rows.push({
       line: lineNumber,
       firstName,
       lastName,
       email: normalizedEmail,
-      role: isInstructor ? "INSTRUCTOR" : "STUDENT",
     });
   }
 

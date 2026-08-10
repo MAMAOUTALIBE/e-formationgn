@@ -128,10 +128,10 @@ export function ImportStudentsForm({
             Liste des élèves
           </label>
           <p className="text-xs text-muted-foreground">
-            Trois colonnes : prénom, nom, email — plus « formateur » en 4ᵉ colonne
-            pour créer un compte formateur. Point-virgule, virgule ou tabulation,
-            avec ou sans ligne d&apos;en-tête. Maximum {MAX_IMPORT_ROWS} lignes par
-            envoi.
+            Trois colonnes apprenant : prénom, nom, email. Point-virgule,
+            virgule ou tabulation, avec ou sans ligne d&apos;en-tête. Maximum
+            {" "}{MAX_IMPORT_ROWS} lignes par envoi. Les comptes internes se
+            créent séparément dans « Équipe &amp; accès ».
           </p>
           <textarea
             id="csv"

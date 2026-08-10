@@ -6,6 +6,7 @@
 import type { UserRole } from "@/generated/prisma/enums";
 import { revalidatePath } from "next/cache";
 
+import { isStaffRole } from "@/lib/account-audience";
 import { requireAdmin } from "@/lib/auth/authorization";
 import { checkUserRateLimit, rateLimitMessage } from "@/lib/auth/rate-limit-ip";
 import { csvResponseHeaders, rowsToCsv } from "@/lib/csv";
@@ -28,6 +29,25 @@ async function audit(
     targetId,
     metadata: metadata ?? null,
   });
+}
+
+async function learnerIdsOrError(
+  requestedIds: string[],
+): Promise<{ ids: string[] } | { error: string }> {
+  const ids = [...new Set(requestedIds)].slice(0, 100);
+  if (ids.length === 0) return { error: "Aucun apprenant sélectionné." };
+
+  const learners = await prisma.user.findMany({
+    where: { id: { in: ids }, role: "STUDENT" },
+    select: { id: true },
+  });
+  if (learners.length !== ids.length) {
+    return {
+      error:
+        "La sélection contient un compte interne. Aucune modification n’a été appliquée.",
+    };
+  }
+  return { ids: learners.map((learner) => learner.id) };
 }
 
 export async function suspendUser(userId: string, reason: string): Promise<ActionResult> {
@@ -57,8 +77,9 @@ export async function bulkSetUserState(
   state: "ACTIVE" | "SUSPENDED" | "BANNED" | "DELETED",
 ): Promise<ActionResult> {
   const admin = await requireAdmin();
-  const ids = [...new Set(userIds)].slice(0, 100);
-  if (ids.length === 0) return { success: false, message: "Aucun compte sélectionné." };
+  const targets = await learnerIdsOrError(userIds);
+  if ("error" in targets) return { success: false, message: targets.error };
+  const { ids } = targets;
   const data = state === "BANNED"
     ? { status: "SUSPENDED" as const, bannedAt: new Date(), bannedReason: "Action groupée administrateur" }
     : state === "ACTIVE"
@@ -72,8 +93,10 @@ export async function bulkSetUserState(
 
 export async function bulkAssignCompany(userIds: string[], companyId: string): Promise<ActionResult> {
   const admin = await requireAdmin();
-  const ids = [...new Set(userIds)].slice(0, 100);
-  if (!ids.length || !companyId) return { success: false, message: "Sélection et société requises." };
+  if (!companyId) return { success: false, message: "Sélection et société requises." };
+  const targets = await learnerIdsOrError(userIds);
+  if ("error" in targets) return { success: false, message: targets.error };
+  const { ids } = targets;
   const company = await prisma.company.findUnique({ where: { id: companyId }, select: { id: true, status: true } });
   if (!company || company.status === "ARCHIVED") return { success: false, message: "Société invalide ou archivée." };
   await prisma.user.updateMany({ where: { id: { in: ids } }, data: { companyId } });
@@ -84,9 +107,9 @@ export async function bulkAssignCompany(userIds: string[], companyId: string): P
 
 export async function exportSelectedUsersCsv(userIds: string[]): Promise<{ csv: string; filename: string } | { error: string }> {
   try { await requireAdmin(); } catch { return { error: "Non autorisé." }; }
-  const ids = [...new Set(userIds)].slice(0, 100);
-  if (!ids.length) return { error: "Aucun compte sélectionné." };
-  const users = await prisma.user.findMany({ where: { id: { in: ids } }, select: { id: true, name: true, email: true, role: true, status: true, country: true, createdAt: true } });
+  const targets = await learnerIdsOrError(userIds);
+  if ("error" in targets) return targets;
+  const users = await prisma.user.findMany({ where: { id: { in: targets.ids }, role: "STUDENT" }, select: { id: true, name: true, email: true, role: true, status: true, country: true, createdAt: true } });
   return {
     csv: rowsToCsv(users.map((user) => ({ ...user, name: user.name ?? "", country: user.country ?? "", createdAt: user.createdAt.toISOString() }))),
     filename: `apprenants-selection-${new Date().toISOString().slice(0, 10)}.csv`,
@@ -127,15 +150,37 @@ export async function changeUserRole(
   role: UserRole,
 ): Promise<ActionResult> {
   const admin = await requireAdmin();
+  if (userId === admin.userId) {
+    return { success: false, message: "Vous ne pouvez pas modifier votre propre rôle." };
+  }
+  if (!isStaffRole(role)) {
+    return {
+      success: false,
+      message: "Un compte interne ne peut pas être transformé en apprenant.",
+    };
+  }
+  const target = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { role: true },
+  });
+  if (!target || !isStaffRole(target.role)) {
+    return {
+      success: false,
+      message:
+        "Ce compte est un apprenant. Créez un compte interne séparé pour lui attribuer un rôle.",
+    };
+  }
   await prisma.user.update({
     where: { id: userId },
     data: {
       role,
-      isInstructor: role === "INSTRUCTOR" || role === "ADMIN",
+      isInstructor: role === "INSTRUCTOR",
     },
   });
   await audit(admin.userId, "user.role-change", userId, { role });
+  revalidatePath("/admin/equipe");
   revalidatePath(`/admin/utilisateurs/${userId}`);
+  revalidatePath("/admin/formateurs");
   return { success: true, message: "Rôle modifié." };
 }
 
@@ -173,6 +218,7 @@ export async function exportUsersCsv(): Promise<{ csv: string; filename: string 
   if (!rl.ok) return { error: rateLimitMessage(rl.resetAt) };
 
   const users = await prisma.user.findMany({
+    where: { role: "STUDENT" },
     orderBy: { createdAt: "desc" },
     take: 5000,
     select: {
@@ -209,7 +255,7 @@ export async function exportUsersCsv(): Promise<{ csv: string; filename: string 
     metadata: { rowCount: rows.length },
   });
 
-  return { csv: rowsToCsv(rows), filename: `users-${new Date().toISOString().slice(0, 10)}.csv` };
+  return { csv: rowsToCsv(rows), filename: `apprenants-${new Date().toISOString().slice(0, 10)}.csv` };
 }
 
 // Garde csvResponseHeaders pour les éventuelles routes /api d'export.

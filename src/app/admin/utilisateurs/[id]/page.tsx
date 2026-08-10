@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { StatusBadge } from "@/components/ui/status-badge";
+import { STAFF_ROLE_LABELS, STAFF_ROLES, type StaffRole } from "@/lib/account-audience";
 import { isTrainingCenterMode } from "@/lib/platform-mode";
 import { prisma } from "@/lib/prisma";
 import {
@@ -42,10 +43,12 @@ export default async function AdminUserDetailPage({ params }: PageProps) {
   const { id } = await params;
   const data = await getAdminUserDetail(id);
   if (!data) notFound();
+  const isLearner = data.user.role === "STUDENT";
+  const backHref = isLearner ? "/admin/utilisateurs" : "/admin/equipe";
 
   // Catalogue attribuable : uniquement les formations publiées — attribuer un
   // brouillon donnerait un accès à un contenu incomplet.
-  const assignableCourses = isTrainingCenterMode()
+  const assignableCourses = isTrainingCenterMode() && isLearner
     ? await prisma.course.findMany({
         where: { status: "PUBLISHED" },
         orderBy: { title: "asc" },
@@ -63,7 +66,7 @@ export default async function AdminUserDetailPage({ params }: PageProps) {
     Awaited<ReturnType<typeof getStudentRegistrations>>,
     Awaited<ReturnType<typeof listOpenSessions>>,
   ] =
-    data.user.role === "STUDENT"
+    isLearner
       ? await Promise.all([getStudentRegistrations(id), listOpenSessions()])
       : [[], []];
 
@@ -88,10 +91,10 @@ export default async function AdminUserDetailPage({ params }: PageProps) {
   return (
     <div className="space-y-6">
       <Link
-        href="/admin/utilisateurs"
+        href={backHref}
         className="text-sm text-muted-foreground hover:text-foreground"
       >
-        ← Retour à la liste
+        ← Retour {isLearner ? "aux apprenants" : "à l’équipe"}
       </Link>
 
       <header className="flex flex-wrap items-start justify-between gap-4">
@@ -153,13 +156,27 @@ export default async function AdminUserDetailPage({ params }: PageProps) {
       </header>
 
       <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <MiniStat label="Commandes" value={user._count.orders} />
-        <MiniStat label="Inscriptions" value={user._count.enrollments} />
-        <MiniStat label="Cours créés" value={user._count.coursesAuthored} />
-        <MiniStat label="Certificats" value={user._count.certificates} />
+        {isLearner ? (
+          <>
+            <MiniStat label="Commandes" value={user._count.orders} />
+            <MiniStat label="Inscriptions" value={user._count.enrollments} />
+            <MiniStat label="Certificats" value={user._count.certificates} />
+            <MiniStat label="Avis" value={user._count.reviews} />
+          </>
+        ) : (
+          <>
+            <MiniStat label="Cours créés" value={user._count.coursesAuthored} />
+            <MiniStat label="Avis" value={user._count.reviews} />
+            <MiniStat label="Questions" value={user._count.questions} />
+            <MiniStat
+              label="Dernière connexion"
+              value={user.lastLoginAt?.toLocaleDateString("fr-FR") ?? "Jamais"}
+            />
+          </>
+        )}
       </section>
 
-      {user.role === "STUDENT" ? (
+      {isLearner ? (
         <Card>
           <CardHeader>
             <CardTitle className="text-base">
@@ -213,8 +230,10 @@ export default async function AdminUserDetailPage({ params }: PageProps) {
         </Card>
       ) : null}
 
-      {/* Engagement apprentissage — pattern Udemy student profile */}
-      <section
+      {isLearner ? (
+        <>
+          {/* Engagement apprentissage — pattern Udemy student profile */}
+          <section
         aria-labelledby="engagement-heading"
         className="rounded-lg border border-border bg-card p-5"
       >
@@ -253,9 +272,9 @@ export default async function AdminUserDetailPage({ params }: PageProps) {
             ? ` · Lifetime spend : ${(lifetimeSpendEur / 100).toLocaleString("fr-FR", { minimumFractionDigits: 2 })} €`
             : ""}
         </p>
-      </section>
+          </section>
 
-      <section className="grid gap-4 sm:grid-cols-2">
+          <section className="grid gap-4 sm:grid-cols-2">
         {spendByCurrency.map((s) => (
           <Card key={s.currency}>
             <CardHeader>
@@ -270,9 +289,9 @@ export default async function AdminUserDetailPage({ params }: PageProps) {
             </CardContent>
           </Card>
         ))}
-      </section>
+          </section>
 
-      <Card>
+          <Card>
         <CardHeader>
           <CardTitle className="text-base">Commandes récentes</CardTitle>
         </CardHeader>
@@ -305,9 +324,9 @@ export default async function AdminUserDetailPage({ params }: PageProps) {
             </ul>
           )}
         </CardContent>
-      </Card>
+          </Card>
 
-      {isTrainingCenterMode() ? (
+          {isTrainingCenterMode() ? (
         <Card>
           <CardHeader>
             <CardTitle className="text-base">Accès aux formations</CardTitle>
@@ -326,9 +345,9 @@ export default async function AdminUserDetailPage({ params }: PageProps) {
             />
           </CardContent>
         </Card>
-      ) : null}
+          ) : null}
 
-      <Card>
+          <Card>
         <CardHeader>
           <CardTitle className="text-base">Apprentissage</CardTitle>
         </CardHeader>
@@ -354,7 +373,9 @@ export default async function AdminUserDetailPage({ params }: PageProps) {
             </ul>
           )}
         </CardContent>
-      </Card>
+          </Card>
+        </>
+      ) : null}
 
       <Card>
         <CardHeader>
@@ -439,7 +460,14 @@ export default async function AdminUserDetailPage({ params }: PageProps) {
               Bannir
             </Button>
           </form>
-          <RoleChangeForm currentRole={user.role} userId={user.id} />
+          {!isLearner ? (
+            <StaffRoleChangeForm currentRole={user.role as StaffRole} userId={user.id} />
+          ) : (
+            <p className="rounded-md border border-border bg-muted/30 p-3 text-sm text-muted-foreground">
+              Ce compte reste un apprenant. Pour donner un accès interne à cette
+              personne, créez un compte séparé depuis « Équipe &amp; accès ».
+            </p>
+          )}
           <form
             action={async () => {
               "use server";
@@ -521,24 +549,18 @@ function ServerActionButton({
   );
 }
 
-function RoleChangeForm({
+function StaffRoleChangeForm({
   currentRole,
   userId,
 }: {
-  currentRole: string;
+  currentRole: StaffRole;
   userId: string;
 }) {
   return (
     <form
       action={async (formData: FormData) => {
         "use server";
-        const role = formData.get("role") as
-          | "STUDENT"
-          | "INSTRUCTOR"
-          | "ADMIN"
-          | "MODERATOR"
-          | "SUPPORT"
-          | "FINANCE";
+        const role = formData.get("role") as StaffRole;
         await changeUserRole(userId, role);
       }}
       className="flex items-center justify-between gap-3"
@@ -550,12 +572,11 @@ function RoleChangeForm({
           defaultValue={currentRole}
           className="rounded-md border border-border bg-background px-2 py-1 text-sm"
         >
-          <option value="STUDENT">Élève</option>
-          <option value="INSTRUCTOR">Formateur</option>
-          <option value="MODERATOR">Modérateur</option>
-          <option value="SUPPORT">Support</option>
-          <option value="FINANCE">Finance</option>
-          <option value="ADMIN">Administrateur</option>
+          {STAFF_ROLES.map((role) => (
+            <option key={role} value={role}>
+              {STAFF_ROLE_LABELS[role]}
+            </option>
+          ))}
         </select>
         <Button type="submit" size="sm" variant="outline">
           Appliquer

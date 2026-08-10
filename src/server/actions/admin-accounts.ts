@@ -30,8 +30,8 @@ import { generateTemporaryPassword } from "@/server/services/temporary-password"
 
 import type { ActionResult } from "./auth";
 
-/** Rôles qu'un centre peut attribuer à la création. */
-const CREATABLE_ROLES = ["STUDENT", "INSTRUCTOR"] as const;
+/** Cet écran crée exclusivement des apprenants. L'équipe a son propre flux. */
+const CREATABLE_ROLES = ["STUDENT"] as const;
 
 const createAccountSchema = z
   .object({
@@ -47,7 +47,7 @@ const createAccountSchema = z
     companyId: z.string().trim().optional().default(""),
   })
   .strict()
-  .refine((v) => v.role !== "STUDENT" || v.companyId !== "", {
+  .refine((v) => v.companyId !== "", {
     message: "Sélectionnez la société de rattachement.",
     path: ["companyId"],
   });
@@ -142,10 +142,8 @@ export async function createCenterAccount(
       phone: phone || null,
       hashedPassword: await hashPassword(temporaryPassword),
       role,
-      // Un formateur n'appartient à aucune société cliente : le champ reste
-      // null pour lui, et le schéma n'exige la société que pour un élève.
-      companyId: companyId || null,
-      isInstructor: role === "INSTRUCTOR",
+      companyId,
+      isInstructor: false,
       // Le compte est immédiatement utilisable : c'est le centre qui a
       // vérifié l'identité de la personne, pas une boucle email.
       status: "ACTIVE",

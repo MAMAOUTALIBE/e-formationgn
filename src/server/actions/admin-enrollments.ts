@@ -54,14 +54,22 @@ export async function grantCourseAccess(
   const { userId, courseIds } = parsed.data;
 
   const [user, courses] = await Promise.all([
-    prisma.user.findUnique({ where: { id: userId }, select: { id: true, email: true } }),
+    prisma.user.findFirst({
+      where: { id: userId, role: "STUDENT" },
+      select: { id: true, email: true },
+    }),
     prisma.course.findMany({
       where: { id: { in: courseIds } },
       select: { id: true, title: true },
     }),
   ]);
 
-  if (!user) return { success: false, message: "Compte introuvable." };
+  if (!user) {
+    return {
+      success: false,
+      message: "Apprenant introuvable. Les comptes internes sont gérés séparément.",
+    };
+  }
   if (courses.length === 0) return { success: false, message: "Formation introuvable." };
 
   // `createMany` + `skipDuplicates` : réattribuer une formation déjà accordée
@@ -195,7 +203,7 @@ export async function loadCourseGrantCandidates(input: {
   const { courseId, query, offset, limit } = parsed.data;
   const where: Prisma.UserWhereInput = {
     status: "ACTIVE",
-    role: { in: ["STUDENT", "INSTRUCTOR"] },
+    role: "STUDENT",
     ...(query
       ? {
           OR: [
@@ -288,10 +296,16 @@ export async function grantCourseToUsers(
   // On restreint aux comptes réellement existants : un identifiant fabriqué
   // ferait échouer tout le lot sur la contrainte de clé étrangère.
   const users = await prisma.user.findMany({
-    where: { id: { in: userIds } },
+    where: { id: { in: userIds }, role: "STUDENT" },
     select: { id: true },
   });
-  if (users.length === 0) return { success: false, message: "Aucun compte valide." };
+  if (users.length !== new Set(userIds).size) {
+    return {
+      success: false,
+      message:
+        "La sélection contient un compte interne ou inconnu. Aucune formation n’a été attribuée.",
+    };
+  }
 
   const result = await prisma.enrollment.createMany({
     data: users.map((u) => ({

@@ -9,7 +9,8 @@ import { useEffect } from "react";
 
 const SHORTCUTS: Record<string, { href: string; label: string }> = {
   d: { href: "/admin", label: "Dashboard" },
-  u: { href: "/admin/utilisateurs", label: "Utilisateurs" },
+  u: { href: "/admin/utilisateurs", label: "Apprenants" },
+  i: { href: "/admin/equipe", label: "Équipe interne" },
   c: { href: "/admin/cours", label: "Cours" },
   f: { href: "/admin/finances", label: "Finances" },
   m: { href: "/admin/marketing", label: "Marketing" },

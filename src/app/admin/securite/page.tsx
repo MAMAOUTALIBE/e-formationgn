@@ -56,7 +56,7 @@ export default async function AdminSecurityHubPage() {
         <CardContent>
           <ul className="grid gap-2 text-sm sm:grid-cols-2">
             <SecurityTile href="/admin/securite/audit" label="Audit log" description="Historique exhaustif des actions sensibles." />
-            <SecurityTile href="/admin/securite/roles" label="Rôles" description="Modérateurs, support, finance." />
+            <SecurityTile href="/admin/equipe" label="Équipe & rôles" description="Comptes internes, rôles et activation." />
             <SecurityTile href="/admin/securite/sessions" label="Connexions" description="Activité récente et déconnexion globale par compte." />
             <SecurityTile href="/admin/securite/logs" label="Logs de connexion" description="Tentatives échouées, IPs bannies." />
             <SecurityTile href="/admin/securite/rgpd" label="RGPD" description="Demandes export/suppression." />

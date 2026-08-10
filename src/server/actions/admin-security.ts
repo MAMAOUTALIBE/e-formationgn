@@ -5,11 +5,14 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
+import { isStaffRole, STAFF_ROLES } from "@/lib/account-audience";
 import { requireAdmin } from "@/lib/auth/authorization";
+import { hashPassword } from "@/lib/auth/password";
 import { checkUserRateLimit, rateLimitMessage } from "@/lib/auth/rate-limit-ip";
 import { rowsToCsv } from "@/lib/csv";
 import { prisma } from "@/lib/prisma";
 import { createAuditLog } from "@/server/services/audit-log";
+import { generateTemporaryPassword } from "@/server/services/temporary-password";
 
 import type { ActionResult } from "./auth";
 
@@ -17,12 +20,10 @@ import type { ActionResult } from "./auth";
 // Réservé à l'ADMIN (requireAdmin). Journalisé. Évite de passer par du SQL
 // direct pour promouvoir un MODERATOR/SUPPORT/FINANCE.
 
-const ASSIGNABLE_ROLES = ["ADMIN", "MODERATOR", "SUPPORT", "FINANCE"] as const;
-
 const assignRoleSchema = z
   .object({
     email: z.string().trim().toLowerCase().email("Email invalide."),
-    role: z.enum(ASSIGNABLE_ROLES),
+    role: z.enum(STAFF_ROLES),
   })
   .strict();
 
@@ -49,14 +50,19 @@ export async function assignAdminRole(
   if (user.role === parsed.data.role) {
     return { success: false, message: `Ce compte est déjà ${parsed.data.role}.` };
   }
+  if (!isStaffRole(user.role)) {
+    return {
+      success: false,
+      message:
+        "Cette adresse appartient à un apprenant. Créez un compte interne séparé pour éviter de mélanger ses accès.",
+    };
+  }
 
   await prisma.user.update({
     where: { id: user.id },
-    // ADMIN obtient aussi les capacités formateur ; les autres rôles ne
-    // touchent pas isInstructor (undefined = champ inchangé).
     data: {
       role: parsed.data.role,
-      isInstructor: parsed.data.role === "ADMIN" ? true : undefined,
+      isInstructor: parsed.data.role === "INSTRUCTOR",
     },
   });
   await createAuditLog({
@@ -66,40 +72,145 @@ export async function assignAdminRole(
     targetId: user.id,
     metadata: { from: user.role, to: parsed.data.role },
   });
-  revalidatePath("/admin/securite/roles");
+  revalidatePath("/admin/equipe");
+  revalidatePath(`/admin/utilisateurs/${user.id}`);
+  revalidatePath("/admin/formateurs");
   return {
     success: true,
     message: `Rôle ${parsed.data.role} attribué à ${parsed.data.email}.`,
   };
 }
 
-export async function revokeAdminRole(userId: string): Promise<ActionResult> {
+export interface CreateStaffAccountResult extends ActionResult {
+  temporaryPassword?: string;
+  createdEmail?: string;
+  values?: Record<string, string>;
+}
+
+const createStaffAccountSchema = z
+  .object({
+    firstName: z.string().trim().min(1, "Prénom requis.").max(80),
+    lastName: z.string().trim().min(1, "Nom requis.").max(80),
+    email: z.string().trim().toLowerCase().email("Email invalide."),
+    role: z.enum(STAFF_ROLES),
+  })
+  .strict();
+
+export async function createStaffAccount(
+  _prev: CreateStaffAccountResult,
+  formData: FormData,
+): Promise<CreateStaffAccountResult> {
   const admin = await requireAdmin();
-  if (userId === admin.userId) {
+  const raw = {
+    firstName: String(formData.get("firstName") ?? ""),
+    lastName: String(formData.get("lastName") ?? ""),
+    email: String(formData.get("email") ?? ""),
+    role: String(formData.get("role") ?? ""),
+  };
+  const parsed = createStaffAccountSchema.safeParse(raw);
+  if (!parsed.success) {
     return {
       success: false,
-      message: "Vous ne pouvez pas révoquer votre propre rôle.",
+      message: "Formulaire incomplet. Votre saisie est conservée.",
+      fieldErrors: parsed.error.flatten().fieldErrors,
+      values: raw,
+    };
+  }
+
+  const existing = await prisma.user.findUnique({
+    where: { email: parsed.data.email },
+    select: { role: true },
+  });
+  if (existing) {
+    return {
+      success: false,
+      message:
+        existing.role === "STUDENT"
+          ? "Cette adresse est déjà celle d’un apprenant. Utilisez une autre adresse pour le compte interne."
+          : "Un compte interne utilise déjà cette adresse.",
+      values: raw,
+    };
+  }
+
+  const temporaryPassword = generateTemporaryPassword();
+  const user = await prisma.user.create({
+    data: {
+      email: parsed.data.email,
+      firstName: parsed.data.firstName,
+      lastName: parsed.data.lastName,
+      name: `${parsed.data.firstName} ${parsed.data.lastName}`,
+      hashedPassword: await hashPassword(temporaryPassword),
+      role: parsed.data.role,
+      isInstructor: parsed.data.role === "INSTRUCTOR",
+      status: "ACTIVE",
+      emailVerified: new Date(),
+      mustChangePassword: false,
+    },
+    select: { id: true, email: true, role: true },
+  });
+
+  await createAuditLog({
+    actorId: admin.userId,
+    action: "staff.create",
+    targetType: "User",
+    targetId: user.id,
+    metadata: { email: user.email, role: user.role },
+  });
+  revalidatePath("/admin/equipe");
+  revalidatePath("/admin/formateurs");
+
+  return {
+    success: true,
+    message: "Compte interne créé.",
+    temporaryPassword,
+    createdEmail: user.email,
+  };
+}
+
+export async function setStaffAccountStatus(
+  userId: string,
+  status: "ACTIVE" | "SUSPENDED",
+): Promise<ActionResult> {
+  const admin = await requireAdmin();
+  if (userId === admin.userId && status === "SUSPENDED") {
+    return {
+      success: false,
+      message: "Vous ne pouvez pas désactiver votre propre compte.",
     };
   }
   const user = await prisma.user.findUnique({
     where: { id: userId },
     select: { role: true, email: true },
   });
-  if (!user) return { success: false, message: "Compte introuvable." };
+  if (!user || !isStaffRole(user.role)) {
+    return { success: false, message: "Compte interne introuvable." };
+  }
 
   await prisma.user.update({
     where: { id: userId },
-    data: { role: "STUDENT", isInstructor: false },
+    data: {
+      status,
+      bannedAt: status === "ACTIVE" ? null : undefined,
+      bannedReason: status === "ACTIVE" ? null : undefined,
+      passwordChangedAt: status === "SUSPENDED" ? new Date() : undefined,
+    },
   });
   await createAuditLog({
     actorId: admin.userId,
-    action: "user.role-revoke",
+    action: status === "ACTIVE" ? "staff.activate" : "staff.suspend",
     targetType: "User",
     targetId: userId,
-    metadata: { from: user.role },
+    metadata: { email: user.email, role: user.role },
   });
-  revalidatePath("/admin/securite/roles");
-  return { success: true, message: `Rôle de ${user.email} révoqué (→ STUDENT).` };
+  revalidatePath("/admin/equipe");
+  revalidatePath(`/admin/utilisateurs/${userId}`);
+  return {
+    success: true,
+    message:
+      status === "ACTIVE"
+        ? `Compte interne de ${user.email} réactivé.`
+        : `Compte interne de ${user.email} désactivé.`,
+  };
 }
 
 export async function exportAuditLogCsv(): Promise<

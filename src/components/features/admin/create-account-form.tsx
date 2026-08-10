@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useActionState, useState } from "react";
+import { useActionState } from "react";
 
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { FormDraft } from "@/components/ui/form-draft";
@@ -37,15 +37,6 @@ export function CreateAccountForm({ companies }: { companies: CompanyOption[] })
   // un échec. Les champs reprennent leur `defaultValue` : en y mettant ce que
   // l'action vient de recevoir, la réinitialisation restaure la saisie.
   const sent = state.values;
-  const submittedRole = sent?.role;
-
-  // Le type de compte pilote l'affichage de la société. Il se déduit plutôt
-  // qu'il ne se synchronise : le choix explicite s'il y en a eu un, sinon ce
-  // qui vient d'être soumis — sans quoi, après un échec, le formulaire
-  // réaffiché ne correspondrait plus au choix de la personne.
-  const [chosenRole, setRole] = useState<string | null>(null);
-  const role = chosenRole ?? submittedRole ?? "STUDENT";
-
   // Sans société enregistrée, aucun élève ne peut être créé : le rattachement
   // est obligatoire et se fait dans une liste. On le dit plutôt que de laisser
   // l'utilisateur buter sur une erreur de validation.
@@ -53,6 +44,7 @@ export function CreateAccountForm({ companies }: { companies: CompanyOption[] })
 
   return (
     <form action={formAction} className="space-y-4">
+      <input type="hidden" name="role" value="STUDENT" />
       {/* Brouillon local : survit à un rafraîchissement ou à un onglet fermé.
           Aucun mot de passe n'y transite — FormDraft ignore ces champs. */}
       <FormDraft storageKey="compte:nouveau" clearWhen={state.success} signal={state} />
@@ -89,7 +81,7 @@ export function CreateAccountForm({ companies }: { companies: CompanyOption[] })
         </FormField>
       </div>
 
-      <div className="grid gap-3 sm:grid-cols-[1fr_200px]">
+      <div>
         <FormField id="email" label="Email" error={errors.email?.[0]}>
           <Input
             id="email"
@@ -99,18 +91,6 @@ export function CreateAccountForm({ companies }: { companies: CompanyOption[] })
             required
             placeholder="eleve@exemple.com"
           />
-        </FormField>
-        <FormField id="role" label="Type de compte" error={errors.role?.[0]}>
-          <Select
-            id="role"
-            name="role"
-            defaultValue={submittedRole ?? "STUDENT"}
-            required
-            onChange={(e) => setRole(e.target.value)}
-          >
-            <option value="STUDENT">Élève</option>
-            <option value="INSTRUCTOR">Formateur</option>
-          </Select>
         </FormField>
       </div>
 
@@ -124,42 +104,38 @@ export function CreateAccountForm({ companies }: { companies: CompanyOption[] })
           <Input id="phone" name="phone" defaultValue={sent?.phone ?? ""} type="tel" maxLength={40} />
         </FormField>
 
-        {/* Société obligatoire pour un élève, sans objet pour un formateur :
-            un formateur n'appartient pas à une société cliente. */}
-        {role === "STUDENT" ? (
-          <FormField
+        <FormField
+          id="companyId"
+          label="Société de rattachement"
+          required
+          error={errors.companyId?.[0]}
+          hint={
+            noCompany
+              ? undefined
+              : "Choix dans la liste : la saisie libre créerait des doublons de client."
+          }
+        >
+          <Select
             id="companyId"
-            label="Société de rattachement"
+            name="companyId"
             required
-            error={errors.companyId?.[0]}
-            hint={
-              noCompany
-                ? undefined
-                : "Choix dans la liste : la saisie libre créerait des doublons de client."
-            }
+            disabled={noCompany}
+            defaultValue={sent?.companyId ?? ""}
           >
-            <Select
-              id="companyId"
-              name="companyId"
-              required
-              disabled={noCompany}
-              defaultValue={sent?.companyId ?? ""}
-            >
-              <option value="" disabled>
-                {noCompany ? "Aucune société enregistrée" : "Sélectionner une société…"}
+            <option value="" disabled>
+              {noCompany ? "Aucune société enregistrée" : "Sélectionner une société…"}
+            </option>
+            {companies.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.name}
+                {c.city ? ` — ${c.city}` : ""}
               </option>
-              {companies.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name}
-                  {c.city ? ` — ${c.city}` : ""}
-                </option>
-              ))}
-            </Select>
-          </FormField>
-        ) : null}
+            ))}
+          </Select>
+        </FormField>
       </div>
 
-      {role === "STUDENT" && noCompany ? (
+      {noCompany ? (
         <Alert variant="destructive">
           <AlertDescription>
             Aucune société n&apos;est enregistrée. Créez d&apos;abord la société
@@ -172,8 +148,8 @@ export function CreateAccountForm({ companies }: { companies: CompanyOption[] })
         </Alert>
       ) : null}
 
-      <SubmitButton disabled={role === "STUDENT" && noCompany}>
-        Créer le compte
+      <SubmitButton disabled={noCompany}>
+        Créer l&apos;apprenant
       </SubmitButton>
     </form>
   );

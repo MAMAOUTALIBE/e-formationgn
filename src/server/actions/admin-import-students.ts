@@ -29,7 +29,6 @@ export interface CreatedAccount {
   firstName: string;
   lastName: string;
   email: string;
-  role: string;
   password: string;
 }
 
@@ -121,8 +120,8 @@ export async function importStudents(
         lastName: row.lastName,
         name: `${row.firstName} ${row.lastName}`,
         hashedPassword: await hashPassword(password),
-        role: row.role,
-        isInstructor: row.role === "INSTRUCTOR",
+        role: "STUDENT",
+        isInstructor: false,
         status: "ACTIVE",
         emailVerified: new Date(),
         mustChangePassword: false,
@@ -145,7 +144,6 @@ export async function importStudents(
       firstName: row.firstName,
       lastName: row.lastName,
       email: row.email,
-      role: row.role,
       password,
     });
   }

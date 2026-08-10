@@ -155,6 +155,14 @@ export const ADMIN_NAV: WorkspaceNavigation = {
       ],
     },
     {
+      href: "/admin/equipe",
+      label: "Équipe & accès",
+      icon: "users",
+      group: "configuration",
+      roles: ADMIN_ONLY,
+      children: [],
+    },
+    {
       href: "/admin/parametres",
       label: "Paramètres",
       icon: "settings",
@@ -175,7 +183,6 @@ export const ADMIN_NAV: WorkspaceNavigation = {
       roles: ADMIN_ONLY,
       badgeKeys: ["pendingGdpr"],
       children: [
-        { href: "/admin/securite/roles", label: "Rôles" },
         { href: "/admin/securite/sessions", label: "Sessions" },
         { href: "/admin/securite/logs", label: "Journaux de connexion" },
         { href: "/admin/securite/audit", label: "Piste d'audit" },
