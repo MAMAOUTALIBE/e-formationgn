@@ -11,17 +11,23 @@ test.describe("CRM admin — cours", () => {
   });
 
   test("centralise catalogue, qualité, modération et vedettes avec les données réelles", async () => {
-    const [pageSource, querySource] = await Promise.all([
+    const [pageSource, querySource, navigationSource, tableSource] = await Promise.all([
       readFile(path.join(root, "src/app/admin/cours/page.tsx"), "utf8"),
       readFile(path.join(root, "src/server/queries/admin-courses.ts"), "utf8"),
+      readFile(path.join(root, "src/lib/workspace/admin-nav.ts"), "utf8"),
+      readFile(path.join(root, "src/components/features/admin/courses-table.tsx"), "utf8"),
     ]);
     expect(pageSource).toContain('data-testid="courses-workspace"');
-    expect(pageSource).toContain("computeQualityScore");
-    expect(pageSource).toContain("/admin/cours/moderation");
-    expect(pageSource).toContain("/admin/cours/featured");
+    expect(pageSource).toContain("getAdminCoursesDashboardData");
+    expect(pageSource).toContain("AdminCoursesTable");
+    expect(pageSource).toContain("CourseFilters");
     expect(pageSource).toContain('name="instructorId"');
+    expect(navigationSource).toContain("/admin/cours/moderation");
+    expect(navigationSource).toContain("/admin/cours/featured");
     expect(querySource).toContain("getAdminCoursesDashboardData");
     expect(querySource).toContain("totalEnrollments");
-    expect(querySource).toContain("topCategories");
+    expect(querySource).toContain("instructors");
+    expect(tableSource).toContain('data-testid="course-actions-menu"');
+    expect(tableSource).toContain("from-brand-primary to-blue-950");
   });
 });
