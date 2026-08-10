@@ -5,17 +5,22 @@ import test from "node:test";
 
 const root = process.cwd();
 
-test("le header réserve la largeur des commandes sans recouvrir la recherche", async () => {
-  const source = await readFile(
-    path.join(root, "src/components/features/workspace/workspace-shell.tsx"),
-    "utf8",
-  );
+test("le header réserve et espace les commandes sans recouvrir la recherche", async () => {
+  const [source, userMenuSource] = await Promise.all([
+    readFile(path.join(root, "src/components/features/workspace/workspace-shell.tsx"), "utf8"),
+    readFile(path.join(root, "src/components/features/auth/user-menu.tsx"), "utf8"),
+  ]);
 
   assert.match(
     source,
     /lg:grid-cols-\[minmax\(0,1fr\)_minmax\(16rem,36rem\)_minmax\(max-content,1fr\)\]/,
   );
+  assert.match(source, /lg:gap-5 lg:px-6 xl:gap-6/);
+  assert.match(source, /sm:gap-2 lg:gap-3/);
   assert.match(source, /<ThemeToggle className="hidden md:inline-flex" \/>/);
   assert.match(source, /<UserMenu showIdentity user=\{user\} \/>/);
   assert.doesNotMatch(source, /lg:grid-cols-\[1fr_minmax\(16rem,36rem\)_1fr\]/);
+  assert.match(userMenuSource, /showIdentity && "xl:pr-2\.5"/);
+  assert.match(userMenuSource, /text-left xl:block/);
+  assert.doesNotMatch(userMenuSource, /showIdentity && "lg:pr-2\.5"/);
 });

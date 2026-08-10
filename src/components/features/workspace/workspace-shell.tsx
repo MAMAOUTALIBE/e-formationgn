@@ -127,8 +127,10 @@ export async function WorkspaceShell({
               de droite garde toutefois au minimum la largeur réelle de ses
               commandes (`max-content`) : elle ne peut donc plus déborder sur
               le champ de recherche lorsque thème, notifications et identité
-              utilisateur sont tous visibles. */}
-          <div className="grid min-h-16 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 px-3 py-2 sm:gap-3 sm:px-4 lg:grid-cols-[minmax(0,1fr)_minmax(16rem,36rem)_minmax(max-content,1fr)] lg:px-6">
+              utilisateur sont tous visibles. Les espacements renforcés sur
+              desktop raccourcissent légèrement la recherche pour laisser une
+              respiration nette avant les commandes d'affichage. */}
+          <div className="grid min-h-16 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 px-3 py-2 sm:gap-3 sm:px-4 lg:grid-cols-[minmax(0,1fr)_minmax(16rem,36rem)_minmax(max-content,1fr)] lg:gap-5 lg:px-6 xl:gap-6">
             {/* Sur ≥ lg le logo vit dans la barre latérale ; en dessous, elle
                 est masquée et le logo revient ici, à côté du hamburger. */}
             <div className="flex min-w-0 items-center gap-2">
@@ -154,7 +156,7 @@ export async function WorkspaceShell({
               />
             </div>
 
-            <div className="flex min-w-0 shrink-0 items-center gap-1 sm:gap-2 justify-self-end">
+            <div className="flex min-w-0 shrink-0 items-center gap-1 justify-self-end sm:gap-2 lg:gap-3">
               {headerActions}
               <ThemeToggle className="hidden md:inline-flex" />
               <UserMenu showIdentity user={user} />

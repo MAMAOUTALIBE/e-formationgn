@@ -16,7 +16,7 @@ interface UserMenuProps {
     role: string;
   };
   /**
-   * Affiche le nom et le rôle à côté de l'avatar (≥ lg).
+   * Affiche le nom et le rôle à côté de l'avatar (≥ xl).
    *
    * Réservé au CRM : sur le site public, la barre du haut est déjà chargée et
    * l'avatar seul suffit.
@@ -75,7 +75,7 @@ export function UserMenu({ user, showIdentity = false }: UserMenuProps) {
         onClick={() => setOpen((current) => !current)}
         className={cn(
           "flex items-center gap-2 rounded-full border border-transparent p-1 transition-colors hover:border-border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-          showIdentity && "lg:pr-2.5",
+          showIdentity && "xl:pr-2.5",
         )}
         aria-haspopup="menu"
         aria-expanded={open}
@@ -83,7 +83,7 @@ export function UserMenu({ user, showIdentity = false }: UserMenuProps) {
       >
         <Avatar src={user.image} alt={user.name ?? user.email} fallback={initials} size={36} />
         {showIdentity ? (
-          <span className="hidden min-w-0 text-left lg:block">
+          <span className="hidden min-w-0 text-left xl:block">
             <span className="block max-w-[10rem] truncate text-sm font-semibold leading-tight">
               {user.name ?? user.email}
             </span>
@@ -93,7 +93,7 @@ export function UserMenu({ user, showIdentity = false }: UserMenuProps) {
           </span>
         ) : null}
         {showIdentity ? (
-          <ChevronDown className="hidden h-4 w-4 shrink-0 opacity-60 lg:block" aria-hidden />
+          <ChevronDown className="hidden h-4 w-4 shrink-0 opacity-60 xl:block" aria-hidden />
         ) : null}
       </button>
 
