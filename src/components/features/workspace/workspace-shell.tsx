@@ -122,13 +122,13 @@ export async function WorkspaceShell({
           coquille malgré `overflow-hidden`. */}
       <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
         <header className="workspace-header sticky top-0 z-40 shrink-0 border-b border-b-[color:var(--admin-header-border,var(--border))] bg-[color:var(--admin-header-bg,var(--background))] text-[color:var(--admin-header-fg,var(--foreground))]">
-          {/* Grille en trois colonnes plutôt qu'un `flex` : les deux colonnes
-              latérales font `1fr` chacune, donc la recherche reste centrée sur
-              la zone de travail même si le bloc d'actions à droite est bien
-              plus large que le bloc de gauche. En `flex`, elle se collait à
-              gauche. La colonne centrale est bornée pour ne pas s'étirer sur
-              les très grands écrans. */}
-          <div className="grid min-h-16 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 px-3 py-2 sm:gap-3 sm:px-4 lg:grid-cols-[1fr_minmax(16rem,36rem)_1fr] lg:px-6">
+          {/* Grille en trois colonnes plutôt qu'un `flex` : la recherche reste
+              centrée tant que l'espace le permet. À partir de `lg`, la colonne
+              de droite garde toutefois au minimum la largeur réelle de ses
+              commandes (`max-content`) : elle ne peut donc plus déborder sur
+              le champ de recherche lorsque thème, notifications et identité
+              utilisateur sont tous visibles. */}
+          <div className="grid min-h-16 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 px-3 py-2 sm:gap-3 sm:px-4 lg:grid-cols-[minmax(0,1fr)_minmax(16rem,36rem)_minmax(max-content,1fr)] lg:px-6">
             {/* Sur ≥ lg le logo vit dans la barre latérale ; en dessous, elle
                 est masquée et le logo revient ici, à côté du hamburger. */}
             <div className="flex min-w-0 items-center gap-2">
