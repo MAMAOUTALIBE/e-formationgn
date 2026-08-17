@@ -15,7 +15,6 @@ export const INSTRUCTOR_NAV: WorkspaceNavigation = {
   groups: [
     { id: "enseignement", label: "Enseignement" },
     { id: "audience", label: "Audience" },
-    { id: "revenus", label: "Revenus" },
   ],
   sections: [
     {
@@ -44,27 +43,6 @@ export const INSTRUCTOR_NAV: WorkspaceNavigation = {
       label: "Avis",
       icon: "star",
       group: "audience",
-      children: [],
-    },
-    {
-      href: "/formateur/paiements",
-      label: "Paiements",
-      icon: "wallet",
-      group: "revenus",
-      children: [],
-    },
-    {
-      href: "/formateur/codes-promo",
-      label: "Codes promo",
-      icon: "tag",
-      group: "revenus",
-      children: [],
-    },
-    {
-      href: "/formateur/affiliation",
-      label: "Affiliation",
-      icon: "link",
-      group: "revenus",
       children: [],
     },
   ],

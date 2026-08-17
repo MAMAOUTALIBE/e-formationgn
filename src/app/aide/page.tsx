@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import {
   ChevronDown,
-  CreditCard,
   GraduationCap,
   LifeBuoy,
   Mail,
@@ -25,7 +24,7 @@ import { Container } from "@/components/ui/container";
 export const metadata: Metadata = {
   title: "Centre d'aide",
   description:
-    "Trouvez rapidement des réponses sur Gandal : compte, achats, apprentissage, formateurs, remboursements.",
+    "Trouvez rapidement des réponses sur Gandal : compte, accès aux formations, apprentissage et formateurs.",
   alternates: { canonical: "/aide" },
 };
 
@@ -63,35 +62,7 @@ const SECTIONS: FaqSection[] = [
       },
       {
         q: "Comment supprimer définitivement mon compte ?",
-        a: "Contactez le support via la page Contact. Conformément au RGPD, nous supprimons toutes vos données personnelles sous 30 jours (les commandes restent anonymisées pour la comptabilité).",
-      },
-    ],
-  },
-  {
-    id: "achats",
-    title: "Achats et paiements",
-    icon: CreditCard,
-    description: "Méthodes de paiement, factures, remboursements.",
-    items: [
-      {
-        q: "Quels moyens de paiement acceptez-vous ?",
-        a: "Carte bancaire internationale (Visa, Mastercard, Amex) via Stripe pour les paiements en EUR ou USD. Mobile Money (Orange Money, MTN MoMo, Wave) et cartes locales via CinetPay pour les paiements en GNF ou XOF.",
-      },
-      {
-        q: "Comment fonctionne la garantie 30 jours ?",
-        a: "Vous avez 30 jours après l'achat pour demander un remboursement intégral, sans avoir à vous justifier. Allez dans « Mes commandes », cliquez sur la commande concernée et choisissez « Demander un remboursement ».",
-      },
-      {
-        q: "Où trouver ma facture ?",
-        a: "Chaque commande payée génère automatiquement une facture téléchargeable au format PDF, disponible depuis « Mes commandes ».",
-      },
-      {
-        q: "Le code promo ne fonctionne pas — que faire ?",
-        a: "Vérifiez l'orthographe (le code est sensible à la casse), sa date d'expiration, et qu'il s'applique bien aux cours présents dans votre panier. Certains codes sont limités à un nombre d'utilisations.",
-      },
-      {
-        q: "Puis-je offrir un cours à quelqu'un ?",
-        a: "La fonctionnalité « cadeau » arrive bientôt. En attendant, vous pouvez acheter le cours puis partager les identifiants de connexion avec le bénéficiaire (sous votre responsabilité).",
+        a: "Contactez le support via la page Contact. Votre demande sera traitée conformément à notre politique de confidentialité.",
       },
     ],
   },
@@ -102,8 +73,8 @@ const SECTIONS: FaqSection[] = [
     description: "Accès aux cours, certificats, lecture vidéo.",
     items: [
       {
-        q: "Combien de temps ai-je accès à un cours acheté ?",
-        a: "À vie. Une fois acheté, le cours reste dans votre bibliothèque « Mon apprentissage » sans limite de durée. Vous pouvez le suivre à votre rythme et revenir autant de fois que nécessaire.",
+        q: "Comment accéder à une formation ?",
+        a: "Votre société ou le gestionnaire de formation vous inscrit à un programme. Les cours attribués apparaissent ensuite dans « Mon apprentissage ».",
       },
       {
         q: "Puis-je suivre un cours sur mobile ?",
@@ -127,23 +98,15 @@ const SECTIONS: FaqSection[] = [
     id: "formateurs",
     title: "Devenir formateur",
     icon: GraduationCap,
-    description: "Création de cours, rémunération, support formateur.",
+    description: "Création de cours et accompagnement pédagogique.",
     items: [
       {
         q: "Qui peut publier un cours sur Gandal ?",
-        a: "Toute personne ayant une expertise à partager. Inscrivez-vous, puis activez votre compte formateur depuis « Devenir formateur ». Votre premier cours doit passer une étape de modération qui dure 2 à 5 jours ouvrés.",
+        a: "Les comptes formateurs sont créés et habilités par le gestionnaire de la plateforme. Les cours suivent ensuite le processus de validation pédagogique.",
       },
       {
-        q: "Comment suis-je rémunéré ?",
-        a: "Vous touchez 70 % du prix de vente (commission plateforme = 30 %) si la vente vient du catalogue Gandal. Vous touchez 85 % (commission = 15 %) si la vente vient de votre lien d'affiliation personnel.",
-      },
-      {
-        q: "Quand suis-je payé ?",
-        a: "Les paiements sont versés via Stripe Connect (Express) au plus tard le 5 du mois suivant la vente, après la fenêtre de remboursement de 30 jours. Configurez vos coordonnées bancaires depuis « Formateur → Paiements ».",
-      },
-      {
-        q: "Puis-je créer mes propres codes promo ?",
-        a: "Oui. Depuis « Formateur → Codes promo », créez des codes ciblés sur vos cours uniquement. La remise est imputée à votre part (la commission plateforme reste calculée sur le prix initial).",
+        q: "Comment suivre les apprenants ?",
+        a: "L'espace formateur permet de consulter l'activité pédagogique, les questions et les avis liés à vos cours.",
       },
     ],
   },
@@ -155,7 +118,7 @@ const SECTIONS: FaqSection[] = [
     items: [
       {
         q: "Mes données sont-elles sécurisées ?",
-        a: "Oui. Mots de passe hashés en bcrypt (cost 12), sessions JWT signées, vérification multi-couche des emails, rate-limiting anti-bruteforce. Aucune donnée bancaire n'est stockée chez nous (Stripe / CinetPay s'en chargent).",
+        a: "Oui. Les mots de passe sont hashés, les sessions signées et les accès protégés par rôle. La plateforme ne collecte aucune donnée bancaire.",
       },
       {
         q: "Comment signaler un cours problématique ou un comportement abusif ?",

@@ -72,17 +72,13 @@ export default async function AdminUserDetailPage({ params }: PageProps) {
 
   const {
     user,
-    orders,
     enrollments,
     recentAudit,
     notes,
-    spendByCurrency,
     engagement,
     lastSessionExpires,
   } = data;
 
-  const lifetimeSpendEur =
-    spendByCurrency.find((s) => s.currency === "EUR")?._sum.totalCents ?? 0;
   const completionRate =
     engagement.lessonsStarted > 0
       ? (engagement.lessonsCompleted / engagement.lessonsStarted) * 100
@@ -158,7 +154,6 @@ export default async function AdminUserDetailPage({ params }: PageProps) {
       <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {isLearner ? (
           <>
-            <MiniStat label="Commandes" value={user._count.orders} />
             <MiniStat label="Inscriptions" value={user._count.enrollments} />
             <MiniStat label="Certificats" value={user._count.certificates} />
             <MiniStat label="Avis" value={user._count.reviews} />
@@ -268,63 +263,8 @@ export default async function AdminUserDetailPage({ params }: PageProps) {
           {lastSessionExpires
             ? ` · Session active jusqu'au ${lastSessionExpires.toLocaleString("fr-FR")}`
             : ""}
-          {lifetimeSpendEur > 0
-            ? ` · Lifetime spend : ${(lifetimeSpendEur / 100).toLocaleString("fr-FR", { minimumFractionDigits: 2 })} €`
-            : ""}
         </p>
           </section>
-
-          <section className="grid gap-4 sm:grid-cols-2">
-        {spendByCurrency.map((s) => (
-          <Card key={s.currency}>
-            <CardHeader>
-              <CardTitle className="text-base">
-                Dépenses {s.currency}
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-2xl font-semibold tracking-tight text-foreground">
-                {((s._sum.totalCents ?? 0) / 100).toLocaleString("fr-FR", { minimumFractionDigits: 2 })}
-              </p>
-            </CardContent>
-          </Card>
-        ))}
-          </section>
-
-          <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Commandes récentes</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {orders.length === 0 ? (
-            <p className="text-sm text-muted-foreground">Aucune commande.</p>
-          ) : (
-            <ul className="divide-y divide-border text-sm">
-              {orders.map((o) => (
-                <li key={o.id} className="flex items-center justify-between gap-3 py-2">
-                  <div className="min-w-0">
-                    <p className="font-medium text-foreground">
-                      {o.items.map((i) => i.course.title).join(", ") || "—"}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      {o.createdAt.toLocaleString("fr-FR")} · {o.id.slice(0, 8)}…
-                    </p>
-                  </div>
-                  <div className="text-right">
-                    <p className="font-medium">
-                      {(o.totalCents / 100).toLocaleString("fr-FR", { minimumFractionDigits: 2 })}{" "}
-                      {o.currency}
-                    </p>
-                    <StatusBadge tone={o.status === "PAID" ? "success" : o.status === "FAILED" ? "danger" : "warning"}>
-                      {o.status}
-                    </StatusBadge>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          )}
-        </CardContent>
-          </Card>
 
           {isTrainingCenterMode() ? (
         <Card>

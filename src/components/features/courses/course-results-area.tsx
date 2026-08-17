@@ -81,7 +81,7 @@ export function CourseResultsArea({
           ) : (
             <div className="space-y-4">
               {courses.map((course) => (
-                <CourseCardList key={course.id} course={course} currency={currency} />
+                <CourseCardList key={course.id} course={course} />
               ))}
             </div>
           )}

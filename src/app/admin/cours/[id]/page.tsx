@@ -14,7 +14,6 @@ import {
   Layers3,
   Pencil,
   Tags,
-  WalletCards,
   X,
 } from "lucide-react";
 
@@ -31,7 +30,6 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { COURSE_LEVEL_LABELS } from "@/lib/format/labels";
 import { formatDurationFromSeconds } from "@/lib/format/duration";
-import { formatPrice } from "@/lib/money";
 import { isTrainingCenterMode } from "@/lib/platform-mode";
 import { prisma } from "@/lib/prisma";
 import { getPublishCriteria } from "@/lib/validators/course-publish";
@@ -197,12 +195,6 @@ function InformationCard({ course, totalLessons }: { course: AdminCourse; totalL
         <dl className="grid grid-cols-2 overflow-hidden rounded-md border border-border sm:grid-cols-4 lg:grid-cols-7">
           <InformationItem icon={<Tags />} label="Catégorie" value={course.category.name} />
           <InformationItem icon={<Gauge />} label="Niveau" value={COURSE_LEVEL_LABELS[course.level]} />
-          <InformationItem
-            icon={<WalletCards />}
-            label="Prix"
-            value={formatPrice(Number(course.priceEUR), "EUR")}
-            title={`Prix USD : ${formatPrice(Number(course.priceUSD), "USD")}`}
-          />
           <InformationItem icon={<Clock3 />} label="Durée" value={formatDurationFromSeconds(course.durationSeconds)} />
           <InformationItem icon={<Layers3 />} label="Sections" value={String(course.sections.length)} />
           <InformationItem icon={<FileText />} label="Leçons" value={String(totalLessons)} />

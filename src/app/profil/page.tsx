@@ -6,7 +6,6 @@ import {
   Clock,
   GraduationCap,
   KeyRound,
-  Settings2,
   ShieldCheck,
   User as UserIcon,
 } from "lucide-react";
@@ -14,7 +13,6 @@ import {
 import { auth } from "@/auth";
 import { AvatarUploader } from "@/components/features/auth/avatar-uploader";
 import { ProfileForm } from "@/components/features/auth/profile-form";
-import { CurrencyToggle } from "@/components/features/preferences/currency-toggle";
 import { Avatar } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Breadcrumbs } from "@/components/ui/breadcrumbs";
@@ -42,7 +40,7 @@ const ROLE_LABELS: Record<string, string> = {
   ADMIN: "Administrateur",
   MODERATOR: "Modérateur",
   SUPPORT: "Support",
-  FINANCE: "Finance",
+  FINANCE: "Accès historique",
   MANAGER: "Gestionnaire",
 };
 
@@ -209,30 +207,6 @@ export default async function ProfilePage() {
                   youtubeUrl: user.youtubeUrl ?? "",
                 }}
               />
-            </CardContent>
-          </Card>
-
-          {/* Préférences */}
-          <Card>
-            <CardHeader>
-              <div className="flex items-center gap-2">
-                <Settings2 className="h-4 w-4 text-muted-foreground" aria-hidden />
-                <CardTitle className="text-base">Préférences</CardTitle>
-              </div>
-              <CardDescription>
-                Devise des prix affichés sur le site et au panier.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <div>
-                  <p className="text-sm font-medium text-foreground">Devise</p>
-                  <p className="text-xs text-muted-foreground">
-                    Devise utilisée pour afficher les prix sur le site et au panier.
-                  </p>
-                </div>
-                <CurrencyToggle current={user.preferredCurrency} />
-              </div>
             </CardContent>
           </Card>
 

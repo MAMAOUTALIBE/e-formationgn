@@ -125,13 +125,6 @@ export function MobileMenu({ isLoggedIn, role }: MobileMenuProps) {
                       Wishlist
                     </DrawerLink>
                     <DrawerLink
-                      href="/panier"
-                      active={pathname === "/panier"}
-                      onClick={close}
-                    >
-                      Panier
-                    </DrawerLink>
-                    <DrawerLink
                       href="/profil"
                       active={pathname === "/profil"}
                       onClick={close}

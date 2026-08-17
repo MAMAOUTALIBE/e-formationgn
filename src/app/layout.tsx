@@ -2,7 +2,6 @@ import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import { Suspense } from "react";
 
-import { AffiliateTracker } from "@/components/features/affiliate/affiliate-tracker";
 import { ImpersonationBanner } from "@/components/features/admin/impersonation-banner";
 import { PageViewTracker } from "@/components/features/analytics/page-view-tracker";
 import { CookieBanner } from "@/components/features/cookie-consent/cookie-banner";
@@ -32,7 +31,7 @@ export const metadata: Metadata = {
     template: "%s · Gandal",
   },
   description:
-    "Gandal est la marketplace francophone de formations en ligne. Apprenez à votre rythme avec des formateurs experts, ou partagez votre savoir.",
+    "Gandal accompagne les sociétés dans la gestion de leurs formations, des inscriptions à la certification.",
   applicationName: "Gandal",
   authors: [{ name: "Gandal" }],
   keywords: [
@@ -40,7 +39,7 @@ export const metadata: Metadata = {
     "e-learning",
     "cours en ligne",
     "francophone",
-    "marketplace formation",
+    "gestion de formation",
   ],
   // Hreflang multi-pays francophones : indique à Google que la même URL est
   // pertinente pour chaque marché (pas de version traduite pour l'instant —
@@ -117,9 +116,6 @@ export default function RootLayout({
           </Suspense>
           <Suspense fallback={null}>
             <SitewideBanner />
-          </Suspense>
-          <Suspense fallback={null}>
-            <AffiliateTracker />
           </Suspense>
           <Suspense fallback={null}>
             <PageViewTracker />

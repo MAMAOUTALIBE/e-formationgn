@@ -15,7 +15,6 @@ export interface ProgramListRow {
   sessionCount: number;
   registrationCount: number;
   upcomingSessionCount: number;
-  revenueCentsEUR: number;
 }
 
 export async function listPrograms(params: { search?: string; status?: string; duration?: string } = {}): Promise<
@@ -65,18 +64,6 @@ export async function listPrograms(params: { search?: string; status?: string; d
     orderBy: [{ status: "asc" }, { title: "asc" }],
   });
 
-  const courseIds = [...new Set(programs.flatMap((program) => program.courses.map((course) => course.courseId)))];
-  const revenue = courseIds.length
-    ? await prisma.orderItem.groupBy({
-        by: ["courseId", "currency"],
-        where: { courseId: { in: courseIds }, order: { status: "PAID" } },
-        _sum: { totalCents: true },
-      })
-    : [];
-  const revenueByCourse = new Map<string, number>();
-  for (const row of revenue) {
-    if (row.currency === "EUR") revenueByCourse.set(row.courseId, row._sum.totalCents ?? 0);
-  }
   const now = new Date();
 
   return programs.map((p) => ({
@@ -89,7 +76,6 @@ export async function listPrograms(params: { search?: string; status?: string; d
     sessionCount: p._count.sessions,
     registrationCount: p.sessions.reduce((sum, session) => sum + session._count.registrations, 0),
     upcomingSessionCount: p.sessions.filter((session) => session.startDate >= now && session.status !== "CANCELLED").length,
-    revenueCentsEUR: p.courses.reduce((sum, course) => sum + (revenueByCourse.get(course.courseId) ?? 0), 0),
   }));
 }
 

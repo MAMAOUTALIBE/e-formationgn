@@ -72,7 +72,7 @@ export function HelpSearch({ items, className }: HelpSearchProps) {
           type="search"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="Tapez votre question (ex : remboursement, certificat)…"
+          placeholder="Tapez votre question (ex : progression, certificat)…"
           className="h-12 w-full rounded-md border border-border bg-card pl-10 pr-10 text-sm text-foreground placeholder:text-muted-foreground/70 focus-visible:border-[color:var(--brand-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           autoComplete="off"
         />

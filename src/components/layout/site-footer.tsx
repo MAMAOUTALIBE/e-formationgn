@@ -130,11 +130,6 @@ export async function SiteFooter() {
               </Link>
             </li>
             <li>
-              <Link href="/cgv#remboursement" className="hover:text-foreground">
-                Remboursement
-              </Link>
-            </li>
-            <li>
               <Link href="/cgv" className="hover:text-foreground">
                 CGV
               </Link>

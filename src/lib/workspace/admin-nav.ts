@@ -14,7 +14,6 @@ const ALL_ADMIN = ["ADMIN", "MODERATOR", "SUPPORT", "FINANCE", "MANAGER"] as con
 // sessions — il est présent dans COMMUNITY_SIDE et CATALOG_SIDE. Il reste
 // tenu à l'écart des finances, de la sécurité et de la configuration : son
 // métier est le suivi pédagogique et administratif.
-const FINANCE_SIDE = ["ADMIN", "FINANCE"] as const;
 const COMMUNITY_SIDE = ["ADMIN", "SUPPORT", "MODERATOR", "MANAGER"] as const;
 const MODERATION_SIDE = ["ADMIN", "MODERATOR"] as const;
 /// Catalogue pédagogique : le modérateur y veille, le gestionnaire y compose.
@@ -28,7 +27,7 @@ export const ADMIN_NAV: WorkspaceNavigation = {
   label: "CRM admin",
   homeHref: "/",
   groups: [
-    { id: "pilotage", label: "Pilotage business" },
+    { id: "pilotage", label: "Pilotage pédagogique" },
     { id: "communaute", label: "Gestion communauté" },
     { id: "catalogue", label: "Catalogue et qualité" },
     { id: "configuration", label: "Configuration" },
@@ -46,26 +45,10 @@ export const ADMIN_NAV: WorkspaceNavigation = {
       label: "Analytics",
       icon: "chart",
       group: "pilotage",
-      roles: FINANCE_SIDE,
+      roles: ALL_ADMIN,
       children: [
-        { href: "/admin/analytics/revenus", label: "Revenus" },
-        { href: "/admin/analytics/funnel", label: "Tunnel de conversion" },
         { href: "/admin/analytics/cohortes", label: "Cohortes" },
-        { href: "/admin/analytics/clients", label: "Clients" },
         { href: "/admin/analytics/apprentissage", label: "Apprentissage" },
-      ],
-    },
-    {
-      href: "/admin/finances",
-      label: "Finances",
-      icon: "wallet",
-      group: "pilotage",
-      roles: FINANCE_SIDE,
-      children: [
-        { href: "/admin/finances/transactions", label: "Transactions" },
-        { href: "/admin/finances/remboursements", label: "Remboursements" },
-        { href: "/admin/finances/payouts", label: "Versements formateurs" },
-        { href: "/admin/finances/rapports", label: "Rapports comptables" },
       ],
     },
     {
@@ -75,10 +58,7 @@ export const ADMIN_NAV: WorkspaceNavigation = {
       group: "pilotage",
       roles: ADMIN_ONLY,
       children: [
-        { href: "/admin/marketing/promotions", label: "Promotions" },
-        { href: "/admin/marketing/codes-promo", label: "Codes promo" },
         { href: "/admin/marketing/campagnes-email", label: "Campagnes email" },
-        { href: "/admin/marketing/affiliation", label: "Affiliation" },
         { href: "/admin/marketing/seo", label: "SEO" },
       ],
     },
@@ -170,9 +150,7 @@ export const ADMIN_NAV: WorkspaceNavigation = {
       roles: ADMIN_ONLY,
       children: [
         { href: "/admin/parametres/branding", label: "Identité visuelle" },
-        { href: "/admin/parametres/commerce", label: "Commerce" },
         { href: "/admin/parametres/emails", label: "Emails" },
-        { href: "/admin/parametres/paiements", label: "Paiements" },
       ],
     },
     {
@@ -192,8 +170,6 @@ export const ADMIN_NAV: WorkspaceNavigation = {
   ],
   standalonePages: [
     { href: "/admin/categories", label: "Catégories" },
-    { href: "/admin/commissions", label: "Commissions" },
-    { href: "/admin/codes-promo", label: "Codes promo (global)" },
     { href: "/admin/cms", label: "Pages CMS" },
   ],
 };

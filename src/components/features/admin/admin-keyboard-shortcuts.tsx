@@ -12,7 +12,6 @@ const SHORTCUTS: Record<string, { href: string; label: string }> = {
   u: { href: "/admin/utilisateurs", label: "Apprenants" },
   i: { href: "/admin/equipe", label: "Équipe interne" },
   c: { href: "/admin/cours", label: "Cours" },
-  f: { href: "/admin/finances", label: "Finances" },
   m: { href: "/admin/marketing", label: "Marketing" },
   s: { href: "/admin/support", label: "Support" },
   o: { href: "/admin/moderation", label: "Modération" },
@@ -84,7 +83,7 @@ export function AdminKeyboardShortcuts() {
 async function showHelpToast() {
   const { toast } = await import("sonner");
   toast.info(
-    "Raccourcis : g+d Dashboard · g+u Users · g+c Cours · g+f Finances · g+m Marketing · g+s Support · g+o Modération · ⌘K Recherche",
+    "Raccourcis : g+d Dashboard · g+u Apprenants · g+c Cours · g+m Communication · g+s Support · g+o Modération · ⌘K Recherche",
     { duration: 8000 },
   );
 }

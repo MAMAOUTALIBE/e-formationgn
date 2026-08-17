@@ -5,7 +5,6 @@ import { CourseEmptyState } from "@/components/features/courses/course-empty-sta
 import { CourseFilterBar } from "@/components/features/courses/course-filter-bar";
 import { CourseFilterSidebar } from "@/components/features/courses/course-filter-sidebar";
 import { CourseResultsArea } from "@/components/features/courses/course-results-area";
-import { CourseSaleBanner } from "@/components/features/courses/course-sale-banner";
 import { FilterTransitionProvider } from "@/components/features/courses/filter-transition-context";
 import { CourseMobileFilterBar } from "@/components/features/courses/course-mobile-filter-bar";
 import { CoursePagination } from "@/components/features/courses/course-pagination";
@@ -16,7 +15,6 @@ import { Breadcrumbs } from "@/components/ui/breadcrumbs";
 import { Container } from "@/components/ui/container";
 import { listCategories } from "@/server/queries/categories";
 import { getCourseFilterCounts, listPublishedCourses } from "@/server/queries/courses";
-import { getActiveSale } from "@/server/queries/sale";
 import { COURSES_PER_PAGE, courseFiltersSchema } from "@/lib/validators/courses";
 
 export const metadata: Metadata = {
@@ -36,7 +34,7 @@ export default async function CoursesCatalogPage({ searchParams }: PageProps) {
   const session = await auth();
   const currency = session?.user.preferredCurrency ?? "EUR";
 
-  const [{ items, total, page, pageCount }, categories, filterCounts, activeSale] =
+  const [{ items, total, page, pageCount }, categories, filterCounts] =
     await Promise.all([
       listPublishedCourses({
         filters,
@@ -45,7 +43,6 @@ export default async function CoursesCatalogPage({ searchParams }: PageProps) {
       }),
       listCategories(),
       getCourseFilterCounts(filters),
-      getActiveSale(),
     ]);
 
   const categoryOptions = categories.map((c) => ({ slug: c.slug, name: c.name }));
@@ -69,12 +66,6 @@ export default async function CoursesCatalogPage({ searchParams }: PageProps) {
               <CourseSearchBar />
             </header>
 
-            {activeSale ? (
-              <CourseSaleBanner
-                endsAt={activeSale.endsAt.toISOString()}
-                coursesCount={activeSale.coursesCount}
-              />
-            ) : null}
 
             {/* Layout 2 colonnes : sidebar filtres + grid résultats, dès lg+.
                 En sm-md on garde la top bar de chips + mobile bottom bar. */}

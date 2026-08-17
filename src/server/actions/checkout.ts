@@ -20,6 +20,7 @@ import { centsToAmount } from "@/lib/money";
 import { isStripeSupported } from "@/lib/payments/currency";
 import { getStripeClient, isStripeConfigured } from "@/lib/stripe";
 import { prisma } from "@/lib/prisma";
+import { isTrainingCenterMode } from "@/lib/platform-mode";
 import { computeCartLines, listCartItems } from "@/server/queries/cart";
 import { buildCheckoutOrder } from "@/server/services/checkout-order-builder";
 
@@ -37,6 +38,12 @@ function sanitizeIdempotencyKey(raw: FormDataEntryValue | null): string | null {
 }
 
 export async function startCheckout(formData: FormData): Promise<ActionResult> {
+  if (isTrainingCenterMode()) {
+    return {
+      success: false,
+      message: "Le paiement est géré en dehors de la plateforme.",
+    };
+  }
   if (!isStripeConfigured()) {
     return {
       success: false,

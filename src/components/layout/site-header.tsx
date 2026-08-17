@@ -3,9 +3,7 @@ import Link from "next/link";
 import { auth } from "@/auth";
 import { Logo } from "@/components/branding/logo";
 import { UserMenu } from "@/components/features/auth/user-menu";
-import { CartIcon } from "@/components/features/cart/cart-icon";
 import { ThemeToggle } from "@/components/features/theme/theme-toggle";
-import { isTrainingCenterMode } from "@/lib/platform-mode";
 import { HeaderSearch } from "@/components/features/courses/header-search";
 import { NotificationBell } from "@/components/features/notifications/notification-bell";
 import { CategoriesDropdown } from "@/components/layout/categories-dropdown";
@@ -15,7 +13,6 @@ import { Button } from "@/components/ui/button";
 import { Container } from "@/components/ui/container";
 import { getDictionary } from "@/lib/i18n/server";
 import { prisma } from "@/lib/prisma";
-import { countCartItems } from "@/server/queries/cart";
 import { listFeaturedCategories } from "@/server/queries/categories";
 
 export async function SiteHeader() {
@@ -25,8 +22,7 @@ export async function SiteHeader() {
 
   // Toutes ces queries en parallèle. `listFeaturedCategories` est déjà
   // mise en cache 1 h (cf. Sprint 1) — coût négligeable par render.
-  const [cartCount, unreadNotifs, headerCategories] = await Promise.all([
-    user ? countCartItems(user.id) : Promise.resolve(0),
+  const [unreadNotifs, headerCategories] = await Promise.all([
     user
       ? prisma.notification.count({
           where: { userId: user.id, isRead: false },
@@ -77,9 +73,6 @@ export async function SiteHeader() {
           {user ? (
             <>
               <NotificationBell unreadCount={unreadNotifs} />
-              {/* Pas de panier en mode centre de formation : aucune vente à
-                  l'unité, l'accès est attribué par le centre. */}
-              {isTrainingCenterMode() ? null : <CartIcon count={cartCount} />}
               <UserMenu
                 user={{
                   name: user.name,

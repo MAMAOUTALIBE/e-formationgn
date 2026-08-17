@@ -127,7 +127,6 @@ export default async function EmailCampaignsPage() {
                   <option value="students">Élèves uniquement</option>
                   <option value="instructors">Formateurs uniquement</option>
                   <option value="inactive_30d">Inactifs 30 j</option>
-                  <option value="cart_abandoned">Paniers abandonnés</option>
                 </Select>
               </FormField>
               <Button type="submit" size="sm">Créer la campagne (brouillon)</Button>

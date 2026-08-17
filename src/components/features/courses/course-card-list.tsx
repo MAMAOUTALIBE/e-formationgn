@@ -9,21 +9,18 @@ import Link from "next/link";
 
 import { Badge } from "@/components/ui/badge";
 import { Stars } from "@/components/ui/stars";
-import type { Currency } from "@/generated/prisma/enums";
 import { getCourseBadges } from "@/lib/courses/badges";
 import { COURSE_LEVEL_LABELS, pluralize } from "@/lib/format/labels";
 import { formatDurationFromSeconds } from "@/lib/format/duration";
 import type { PublicCourseListItem } from "@/server/queries/courses";
 
 import { CourseBadges } from "./course-badges";
-import { CoursePrice } from "./course-price";
 
 interface CourseCardListProps {
   course: PublicCourseListItem;
-  currency?: Currency;
 }
 
-export function CourseCardList({ course, currency = "EUR" }: CourseCardListProps) {
+export function CourseCardList({ course }: CourseCardListProps) {
   const instructorName =
     course.instructor.name ??
     ([course.instructor.firstName, course.instructor.lastName].filter(Boolean).join(" ") ||
@@ -113,20 +110,6 @@ export function CourseCardList({ course, currency = "EUR" }: CourseCardListProps
         </div>
       </div>
 
-      <div className="flex shrink-0 items-end sm:flex-col sm:items-end sm:justify-between">
-        <CoursePrice
-          priceEUR={Number(course.priceEUR)}
-          priceUSD={Number(course.priceUSD)}
-          discountPriceEUR={
-            course.discountPriceEUR != null ? Number(course.discountPriceEUR) : null
-          }
-          discountPriceUSD={
-            course.discountPriceUSD != null ? Number(course.discountPriceUSD) : null
-          }
-          currency={currency}
-          size="md"
-        />
-      </div>
     </article>
   );
 }

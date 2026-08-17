@@ -15,7 +15,6 @@ export interface WizardStep {
 export const WIZARD_STEPS: WizardStep[] = [
   { slug: "", label: "Général" },
   { slug: "programme", label: "Programme" },
-  { slug: "tarification", label: "Tarification" },
   { slug: "seo", label: "SEO & Objectifs" },
 ];
 

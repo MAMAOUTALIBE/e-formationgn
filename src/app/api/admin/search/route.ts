@@ -1,5 +1,5 @@
 // Recherche transverse (Cmd+K) côté admin.
-// Retourne au plus 5 résultats par catégorie : User, Course, Order, Ticket.
+// Retourne au plus 5 résultats par catégorie : User, Course, Ticket.
 // Auth : ADMIN strict (les sous-rôles n'ont pas accès au search global).
 
 import { NextRequest, NextResponse } from "next/server";
@@ -17,7 +17,7 @@ export const dynamic = "force-dynamic";
 const PRIVATE_NO_STORE = "private, no-store, max-age=0, must-revalidate";
 
 type Hit = {
-  type: "user" | "course" | "order" | "ticket";
+  type: "user" | "course" | "ticket";
   id: string;
   title: string;
   subtitle?: string;
@@ -60,7 +60,7 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  const [users, courses, orders, tickets] = await Promise.all([
+  const [users, courses, tickets] = await Promise.all([
     prisma.user.findMany({
       where: {
         OR: [
@@ -81,17 +81,6 @@ export async function GET(request: NextRequest) {
         ],
       },
       select: { id: true, title: true, slug: true, status: true },
-      take: 5,
-    }),
-    prisma.order.findMany({
-      where: {
-        OR: [
-          { id: { contains: q } },
-          { stripeCheckoutSessionId: { contains: q } },
-          { stripePaymentIntentId: { contains: q } },
-        ],
-      },
-      select: { id: true, totalCents: true, currency: true, status: true },
       take: 5,
     }),
     prisma.supportTicket.findMany({
@@ -120,13 +109,6 @@ export async function GET(request: NextRequest) {
       title: c.title,
       subtitle: c.status,
       href: `/admin/cours/${c.id}`,
-    })),
-    ...orders.map((o) => ({
-      type: "order" as const,
-      id: o.id,
-      title: `Commande ${o.id.slice(0, 8)}…`,
-      subtitle: `${(o.totalCents / 100).toFixed(2)} ${o.currency} · ${o.status}`,
-      href: `/admin/finances/transactions?order=${o.id}`,
     })),
     ...tickets.map((t) => ({
       type: "ticket" as const,

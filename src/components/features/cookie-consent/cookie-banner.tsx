@@ -1,7 +1,7 @@
 "use client";
 
 // Bandeau RGPD minimaliste — l'application n'utilise que des cookies
-// strictement nécessaires (session, panier, devise, affiliation).
+// strictement nécessaires (session, sécurité, préférences d'interface).
 // Pas de tracker publicitaire. On utilise useSyncExternalStore pour lire
 // localStorage de façon SSR-safe sans setState dans un useEffect.
 
@@ -53,7 +53,7 @@ export function CookieBanner() {
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <p className="text-sm text-foreground">
           Gandal utilise uniquement des cookies nécessaires au
-          fonctionnement (session, panier, devise, affiliation). Pas de
+          fonctionnement (session, sécurité et préférences d&apos;interface). Pas de
           traceur publicitaire.{" "}
           <Link href="/cookies" className="text-[color:var(--brand-secondary)] hover:underline">
             En savoir plus

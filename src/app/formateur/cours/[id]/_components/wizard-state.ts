@@ -31,10 +31,6 @@ export const getWizardState = cache(
         description: true,
         categoryId: true,
         thumbnailUrl: true,
-        priceEUR: true,
-        priceUSD: true,
-        priceGNF: true,
-        priceXOF: true,
         metaTitle: true,
         whatYouWillLearn: true,
         sections: { select: { lessons: { select: { id: true } } } },
@@ -51,9 +47,6 @@ export const getWizardState = cache(
     const thumbnailOk = Boolean(c.thumbnailUrl);
     const programmeOk =
       c.sections.length > 0 && c.sections.some((s) => s.lessons.length > 0);
-    const priceOk = [c.priceEUR, c.priceUSD, c.priceGNF, c.priceXOF].some(
-      (p) => Number(p) > 0,
-    );
     const seoOk =
       Boolean(c.metaTitle?.trim()) || c.whatYouWillLearn.length > 0;
 
@@ -61,14 +54,12 @@ export const getWizardState = cache(
     const completedSlugs: string[] = [];
     if (titleOk && descriptionOk && thumbnailOk) completedSlugs.push("");
     if (programmeOk) completedSlugs.push("programme");
-    if (priceOk) completedSlugs.push("tarification");
     if (seoOk) completedSlugs.push("seo");
 
     // Verrouillage : prérequis OBLIGATOIRES par étape (true = pas un blocage).
     const required = [
       titleOk && descriptionOk && categoryOk, // Général
       programmeOk, // Programme
-      true, // Tarification (optionnel)
       true, // SEO (optionnel)
     ];
     let unlockedMaxIndex = required.findIndex((ok) => !ok);

@@ -9,13 +9,11 @@ import { cn } from "@/lib/utils";
 import {
   COURSE_LEVEL_LABELS,
   DURATION_FILTER_LABELS,
-  PRICE_FILTER_LABELS,
   SORT_LABELS,
 } from "@/lib/format/labels";
 import {
   COURSE_LEVELS,
   DURATION_FILTERS,
-  PRICE_FILTERS,
   SORT_OPTIONS,
 } from "@/lib/validators/courses";
 
@@ -32,7 +30,6 @@ interface CategoryOption {
 export interface CourseFilterCountsProp {
   categories?: Record<string, number>;
   levels?: Record<string, number>;
-  prices?: Record<string, number>;
   durations?: Record<string, number>;
   ratings?: Record<string, number>;
 }
@@ -65,7 +62,6 @@ export function CourseFilterBar({
   const currentLevelRaw = params.get("level") ?? "";
   const currentLevels = currentLevelRaw ? currentLevelRaw.split(",").filter(Boolean) : [];
   const currentLevel = currentLevels[0] ?? ""; // pour radio mono dans les dropdowns chip
-  const currentPrice = params.get("price") ?? "";
   const currentDurationRaw = params.get("duration") ?? "";
   const currentDurations = currentDurationRaw ? currentDurationRaw.split(",").filter(Boolean) : [];
   const currentDuration = currentDurations[0] ?? "";
@@ -99,7 +95,6 @@ export function CourseFilterBar({
   const activeCount =
     (currentCategory ? 1 : 0) +
     currentLevels.length +
-    (currentPrice ? 1 : 0) +
     currentDurations.length +
     (currentRating ? 1 : 0);
 
@@ -200,31 +195,6 @@ export function CourseFilterBar({
                 >
                   {COURSE_LEVEL_LABELS[lv]}
                   {countSuffix(counts?.levels?.[lv])}
-                </FilterOption>
-              ))}
-            </FilterMenu>
-          )}
-        </FilterChip>
-
-        <FilterChip
-          label="Prix"
-          value={currentPrice}
-          valueLabel={currentPrice ? PRICE_FILTER_LABELS[currentPrice] : ""}
-          onClear={() => update({ price: undefined })}
-        >
-          {(close) => (
-            <FilterMenu>
-              {PRICE_FILTERS.map((p) => (
-                <FilterOption
-                  key={p}
-                  selected={p === "all" ? !currentPrice : currentPrice === p}
-                  onClick={() => {
-                    update({ price: p === "all" ? undefined : p });
-                    close();
-                  }}
-                >
-                  {PRICE_FILTER_LABELS[p]}
-                  {p !== "all" ? countSuffix(counts?.prices?.[p]) : ""}
                 </FilterOption>
               ))}
             </FilterMenu>

@@ -176,8 +176,8 @@ export default function CreditsPage() {
               En téléversant un cours sur Gandal, vous garantissez
               détenir les droits sur les contenus diffusés (vidéos, images,
               textes) ou utiliser des œuvres sous licence permettant cette
-              diffusion. Les contenus de démonstration ci-dessus ne sont pas
-              proposés à la vente.
+              diffusion. Les contenus de démonstration ci-dessus sont utilisés
+              uniquement à des fins pédagogiques.
             </p>
           </section>
         </Container>

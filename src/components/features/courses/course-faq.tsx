@@ -22,27 +22,17 @@ interface FaqItem {
   a: string;
 }
 
-export function CourseFaq({
-  showMoneyBackQuestion = true,
-  showCertificateQuestion = true,
-}: CourseFaqProps = {}) {
+export function CourseFaq(props: CourseFaqProps = {}) {
+  const { showCertificateQuestion = true } = props;
   const items: FaqItem[] = [
     {
       q: "Quand puis-je commencer le cours ?",
-      a: "Immédiatement après l'achat. Le cours apparaît dans « Mon apprentissage » et vous accédez à toutes les leçons sans délai.",
+      a: "Dès que votre gestionnaire vous inscrit, le cours apparaît dans « Mon apprentissage ».",
     },
     {
       q: "Combien de temps ai-je accès au cours ?",
-      a: "À vie. Une fois acheté, le cours reste dans votre bibliothèque et vous pouvez le suivre à votre rythme, autant de fois que vous le souhaitez.",
+      a: "La durée d'accès dépend de la session organisée par votre société. Les dates sont indiquées dans votre espace d'apprentissage.",
     },
-    ...(showMoneyBackQuestion
-      ? [
-          {
-            q: "Puis-je être remboursé si le cours ne me convient pas ?",
-            a: "Oui. Vous avez 30 jours après l'achat pour demander un remboursement intégral, sans justification, depuis la page « Mes commandes ».",
-          },
-        ]
-      : []),
     ...(showCertificateQuestion
       ? [
           {

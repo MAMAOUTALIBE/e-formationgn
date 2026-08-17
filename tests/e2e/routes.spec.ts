@@ -38,7 +38,6 @@ const PROTECTED_PAGES: RouteCase[] = [
   { path: "/formateur", expected: 302 },
   { path: "/profil", expected: 302 },
   { path: "/apprentissage", expected: 302 },
-  { path: "/panier", expected: 302 },
   { path: "/wishlist", expected: 302 },
   { path: "/notifications", expected: 302 },
 ];
@@ -55,10 +54,19 @@ const APIS: RouteCase[] = [
 ];
 
 const WEBHOOKS_GET: RouteCase[] = [
-  // Les webhooks acceptent uniquement POST avec signature.
-  { path: "/api/webhooks/stripe", expected: 405 },
+  // Les intégrations financières retirées répondent 410 ; Mux reste actif.
+  { path: "/api/webhooks/stripe", expected: 410 },
   { path: "/api/webhooks/mux", expected: 405 },
-  { path: "/api/webhooks/cinetpay", expected: 405 },
+  { path: "/api/webhooks/cinetpay", expected: 410 },
+];
+
+const REMOVED_ROUTES: RouteCase[] = [
+  { path: "/panier", expected: 404 },
+  { path: "/admin/finances", expected: 404 },
+  { path: "/formateur/paiements", expected: 404 },
+  { path: "/admin/support/litiges", expected: 404 },
+  { path: "/formateur/cours/demo/insights", expected: 404 },
+  { path: "/api/cron/reconcile-orders", expected: 410 },
 ];
 
 test.describe("Couverture HTTP — pages publiques", () => {
@@ -97,6 +105,15 @@ test.describe("Couverture HTTP — webhooks", () => {
       const r = await request.get(path, { maxRedirects: 0 });
       const statuses = Array.isArray(expected) ? expected : [expected];
       expect(statuses).toContain(r.status());
+    });
+  }
+});
+
+test.describe("Couverture HTTP — fonctions commerciales retirées", () => {
+  for (const { path, expected } of REMOVED_ROUTES) {
+    test(`GET ${path} → ${expected}`, async ({ request }) => {
+      const response = await request.get(path, { maxRedirects: 0 });
+      expect(response.status()).toBe(expected);
     });
   }
 });

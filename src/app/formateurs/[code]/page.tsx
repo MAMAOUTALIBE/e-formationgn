@@ -143,14 +143,6 @@ export default async function PublicInstructorPage({ params }: PageProps) {
     jobTitle: instructor.headline ?? "Formateur",
   };
 
-  // Helper pour suffixer chaque lien cours avec ?ref=<affiliateCode>.
-  // L'affiliation cookie est posée par AffiliateTracker au load de la page
-  // /cours/[slug] — la conversion remonte au bon formateur (commission 15 %).
-  const withRef = (href: string) =>
-    instructor.affiliateCode
-      ? `${href}${href.includes("?") ? "&" : "?"}ref=${instructor.affiliateCode}`
-      : href;
-
   return (
     <>
       <JsonLd id="instructor-jsonld" data={personJsonLd} />
@@ -300,7 +292,7 @@ export default async function PublicInstructorPage({ params }: PageProps) {
                     <CourseCard
                       key={course.id}
                       course={serializeCourseListItem(course)}
-                      href={withRef(`/cours/${course.slug}`)}
+                      href={`/cours/${course.slug}`}
                     />
                   ))}
                 </div>

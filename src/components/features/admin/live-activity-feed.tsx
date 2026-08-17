@@ -1,6 +1,6 @@
 "use client";
 
-// Feed temps réel des dernières activités (signups + orders).
+// Feed temps réel des dernières activités de la plateforme.
 // Polling toutes les 15s sur /api/admin/live-feed. Pulse animation sur les
 // nouveaux items pour signaler visuellement. Stop le polling si l'onglet
 // devient invisible (économise la batterie / coût serveur).
@@ -137,7 +137,7 @@ export function LiveActivityFeed() {
                   {it.kind === "signup" ? (
                     <StatusBadge tone="info">Inscription</StatusBadge>
                   ) : (
-                    <StatusBadge tone="success">Vente</StatusBadge>
+                    <StatusBadge tone="success">Inscription cours</StatusBadge>
                   )}
                   <div className="min-w-0 flex-1">
                     <p className="truncate font-medium text-foreground">

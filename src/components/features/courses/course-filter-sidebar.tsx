@@ -9,7 +9,7 @@
 // contexte de la page (résultats à côté).
 //
 // Multi-select : Niveau et Durée acceptent plusieurs valeurs simultanées
-// (checkboxes). Catégorie, Prix et Note restent mono-select (radios).
+// (checkboxes). Catégorie et Note restent mono-select (radios).
 // Format URL : "?level=BEGINNER,INTERMEDIATE&duration=short,medium".
 
 import { ChevronDown, X } from "lucide-react";
@@ -40,7 +40,6 @@ interface CourseFilterSidebarProps {
   counts?: {
     categories?: Record<string, number>;
     levels?: Record<string, number>;
-    prices?: Record<string, number>;
     durations?: Record<string, number>;
     ratings?: Record<string, number>;
   };
@@ -65,7 +64,6 @@ export function CourseFilterSidebar({
 
   const currentCategory = params.get("category") ?? "";
   const currentLevels = parseCsv(params.get("level"));
-  const currentPrice = params.get("price") ?? "";
   const currentDurations = parseCsv(params.get("duration"));
   const currentRating = params.get("rating") ?? "";
 
@@ -110,7 +108,6 @@ export function CourseFilterSidebar({
   const activeCount =
     (currentCategory && !hideCategory ? 1 : 0) +
     currentLevels.length +
-    (currentPrice ? 1 : 0) +
     currentDurations.length +
     (currentRating ? 1 : 0);
 
@@ -201,25 +198,6 @@ export function CourseFilterSidebar({
         ))}
       </Section>
 
-      <Section title="Prix" defaultOpen>
-        <RadioRow
-          label="Tous"
-          checked={!currentPrice}
-          onChange={() => update({ price: undefined })}
-        />
-        <RadioRow
-          label="Gratuit"
-          count={countLabel(counts?.prices?.free)}
-          checked={currentPrice === "free"}
-          onChange={() => update({ price: "free" })}
-        />
-        <RadioRow
-          label="Payant"
-          count={countLabel(counts?.prices?.paid)}
-          checked={currentPrice === "paid"}
-          onChange={() => update({ price: "paid" })}
-        />
-      </Section>
     </aside>
   );
 }

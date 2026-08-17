@@ -411,9 +411,8 @@ export default async function HomePage() {
                 Partagez votre expertise
               </h2>
               <p className="mt-3 text-base text-white/85">
-                Créez votre cours, fixez votre prix, touchez une audience
-                francophone engagée. Bénéficiez d&apos;un taux préférentiel à
-                15% sur les ventes générées via votre lien d&apos;affiliation.
+                Créez des cours structurés, accompagnez les apprenants et
+                suivez leur progression dans un espace pédagogique complet.
               </p>
             </div>
             <div className="md:justify-self-end">

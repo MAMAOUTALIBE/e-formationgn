@@ -14,25 +14,10 @@
 // commercial reste en place mais dormant, et le retour en arrière tient dans
 // une variable d'environnement.
 
-export type PlatformMode = "marketplace" | "centre_formation";
+export type PlatformMode = "centre_formation";
 
 export function getPlatformMode(): PlatformMode {
-  // On lit la variable PUBLIQUE en premier, et ce n'est pas un détail.
-  //
-  // `PLATFORM_MODE` n'existe que sur le serveur. Or un composant serveur
-  // importé par un composant client — c'est le cas de `CourseCard`, importé
-  // par `CourseResultsArea` — est compilé DANS le paquet navigateur, où cette
-  // variable vaut `undefined`. Le serveur concluait donc « centre de
-  // formation » et masquait les prix, le navigateur concluait « marketplace »
-  // et les réaffichait : React refusait l'hydratation (erreur #418) et les
-  // prix apparaissaient malgré tout dans la page.
-  //
-  // La variable publique, elle, est figée au build dans les DEUX paquets :
-  // les deux rendus s'accordent. Le repli sur `PLATFORM_MODE` conserve le
-  // comportement des déploiements qui ne la fournissent pas encore.
-  const mode =
-    process.env.NEXT_PUBLIC_PLATFORM_MODE ?? process.env.PLATFORM_MODE;
-  return mode === "centre_formation" ? "centre_formation" : "marketplace";
+  return "centre_formation";
 }
 
 /**

@@ -72,16 +72,14 @@ test.describe("Sécurité — admin search anonyme", () => {
 });
 
 test.describe("Sécurité — webhooks signature", () => {
-  test("/api/webhooks/stripe sans signature renvoie 400", async ({
+  test("/api/webhooks/stripe est désactivé", async ({
     request,
   }) => {
     const response = await request.post("/api/webhooks/stripe", {
       data: { type: "test" },
       headers: { "content-type": "application/json" },
     });
-    // 400 si Stripe configuré, 503 si STRIPE_SECRET_KEY absent — les deux
-    // sont des refus valides (pas d'événement traité sans signature).
-    expect([400, 503]).toContain(response.status());
+    expect(response.status()).toBe(410);
   });
 
   test("/api/webhooks/mux sans signature renvoie 400", async ({ request }) => {
@@ -188,7 +186,7 @@ test.describe("Sécurité — cache PWA", () => {
 test.describe("Sécurité — export des transactions", () => {
   test("refuse un accès non authentifié", async ({ request }) => {
     const r = await request.get("/api/admin/transactions-csv", { maxRedirects: 0 });
-    expect([401, 403, 302, 307]).toContain(r.status());
+    expect(r.status()).toBe(410);
     if (r.status() === 200) throw new Error("export accessible sans session");
   });
 });

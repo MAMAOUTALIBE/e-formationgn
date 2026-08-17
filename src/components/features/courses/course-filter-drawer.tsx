@@ -12,12 +12,10 @@ import { Stars } from "@/components/ui/stars";
 import {
   COURSE_LEVEL_LABELS,
   DURATION_FILTER_LABELS,
-  PRICE_FILTER_LABELS,
 } from "@/lib/format/labels";
 import {
   COURSE_LEVELS,
   DURATION_FILTERS,
-  PRICE_FILTERS,
 } from "@/lib/validators/courses";
 
 const RATING_THRESHOLDS = [4.5, 4, 3.5, 3] as const;
@@ -34,7 +32,6 @@ interface CourseFilterDrawerProps {
   counts?: {
     categories?: Record<string, number>;
     levels?: Record<string, number>;
-    prices?: Record<string, number>;
     durations?: Record<string, number>;
     ratings?: Record<string, number>;
   };
@@ -59,7 +56,6 @@ export function CourseFilterDrawer({
 
   const [category, setCategory] = useState("");
   const [level, setLevel] = useState("");
-  const [price, setPrice] = useState("");
   const [duration, setDuration] = useState("");
   const [rating, setRating] = useState("");
 
@@ -73,7 +69,6 @@ export function CourseFilterDrawer({
     if (open) {
       setCategory(params.get("category") ?? "");
       setLevel(params.get("level") ?? "");
-      setPrice(params.get("price") ?? "");
       setDuration(params.get("duration") ?? "");
       setRating(params.get("rating") ?? "");
     }
@@ -87,7 +82,6 @@ export function CourseFilterDrawer({
     };
     if (!hideCategory) set("category", category);
     set("level", level);
-    set("price", price);
     set("duration", duration);
     set("rating", rating);
     next.delete("page");
@@ -100,7 +94,6 @@ export function CourseFilterDrawer({
   function reset() {
     setCategory("");
     setLevel("");
-    setPrice("");
     setDuration("");
     setRating("");
   }
@@ -155,22 +148,6 @@ export function CourseFilterDrawer({
               <option key={lv} value={lv}>
                 {COURSE_LEVEL_LABELS[lv]}
                 {countSuffix(counts?.levels?.[lv])}
-              </option>
-            ))}
-          </Select>
-        </div>
-
-        <div className="space-y-1.5">
-          <Label htmlFor="drawer-price">Prix</Label>
-          <Select
-            id="drawer-price"
-            value={price}
-            onChange={(e) => setPrice(e.target.value)}
-          >
-            {PRICE_FILTERS.map((p) => (
-              <option key={p} value={p === "all" ? "" : p}>
-                {PRICE_FILTER_LABELS[p]}
-                {p !== "all" ? countSuffix(counts?.prices?.[p]) : ""}
               </option>
             ))}
           </Select>

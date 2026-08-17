@@ -17,7 +17,6 @@ import {
 } from "@/server/actions/instructor";
 import { Card, CardContent } from "@/components/ui/card";
 import { pluralize } from "@/lib/format/labels";
-import { formatPrice } from "@/lib/money";
 import {
   computeCourseReadiness,
   listInstructorCourses,
@@ -110,7 +109,6 @@ export default async function InstructorCoursesPage({ searchParams }: PageProps)
                 <th className="px-4 py-3 font-medium">Statut</th>
                 <th className="px-4 py-3 font-medium">Catégorie</th>
                 <th className="hidden px-4 py-3 font-medium sm:table-cell">Élèves</th>
-                <th className="hidden px-4 py-3 font-medium sm:table-cell">Prix</th>
                 <th className="hidden px-4 py-3 font-medium md:table-cell">Sections</th>
                 <th className="hidden px-4 py-3 font-medium md:table-cell">Prêt</th>
                 <th className="px-4 py-3 text-right font-medium">Action</th>
@@ -156,11 +154,6 @@ export default async function InstructorCoursesPage({ searchParams }: PageProps)
                   </td>
                   <td className="hidden px-4 py-3 text-muted-foreground sm:table-cell">
                     {course._count.enrollments}
-                  </td>
-                  <td className="hidden px-4 py-3 text-muted-foreground sm:table-cell">
-                    {Number(course.priceEUR) === 0
-                      ? "Gratuit"
-                      : formatPrice(Number(course.priceEUR), "EUR")}
                   </td>
                   <td className="hidden px-4 py-3 text-muted-foreground md:table-cell">
                     {course._count.sections}

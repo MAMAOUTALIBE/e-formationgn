@@ -15,12 +15,19 @@ import {
 import { requireSession } from "@/lib/auth/authorization";
 import { writeCurrencyCookie } from "@/lib/currency";
 import { prisma } from "@/lib/prisma";
+import { isTrainingCenterMode } from "@/lib/platform-mode";
 import { setCurrencySchema } from "@/lib/validators/checkout";
 import { isUserEnrolledIn } from "@/server/queries/cart";
 
 import type { ActionResult } from "./auth";
 
 export async function addCourseToCart(courseId: string): Promise<ActionResult> {
+  if (isTrainingCenterMode()) {
+    return {
+      success: false,
+      message: "Les accès aux formations sont attribués par votre société.",
+    };
+  }
   const session = await auth();
   if (!session?.user) {
     return {
@@ -75,13 +82,8 @@ export async function addCourseToCart(courseId: string): Promise<ActionResult> {
 // Pourquoi pas direct Stripe : Gandal supporte Stripe + CinetPay selon devise,
 // le panier est l'endroit qui pilote ce choix. Reste 1 clic vs 2 normalement.
 export async function buyCourseNow(courseId: string): Promise<void> {
-  const result = await addCourseToCart(courseId);
-  if (!result.success) {
-    // Si l'add fail (déjà inscrit, rate limit), on redirige quand même vers
-    // /panier qui affichera le message d'erreur via la query string `?msg`.
-    redirect(`/panier?msg=${encodeURIComponent(result.message ?? "Action impossible.")}`);
-  }
-  redirect("/panier");
+  void courseId;
+  redirect("/cours");
 }
 
 // "Garder pour plus tard" — déplace l'item du panier vers la wishlist en une

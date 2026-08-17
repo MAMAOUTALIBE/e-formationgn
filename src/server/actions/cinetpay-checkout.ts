@@ -20,6 +20,7 @@ import { logError } from "@/lib/logger";
 import { isCinetPaySupported } from "@/lib/payments/currency";
 import { cinetPayAmountFromMinor } from "@/lib/payments/cinetpay-validation";
 import { prisma } from "@/lib/prisma";
+import { isTrainingCenterMode } from "@/lib/platform-mode";
 import { buildCheckoutOrder } from "@/server/services/checkout-order-builder";
 
 import type { ActionResult } from "./auth";
@@ -37,6 +38,12 @@ function sanitizeIdempotencyKey(raw: FormDataEntryValue | null): string | null {
 export async function startCinetPayCheckout(
   formData: FormData,
 ): Promise<ActionResult> {
+  if (isTrainingCenterMode()) {
+    return {
+      success: false,
+      message: "Le paiement est géré en dehors de la plateforme.",
+    };
+  }
   if (!isCinetPayConfigured()) {
     return {
       success: false,

@@ -25,7 +25,7 @@ interface Exchange {
 const SUGGESTIONS = [
   "Que dois-je traiter en priorité aujourd'hui ?",
   "Où voir les versements formateurs en attente ?",
-  "Comment se comportent les revenus sur la période ?",
+  "Comment évolue la progression des apprenants sur la période ?",
 ];
 
 export function AdminAssistant() {

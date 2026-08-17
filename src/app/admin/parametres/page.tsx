@@ -17,21 +17,6 @@ const TILES: Array<{ href: string; label: string; description: string }> = [
     description: "CGV, mentions légales, RGPD, FAQ, etc.",
   },
   {
-    href: "/admin/commissions",
-    label: "Commissions",
-    description: "Taux 15 % (affilié) / 30 % (plateforme).",
-  },
-  {
-    href: "/admin/codes-promo",
-    label: "Codes promo plateforme",
-    description: "Codes globaux et codes formateur.",
-  },
-  {
-    href: "/admin/parametres/commerce",
-    label: "Commerce",
-    description: "Devises actives, taxes, méthodes de paiement.",
-  },
-  {
     href: "/admin/parametres/emails",
     label: "Templates emails",
     description: "Emails transactionnels.",

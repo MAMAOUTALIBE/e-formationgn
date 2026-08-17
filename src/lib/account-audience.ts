@@ -23,7 +23,7 @@ export const STAFF_ROLE_LABELS: Record<StaffRole, string> = {
   MANAGER: "Gestionnaire",
   MODERATOR: "Modérateur",
   SUPPORT: "Support",
-  FINANCE: "Finance",
+  FINANCE: "Accès historique",
   ADMIN: "Administrateur",
 };
 

@@ -5,26 +5,18 @@ import { CalendarClock, CheckCircle2, Globe2, MessageSquare, Users } from "lucid
 
 import { auth } from "@/auth";
 import { JsonLd } from "@/components/seo/json-ld";
-import { AddToCartButton } from "@/components/features/cart/add-to-cart-button";
-import { BuyNowButton } from "@/components/features/cart/buy-now-button";
 import { CourseBadges } from "@/components/features/courses/course-badges";
 import { CourseCard } from "@/components/features/courses/course-card";
-import { CourseCouponInput } from "@/components/features/courses/course-coupon-input";
 import { CourseCurriculum } from "@/components/features/courses/course-curriculum";
 import { CourseFaq } from "@/components/features/courses/course-faq";
 import { CourseFeaturedReview } from "@/components/features/courses/course-featured-review";
 import { CourseIncludes } from "@/components/features/courses/course-includes";
 import { CourseInstructorCard } from "@/components/features/courses/course-instructor-card";
-import { CourseMoneyBack } from "@/components/features/courses/course-money-back";
-import { CoursePrice } from "@/components/features/courses/course-price";
 import { CourseAccessNotice } from "@/components/features/courses/course-access-notice";
-import { CoursePromoCountdown } from "@/components/features/courses/course-promo-countdown";
 import { CourseRatingDistribution } from "@/components/features/courses/course-rating-distribution";
 import { CourseReviewsList } from "@/components/features/courses/course-reviews-list";
-import { CourseStickyBuyBar } from "@/components/features/courses/course-sticky-buy-bar";
 import { PromoVideoPlayer } from "@/components/features/courses/promo-video-player";
 import { ReviewForm } from "@/components/features/reviews/review-form";
-import { WishlistButton } from "@/components/features/wishlist/wishlist-button";
 import { SiteFooter } from "@/components/layout/site-footer";
 import { SiteHeader } from "@/components/layout/site-header";
 import { Badge } from "@/components/ui/badge";
@@ -32,9 +24,7 @@ import { Breadcrumbs } from "@/components/ui/breadcrumbs";
 import { Container } from "@/components/ui/container";
 import { Stars } from "@/components/ui/stars";
 import { getCourseBadges } from "@/lib/courses/badges";
-import { getCurrentCurrency } from "@/lib/currency";
 import { COURSE_LEVEL_LABELS, pluralize } from "@/lib/format/labels";
-import { isTrainingCenterMode } from "@/lib/platform-mode";
 import { prisma } from "@/lib/prisma";
 import { buildCourseJsonLd } from "@/lib/seo/json-ld";
 import {
@@ -43,7 +33,6 @@ import {
   getPublishedCourseBySlug,
   getRelatedCourses,
 } from "@/server/queries/courses";
-import { isCourseInWishlist } from "@/server/actions/wishlist";
 
 interface PageProps {
   params: Promise<{ slug: string }>;
@@ -105,34 +94,22 @@ export default async function CourseDetailPage({
   if (!course) notFound();
 
   const isPreview = course.status !== "PUBLISHED";
-  const currency = await getCurrentCurrency(session?.user.preferredCurrency ?? "EUR");
 
-  const trainingCenter = isTrainingCenterMode();
-
-  // État de l'élève vis-à-vis du cours (inscrit ? au panier ? wishlist ?)
+  // État pédagogique de l'apprenant vis-à-vis du cours.
   let alreadyEnrolled = false;
-  let alreadyInCart = false;
-  let inWishlist = false;
   let myReview: { rating: number; title: string; comment: string } | null = null;
   if (session?.user) {
-    const [enrollment, cartItem, wishlist, review] = await Promise.all([
+    const [enrollment, review] = await Promise.all([
       prisma.enrollment.findUnique({
         where: { userId_courseId: { userId: session.user.id, courseId: course.id } },
         select: { id: true },
       }),
-      prisma.cartItem.findUnique({
-        where: { userId_courseId: { userId: session.user.id, courseId: course.id } },
-        select: { id: true },
-      }),
-      isCourseInWishlist(course.id),
       prisma.review.findUnique({
         where: { userId_courseId: { userId: session.user.id, courseId: course.id } },
         select: { rating: true, title: true, comment: true },
       }),
     ]);
     alreadyEnrolled = Boolean(enrollment);
-    alreadyInCart = Boolean(cartItem);
-    inWishlist = wishlist;
     if (review) {
       myReview = {
         rating: review.rating,
@@ -169,7 +146,7 @@ export default async function CourseDetailPage({
 
   // Card prix : extraite en fragment pour être réutilisée dans la sticky
   // desktop ET dans la version inline mobile (sous le hero).
-  const priceCard = (
+  const accessCard = (
     <div className="overflow-hidden rounded-lg border border-border bg-card text-card-foreground shadow-md">
       {course.promoVideoPlaybackId || course.promoVideoUrl ? (
         <PromoVideoPlayer
@@ -191,57 +168,7 @@ export default async function CourseDetailPage({
         </div>
       )}
       <div className="space-y-5 p-5">
-        {/* Compte à rebours si une promo a une date de fin. Le composant
-            client se masque lui-même une fois l'offre expirée — on évite ainsi
-            d'appeler Date.now() pendant le render serveur (impur). */}
-        {course.discountEndsAt ? (
-          <CoursePromoCountdown endsAt={course.discountEndsAt.toISOString()} />
-        ) : null}
-
-        {trainingCenter ? (
-          /* Centre de formation : aucune vente à l'unité. On affiche l'état
-             d'accès réel plutôt qu'un prix et un bouton d'achat inopérants. */
-          <CourseAccessNotice alreadyEnrolled={alreadyEnrolled} slug={course.slug} />
-        ) : (
-          <>
-            <CoursePrice
-              priceEUR={Number(course.priceEUR)}
-              priceUSD={Number(course.priceUSD)}
-              discountPriceEUR={
-                course.discountPriceEUR != null ? Number(course.discountPriceEUR) : null
-              }
-              discountPriceUSD={
-                course.discountPriceUSD != null ? Number(course.discountPriceUSD) : null
-              }
-              currency={currency}
-              size="lg"
-            />
-
-            <div className="space-y-2">
-              <AddToCartButton
-                courseId={course.id}
-                fullWidth
-                size="lg"
-                alreadyEnrolled={alreadyEnrolled}
-                alreadyInCart={alreadyInCart}
-              />
-              <BuyNowButton
-                courseId={course.id}
-                fullWidth
-                alreadyEnrolled={alreadyEnrolled}
-              />
-              <WishlistButton
-                courseId={course.id}
-                fullWidth
-                initialActive={inWishlist}
-              />
-            </div>
-
-            <CourseMoneyBack className="w-full justify-center" />
-
-            <CourseCouponInput courseId={course.id} currency={currency} />
-          </>
-        )}
+        <CourseAccessNotice alreadyEnrolled={alreadyEnrolled} slug={course.slug} />
 
         <div className="border-t border-border pt-5">
           <CourseIncludes
@@ -385,12 +312,12 @@ export default async function CourseDetailPage({
           </Container>
         </section>
 
-        {/* Contenu principal + sticky price card */}
+        {/* Contenu principal et état d'accès */}
         <Container className="grid gap-8 py-8 lg:grid-cols-[1fr_360px]">
           {/* Colonne principale */}
           <div className="space-y-8">
             {/* Card prix inline mobile/tablette (sous le hero) */}
-            <div className="lg:hidden">{priceCard}</div>
+            <div className="lg:hidden">{accessCard}</div>
 
             {course.whatYouWillLearn && course.whatYouWillLearn.length > 0 ? (
               <section
@@ -519,11 +446,11 @@ export default async function CourseDetailPage({
             <CourseFaq />
           </div>
 
-          {/* Sticky price card desktop — chevauche le hero via marge négative.
+          {/* Carte d'accès desktop — chevauche le hero via marge négative.
               `lg:-mt-72` (≈18 rem) fait remonter la card sur le bandeau bleu,
               `lg:sticky lg:top-24` la garde visible pendant tout le scroll. */}
           <aside className="hidden lg:block lg:-mt-72">
-            <div className="sticky top-24">{priceCard}</div>
+            <div className="sticky top-24">{accessCard}</div>
           </aside>
         </Container>
 
@@ -539,7 +466,6 @@ export default async function CourseDetailPage({
                   <CourseCard
                     key={relatedCourse.id}
                     course={relatedCourse}
-                    currency={currency}
                   />
                 ))}
               </div>
@@ -547,25 +473,6 @@ export default async function CourseDetailPage({
           </section>
         ) : null}
       </main>
-
-      {/* Barre fixe en bas (mobile uniquement) — prix + CTA toujours visibles.
-          Pas de vente en mode centre de formation : la barre n'est pas rendue. */}
-      {trainingCenter ? null : (
-      <CourseStickyBuyBar
-        courseId={course.id}
-        priceEUR={Number(course.priceEUR)}
-        priceUSD={Number(course.priceUSD)}
-        discountPriceEUR={
-          course.discountPriceEUR != null ? Number(course.discountPriceEUR) : null
-        }
-        discountPriceUSD={
-          course.discountPriceUSD != null ? Number(course.discountPriceUSD) : null
-        }
-        currency={currency}
-        alreadyEnrolled={alreadyEnrolled}
-        alreadyInCart={alreadyInCart}
-      />
-      )}
 
       <SiteFooter />
     </>

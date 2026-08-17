@@ -37,7 +37,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
       }}
       badges={badges}
       searchEndpoint="/api/admin/search"
-      searchPlaceholder="Rechercher un écran, un utilisateur, une commande…"
+      searchPlaceholder="Rechercher un écran, un apprenant, une formation…"
       settingsHref="/admin/parametres"
       extras={<AdminKeyboardShortcuts />}
       headerActions={

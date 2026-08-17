@@ -48,7 +48,7 @@ const ROLE_SCOPES: Record<StaffRole, string> = {
   MANAGER: "Suit les sociétés, apprenants, formations et inscriptions.",
   MODERATOR: "Contrôle les cours, avis, questions et signalements.",
   SUPPORT: "Traite les tickets, litiges et demandes des utilisateurs.",
-  FINANCE: "Accède aux transactions, remboursements et rapports.",
+  FINANCE: "Accès administratif historique, sans module métier associé.",
   ADMIN: "Dispose de tous les accès, rôles et paramètres de sécurité.",
 };
 

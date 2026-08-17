@@ -143,7 +143,6 @@ export async function getAdminUserDetail(userId: string) {
     include: {
       _count: {
         select: {
-          orders: true,
           enrollments: true,
           coursesAuthored: true,
           reviews: true,
@@ -155,21 +154,7 @@ export async function getAdminUserDetail(userId: string) {
   });
   if (!user) return null;
 
-  const [orders, enrollments, recentAudit, notes] = await Promise.all([
-    prisma.order.findMany({
-      where: { userId },
-      orderBy: { createdAt: "desc" },
-      take: 20,
-      select: {
-        id: true,
-        status: true,
-        currency: true,
-        totalCents: true,
-        createdAt: true,
-        paidAt: true,
-        items: { select: { course: { select: { title: true } } } },
-      },
-    }),
+  const [enrollments, recentAudit, notes] = await Promise.all([
     prisma.enrollment.findMany({
       where: { userId },
       orderBy: { enrolledAt: "desc" },
@@ -198,12 +183,7 @@ export async function getAdminUserDetail(userId: string) {
     }),
   ]);
 
-  const [spendByCurrency, engagement, lastSession] = await Promise.all([
-    prisma.order.groupBy({
-      by: ["currency"],
-      where: { userId, status: "PAID" },
-      _sum: { totalCents: true },
-    }),
+  const [engagement, lastSession] = await Promise.all([
     // Engagement apprentissage : lessons commencées/terminées + temps cumulé
     prisma.lessonProgress
       .aggregate({
@@ -231,11 +211,9 @@ export async function getAdminUserDetail(userId: string) {
 
   return {
     user,
-    orders,
     enrollments,
     recentAudit,
     notes,
-    spendByCurrency,
     engagement,
     lastSessionExpires: lastSession?.expires ?? null,
   };

@@ -20,7 +20,7 @@ import { becomeInstructor } from "@/server/actions/instructor";
 export const metadata: Metadata = {
   title: "Devenir formateur",
   description:
-    "Partagez votre savoir auprès de la communauté Gandal et bénéficiez d'un taux préférentiel à 15% sur les ventes que vous générez vous-même.",
+    "Créez des cours structurés et accompagnez les apprenants tout au long de leur progression.",
   alternates: { canonical: "/devenir-formateur" },
 };
 
@@ -49,11 +49,8 @@ export default async function BecomeInstructorPage() {
               Partagez votre expertise
             </h1>
             <p className="mx-auto mt-4 max-w-2xl text-base text-primary-foreground/80">
-              Créez votre cours, fixez votre prix, touchez une audience
-              francophone engagée. Bénéficiez d&apos;un taux préférentiel à
-              <strong className="font-semibold"> 15&nbsp;%</strong> sur les
-              ventes que vous générez vous-même grâce à votre lien
-              d&apos;affiliation personnel.
+              Créez des cours structurés, animez vos formations et accompagnez
+              les apprenants tout au long de leur progression.
             </p>
 
             <form
@@ -81,8 +78,7 @@ export default async function BecomeInstructorPage() {
                 </Button>
               )}
               <p className="text-xs text-primary-foreground/70">
-                Activation immédiate — vous gardez l&apos;accès à vos cours achetés
-                en tant qu&apos;élève.
+                Votre accès formateur est encadré par le gestionnaire de la plateforme.
               </p>
             </form>
           </Container>
@@ -92,8 +88,8 @@ export default async function BecomeInstructorPage() {
           <Container className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
             <FeatureCard
               icon={<PercentCircle className="h-6 w-6" aria-hidden />}
-              title="15% de commission sur vos ventes"
-              description="Vos ventes via votre lien d'affiliation ou votre audience perso bénéficient d'un taux préférentiel."
+              title="Parcours pédagogiques structurés"
+              description="Organisez les contenus, leçons, ressources et évaluations de chaque formation."
             />
             <FeatureCard
               icon={<Users className="h-6 w-6" aria-hidden />}
@@ -108,7 +104,7 @@ export default async function BecomeInstructorPage() {
             <FeatureCard
               icon={<BarChart3 className="h-6 w-6" aria-hidden />}
               title="Tableau de bord complet"
-              description="Suivez vos revenus, vos élèves et vos avis en temps réel."
+              description="Suivez les apprenants, leur progression et leurs avis en temps réel."
             />
           </Container>
         </section>
@@ -172,7 +168,7 @@ const STEPS = [
   {
     title: "Activez votre compte formateur",
     description:
-      "Un clic suffit : votre rôle est mis à jour et un lien d'affiliation personnalisé est généré.",
+      "Le gestionnaire valide votre rôle et vous ouvre l'accès à l'espace formateur.",
   },
   {
     title: "Créez votre cours",
