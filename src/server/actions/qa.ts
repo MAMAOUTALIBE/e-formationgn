@@ -8,6 +8,7 @@ import {
   rateLimitMessage,
 } from "@/lib/auth/rate-limit-ip";
 import { prisma } from "@/lib/prisma";
+import { canAnswerQuestion } from "@/lib/qa-access";
 import { answerSchema, questionSchema } from "@/lib/validators/engagement";
 
 import type { ActionResult } from "./auth";
@@ -26,6 +27,8 @@ export async function createQuestion(formData: FormData): Promise<ActionResult> 
 
   const parsed = questionSchema.safeParse({
     courseId: formData.get("courseId"),
+    lessonId: formData.get("lessonId") || undefined,
+    visibility: formData.get("visibility") || "PUBLIC",
     title: formData.get("title"),
     body: formData.get("body"),
   });
@@ -33,44 +36,62 @@ export async function createQuestion(formData: FormData): Promise<ActionResult> 
     return { success: false, fieldErrors: parsed.error.flatten().fieldErrors };
   }
 
-  const enrollment = await prisma.enrollment.findUnique({
-    where: {
-      userId_courseId: { userId: session.user.id, courseId: parsed.data.courseId },
-    },
-    select: { id: true },
-  });
+  const [enrollment, course, lesson] = await Promise.all([
+    prisma.enrollment.findUnique({
+      where: {
+        userId_courseId: { userId: session.user.id, courseId: parsed.data.courseId },
+      },
+      select: { id: true },
+    }),
+    prisma.course.findUnique({
+      where: { id: parsed.data.courseId },
+      select: { slug: true, instructorId: true, title: true },
+    }),
+    parsed.data.lessonId
+      ? prisma.lesson.findFirst({
+          where: { id: parsed.data.lessonId, section: { courseId: parsed.data.courseId } },
+          select: { id: true, title: true },
+        })
+      : Promise.resolve(null),
+  ]);
   if (!enrollment) {
     return {
       success: false,
       message: "Inscrivez-vous au cours pour poser une question.",
     };
   }
+  if (!course) return { success: false, message: "Cours introuvable." };
+  if (parsed.data.lessonId && !lesson) {
+    return { success: false, message: "Cette leçon n’appartient pas au cours." };
+  }
 
-  const question = await prisma.question.create({
-    data: {
-      courseId: parsed.data.courseId,
-      userId: session.user.id,
-      title: parsed.data.title,
-      body: parsed.data.body,
-    },
-  });
-
-  const course = await prisma.course.findUnique({
-    where: { id: parsed.data.courseId },
-    select: { slug: true, instructorId: true, title: true },
-  });
-  if (course) {
-    revalidatePath(`/cours/${course.slug}/questions`);
-    await prisma.notification.create({
+  await prisma.$transaction(async (tx) => {
+    const created = await tx.question.create({
+      data: {
+        courseId: parsed.data.courseId,
+        lessonId: lesson?.id,
+        userId: session.user.id,
+        title: parsed.data.title,
+        body: parsed.data.body,
+        visibility: parsed.data.visibility,
+      },
+    });
+    await tx.notification.create({
       data: {
         userId: course.instructorId,
         kind: "NEW_QUESTION",
-        title: "Nouvelle question sur votre cours",
+        title: lesson
+          ? `Nouvelle question sur « ${lesson.title} »`
+          : "Nouvelle question sur votre cours",
         body: `${parsed.data.title} (${course.title})`,
-        url: `/cours/${course.slug}/questions/${question.id}`,
+        url: `/cours/${course.slug}/questions/${created.id}`,
       },
     });
-  }
+    return created;
+  });
+  revalidatePath(`/cours/${course.slug}/questions`);
+  if (lesson) revalidatePath(`/apprentissage/${course.slug}/lecons/${lesson.id}`);
+  revalidatePath("/formateur/questions");
   return { success: true, message: "Question publiée." };
 }
 
@@ -100,49 +121,58 @@ export async function answerQuestion(formData: FormData): Promise<ActionResult> 
   });
   if (!question) return { success: false, message: "Question introuvable." };
 
-  // Le formateur peut toujours répondre. Les autres : doivent être inscrits.
-  const isInstructor = session.user.id === question.course.instructorId;
-  if (!isInstructor) {
-    const enrollment = await prisma.enrollment.findUnique({
-      where: {
-        userId_courseId: {
-          userId: session.user.id,
-          courseId: question.courseId,
-        },
+  const enrollment = await prisma.enrollment.findUnique({
+    where: {
+      userId_courseId: {
+        userId: session.user.id,
+        courseId: question.courseId,
       },
-      select: { id: true },
-    });
-    if (!enrollment) {
-      return {
-        success: false,
-        message: "Inscrivez-vous au cours pour répondre.",
-      };
-    }
-  }
-
-  await prisma.answer.create({
-    data: {
-      questionId: question.id,
-      userId: session.user.id,
-      body: parsed.data.body,
     },
+    select: { id: true },
   });
+  if (
+    !canAnswerQuestion({
+      viewerId: session.user.id,
+      viewerRole: session.user.role,
+      authorId: question.userId,
+      instructorId: question.course.instructorId,
+      visibility: question.visibility,
+      isEnrolled: Boolean(enrollment),
+    })
+  ) {
+    return { success: false, message: "Vous ne pouvez pas répondre à cette question." };
+  }
 
-  // Notification à l'auteur de la question (sauf s'il a répondu lui-même).
-  if (question.userId !== session.user.id) {
-    await prisma.notification.create({
+  // Une réponse officielle du formateur déclenche la notification demandée.
+  const isOfficialAnswer = session.user.id === question.course.instructorId;
+  await prisma.$transaction(async (tx) => {
+    await tx.answer.create({
       data: {
-        userId: question.userId,
-        kind: "NEW_ANSWER",
-        title: "Nouvelle réponse à votre question",
-        body: question.title,
-        url: `/cours/${question.course.slug}/questions/${question.id}`,
+        questionId: question.id,
+        userId: session.user.id,
+        body: parsed.data.body,
       },
     });
-  }
+
+    if (question.userId !== session.user.id && isOfficialAnswer) {
+      await tx.notification.create({
+        data: {
+          userId: question.userId,
+          kind: "NEW_ANSWER",
+          title: "Nouvelle réponse à votre question",
+          body: question.title,
+          url: `/cours/${question.course.slug}/questions/${question.id}`,
+        },
+      });
+    }
+  });
 
   revalidatePath(`/cours/${question.course.slug}/questions/${question.id}`);
   revalidatePath(`/cours/${question.course.slug}/questions`);
+  if (question.lessonId) {
+    revalidatePath(`/apprentissage/${question.course.slug}/lecons/${question.lessonId}`);
+  }
+  revalidatePath("/formateur/questions");
   return { success: true, message: "Réponse publiée." };
 }
 
@@ -176,4 +206,7 @@ export async function setQuestionResolved(
   revalidatePath("/formateur/questions");
   revalidatePath(`/cours/${question.course.slug}/questions/${question.id}`);
   revalidatePath(`/cours/${question.course.slug}/questions`);
+  if (question.lessonId) {
+    revalidatePath(`/apprentissage/${question.course.slug}/lecons/${question.lessonId}`);
+  }
 }

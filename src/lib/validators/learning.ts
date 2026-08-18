@@ -28,7 +28,7 @@ export const quizQuestionSchema = z
         z
           .object({
             label: z.string().trim().min(1).max(300),
-            isCorrect: z.coerce.boolean(),
+            isCorrect: z.boolean(),
           })
           .strict(),
       )
@@ -39,7 +39,27 @@ export const quizQuestionSchema = z
   .refine((data) => data.options.some((o) => o.isCorrect), {
     message: "Au moins une option doit être correcte.",
     path: ["options"],
-  });
+  })
+  .refine(
+    (data) =>
+      data.kind === "MULTIPLE_CHOICE" ||
+      data.options.filter((option) => option.isCorrect).length === 1,
+    {
+      message: "Une seule réponse doit être correcte pour ce type de question.",
+      path: ["options"],
+    },
+  )
+  .refine(
+    (data) =>
+      data.kind !== "TRUE_FALSE" ||
+      (data.options.length === 2 &&
+        data.options[0]?.label === "Vrai" &&
+        data.options[1]?.label === "Faux"),
+    {
+      message: "Une question Vrai/Faux doit proposer les réponses Vrai et Faux.",
+      path: ["options"],
+    },
+  );
 export type QuizQuestionInput = z.infer<typeof quizQuestionSchema>;
 
 export const quizMetaSchema = z

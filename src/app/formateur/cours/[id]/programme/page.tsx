@@ -162,7 +162,7 @@ export default async function CourseProgramPage({ params }: PageProps) {
                                 href={`/formateur/cours/${course.id}/lecons/${lesson.id}`}
                               >
                                 <PenLine className="h-3.5 w-3.5" />
-                                Modifier
+                                {lesson.type === "QUIZ" ? "Configurer le quiz" : "Modifier"}
                               </Link>
                             </Button>
                             <form action={duplicateLesson.bind(null, lesson.id)}>

@@ -18,15 +18,17 @@ async function submit(_prev: ActionResult, formData: FormData) {
 
 interface AskQuestionFormProps {
   courseId: string;
+  lessonId?: string;
 }
 
-export function AskQuestionForm({ courseId }: AskQuestionFormProps) {
+export function AskQuestionForm({ courseId, lessonId }: AskQuestionFormProps) {
   const [state, formAction] = useActionState(submit, initialState);
   const errors = state.fieldErrors ?? {};
 
   return (
     <form action={formAction} className="space-y-4">
       <input type="hidden" name="courseId" value={courseId} />
+      {lessonId ? <input type="hidden" name="lessonId" value={lessonId} /> : null}
 
       {state.message ? (
         <Alert variant={state.success ? "success" : "destructive"}>
@@ -55,6 +57,22 @@ export function AskQuestionForm({ courseId }: AskQuestionFormProps) {
           maxLength={4000}
           placeholder="Donnez le contexte, ce que vous avez essayé, etc."
         />
+      </FormField>
+
+      <FormField
+        id="visibility"
+        label="Visibilité"
+        hint="Une question privée n’est visible que par vous, le formateur et les administrateurs."
+      >
+        <select
+          id="visibility"
+          name="visibility"
+          defaultValue="PUBLIC"
+          className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+        >
+          <option value="PUBLIC">Publique — utile aux autres élèves</option>
+          <option value="PRIVATE">Privée — uniquement moi et le formateur</option>
+        </select>
       </FormField>
 
       <SubmitButton>Publier la question</SubmitButton>

@@ -71,6 +71,131 @@ export async function getInstructorCourse(
   return course as InstructorCourseDetail;
 }
 
+const COURSE_QUIZ_RESULTS_INCLUDE = {
+  enrollments: {
+    orderBy: { enrolledAt: "asc" },
+    include: {
+      user: { select: { id: true, name: true, firstName: true, lastName: true, email: true } },
+    },
+  },
+  sections: {
+    orderBy: { displayOrder: "asc" },
+    include: {
+      lessons: {
+        orderBy: { displayOrder: "asc" },
+        include: {
+          quiz: {
+            include: {
+              attempts: {
+                where: { completedAt: { not: null } },
+                orderBy: { completedAt: "desc" },
+                select: {
+                  id: true, userId: true, score: true, passed: true,
+                  attemptNumber: true, completedAt: true,
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+  },
+} satisfies Prisma.CourseInclude;
+
+export type InstructorQuizResults = Prisma.CourseGetPayload<{
+  include: typeof COURSE_QUIZ_RESULTS_INCLUDE;
+}>;
+
+export async function getInstructorQuizResults(
+  courseId: string,
+  instructorId: string,
+  isAdmin = false,
+): Promise<InstructorQuizResults | null> {
+  const course = await prisma.course.findUnique({
+    where: { id: courseId },
+    include: COURSE_QUIZ_RESULTS_INCLUDE,
+    omit: isAdmin ? undefined : { internalNotes: true },
+  });
+  if (!course || (!isAdmin && course.instructorId !== instructorId)) return null;
+  return course as InstructorQuizResults;
+}
+
+export async function getInstructorQuizAttempt(
+  courseId: string,
+  attemptId: string,
+  instructorId: string,
+  isAdmin = false,
+) {
+  const attempt = await prisma.quizAttempt.findFirst({
+    where: { id: attemptId, quiz: { lesson: { section: { courseId } } } },
+    include: {
+      user: { select: { id: true, name: true, firstName: true, lastName: true, email: true } },
+      quiz: {
+        include: {
+          lesson: { include: { section: { select: { course: { select: { instructorId: true } } } } } },
+          questions: { orderBy: { displayOrder: "asc" }, include: { options: { orderBy: { displayOrder: "asc" } } } },
+        },
+      },
+      answers: true,
+    },
+  });
+  if (!attempt) return null;
+  if (!isAdmin && attempt.quiz.lesson.section.course.instructorId !== instructorId) return null;
+  return attempt;
+}
+
+export async function getInstructorStudentTracking(
+  courseId: string,
+  instructorId: string,
+  isAdmin = false,
+  userId?: string,
+) {
+  const course = await prisma.course.findUnique({
+    where: { id: courseId },
+    select: {
+      id: true, title: true, instructorId: true,
+      sections: { orderBy: { displayOrder: "asc" }, select: {
+        id: true, title: true, lessons: { orderBy: { displayOrder: "asc" }, select: {
+          id: true, title: true, type: true, videoDurationSeconds: true,
+          quiz: { select: { id: true, title: true, passingScore: true } },
+        } },
+      } },
+      enrollments: {
+        where: userId ? { userId } : undefined,
+        orderBy: { enrolledAt: "asc" },
+        select: {
+          id: true, userId: true, enrolledAt: true, completedAt: true,
+          progressPercent: true, lastAccessedAt: true,
+          user: { select: { id: true, name: true, firstName: true, lastName: true, email: true } },
+          learningSessions: { select: { lessonId: true, activeSeconds: true } },
+        },
+      },
+    },
+  });
+  if (!course || (!isAdmin && course.instructorId !== instructorId)) return null;
+  if (userId && course.enrollments.length !== 1) return null;
+
+  const lessonIds = course.sections.flatMap((section) => section.lessons.map((lesson) => lesson.id));
+  const enrolledUserIds = course.enrollments.map((enrollment) => enrollment.userId);
+  const [progress, attempts, questions] = await Promise.all([
+    prisma.lessonProgress.findMany({
+      where: { userId: { in: enrolledUserIds }, lessonId: { in: lessonIds } },
+      select: { userId: true, lessonId: true, isCompleted: true, watchedSeconds: true, completedAt: true, updatedAt: true },
+    }),
+    prisma.quizAttempt.findMany({
+      where: { userId: { in: enrolledUserIds }, quiz: { lessonId: { in: lessonIds } }, completedAt: { not: null } },
+      orderBy: { completedAt: "desc" },
+      select: { id: true, userId: true, quizId: true, score: true, passed: true, attemptNumber: true, completedAt: true },
+    }),
+    prisma.question.findMany({
+      where: { courseId, userId: { in: enrolledUserIds } },
+      orderBy: { createdAt: "desc" },
+      select: { id: true, userId: true, lessonId: true, title: true, isResolved: true, createdAt: true, _count: { select: { answers: true } } },
+    }),
+  ]);
+  return { course, progress, attempts, questions };
+}
+
 // ---------------------------------------------------------------------------
 // Readiness « prêt à publier » — source de vérité unique partagée par la
 // checklist de l'éditeur, le badge % de la liste des cours, et la soumission
@@ -508,6 +633,14 @@ export async function getLessonForInstructor(
   const lesson = await prisma.lesson.findUnique({
     where: { id: lessonId },
     include: {
+      quiz: {
+        include: {
+          questions: {
+            orderBy: { displayOrder: "asc" },
+            include: { options: { orderBy: { displayOrder: "asc" } } },
+          },
+        },
+      },
       section: {
         include: { course: { select: { id: true, instructorId: true, slug: true } } },
       },
@@ -527,19 +660,22 @@ export interface InstructorQuestionRow {
   body: string;
   createdAt: Date;
   isResolved: boolean;
+  visibility: "PUBLIC" | "PRIVATE";
   answersCount: number;
   hasInstructorAnswer: boolean;
   course: { id: string; slug: string; title: string };
+  lesson: { id: string; title: string } | null;
   user: { id: string; name: string | null; image: string | null };
 }
 
 export async function listInstructorQuestions(
   instructorId: string,
-  opts: { onlyUnanswered?: boolean; limit?: number } = {},
+  opts: { onlyUnanswered?: boolean; lessonId?: string; limit?: number } = {},
 ): Promise<InstructorQuestionRow[]> {
   const questions = await prisma.question.findMany({
     where: {
       course: { instructorId },
+      ...(opts.lessonId ? { lessonId: opts.lessonId } : {}),
       ...(opts.onlyUnanswered
         ? {
             answers: { none: { userId: instructorId } },
@@ -548,6 +684,7 @@ export async function listInstructorQuestions(
     },
     include: {
       course: { select: { id: true, slug: true, title: true } },
+      lesson: { select: { id: true, title: true } },
       user: { select: { id: true, name: true, image: true } },
       answers: { select: { userId: true } },
     },
@@ -560,9 +697,11 @@ export async function listInstructorQuestions(
     body: q.body,
     createdAt: q.createdAt,
     isResolved: q.isResolved,
+    visibility: q.visibility,
     answersCount: q.answers.length,
     hasInstructorAnswer: q.answers.some((a) => a.userId === instructorId),
     course: q.course,
+    lesson: q.lesson,
     user: q.user,
   }));
 }
@@ -732,4 +871,3 @@ export async function getCourseTimeseries(
   }
   return Array.from(buckets.entries()).map(([date, v]) => ({ date, ...v }));
 }
-

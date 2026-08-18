@@ -12,6 +12,8 @@ export const reviewSchema = z
 export const questionSchema = z
   .object({
     courseId: z.string().min(1),
+    lessonId: z.string().min(1).optional(),
+    visibility: z.enum(["PUBLIC", "PRIVATE"]).default("PUBLIC"),
     title: z.string().trim().min(5).max(160),
     body: z.string().trim().min(10).max(4000),
   })

@@ -112,6 +112,36 @@ export async function getMyReviewForCourse(userId: string, courseId: string) {
   });
 }
 
+export async function listLessonQuestions(
+  userId: string,
+  courseId: string,
+  lessonId: string,
+) {
+  return prisma.question.findMany({
+    where: {
+      courseId,
+      OR: [
+        { visibility: "PUBLIC", lessonId },
+        { visibility: "PUBLIC", lessonId: null },
+        { visibility: "PRIVATE", userId, lessonId },
+        { visibility: "PRIVATE", userId, lessonId: null },
+      ],
+    },
+    orderBy: { createdAt: "desc" },
+    take: 50,
+    include: {
+      user: { select: { id: true, name: true, firstName: true, image: true } },
+      lesson: { select: { id: true, title: true } },
+      answers: {
+        orderBy: { createdAt: "asc" },
+        include: {
+          user: { select: { id: true, name: true, firstName: true, image: true } },
+        },
+      },
+    },
+  });
+}
+
 export async function getLessonForLearner(
   userId: string,
   lessonId: string,
@@ -136,10 +166,10 @@ export async function getLessonForLearner(
   return { lesson, enrolled: Boolean(enrollment) };
 }
 
-export async function getQuizForLearner(quizId: string) {
+export async function getQuizForLearner(quizId: string, userId: string) {
   // On ne renvoie pas la flag isCorrect des options à l'élève — il pourrait
   // sinon lire la réponse dans le payload réseau.
-  return prisma.quiz.findUnique({
+  const quiz = await prisma.quiz.findUnique({
     where: { id: quizId },
     include: {
       questions: {
@@ -151,8 +181,36 @@ export async function getQuizForLearner(quizId: string) {
           },
         },
       },
+      attempts: {
+        where: { userId, completedAt: { not: null } },
+        orderBy: { attemptNumber: "desc" },
+        select: {
+          id: true,
+          attemptNumber: true,
+          score: true,
+          passed: true,
+          completedAt: true,
+        },
+      },
     },
   });
+  if (!quiz) return null;
+  const attemptsUsed = quiz.attempts.length;
+  return {
+    ...quiz,
+    attemptSummary: {
+      attemptsUsed,
+      attemptsRemaining:
+        quiz.maxAttempts === null
+          ? null
+          : Math.max(0, quiz.maxAttempts - attemptsUsed),
+      bestScore:
+        attemptsUsed === 0
+          ? null
+          : Math.max(...quiz.attempts.map((attempt) => attempt.score)),
+      lastScore: quiz.attempts[0]?.score ?? null,
+    },
+  };
 }
 
 export async function getQuizForInstructor(quizId: string) {

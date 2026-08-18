@@ -13,6 +13,7 @@ import {
   lessonNoteSchema,
   lessonProgressSchema,
 } from "@/lib/validators/learning";
+import { computeHeartbeatCredit } from "@/lib/learning-tracking";
 
 import type { ActionResult } from "./auth";
 
@@ -80,6 +81,58 @@ export async function recordLessonProgress(
     watchedSeconds: parsed.data.watchedSeconds,
     lastPositionSeconds: parsed.data.lastPositionSeconds,
   });
+  return { success: true };
+}
+
+export async function recordLearningHeartbeat(input: {
+  lessonId: string;
+  sessionKey: string;
+}): Promise<ActionResult> {
+  const session = await auth();
+  if (!session?.user || session.user.role !== "STUDENT") {
+    return { success: false, message: "Accès élève requis." };
+  }
+  if (
+    typeof input?.lessonId !== "string" || input.lessonId.length > 100 ||
+    typeof input?.sessionKey !== "string" || !/^[a-zA-Z0-9-]{16,100}$/.test(input.sessionKey)
+  ) return { success: false, message: "Données invalides." };
+
+  const lesson = await prisma.lesson.findUnique({
+    where: { id: input.lessonId },
+    select: { section: { select: { courseId: true } } },
+  });
+  if (!lesson) return { success: false, message: "Leçon introuvable." };
+  const enrollment = await prisma.enrollment.findUnique({
+    where: { userId_courseId: { userId: session.user.id, courseId: lesson.section.courseId } },
+    select: { id: true },
+  });
+  if (!enrollment) return { success: false, message: "Inscription requise." };
+
+  const now = new Date();
+  const accepted = await prisma.$transaction(async (tx) => {
+    const existing = await tx.learningSession.findUnique({ where: { sessionKey: input.sessionKey } });
+    if (existing && (existing.userId !== session.user.id || existing.lessonId !== input.lessonId)) {
+      return false;
+    }
+    if (existing) {
+      const credit = computeHeartbeatCredit(existing.lastHeartbeatAt, now);
+      // La condition sur l'ancien timestamp empêche deux requêtes concurrentes
+      // de créditer deux fois le même intervalle.
+      await tx.learningSession.updateMany({
+        where: { id: existing.id, lastHeartbeatAt: existing.lastHeartbeatAt },
+        data: { lastHeartbeatAt: now, activeSeconds: { increment: credit } },
+      });
+    } else {
+      await tx.learningSession.create({ data: {
+        sessionKey: input.sessionKey, userId: session.user.id,
+        enrollmentId: enrollment.id, lessonId: input.lessonId,
+        lastHeartbeatAt: now,
+      } });
+    }
+    await tx.enrollment.update({ where: { id: enrollment.id }, data: { lastAccessedAt: now } });
+    return true;
+  });
+  if (!accepted) return { success: false, message: "Session de suivi invalide." };
   return { success: true };
 }
 

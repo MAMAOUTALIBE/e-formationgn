@@ -7,6 +7,7 @@ import { ConfirmAction } from "@/components/features/instructor/confirm-action";
 import { LessonAiTools } from "@/components/features/instructor/lesson-ai-tools";
 import { LessonEditForm } from "@/components/features/instructor/lesson-edit-form";
 import { LessonVideoSource } from "@/components/features/instructor/lesson-video-source";
+import { QuizEditor } from "@/components/features/instructor/quiz-editor";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { isLessonSummaryConfigured } from "@/lib/ai/lesson-summary";
@@ -106,6 +107,24 @@ export default async function LessonEditPage({ params }: PageProps) {
           </Card>
         ) : null}
       </div>
+
+      {lesson.type === "QUIZ" ? (
+        <Card>
+          <CardHeader>
+            <CardTitle>Quiz de la leçon</CardTitle>
+            <CardDescription>
+              Configurez le seuil de réussite, les tentatives et les réponses attendues.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <QuizEditor
+              lessonId={lesson.id}
+              lessonTitle={lesson.title}
+              quiz={lesson.quiz}
+            />
+          </CardContent>
+        </Card>
+      ) : null}
 
       <Card>
         <CardHeader>

@@ -11,6 +11,7 @@ import { Breadcrumbs } from "@/components/ui/breadcrumbs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Container } from "@/components/ui/container";
 import { prisma } from "@/lib/prisma";
+import { canAnswerQuestion, canReadQuestion } from "@/lib/qa-access";
 
 export const metadata: Metadata = {
   title: "Question",
@@ -51,6 +52,17 @@ export default async function QuestionThreadPage({ params }: PageProps) {
   if (!question || question.course.slug !== slug) notFound();
 
   const session = await auth();
+  if (
+    !canReadQuestion({
+      viewerId: session?.user?.id ?? null,
+      viewerRole: session?.user?.role,
+      authorId: question.userId,
+      instructorId: question.course.instructorId,
+      visibility: question.visibility,
+    })
+  ) {
+    notFound();
+  }
   const enrolled = session?.user
     ? Boolean(
         await prisma.enrollment.findUnique({
@@ -64,8 +76,14 @@ export default async function QuestionThreadPage({ params }: PageProps) {
         }),
       )
     : false;
-  const isInstructor = session?.user?.id === question.course.instructorId;
-  const canAnswer = isInstructor || enrolled;
+  const canAnswer = canAnswerQuestion({
+    viewerId: session?.user?.id ?? null,
+    viewerRole: session?.user?.role,
+    authorId: question.userId,
+    instructorId: question.course.instructorId,
+    visibility: question.visibility,
+    isEnrolled: enrolled,
+  });
 
   return (
     <>

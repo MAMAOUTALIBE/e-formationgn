@@ -49,11 +49,22 @@ export default async function CourseQAPage({ params }: PageProps) {
         }),
       )
     : false;
+  const canSeeAll =
+    session?.user?.id === course.instructorId || session?.user?.role === "ADMIN";
 
   const questions = await prisma.question.findMany({
-    where: { courseId: course.id },
+    where: canSeeAll
+      ? { courseId: course.id }
+      : {
+          courseId: course.id,
+          OR: [
+            { visibility: "PUBLIC" },
+            ...(session?.user?.id ? [{ userId: session.user.id }] : []),
+          ],
+        },
     include: {
       user: { select: { id: true, name: true, firstName: true, image: true } },
+      lesson: { select: { title: true } },
       _count: { select: { answers: true } },
     },
     orderBy: { createdAt: "desc" },
@@ -111,6 +122,7 @@ export default async function CourseQAPage({ params }: PageProps) {
                               </p>
                               <p className="mt-1 text-xs text-muted-foreground">
                                 {name} · {dateFormatter.format(question.createdAt)} ·{" "}
+                                {question.lesson ? `${question.lesson.title} · ` : "Cours entier · "}
                                 {question._count.answers}{" "}
                                 {pluralize(question._count.answers, "réponse")}
                               </p>

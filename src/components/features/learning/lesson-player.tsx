@@ -9,6 +9,7 @@ import { useRouter } from "next/navigation";
 import { Play, X } from "lucide-react";
 
 import { recordLessonProgress } from "@/server/actions/learning";
+import { useLearningHeartbeat } from "./use-learning-heartbeat";
 
 interface LessonPlayerProps {
   /** Identifiant Mux Playback. Prioritaire sur externalVideoUrl. */
@@ -192,6 +193,8 @@ function MuxLessonPlayer({
   const completedRef = useRef(false);
   const autoAdvance = useAutoAdvance(nextLessonHref);
   const advanceTrigger = autoAdvance.trigger;
+  const [isPlaying, setIsPlaying] = useState(false);
+  useLearningHeartbeat(lessonId, { mode: "VIDEO", isPlaying });
 
   useEffect(() => {
     void import("@mux/mux-player");
@@ -251,9 +254,15 @@ function MuxLessonPlayer({
 
     player.addEventListener("timeupdate", handleTimeUpdate);
     player.addEventListener("ended", handleEnded);
+    const handlePlay = () => setIsPlaying(true);
+    const handlePause = () => setIsPlaying(false);
+    player.addEventListener("play", handlePlay);
+    player.addEventListener("pause", handlePause);
     return () => {
       player.removeEventListener("timeupdate", handleTimeUpdate);
       player.removeEventListener("ended", handleEnded);
+      player.removeEventListener("play", handlePlay);
+      player.removeEventListener("pause", handlePause);
     };
   }, [lessonId, durationSeconds, router, advanceTrigger]);
 
@@ -314,6 +323,8 @@ function NativeLessonPlayer({
   const completedRef = useRef(false);
   const autoAdvance = useAutoAdvance(nextLessonHref);
   const advanceTrigger = autoAdvance.trigger;
+  const [isPlaying, setIsPlaying] = useState(false);
+  useLearningHeartbeat(lessonId, { mode: "VIDEO", isPlaying });
 
   useEffect(() => {
     const video = videoRef.current;
@@ -375,9 +386,15 @@ function NativeLessonPlayer({
 
     video.addEventListener("timeupdate", handleTimeUpdate);
     video.addEventListener("ended", handleEnded);
+    const handlePlay = () => setIsPlaying(true);
+    const handlePause = () => setIsPlaying(false);
+    video.addEventListener("play", handlePlay);
+    video.addEventListener("pause", handlePause);
     return () => {
       video.removeEventListener("timeupdate", handleTimeUpdate);
       video.removeEventListener("ended", handleEnded);
+      video.removeEventListener("play", handlePlay);
+      video.removeEventListener("pause", handlePause);
     };
   }, [lessonId, durationSeconds, initialPositionSeconds, router, advanceTrigger]);
 

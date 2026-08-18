@@ -1,9 +1,10 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { CircleHelp, MessageCircle } from "lucide-react";
+import { CircleHelp, Lock, MessageCircle } from "lucide-react";
 
 import { auth } from "@/auth";
+import { AnswerForm } from "@/components/features/qa/answer-form";
 import { Avatar } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Breadcrumbs } from "@/components/ui/breadcrumbs";
@@ -19,7 +20,7 @@ export const metadata: Metadata = {
 export const dynamic = "force-dynamic";
 
 interface PageProps {
-  searchParams: Promise<{ filter?: string }>;
+  searchParams: Promise<{ filter?: string; lesson?: string }>;
 }
 
 const dateFormatter = new Intl.DateTimeFormat("fr-FR", {
@@ -32,7 +33,7 @@ export default async function InstructorQuestionsPage({ searchParams }: PageProp
   const session = await auth();
   if (!session?.user) redirect("/connexion?callbackUrl=/formateur/questions");
 
-  const { filter } = await searchParams;
+  const { filter, lesson } = await searchParams;
   const onlyUnanswered = filter === "unanswered";
 
   const [all, unanswered] = await Promise.all([
@@ -40,7 +41,8 @@ export default async function InstructorQuestionsPage({ searchParams }: PageProp
     listInstructorQuestions(session.user.id, { onlyUnanswered: true, limit: 100 }),
   ]);
 
-  const list = onlyUnanswered ? unanswered : all;
+  const baseList = onlyUnanswered ? unanswered : all;
+  const list = lesson ? baseList.filter((question) => question.lesson?.id === lesson) : baseList;
 
   return (
     <div className="space-y-6">
@@ -77,6 +79,30 @@ export default async function InstructorQuestionsPage({ searchParams }: PageProp
           </span>
         </TabLink>
       </nav>
+
+      <form className="flex flex-wrap items-end gap-2" method="get">
+        {onlyUnanswered ? <input type="hidden" name="filter" value="unanswered" /> : null}
+        <label className="space-y-1 text-sm">
+          <span className="block font-medium">Filtrer par leçon</span>
+          <select
+            name="lesson"
+            defaultValue={lesson ?? ""}
+            className="h-9 rounded-md border border-input bg-background px-3"
+          >
+            <option value="">Toutes les leçons</option>
+            {Array.from(
+              new Map(
+                [...all, ...unanswered]
+                  .filter((question) => question.lesson)
+                  .map((question) => [question.lesson!.id, question.lesson!]),
+              ).values(),
+            ).map((item) => (
+              <option key={item.id} value={item.id}>{item.title}</option>
+            ))}
+          </select>
+        </label>
+        <Button type="submit" variant="outline" size="sm">Appliquer</Button>
+      </form>
 
       {list.length === 0 ? (
         <Card>
@@ -123,10 +149,14 @@ export default async function InstructorQuestionsPage({ searchParams }: PageProp
                             >
                               {q.course.title}
                             </Link>
+                            {q.lesson ? ` · Leçon : ${q.lesson.title}` : " · Cours entier"}
                           </p>
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
+                        {q.visibility === "PRIVATE" ? (
+                          <Badge variant="secondary"><Lock className="h-3 w-3" /> Privée</Badge>
+                        ) : null}
                         {q.isResolved ? (
                           <Badge variant="default" className="bg-[color:var(--brand-success)]/15 text-[color:var(--brand-success)]">
                             Résolu
@@ -182,13 +212,19 @@ export default async function InstructorQuestionsPage({ searchParams }: PageProp
                           </Button>
                         </form>
                         <Link
-                          href={`/cours/${q.course.slug}/questions`}
+                          href={`/cours/${q.course.slug}/questions/${q.id}`}
                           className="font-medium text-[color:var(--brand-secondary)] hover:underline"
                         >
                           {q.hasInstructorAnswer ? "Voir / éditer" : "Répondre →"}
                         </Link>
                       </div>
                     </div>
+                    {!q.hasInstructorAnswer ? (
+                      <div className="border-t border-border pt-3">
+                        <p className="mb-2 text-xs font-medium text-muted-foreground">Réponse officielle du formateur</p>
+                        <AnswerForm questionId={q.id} />
+                      </div>
+                    ) : null}
                   </CardContent>
                 </Card>
               </li>

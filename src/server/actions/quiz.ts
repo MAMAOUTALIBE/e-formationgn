@@ -5,7 +5,9 @@
 import { revalidatePath } from "next/cache";
 
 import { auth } from "@/auth";
+import { Prisma } from "@/generated/prisma/client";
 import { prisma } from "@/lib/prisma";
+import { validateQuizSubmission } from "@/lib/quiz-submission";
 import { markLessonCompleted } from "@/server/services/lesson-completion";
 import {
   quizAttemptSubmitSchema,
@@ -56,7 +58,7 @@ export async function updateQuizMeta(
   lessonId: string,
   formData: FormData,
 ): Promise<ActionResult> {
-  await requireLessonOwner(lessonId);
+  const { lesson } = await requireLessonOwner(lessonId);
 
   const parsed = quizMetaSchema.safeParse({
     title: formData.get("title"),
@@ -93,6 +95,7 @@ export async function updateQuizMeta(
     },
   });
 
+  revalidateQuizEditor(lesson.section.courseId, lessonId);
   return { success: true, message: "Quiz mis à jour." };
 }
 
@@ -100,7 +103,7 @@ export async function addQuizQuestion(
   lessonId: string,
   payload: unknown,
 ): Promise<ActionResult> {
-  await requireLessonOwner(lessonId);
+  const { lesson } = await requireLessonOwner(lessonId);
 
   const parsed = quizQuestionSchema.safeParse(payload);
   if (!parsed.success) {
@@ -131,6 +134,7 @@ export async function addQuizQuestion(
     },
   });
 
+  revalidateQuizEditor(lesson.section.courseId, lessonId);
   return { success: true, message: "Question ajoutée." };
 }
 
@@ -155,8 +159,28 @@ export async function deleteQuizQuestion(
   if (!isAdmin && question.quiz.lesson.section.course.instructorId !== session.user.id) {
     return { success: false, message: "Action non autorisée." };
   }
+  const answersCount = await prisma.quizAnswer.count({
+    where: { questionId },
+  });
+  if (answersCount > 0) {
+    return {
+      success: false,
+      message:
+        "Cette question possède déjà des réponses d’élèves et ne peut plus être supprimée.",
+    };
+  }
+
   await prisma.quizQuestion.delete({ where: { id: questionId } });
+  revalidateQuizEditor(
+    question.quiz.lesson.section.courseId,
+    question.quiz.lessonId,
+  );
   return { success: true, message: "Question supprimée." };
+}
+
+function revalidateQuizEditor(courseId: string, lessonId: string) {
+  revalidatePath(`/formateur/cours/${courseId}/programme`);
+  revalidatePath(`/formateur/cours/${courseId}/lecons/${lessonId}`);
 }
 
 // ----- Côté élève : tentatives --------------------------------------------
@@ -168,7 +192,20 @@ export interface QuizAttemptResult {
   passed?: boolean;
   totalQuestions?: number;
   correctCount?: number;
+  attemptsUsed?: number;
+  attemptsRemaining?: number | null;
+  bestScore?: number;
+  lastScore?: number;
   message?: string;
+}
+
+const ATTEMPT_LIMIT_REACHED = "ATTEMPT_LIMIT_REACHED";
+
+function isRetryableAttemptConflict(error: unknown) {
+  return (
+    error instanceof Prisma.PrismaClientKnownRequestError &&
+    (error.code === "P2034" || error.code === "P2002")
+  );
 }
 
 export async function submitQuizAttempt(
@@ -202,17 +239,12 @@ export async function submitQuizAttempt(
   });
   if (!enrollment) return { ok: false, message: "Inscription requise." };
 
-  // Limite éventuelle de tentatives
-  if (quiz.maxAttempts !== null) {
-    const attempts = await prisma.quizAttempt.count({
-      where: { quizId, userId: session.user.id, completedAt: { not: null } },
-    });
-    if (attempts >= quiz.maxAttempts) {
-      return {
-        ok: false,
-        message: "Vous avez atteint la limite de tentatives.",
-      };
-    }
+  const submissionValidation = validateQuizSubmission(
+    quiz.questions,
+    parsed.data.answers,
+  );
+  if (!submissionValidation.valid) {
+    return { ok: false, message: submissionValidation.message };
   }
 
   // Index des options correctes (côté serveur uniquement)
@@ -253,65 +285,117 @@ export async function submitQuizAttempt(
   // Avant cette refonte, le upsert LessonProgress était hors transaction —
   // un crash entre les deux laissait un attempt enregistré mais la leçon non
   // complétée (et le pourcentage de progression non recalculé du tout).
+  const snapshot = {
+    schemaVersion: 1,
+    title: quiz.title,
+    passingScore: quiz.passingScore,
+    questions: quiz.questions.map((question) => ({
+      id: question.id,
+      prompt: question.prompt,
+      explanation: question.explanation,
+      kind: question.kind,
+      points: question.points,
+      options: question.options.map((option) => ({
+        id: option.id,
+        label: option.label,
+        isCorrect: option.isCorrect,
+      })),
+    })),
+  } satisfies Prisma.InputJsonValue;
+
   const userId = session.user.id;
-  const attempt = await prisma.$transaction(async (tx) => {
-    const created = await tx.quizAttempt.create({
-      data: {
-        quizId,
-        userId,
-        score,
-        passed,
-        completedAt: new Date(),
-      },
-    });
-    for (const answer of parsed.data.answers) {
-      const correctSet = correctByQuestion.get(answer.questionId);
-      if (!correctSet) continue;
-      // On stocke un row par option choisie ; pour les SINGLE_CHOICE/TRUE_FALSE
-      // le tableau a 0 ou 1 élément.
-      if (answer.optionIds.length === 0) {
-        await tx.quizAnswer.create({
-          data: {
-            attemptId: created.id,
-            questionId: answer.questionId,
-            optionId: null,
-            isCorrect: false,
-          },
-        });
-      } else {
-        for (const optionId of answer.optionIds) {
-          await tx.quizAnswer.create({
+  let transactionResult:
+    | { attemptId: string; attemptsUsed: number; bestScore: number }
+    | undefined;
+  for (let transactionTry = 0; transactionTry < 3; transactionTry += 1) {
+    try {
+      transactionResult = await prisma.$transaction(
+        async (tx) => {
+          const previousAttempts = await tx.quizAttempt.findMany({
+            where: { quizId, userId },
+            select: { score: true, attemptNumber: true, completedAt: true },
+          });
+          const completedAttempts = previousAttempts.filter(
+            (item) => item.completedAt !== null,
+          );
+          if (
+            quiz.maxAttempts !== null &&
+            completedAttempts.length >= quiz.maxAttempts
+          ) {
+            throw new Error(ATTEMPT_LIMIT_REACHED);
+          }
+          const attemptNumber =
+            Math.max(0, ...previousAttempts.map((item) => item.attemptNumber)) + 1;
+          const created = await tx.quizAttempt.create({
             data: {
-              attemptId: created.id,
-              questionId: answer.questionId,
-              optionId,
-              isCorrect: correctSet.has(optionId),
+              quizId,
+              userId,
+              score,
+              passed,
+              completedAt: new Date(),
+              attemptNumber,
+              snapshot,
             },
           });
-        }
-      }
-    }
+          for (const answer of parsed.data.answers) {
+            const correctSet = correctByQuestion.get(answer.questionId)!;
+            for (const optionId of answer.optionIds) {
+              await tx.quizAnswer.create({
+                data: {
+                  attemptId: created.id,
+                  questionId: answer.questionId,
+                  optionId,
+                  isCorrect: correctSet.has(optionId),
+                },
+              });
+            }
+          }
 
-    if (passed) {
-      await markLessonCompleted(
-        {
-          userId,
-          lessonId: quiz.lessonId,
-          courseId: quiz.lesson.section.courseId,
+          if (passed) {
+            await markLessonCompleted(
+              {
+                userId,
+                lessonId: quiz.lessonId,
+                courseId: quiz.lesson.section.courseId,
+              },
+              tx,
+            );
+          }
+          return {
+            attemptId: created.id,
+            attemptsUsed: completedAttempts.length + 1,
+            bestScore: Math.max(score, ...completedAttempts.map((item) => item.score)),
+          };
         },
-        tx,
+        { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
       );
+      break;
+    } catch (error) {
+      if (error instanceof Error && error.message === ATTEMPT_LIMIT_REACHED) {
+        return { ok: false, message: "Vous avez atteint la limite de tentatives." };
+      }
+      if (!isRetryableAttemptConflict(error) || transactionTry === 2) throw error;
     }
-    return created;
-  });
+  }
+
+  if (!transactionResult) {
+    return { ok: false, message: "La tentative n’a pas pu être enregistrée." };
+  }
 
   revalidatePath(`/apprentissage`);
   return {
     ok: true,
-    attemptId: attempt.id,
+    attemptId: transactionResult.attemptId,
     score,
     passed,
     totalQuestions: quiz.questions.length,
     correctCount,
+    attemptsUsed: transactionResult.attemptsUsed,
+    attemptsRemaining:
+      quiz.maxAttempts === null
+        ? null
+        : Math.max(0, quiz.maxAttempts - transactionResult.attemptsUsed),
+    bestScore: transactionResult.bestScore,
+    lastScore: score,
   };
 }

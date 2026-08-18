@@ -73,7 +73,7 @@ export function LessonEditForm({ lessonId, defaults }: LessonEditFormProps) {
         >
           <option value="VIDEO">Vidéo</option>
           <option value="TEXT">Texte</option>
-          <option value="QUIZ">Quiz (édition complète en Phase 5)</option>
+          <option value="QUIZ">Quiz</option>
           <option value="RESOURCE">Ressource</option>
         </Select>
       </FormField>

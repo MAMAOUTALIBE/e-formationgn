@@ -18,6 +18,8 @@ import { LessonBookmarkButton } from "@/components/features/learning/lesson-book
 import { LessonCompletionToggle } from "@/components/features/learning/lesson-completion-toggle";
 import { LessonNotes } from "@/components/features/learning/lesson-notes";
 import { LessonPlayer } from "@/components/features/learning/lesson-player";
+import { LearningActivityHeartbeat } from "@/components/features/learning/use-learning-heartbeat";
+import { LessonQuestions } from "@/components/features/learning/lesson-questions";
 import { signMuxPlaybackToken } from "@/lib/mux";
 import { LessonTutor } from "@/components/features/learning/lesson-tutor";
 import { QuizAttempt } from "@/components/features/learning/quiz-attempt";
@@ -35,6 +37,7 @@ import {
   getQuizForLearner,
   isLessonBookmarked,
   listCourseAnnouncements,
+  listLessonQuestions,
 } from "@/server/queries/learning";
 
 export const metadata: Metadata = {
@@ -73,6 +76,7 @@ export default async function LessonViewerPage({ params }: PageProps) {
     announcements,
     reviewsBundle,
     myReview,
+    lessonQuestions,
   ] = await Promise.all([
     getLessonProgress(session.user.id, course.id),
     getLessonNotes(session.user.id, lessonId),
@@ -81,13 +85,14 @@ export default async function LessonViewerPage({ params }: PageProps) {
           const quizRecord = await import("@/lib/prisma").then(({ prisma }) =>
             prisma.quiz.findUnique({ where: { lessonId } }),
           );
-          return quizRecord ? getQuizForLearner(quizRecord.id) : null;
+          return quizRecord ? getQuizForLearner(quizRecord.id, session.user.id) : null;
         })()
       : Promise.resolve(null),
     isLessonBookmarked(session.user.id, lessonId),
     listCourseAnnouncements(course.id),
     getCourseReviewsForLearner(course.id, 20),
     getMyReviewForCourse(session.user.id, course.id),
+    listLessonQuestions(session.user.id, course.id, lessonId),
   ]);
   const completedIds = new Set(
     progressList.filter((p) => p.isCompleted).map((p) => p.lessonId),
@@ -193,6 +198,19 @@ export default async function LessonViewerPage({ params }: PageProps) {
     { key: "presentation", label: "Présentation", content: presentationContent },
     { key: "notes", label: "Mes notes", content: notesContent },
     {
+      key: "questions",
+      label: "Questions",
+      badge: lessonQuestions.length > 0 ? lessonQuestions.length : undefined,
+      content: (
+        <LessonQuestions
+          courseId={course.id}
+          lessonId={lesson.id}
+          instructorId={course.instructorId}
+          questions={lessonQuestions}
+        />
+      ),
+    },
+    {
       key: "announcements",
       label: "Annonces",
       badge: announcements.length > 0 ? announcements.length : undefined,
@@ -209,6 +227,7 @@ export default async function LessonViewerPage({ params }: PageProps) {
 
   return (
     <FocusModeProvider>
+      {lesson.type !== "VIDEO" ? <LearningActivityHeartbeat lessonId={lesson.id} /> : null}
       <LearningHeader
         courseSlug={course.slug}
         courseTitle={course.title}
@@ -269,6 +288,12 @@ export default async function LessonViewerPage({ params }: PageProps) {
                       <QuizAttempt
                         quizId={quiz.id}
                         passingScore={quiz.passingScore}
+                        maxAttempts={quiz.maxAttempts}
+                        initialAttemptSummary={quiz.attemptSummary}
+                        initialHistory={quiz.attempts.map((attempt) => ({
+                          ...attempt,
+                          completedAt: attempt.completedAt!.toISOString(),
+                        }))}
                         questions={quiz.questions.map((q) => ({
                           id: q.id,
                           prompt: q.prompt,

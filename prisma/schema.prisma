@@ -135,6 +135,7 @@ model User {
   certificates    Certificate[]
   quizAttempts    QuizAttempt[]
   lessonProgress  LessonProgress[]
+  learningSessions LearningSession[]
   affiliateClicks AffiliateClick[]
   payouts         Payout[]
   notifications   Notification[]
@@ -431,6 +432,8 @@ model Lesson {
   progress  LessonProgress[]
   notes     LessonNote[]
   bookmarks LessonBookmark[]
+  questions Question[]
+  learningSessions LearningSession[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -511,8 +514,11 @@ model QuizAttempt {
   passed      Boolean      @default(false)
   startedAt   DateTime     @default(now())
   completedAt DateTime?
+  attemptNumber Int
+  snapshot      Json
   answers     QuizAnswer[]
 
+  @@unique([quizId, userId, attemptNumber])
   @@index([userId])
   @@index([quizId])
 }
@@ -556,10 +562,31 @@ model Enrollment {
   orderItemId     String?          @unique
   orderItem       OrderItem?       @relation(fields: [orderItemId], references: [id])
   source          EnrollmentSource @default(PURCHASE)
+  learningSessions LearningSession[]
 
   @@unique([userId, courseId])
   @@index([userId])
   @@index([courseId])
+}
+
+/// Session de présence active. Le client ne fournit jamais une durée : le
+/// serveur additionne uniquement l'intervalle entre deux heartbeats rapprochés.
+model LearningSession {
+  id              String     @id @default(cuid())
+  sessionKey      String     @unique
+  userId          String
+  user            User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  enrollmentId    String
+  enrollment      Enrollment @relation(fields: [enrollmentId], references: [id], onDelete: Cascade)
+  lessonId        String
+  lesson          Lesson     @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  activeSeconds   Int        @default(0)
+  startedAt       DateTime   @default(now())
+  lastHeartbeatAt DateTime   @default(now())
+  endedAt         DateTime?
+
+  @@index([enrollmentId])
+  @@index([userId, lessonId])
 }
 
 model LessonProgress {
@@ -670,17 +697,27 @@ model Question {
   id         String   @id @default(cuid())
   courseId   String
   course     Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  lessonId   String?
+  // Une question reste consultable au niveau du cours si la leçon est supprimée.
+  lesson     Lesson?  @relation(fields: [lessonId], references: [id], onDelete: SetNull)
   userId     String
   user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   title      String
   body       String   @db.Text
+  visibility QuestionVisibility @default(PUBLIC)
   isResolved Boolean  @default(false)
   answers    Answer[]
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
-  @@index([courseId])
+  @@index([courseId, visibility, createdAt])
+  @@index([lessonId, createdAt])
   @@index([userId])
+}
+
+enum QuestionVisibility {
+  PUBLIC
+  PRIVATE
 }
 
 model Answer {

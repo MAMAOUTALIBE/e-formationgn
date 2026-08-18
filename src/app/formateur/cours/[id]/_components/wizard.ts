@@ -20,6 +20,8 @@ export const WIZARD_STEPS: WizardStep[] = [
 
 export const SECONDARY_STEPS: WizardStep[] = [
   { slug: "insights", label: "Insights" },
+  { slug: "eleves", label: "Élèves" },
+  { slug: "resultats", label: "Résultats quiz" },
   { slug: "annonces", label: "Annonces" },
 ];
 
