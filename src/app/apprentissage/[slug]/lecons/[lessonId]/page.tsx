@@ -238,7 +238,7 @@ export default async function LessonViewerPage({ params }: PageProps) {
       <main className="flex-1 bg-muted/20">
         <div
           data-learning-grid
-          className="mx-auto grid w-full max-w-[1600px] gap-0 lg:grid-cols-[minmax(0,1fr)_360px]"
+          className="mx-auto grid w-full max-w-[1600px] grid-cols-[minmax(0,1fr)] gap-0 lg:grid-cols-[minmax(0,1fr)_360px]"
         >
           {/* ── Colonne principale : player + tabs ───────────────────── */}
           <section className="order-1 min-w-0 bg-card">
