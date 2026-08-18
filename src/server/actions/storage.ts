@@ -2,7 +2,7 @@
 
 // Server Actions pour générer des URLs d'upload signées vers R2.
 // Restreintes aux utilisateurs INSTRUCTOR ou ADMIN. Images (5 MB) pour les
-// miniatures/avatars ; vidéos de leçon (500 MB) en auto-hébergement R2, en
+// miniatures/avatars ; vidéos de leçon en auto-hébergement R2, en
 // alternative à Mux.
 
 import { auth } from "@/auth";
@@ -18,6 +18,7 @@ import {
   isR2PublicUrlConfigured,
   type PresignedUploadResult,
 } from "@/lib/storage/r2";
+import { isLikelyVideoFile, videoUploadContentType } from "@/lib/video-file";
 
 const ALLOWED_IMAGE_TYPES = new Set([
   "image/jpeg",
@@ -27,14 +28,6 @@ const ALLOWED_IMAGE_TYPES = new Set([
 ]);
 
 const MAX_IMAGE_SIZE = 5 * 1024 * 1024;
-
-// On accepte TOUT format vidéo (video/*) plutôt qu'une liste blanche figée.
-function isVideoType(contentType: string): boolean {
-  return contentType.startsWith("video/");
-}
-
-// Plafond aligné sur la route d'upload local (/api/upload/blob).
-const MAX_VIDEO_SIZE = 1024 * 1024 * 1024; // 1 GB
 
 interface CreatePresignedThumbnailUploadResult {
   ok: boolean;
@@ -127,22 +120,23 @@ export async function createPresignedLessonVideoUpload(params: {
     throw new AuthorizationError("FORBIDDEN", "Action non autorisée.");
   }
 
-  if (!isVideoType(params.contentType)) {
+  if (!isLikelyVideoFile(params.filename, params.contentType)) {
     return {
       ok: false,
       message: "Format non supporté. Choisissez un fichier vidéo.",
     };
   }
 
-  if (params.sizeBytes <= 0 || params.sizeBytes > MAX_VIDEO_SIZE) {
+  if (!Number.isSafeInteger(params.sizeBytes) || params.sizeBytes <= 0) {
     return {
       ok: false,
-      message: `Taille de fichier invalide (max ${Math.round(MAX_VIDEO_SIZE / 1024 / 1024)} MB).`,
+      message: "Taille de fichier invalide.",
     };
   }
 
   const prefix = `lessons/${params.lessonId}`;
   const useR2 = isR2Configured() && isR2PublicUrlConfigured();
+  const contentType = videoUploadContentType(params.filename, params.contentType);
 
   try {
     // R2 en prod (avec domaine public pour servir la vidéo), sinon fallback
@@ -151,7 +145,7 @@ export async function createPresignedLessonVideoUpload(params: {
       ? await createPresignedUpload({
           prefix,
           filename: params.filename,
-          contentType: params.contentType,
+          contentType,
           maxSizeBytes: params.sizeBytes,
           // Vidéos plus lourdes → fenêtre d'upload plus large.
           expiresInSeconds: 600,

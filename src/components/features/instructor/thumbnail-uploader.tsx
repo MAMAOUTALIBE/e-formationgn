@@ -6,6 +6,7 @@ import * as React from "react";
 import { Button } from "@/components/ui/button";
 import { compressImage } from "@/lib/images/compress";
 import { cn } from "@/lib/utils";
+import { isLikelyVideoFile, videoUploadContentType } from "@/lib/video-file";
 
 interface ThumbnailUploaderProps {
   /** Nom du champ caché qui contient l'URL finale (sera lu par le formulaire). */
@@ -21,11 +22,7 @@ interface ThumbnailUploaderProps {
   optional?: boolean;
 }
 
-const MAX_BYTES = 1024 * 1024 * 1024; // 1 GB — couvre images et vidéos
-// On accepte tout format d'image ET de vidéo (image/*, video/*).
-function isAllowedType(type: string): boolean {
-  return type.startsWith("image/") || type.startsWith("video/");
-}
+const MAX_IMAGE_SOURCE_BYTES = 1024 * 1024 * 1024;
 function isVideoUrl(value: string): boolean {
   return /\.(mp4|webm|mov|m4v|ogg|ogv|mkv|avi)(\?|#|$)/i.test(value);
 }
@@ -56,17 +53,17 @@ export function ThumbnailUploader({
   async function handleFile(file: File) {
     setError(null);
 
-    if (!isAllowedType(file.type)) {
+    const fileIsVideo = isLikelyVideoFile(file.name, file.type);
+    if (!file.type.startsWith("image/") && !fileIsVideo) {
       setError("Format non supporté. Choisissez une image ou une vidéo.");
       setStatus("error");
       return;
     }
-    if (file.size > MAX_BYTES) {
-      setError(`Fichier trop lourd (max ${MAX_BYTES / (1024 * 1024 * 1024)} GB).`);
+    if (!fileIsVideo && file.size > MAX_IMAGE_SOURCE_BYTES) {
+      setError("Image source trop lourde pour être préparée dans le navigateur.");
       setStatus("error");
       return;
     }
-    const fileIsVideo = file.type.startsWith("video/");
 
     // Images : compression + recadrage 16:9 côté client avant upload.
     // Vidéos : envoyées telles quelles.
@@ -84,7 +81,9 @@ export function ThumbnailUploader({
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
           filename: uploadFile.name,
-          contentType: uploadFile.type,
+          contentType: fileIsVideo
+            ? videoUploadContentType(uploadFile.name, uploadFile.type)
+            : uploadFile.type,
           sizeBytes: uploadFile.size,
         }),
       });
@@ -103,7 +102,14 @@ export function ThumbnailUploader({
 
     setStatus("uploading");
     try {
-      await uploadWithProgress(presigned.uploadUrl, uploadFile, setProgress);
+      await uploadWithProgress(
+        presigned.uploadUrl,
+        uploadFile,
+        fileIsVideo
+          ? videoUploadContentType(uploadFile.name, uploadFile.type)
+          : uploadFile.type,
+        setProgress,
+      );
       setUrl(presigned.publicUrl);
       setIsVideo(fileIsVideo);
       setStatus("done");
@@ -234,7 +240,7 @@ export function ThumbnailUploader({
                   Cliquez ou glissez une image ou une vidéo
                 </p>
                 <p className="mt-1 text-xs text-muted-foreground">
-                  Tous formats image &amp; vidéo — 1 GB max — 16:9 recommandé
+                  Tous formats vidéo, sans plafond applicatif — 16:9 recommandé
                 </p>
                 {optional ? (
                   <p className="mt-1 text-xs italic text-muted-foreground">
@@ -310,12 +316,13 @@ export function ThumbnailUploader({
 function uploadWithProgress(
   url: string,
   file: File,
+  contentType: string,
   onProgress: (pct: number) => void,
 ): Promise<void> {
   return new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest();
     xhr.open("PUT", url, true);
-    xhr.setRequestHeader("Content-Type", file.type);
+    xhr.setRequestHeader("Content-Type", contentType);
     xhr.upload.addEventListener("progress", (e) => {
       if (e.lengthComputable) onProgress(Math.round((e.loaded / e.total) * 100));
     });

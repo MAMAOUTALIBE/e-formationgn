@@ -15,6 +15,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { ConfirmAction } from "@/components/features/instructor/confirm-action";
 import { cn } from "@/lib/utils";
+import { isLikelyVideoFile } from "@/lib/video-file";
 import {
   confirmMuxUploadForCoursePromo,
   createMuxUploadForCoursePromo,
@@ -63,7 +64,7 @@ export function MuxPromoUploader({
   async function handleFile(event: React.ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
     if (!file) return;
-    if (!file.type.startsWith("video/")) {
+    if (!isLikelyVideoFile(file.name, file.type)) {
       setState({ kind: "error", message: "Seuls les fichiers vidéo sont acceptés." });
       return;
     }
@@ -156,7 +157,7 @@ export function MuxPromoUploader({
       <input
         ref={fileInputRef}
         type="file"
-        accept="video/*"
+        accept="video/*,.3g2,.3gp,.asf,.avi,.divx,.dv,.f4v,.flv,.m2t,.m2ts,.m4v,.mkv,.mod,.mov,.mpe,.mpeg,.mpg,.mts,.mxf,.ogm,.ogv,.qt,.rm,.rmvb,.tod,.ts,.vob,.webm,.wmv"
         onChange={handleFile}
         className="hidden"
       />

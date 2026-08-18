@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { createLocalUpload } from "@/lib/storage/local";
 import { createPresignedUpload, isR2Configured } from "@/lib/storage/r2";
+import { isLikelyVideoFile, videoUploadContentType } from "@/lib/video-file";
 
 export const runtime = "nodejs";
 
@@ -10,7 +11,6 @@ export const runtime = "nodejs";
 // pas : le plafond unique de 1 Gio servait la vidéo et laissait, pour les
 // images, une marge dont seul un abus pouvait se servir.
 const MAX_IMAGE_BYTES = 12 * 1024 * 1024; // 12 Mio
-const MAX_VIDEO_BYTES = 1024 * 1024 * 1024; // 1 Gio
 
 // Types refusés quel que soit le préfixe.
 //
@@ -24,9 +24,9 @@ const DENIED_TYPES = new Set([
   "application/xhtml+xml",
 ]);
 
-function isAllowedType(contentType: string): boolean {
+function isAllowedType(filename: string, contentType: string): boolean {
   if (DENIED_TYPES.has(contentType.toLowerCase())) return false;
-  return contentType.startsWith("image/") || contentType.startsWith("video/");
+  return contentType.startsWith("image/") || isLikelyVideoFile(filename, contentType);
 }
 
 /** Extensions dangereuses, indépendamment du type déclaré. */
@@ -66,21 +66,29 @@ export async function POST(request: Request) {
       { status: 400 },
     );
   }
-  if (!isAllowedType(contentType) || hasDeniedExtension(filename)) {
+  if (!isAllowedType(filename, contentType) || hasDeniedExtension(filename)) {
     return NextResponse.json(
       { error: "Format non supporté. Choisissez une image ou une vidéo." },
       { status: 400 },
     );
   }
-  const maxBytes = contentType.startsWith("video/")
-    ? MAX_VIDEO_BYTES
-    : MAX_IMAGE_BYTES;
-  if (sizeBytes <= 0 || sizeBytes > maxBytes) {
+  const isVideo = isLikelyVideoFile(filename, contentType);
+  if (!Number.isSafeInteger(sizeBytes) || sizeBytes <= 0) {
     return NextResponse.json(
-      { error: `Fichier trop lourd (max ${Math.round(maxBytes / (1024 * 1024))} Mo).` },
+      { error: "Taille de fichier invalide." },
       { status: 400 },
     );
   }
+  if (!isVideo && sizeBytes > MAX_IMAGE_BYTES) {
+    return NextResponse.json(
+      { error: `Image trop lourde (max ${Math.round(MAX_IMAGE_BYTES / (1024 * 1024))} Mo).` },
+      { status: 400 },
+    );
+  }
+
+  const uploadContentType = isVideo
+    ? videoUploadContentType(filename, contentType)
+    : contentType;
 
   const prefix = `thumbnails/courses/${session.user.id}`;
 
@@ -90,11 +98,10 @@ export async function POST(request: Request) {
       ? await createPresignedUpload({
           prefix,
           filename,
-          contentType,
-          // Le plafond transmis à la signature est CELUI DU SERVEUR, pas la
-          // taille annoncée par le client : sinon un appelant déclarant 1 Ko
-          // obtiendrait une URL signée qui accepte n'importe quel volume.
-          maxSizeBytes: maxBytes,
+          contentType: uploadContentType,
+          // Lie la signature à la taille exacte annoncée. Les vidéos n'ont
+          // plus de plafond applicatif ; R2 applique ses limites physiques.
+          maxSizeBytes: sizeBytes,
           // Vidéos potentiellement lourdes → fenêtre d'upload large.
           expiresInSeconds: 600,
         })

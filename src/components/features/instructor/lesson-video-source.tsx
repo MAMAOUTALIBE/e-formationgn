@@ -21,6 +21,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { formatDurationFromSeconds } from "@/lib/format/duration";
 import { cn } from "@/lib/utils";
+import { isLikelyVideoFile, videoUploadContentType } from "@/lib/video-file";
 import {
   clearLessonVideo,
   setLessonExternalVideoUrl,
@@ -309,7 +310,7 @@ function R2VideoUploader({
   async function handleFile(event: React.ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
     if (!file) return;
-    if (!file.type.startsWith("video/")) {
+    if (!isLikelyVideoFile(file.name, file.type)) {
       setState({ kind: "error", message: "Seuls les fichiers vidéo sont acceptés." });
       return;
     }
@@ -319,7 +320,7 @@ function R2VideoUploader({
       const presigned = await createPresignedLessonVideoUpload({
         lessonId,
         filename: file.name,
-        contentType: file.type,
+        contentType: videoUploadContentType(file.name, file.type),
         sizeBytes: file.size,
       });
       if (!presigned.ok || !presigned.upload) {
@@ -327,8 +328,12 @@ function R2VideoUploader({
         return;
       }
 
-      await putToR2(file, presigned.upload.uploadUrl, file.type, (progress) =>
-        setState({ kind: "uploading", progress }),
+      await putToR2(
+        file,
+        presigned.upload.uploadUrl,
+        videoUploadContentType(file.name, file.type),
+        (progress) =>
+          setState({ kind: "uploading", progress }),
       );
 
       setState({ kind: "saving" });
@@ -357,7 +362,7 @@ function R2VideoUploader({
       <input
         ref={fileInputRef}
         type="file"
-        accept="video/*"
+        accept="video/*,.3g2,.3gp,.asf,.avi,.divx,.dv,.f4v,.flv,.m2t,.m2ts,.m4v,.mkv,.mod,.mov,.mpe,.mpeg,.mpg,.mts,.mxf,.ogm,.ogv,.qt,.rm,.rmvb,.tod,.ts,.vob,.webm,.wmv"
         onChange={handleFile}
         className="hidden"
       />
@@ -373,8 +378,7 @@ function R2VideoUploader({
             Cliquer pour téléverser un fichier vidéo
           </span>
           <span className="text-xs text-muted-foreground">
-            Tous formats vidéo — jusqu&apos;à 1 Go. Hébergé sur le stockage de
-            la plateforme.
+            Tous formats et toutes tailles acceptés par le stockage vidéo.
           </span>
         </button>
       ) : null}

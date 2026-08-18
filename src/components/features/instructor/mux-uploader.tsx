@@ -22,6 +22,7 @@ import { Button } from "@/components/ui/button";
 import { ConfirmAction } from "@/components/features/instructor/confirm-action";
 import { formatDurationFromSeconds } from "@/lib/format/duration";
 import { cn } from "@/lib/utils";
+import { isLikelyVideoFile } from "@/lib/video-file";
 import {
   confirmMuxUploadForLesson,
   createMuxUploadForLesson,
@@ -76,7 +77,7 @@ export function MuxUploader({
   async function handleFile(event: React.ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
     if (!file) return;
-    if (!file.type.startsWith("video/")) {
+    if (!isLikelyVideoFile(file.name, file.type)) {
       setState({ kind: "error", message: "Seuls les fichiers vidéo sont acceptés." });
       return;
     }
@@ -176,7 +177,7 @@ export function MuxUploader({
       <input
         ref={fileInputRef}
         type="file"
-        accept="video/*"
+        accept="video/*,.3g2,.3gp,.asf,.avi,.divx,.dv,.f4v,.flv,.m2t,.m2ts,.m4v,.mkv,.mod,.mov,.mpe,.mpeg,.mpg,.mts,.mxf,.ogm,.ogv,.qt,.rm,.rmvb,.tod,.ts,.vob,.webm,.wmv"
         onChange={handleFile}
         className="hidden"
       />
@@ -226,7 +227,7 @@ export function MuxUploader({
             Cliquer pour téléverser la vidéo
           </span>
           <span className="text-xs text-muted-foreground">
-            MP4, MOV, MKV — jusqu&apos;à plusieurs gigaoctets. Encodage automatique.
+            Tous formats et toutes tailles acceptés par Mux. Encodage automatique.
           </span>
         </button>
       ) : null}
