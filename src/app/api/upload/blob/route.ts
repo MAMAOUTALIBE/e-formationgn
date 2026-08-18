@@ -50,8 +50,12 @@ export async function PUT(request: Request) {
   let dest: string;
   try {
     dest = await resolveLocalUploadPath(key);
-  } catch {
-    return NextResponse.json({ error: "Clé invalide." }, { status: 400 });
+  } catch (error) {
+    console.error("[upload/blob] préparation du stockage", { key, error });
+    return NextResponse.json(
+      { error: "Le stockage vidéo n'est pas accessible. Réessayez." },
+      { status: 500 },
+    );
   }
 
   const ws = createWriteStream(dest);

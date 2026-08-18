@@ -68,7 +68,7 @@ RUN npx next build --webpack
 FROM node:20-alpine AS runner
 WORKDIR /app
 
-RUN apk add --no-cache openssl curl tini \
+RUN apk add --no-cache openssl curl tini su-exec \
   && addgroup --system --gid 1001 nodejs \
   && adduser --system --uid 1001 nextjs
 
@@ -95,7 +95,6 @@ COPY --from=builder --chown=nextjs:nodejs /app/prisma.config.ts ./prisma.config.
 COPY --chown=nextjs:nodejs scripts/docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
 RUN chmod +x /usr/local/bin/docker-entrypoint.sh
 
-USER nextjs
 EXPOSE 3000
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \

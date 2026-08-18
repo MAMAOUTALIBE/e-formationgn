@@ -431,7 +431,19 @@ function putToR2(
     });
     xhr.onload = () => {
       if (xhr.status >= 200 && xhr.status < 300) resolve();
-      else reject(new Error(`Upload échoué (${xhr.status}). Réessayez.`));
+      else {
+        let serverMessage = "";
+        try {
+          serverMessage = (JSON.parse(xhr.responseText) as { error?: string }).error ?? "";
+        } catch {
+          // Une réponse non JSON (par exemple nginx) conserve le message générique.
+        }
+        reject(
+          new Error(
+            serverMessage || `Upload échoué (${xhr.status}). Réessayez.`,
+          ),
+        );
+      }
     };
     xhr.onerror = () => reject(new Error("Erreur réseau pendant l'upload."));
     xhr.send(file);

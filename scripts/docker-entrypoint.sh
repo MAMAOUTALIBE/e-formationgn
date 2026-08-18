@@ -3,6 +3,16 @@
 # Conçu pour idempotence : peut être relancé sans risque.
 set -e
 
+# Un volume Docker neuf est créé avec root:root, même si le dossier de l'image
+# appartient à nextjs. Prépare le volume persistant puis redémarre immédiatement
+# l'entrypoint avec l'utilisateur non privilégié de l'application.
+if [ "$(id -u)" = "0" ]; then
+  mkdir -p /app/public/uploads
+  chown -R nextjs:nodejs /app/public/uploads
+  chmod -R u+rwX /app/public/uploads
+  exec su-exec nextjs:nodejs "$0" "$@"
+fi
+
 if [ -z "${DATABASE_URL:-}" ]; then
   echo "[entrypoint] DATABASE_URL absent. Abandon." >&2
   exit 1
