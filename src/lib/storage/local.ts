@@ -22,6 +22,27 @@ import type { PresignedUploadResult } from "@/lib/storage/r2";
 
 const UPLOAD_ROOT = path.join(process.cwd(), "public", "uploads");
 
+/** Résout un fichier déjà stocké sans créer de dossier (lecture publique). */
+export function resolveLocalStoredFilePath(segments: string[]): string | null {
+  if (
+    segments.length === 0 ||
+    segments.some(
+      (segment) =>
+        !segment ||
+        segment === "." ||
+        segment === ".." ||
+        segment.includes("/") ||
+        segment.includes("\\") ||
+        segment.includes("\0"),
+    )
+  ) {
+    return null;
+  }
+
+  const resolved = path.resolve(UPLOAD_ROOT, ...segments);
+  return resolved.startsWith(UPLOAD_ROOT + path.sep) ? resolved : null;
+}
+
 function secret(): string {
   // NEXTAUTH_SECRET est toujours posé (auth obligatoire) ; fallback dev.
   return process.env.NEXTAUTH_SECRET ?? "dev-insecure-upload-secret";
