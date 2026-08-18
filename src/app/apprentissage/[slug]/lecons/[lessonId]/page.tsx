@@ -233,6 +233,7 @@ export default async function LessonViewerPage({ params }: PageProps) {
                 {lesson.type === "VIDEO" ? (
                   lesson.muxPlaybackId || lesson.externalVideoUrl ? (
                     <LessonPlayer
+                      key={lesson.id}
                       playbackId={lesson.muxPlaybackId}
                       playbackToken={
                         lesson.muxPlaybackId

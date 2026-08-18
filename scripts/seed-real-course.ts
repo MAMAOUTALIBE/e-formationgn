@@ -28,17 +28,35 @@ interface PexelsVideo {
   thumbnail: string;
   author: string;
   authorUrl: string;
-  videoFileHd: string;
-  videoFileSd: string;
+  videoFileHd: string | null;
+  videoFileSd: string | null;
+}
+
+type SeedVideo = PexelsVideo & { videoFileHd: string };
+
+function isUsableTechVideo(video: PexelsVideo): video is SeedVideo {
+  if (video.category !== "tech" || !video.videoFileHd) return false;
+
+  try {
+    const url = new URL(video.videoFileHd);
+    return (
+      (url.protocol === "https:" || url.protocol === "http:") &&
+      video.durationSeconds > 0
+    );
+  } catch {
+    return false;
+  }
 }
 
 async function main() {
   const videos: PexelsVideo[] = JSON.parse(
     fs.readFileSync(path.join(__dirname, "..", "pexels-videos.json"), "utf8"),
   );
-  const techVideos = videos.filter((v) => v.category === "tech");
+  const techVideos = videos.filter(isUsableTechVideo);
   if (techVideos.length < 4) {
-    throw new Error(`Besoin de 4 vidéos tech, trouvé ${techVideos.length}.`);
+    throw new Error(
+      `Besoin de 4 vidéos tech avec URL HD et durée valides, trouvé ${techVideos.length}. Régénère pexels-videos.json avec scripts/pexels-fetch-videos.ts.`,
+    );
   }
 
   const instructor = await prisma.user.findUnique({
