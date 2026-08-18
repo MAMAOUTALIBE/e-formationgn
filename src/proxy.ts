@@ -51,8 +51,14 @@ export default function proxy(request: NextRequest, event: NextFetchEvent) {
 
 // Matcher Next.js : on évite les assets statiques, les routes API d'auth,
 // le manifest PWA et le service worker (servis statiquement depuis /public).
+//
+// L'upload blob est également exclu : le proxy Next clone et met en mémoire le
+// corps des requêtes avec une limite de 10 Mo. Une vidéo plus lourde arriverait
+// donc tronquée au route handler, qui répondrait 400. La route conserve ses
+// propres protections (session, URL signée HMAC, expiration et limite 1 Go) et
+// écrit le fichier en streaming sur disque.
 export const config = {
   matcher: [
-    "/((?!api/auth|_next/static|_next/image|favicon.ico|manifest.webmanifest|sw.js|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|mp4|webm|mov|m4v)$).*)",
+    "/((?!api/auth|api/upload/blob$|_next/static|_next/image|favicon.ico|manifest.webmanifest|sw.js|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|mp4|webm|mov|m4v)$).*)",
   ],
 };
