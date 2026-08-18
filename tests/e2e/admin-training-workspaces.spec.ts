@@ -12,16 +12,16 @@ test.describe("CRM formateurs et formations", () => {
     });
   }
 
-  test("les formateurs utilisent Stripe, cours, élèves, notes et revenus réels", async () => {
+  test("les formateurs utilisent les cours et inscriptions réels du LMS", async () => {
     const source = await readFile(path.join(root, "src/app/admin/formateurs/page.tsx"), "utf8");
-    expect(source).toContain('data-testid="instructors-workspace"');
-    expect(source).toContain("stripeOnboardingDone");
+    expect(source).toContain("Gestion des formateurs");
+    expect(source).toContain("isInstructor: true");
     expect(source).toContain("coursesAuthored");
-    expect(source).toContain("instructorPayoutCents");
-    expect(source).toContain("exportInstructorsCsv");
+    expect(source).toContain("totalEnrollments");
+    expect(source).not.toContain("stripeOnboardingDone");
   });
 
-  test("les formations utilisent programmes, sessions, inscriptions et revenus réels", async () => {
+  test("les formations utilisent programmes, sessions et inscriptions réels", async () => {
     const [pageSource, querySource] = await Promise.all([
       readFile(path.join(root, "src/app/admin/formations/page.tsx"), "utf8"),
       readFile(path.join(root, "src/server/queries/admin-programs.ts"), "utf8"),
@@ -30,6 +30,6 @@ test.describe("CRM formateurs et formations", () => {
     expect(pageSource).toContain("exportProgramsCsv");
     expect(querySource).toContain("prisma.trainingSession.count");
     expect(querySource).toContain("prisma.registration.count");
-    expect(querySource).toContain("prisma.orderItem.groupBy");
+    expect(querySource).toContain("prisma.program.findMany");
   });
 });

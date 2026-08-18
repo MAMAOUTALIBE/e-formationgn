@@ -22,6 +22,13 @@ import {
 
 type Params = Record<string, string | undefined>;
 
+const courseDateFormatter = new Intl.DateTimeFormat("fr-FR", {
+  day: "numeric",
+  month: "short",
+  year: "numeric",
+  timeZone: "UTC",
+});
+
 export function AdminCoursesTable({ rows, params, page, pageSize, total, totalPages }: {
   rows: AdminCourseRow[];
   params: Params;
@@ -117,7 +124,7 @@ export function AdminCoursesTable({ rows, params, page, pageSize, total, totalPa
                 <td className="truncate px-3 text-muted-foreground" title={course.instructor.name ?? course.instructor.email}>{course.instructor.name ?? course.instructor.email}</td>
                 <td className="truncate px-3 text-muted-foreground" title={course.category.name}>{course.category.name}</td>
                 <td className="px-3 text-right font-semibold tabular-nums">{course.totalEnrollments.toLocaleString("fr-FR")}</td>
-                <td className="px-3 text-xs text-muted-foreground"><time dateTime={course.updatedAt.toISOString()}>{new Intl.DateTimeFormat("fr-FR", { day: "numeric", month: "short", year: "numeric" }).format(course.updatedAt)}</time></td>
+                <td className="px-3 text-xs text-muted-foreground"><time dateTime={course.updatedAt.toISOString()}>{courseDateFormatter.format(course.updatedAt)}</time></td>
                 <td className="px-3 text-right"><CourseMenu course={course} pending={pending} onAction={run} onDelete={() => setToDelete(course)} /></td>
               </tr>
             ))}

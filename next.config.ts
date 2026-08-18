@@ -3,7 +3,7 @@ import type { NextConfig } from "next";
 // En-têtes de sécurité appliqués à toutes les réponses HTML.
 // Mode CSP contrôlé par l'env `CSP_MODE` :
 //   - "enforce" → `Content-Security-Policy` (XSS bloqué activement)
-//   - "report-only" (défaut) → `Content-Security-Policy-Report-Only` (signale
+//   - "report-only" → `Content-Security-Policy-Report-Only` (signale
 //     les violations dans la console sans bloquer, pour validation progressive)
 //
 // Procédure de durcissement recommandée :

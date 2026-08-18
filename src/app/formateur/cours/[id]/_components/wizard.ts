@@ -2,7 +2,7 @@
 //
 // Les 4 étapes « création » sont ordonnées et numérotées : le formateur les
 // remplit dans l'ordre, et chaque enregistrement valide l'envoie à la suivante
-// (cf. useAdvanceOnSuccess). Insights & Annonces sont des outils post-création,
+// (cf. useAdvanceOnSuccess). Les outils secondaires sont post-création,
 // affichés à part (non numérotés). La navigation reste libre — on guide sans
 // verrouiller.
 
@@ -19,7 +19,6 @@ export const WIZARD_STEPS: WizardStep[] = [
 ];
 
 export const SECONDARY_STEPS: WizardStep[] = [
-  { slug: "insights", label: "Insights" },
   { slug: "eleves", label: "Élèves" },
   { slug: "resultats", label: "Résultats quiz" },
   { slug: "annonces", label: "Annonces" },
@@ -32,7 +31,7 @@ export function stepHref(courseId: string, slug: string): string {
 
 /**
  * Index de l'étape « création » correspondant au pathname courant, ou -1 si on
- * est sur une page secondaire (Insights / Annonces) ou ailleurs.
+ * est sur une page secondaire ou ailleurs.
  */
 export function currentStepIndex(courseId: string, pathname: string): number {
   const base = `/formateur/cours/${courseId}`;

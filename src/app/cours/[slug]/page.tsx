@@ -39,9 +39,18 @@ interface PageProps {
   searchParams: Promise<{ preview?: string }>;
 }
 
-export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+export async function generateMetadata({
+  params,
+  searchParams,
+}: PageProps): Promise<Metadata> {
   const { slug } = await params;
-  const course = await getPublishedCourseBySlug(slug);
+  const { preview } = await searchParams;
+  const session = preview === "1" ? await auth() : null;
+  const previewCtx =
+    preview === "1" && session?.user
+      ? { viewerId: session.user.id, isAdmin: session.user.role === "ADMIN" }
+      : undefined;
+  const course = await getPublishedCourseBySlug(slug, previewCtx);
   if (!course) return { title: "Cours introuvable" };
 
   const description =

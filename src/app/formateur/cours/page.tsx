@@ -56,7 +56,7 @@ export default async function InstructorCoursesPage({ searchParams }: PageProps)
   const hasFilters = query !== "" || status !== "ALL" || sort !== "recent";
 
   return (
-    <div className="space-y-6">
+    <div className="min-w-0 max-w-full space-y-6 overflow-hidden">
       <header className="flex flex-col items-start justify-between gap-3 sm:flex-row sm:items-center">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight text-foreground">Mes cours</h1>
@@ -101,7 +101,7 @@ export default async function InstructorCoursesPage({ searchParams }: PageProps)
           </CardContent>
         </Card>
       ) : (
-        <div className="overflow-x-auto rounded-lg border border-border bg-card">
+        <div className="min-w-0 max-w-full overflow-x-auto rounded-lg border border-border bg-card">
           <table className="w-full min-w-[640px] text-sm">
             <thead className="border-b border-border bg-muted/40 text-left text-xs uppercase tracking-wide text-muted-foreground">
               <tr>

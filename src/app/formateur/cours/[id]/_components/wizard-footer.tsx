@@ -17,13 +17,13 @@ interface WizardFooterProps {
 /**
  * Barre de navigation bas-de-page de l'assistant : « Étape précédente » /
  * « Étape suivante ». Affichée uniquement sur les 4 étapes de création
- * (masquée sur Insights / Annonces). Sur la dernière étape, invite à soumettre.
+ * (masquée sur les pages secondaires). Sur la dernière étape, invite à soumettre.
  */
 export function WizardFooter({ courseId, unlockedMaxIndex }: WizardFooterProps) {
   const pathname = usePathname();
   const index = currentStepIndex(courseId, pathname);
 
-  // Page secondaire (Insights / Annonces) ou inconnue → pas d'assistant.
+  // Page secondaire ou inconnue → pas d'assistant.
   if (index === -1) return null;
 
   const prev = index > 0 ? WIZARD_STEPS[index - 1] : null;

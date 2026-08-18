@@ -5,6 +5,13 @@ import path from "node:path";
 const root = process.cwd();
 
 test.describe("Espace apprenants CRM", () => {
+  test("les dates du tableau ont un fuseau déterministe pour l’hydratation", async () => {
+    const source = await readFile(
+      `${root}/src/components/features/admin/learners-table.tsx`,
+      "utf8",
+    );
+    expect(source).toContain('timeZone: "UTC"');
+  });
   test("reste protégé pour un visiteur anonyme", async ({ page }) => {
     await page.goto("/admin/utilisateurs");
     await expect(page).toHaveURL(/\/connexion/);
