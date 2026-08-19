@@ -26,12 +26,17 @@ test("le header réserve et espace les commandes sans recouvrir la recherche", a
 });
 
 test("la coquille occupe toujours tout le viewport sans espace sous le footer", async () => {
-  const source = await readFile(
-    path.join(root, "src/components/features/workspace/workspace-shell.tsx"),
-    "utf8",
-  );
+  const [source, styles] = await Promise.all([
+    readFile(
+      path.join(root, "src/components/features/workspace/workspace-shell.tsx"),
+      "utf8",
+    ),
+    readFile(path.join(root, "src/app/globals.css"), "utf8"),
+  ]);
 
   assert.match(source, /h-\[100dvh\] min-h-\[100dvh\]/);
   assert.match(source, /min-w-0 shrink-0 overflow-hidden/);
   assert.match(source, /workspace-main min-h-0 min-w-0 flex-1 overflow-y-auto/);
+  assert.match(styles, /html:has\(\.workspace-shell\),\s*body:has\(\.workspace-shell\)/);
+  assert.match(styles, /height: 100%;\s*overflow: hidden;/);
 });
