@@ -99,11 +99,6 @@ export async function SiteFooter() {
               </Link>
             </li>
             <li>
-              <Link href="/blog" className="hover:text-foreground">
-                {t.footer.blog}
-              </Link>
-            </li>
-            <li>
               <Link href="/contact" className="hover:text-foreground">
                 {t.footer.contact}
               </Link>
@@ -141,7 +136,7 @@ export async function SiteFooter() {
               className="mt-3 rounded bg-white p-1"
             />
             <p>
-              Certificat {BRAND.qualiopiCertificate}, valide jusqu&apos;au{" "}
+              Certification Qualiopi — certificat {BRAND.qualiopiCertificate}, valide jusqu&apos;au{" "}
               {BRAND.qualiopiValidUntil}.
             </p>
           </div>
