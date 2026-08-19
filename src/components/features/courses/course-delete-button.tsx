@@ -56,7 +56,7 @@ export function CourseDeleteButton({
     <div className="space-y-2">
       {!deletable ? (
         <p className="text-xs text-muted-foreground">
-          Suppression définitive impossible : ce cours a des ventes ou des
+          Suppression définitive impossible : cette formation a des ventes ou des
           certificats. Archivez-le pour le retirer du catalogue tout en
           préservant la comptabilité.
         </p>

@@ -65,7 +65,7 @@ export function CourseCard({
         {course.thumbnailUrl ? (
           <Image
             src={course.thumbnailUrl}
-            alt={`Vignette du cours ${course.title}`}
+            alt={`Vignette de la formation ${course.title}`}
             fill
             sizes="(min-width: 1280px) 25vw, (min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
             className="object-cover transition-transform duration-200 group-hover/card:scale-[1.02]"
@@ -119,12 +119,12 @@ export function CourseCard({
         )}
 
         {/* Rangée de pastilles (une ligne, compacte façon Udemy) :
-            Cours · ★ note · N avis. Le badge marketing est en overlay sur
+            Formation · ★ note · N avis. Le badge marketing est en overlay sur
             l'image. Note et avis pointent vers la section avis (z-10 pour
             rester cliquables au-dessus du lien étiré). */}
         <div className="relative z-10 mt-2 flex w-fit max-w-full flex-wrap items-center gap-1">
           <span className="inline-flex items-center rounded-md border border-border px-1.5 py-0.5 text-[10px] text-muted-foreground">
-            Cours
+            Formation
           </span>
           <Link
             href={`/cours/${course.slug}#reviews`}
