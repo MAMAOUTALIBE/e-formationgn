@@ -325,31 +325,14 @@ video {
   max-width: 100%;
 }
 
-/* La fiche cours exploite toute la hauteur du CRM. `:has()` garde ce choix
- * strictement local à la route : les autres écrans conservent leur footer et
- * leur zone de contenu défilante. */
+/* La fiche cours masque le footer pour consacrer l’espace aux manipulations.
+ * Le scroll reste porté par `.workspace-main`, comme sur les autres écrans. */
 .workspace-shell:has(.page-course-detail) .workspace-footer {
   display: none;
 }
 
 .page-course-detail [data-slot="card-header"] {
   padding: 0.625rem 1rem 0.375rem;
-}
-
-@media (min-width: 80rem) {
-  .workspace-main:has(.page-course-detail) {
-    overflow: hidden;
-  }
-
-  .workspace-content:has(.page-course-detail) {
-    height: 100%;
-    padding-block: 0.75rem;
-  }
-
-  .page-course-detail {
-    height: 100%;
-    overflow: hidden;
-  }
 }
 
 @media (max-width: 47.999rem) {

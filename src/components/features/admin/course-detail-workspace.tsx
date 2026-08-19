@@ -71,7 +71,7 @@ export function CourseDetailWorkspace({
         tabIndex={0}
         className={cn(
           panel.key === active ? "block" : "hidden",
-          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 xl:block xl:h-auto xl:min-h-0 xl:overflow-hidden",
+          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 xl:block xl:h-auto xl:min-h-0 xl:overflow-visible",
           panel.key === "information"
             ? "h-auto min-h-0"
             : "h-[calc(100dvh-12rem)] min-h-[26rem]",
@@ -126,19 +126,19 @@ export function CourseDetailWorkspace({
       </nav>
 
       <div
-        className="mt-3 min-h-0 flex-1 xl:grid xl:grid-cols-12 xl:grid-rows-[minmax(0,1fr)] xl:gap-3 xl:overflow-hidden"
+        className="mt-3 min-h-0 flex-1 xl:grid xl:grid-cols-12 xl:items-start xl:gap-3"
       >
         <div
           className={cn(
-            "contents xl:col-span-8 xl:grid xl:min-h-0 xl:overflow-hidden xl:gap-3",
+            "contents xl:col-span-8 xl:grid xl:min-h-0 xl:gap-3",
             learners
-              ? "xl:grid-rows-[auto_minmax(0,0.82fr)_minmax(0,1.18fr)]"
-              : "xl:grid-rows-[auto_minmax(0,1fr)]",
+              ? "xl:grid-rows-[auto_auto_minmax(32rem,auto)]"
+              : "xl:grid-rows-[auto_auto]",
           )}
         >
           {mainPanels.map(renderPanel)}
         </div>
-        <div className="contents xl:col-span-4 xl:grid xl:min-h-0 xl:grid-rows-[minmax(0,1.05fr)_minmax(0,0.95fr)] xl:overflow-hidden xl:gap-3">
+        <div className="contents xl:sticky xl:top-0 xl:col-span-4 xl:grid xl:min-h-0 xl:grid-rows-[auto_auto] xl:gap-3">
           {controlPanels.map(renderPanel)}
         </div>
       </div>

@@ -42,16 +42,17 @@ test("la fiche admin garde la grille compacte, les onglets et la suppression con
   assert.doesNotMatch(pageSource, /Zone de danger|Curation/);
 
   assert.match(workspaceSource, /xl:grid-cols-12/);
-  assert.match(workspaceSource, /xl:grid-rows-\[minmax\(0,1fr\)\]/);
+  assert.match(workspaceSource, /xl:items-start/);
   assert.match(workspaceSource, /xl:col-span-8 xl:grid xl:min-h-0/);
-  assert.match(workspaceSource, /xl:col-span-4 xl:grid xl:min-h-0/);
-  assert.match(workspaceSource, /xl:grid-rows-\[auto_minmax\(0,0\.82fr\)_minmax\(0,1\.18fr\)\]/);
-  assert.match(workspaceSource, /xl:grid-rows-\[minmax\(0,1\.05fr\)_minmax\(0,0\.95fr\)\]/);
+  assert.match(workspaceSource, /xl:sticky xl:top-0 xl:col-span-4/);
+  assert.match(workspaceSource, /xl:grid-rows-\[auto_auto_minmax\(32rem,auto\)\]/);
+  assert.match(workspaceSource, /xl:grid-rows-\[auto_auto\]/);
   assert.match(workspaceSource, /role="tablist"/);
   assert.match(workspaceSource, /ArrowRight/);
 
   assert.match(stylesSource, /workspace-shell:has\(\.page-course-detail\) \.workspace-footer/);
-  assert.match(stylesSource, /workspace-main:has\(\.page-course-detail\)/);
+  assert.doesNotMatch(stylesSource, /workspace-main:has\(\.page-course-detail\)\s*\{[^}]*overflow:\s*hidden/);
+  assert.doesNotMatch(stylesSource, /\.page-course-detail\s*\{[^}]*height:\s*100%/);
 
   assert.match(grantSource, /loadCourseGrantCandidates/);
   assert.match(grantSource, /skip: offset/);
