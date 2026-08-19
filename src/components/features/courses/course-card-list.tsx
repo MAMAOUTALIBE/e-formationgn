@@ -39,13 +39,13 @@ export function CourseCardList({ course }: CourseCardListProps) {
       <Link
         href={`/cours/${course.slug}`}
         className="block shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-        aria-label={`Voir le cours ${course.title}`}
+        aria-label={`Voir la formation ${course.title}`}
       >
         <div className="relative aspect-video w-full overflow-hidden rounded-md bg-muted sm:w-[260px]">
           {course.thumbnailUrl ? (
             <Image
               src={course.thumbnailUrl}
-              alt={`Vignette du cours ${course.title}`}
+              alt={`Vignette de la formation ${course.title}`}
               fill
               sizes="(min-width: 640px) 260px, 100vw"
               className="object-cover transition-transform duration-200 group-hover:scale-[1.02]"

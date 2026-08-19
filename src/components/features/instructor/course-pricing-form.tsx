@@ -61,7 +61,7 @@ export function CoursePricingForm({
       <p className="text-sm text-muted-foreground">
         Fixez votre prix dans chaque devise. Mettez{" "}
         <code className="rounded bg-muted px-1">0</code> pour ne pas vendre dans
-        cette devise (le cours n&apos;apparaîtra pas dans le panier des élèves
+        cette devise (la formation n&apos;apparaîtra pas dans le panier des élèves
         qui ont sélectionné cette devise).
       </p>
 

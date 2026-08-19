@@ -63,7 +63,7 @@ export function CourseSaleBanner({ endsAt, coursesCount }: CourseSaleBannerProps
       />
       <p>
         <strong>Soldes en cours</strong> sur{" "}
-        <span className="font-semibold">{coursesCount}</span> cours — se termine
+        <span className="font-semibold">{coursesCount}</span> formations — se termine
         dans{" "}
         <span className="font-bold tabular-nums text-[color:var(--brand-warning)]">
           {formatRemaining(remaining)}

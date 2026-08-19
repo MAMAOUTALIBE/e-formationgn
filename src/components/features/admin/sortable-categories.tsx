@@ -127,7 +127,7 @@ function SortableRow({
           {!item.isActive ? <Badge variant="outline">Inactive</Badge> : null}
         </p>
         <p className="text-xs text-muted-foreground">
-          /{item.slug} · {item.coursesCount} cours
+          /{item.slug} · {item.coursesCount} formation{item.coursesCount !== 1 ? "s" : ""}
         </p>
       </div>
       <Button

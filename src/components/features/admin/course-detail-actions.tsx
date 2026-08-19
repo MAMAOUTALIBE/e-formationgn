@@ -50,7 +50,7 @@ export function CourseDetailActions({
         type="button"
         variant="outline"
         size="icon"
-        aria-label="Plus d’actions sur le cours"
+        aria-label="Plus d’actions sur la formation"
         aria-haspopup="menu"
         aria-expanded={open}
         title="Plus d’actions"
@@ -63,7 +63,7 @@ export function CourseDetailActions({
       {open ? (
         <div
           role="menu"
-          aria-label="Actions sur le cours"
+          aria-label="Actions sur la formation"
           className="absolute right-0 top-full z-30 mt-1 w-80 max-w-[calc(100vw-1.5rem)] rounded-lg border border-border bg-popover p-1.5 text-popover-foreground shadow-lg"
         >
           <CourseDeleteButton

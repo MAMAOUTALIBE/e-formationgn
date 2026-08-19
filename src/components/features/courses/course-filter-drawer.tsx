@@ -103,7 +103,7 @@ export function CourseFilterDrawer({
       open={open}
       onClose={onClose}
       title="Tous les filtres"
-      description="Affinez votre sélection pour trouver le cours idéal."
+      description="Affinez votre sélection pour trouver la formation idéale."
       size="md"
       footer={
         <div className="flex items-center justify-between gap-3">

@@ -55,13 +55,13 @@ export async function suggestSeoForCourse(
         category: { select: { name: true } },
       },
     });
-    if (!course) return { ok: false, message: "Cours introuvable." };
+    if (!course) return { ok: false, message: "Formation introuvable." };
 
     if (course.description.trim().length < 80) {
       return {
         ok: false,
         message:
-          "La description du cours est trop courte (≥ 80 caractères) pour générer des suggestions de qualité.",
+          "La description de la formation est trop courte (≥ 80 caractères) pour générer des suggestions de qualité.",
       };
     }
 

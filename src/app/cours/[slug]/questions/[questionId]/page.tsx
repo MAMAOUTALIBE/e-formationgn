@@ -178,7 +178,7 @@ export default async function QuestionThreadPage({ params }: PageProps) {
             </Card>
           ) : (
             <p className="text-sm text-muted-foreground">
-              Inscrivez-vous au cours pour pouvoir répondre.
+              Inscrivez-vous à la formation pour pouvoir répondre.
             </p>
           )}
         </Container>

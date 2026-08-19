@@ -68,7 +68,7 @@ export function CourseDeleteButton({
         role={presentation === "menu-item" ? "menuitem" : undefined}
         disabled={!deletable || pending}
         onClick={() => setOpen(true)}
-        title={!deletable ? "Suppression indisponible pour ce cours" : undefined}
+        title={!deletable ? "Suppression indisponible pour cette formation" : undefined}
         className={
           presentation === "menu-item"
             ? "h-9 w-full justify-start px-2 text-[color:var(--brand-danger)] hover:bg-[color:var(--brand-danger)]/10"
@@ -76,7 +76,7 @@ export function CourseDeleteButton({
         }
       >
         <Trash2 className="h-4 w-4" />
-        Supprimer le cours
+        Supprimer la formation
       </Button>
 
       {error ? (
@@ -91,7 +91,7 @@ export function CourseDeleteButton({
           enrollments > 0
             ? ` ${enrollments.toLocaleString("fr-FR")} inscription(s) seront aussi supprimées.`
             : ""
-        } Le cours, ses sections, leçons et avis seront définitivement effacés.`}
+        } La formation, ses sections, leçons, quiz et avis seront définitivement effacés.`}
         confirmLabel="Supprimer définitivement"
         destructive
         pending={pending}

@@ -140,13 +140,13 @@ export default async function ProfilePage() {
             </h2>
             <StatCard
               icon={<GraduationCap className="h-4 w-4" aria-hidden />}
-              label="Cours suivis"
+              label="Formations suivies"
               value={enrollmentsCount.toLocaleString("fr-FR")}
               hint={`${avgProgress} % de progression moyenne`}
             />
             <StatCard
               icon={<Award className="h-4 w-4" aria-hidden />}
-              label="Cours terminés"
+              label="Formations terminées"
               value={completedCoursesCount.toLocaleString("fr-FR")}
               hint={`${certificatesCount} certificat${certificatesCount > 1 ? "s" : ""}`}
             />

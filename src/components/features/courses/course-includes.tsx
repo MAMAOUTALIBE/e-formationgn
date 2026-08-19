@@ -46,13 +46,13 @@ export function CourseIncludes({
   items.push(
     { icon: Smartphone, label: "Accès sur mobile et ordinateur" },
     { icon: InfinityIcon, label: "Accès à vie au contenu" },
-    { icon: Award, label: "Certificat de fin de cours" },
+    { icon: Award, label: "Certificat de fin de formation" },
   );
 
   return (
     <div className="space-y-3">
       <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-        Ce cours inclut
+        Cette formation inclut
       </p>
       <ul className="space-y-2 text-sm text-foreground">
         {items.map((item, index) => {

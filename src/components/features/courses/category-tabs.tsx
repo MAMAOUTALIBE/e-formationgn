@@ -27,7 +27,7 @@ export function CategoryTabs({ tabs, className }: CategoryTabsProps) {
     <div className={cn("w-full", className)}>
       <div
         role="tablist"
-        aria-label="Catégories de cours"
+        aria-label="Catégories de formations"
         className="flex flex-wrap gap-1 border-b border-border"
       >
         {tabs.map((tab) => {

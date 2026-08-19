@@ -362,7 +362,7 @@ export default async function LessonViewerPage({ params }: PageProps) {
           {/* ── Colonne curriculum (cachée en mode focus) ───────────── */}
           <aside
             data-learning-sidebar
-            aria-label="Programme du cours"
+            aria-label="Programme de la formation"
             className="order-2 border-l border-border bg-card lg:sticky lg:top-14 lg:max-h-[calc(100vh-3.5rem)] lg:overflow-y-auto"
           >
             <LearningSidebarPanel

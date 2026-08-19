@@ -16,7 +16,7 @@ export const instructorPromoCreateSchema = z
     kind: z.enum(["PERCENTAGE", "FIXED_AMOUNT"]),
     value: z.coerce.number().int().min(1),
     currency: z.enum(["EUR", "USD"]).optional(),
-    courseIds: z.array(z.string().min(1)).min(1, "Sélectionnez au moins un cours."),
+    courseIds: z.array(z.string().min(1)).min(1, "Sélectionnez au moins une formation."),
     maxRedemptions: z
       .union([z.coerce.number().int().min(1), z.literal("")])
       .optional(),

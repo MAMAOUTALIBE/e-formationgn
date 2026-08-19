@@ -38,7 +38,7 @@ export async function GET() {
 
   const header = [
     "Date",
-    "Cours",
+    "Formation",
     "Devise",
     "Montant total",
     "Commission plateforme",

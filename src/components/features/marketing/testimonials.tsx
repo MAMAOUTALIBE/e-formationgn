@@ -34,14 +34,14 @@ const TESTIMONIALS: Testimonial[] = [
     role: "Marketing manager · Dakar",
     rating: 5,
     quote:
-      "Les cours sont structurés, pratiques, et adaptés au marché africain francophone. Le format vidéo + quiz est idéal pour apprendre le soir après le travail.",
+      "Les formations sont structurées, pratiques, et adaptées au marché africain francophone. Le format vidéo + quiz est idéal pour apprendre le soir après le travail.",
   },
   {
     name: "Aïcha Traoré",
     role: "Designer UI · Abidjan",
     rating: 5,
     quote:
-      "Enfin une plateforme francophone de qualité ! L'accès illimité aux cours et le certificat à la fin font vraiment la différence sur mon CV. Je recommande à 100 %.",
+      "Enfin une plateforme francophone de qualité ! L'accès illimité aux formations et le certificat à la fin font vraiment la différence sur mon CV. Je recommande à 100 %.",
   },
 ];
 

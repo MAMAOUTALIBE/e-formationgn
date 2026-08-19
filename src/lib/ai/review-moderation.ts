@@ -42,8 +42,8 @@ Catégories possibles :
 - SPAM : contenu publicitaire, lien externe promotionnel, mention répétée d'un autre service
 - HARASSMENT : insultes ciblant le formateur, attaques personnelles, langage haineux
 - INAPPROPRIATE : contenu sexuel, violent, ou choquant sans rapport avec la formation
-- OFF_TOPIC : ne discute pas le cours (publicité d'un cours concurrent, message politique, plainte sans rapport)
-- OK : avis légitime, même négatif ou critique, du moment qu'il porte sur le cours
+- OFF_TOPIC : ne discute pas la formation (publicité d'une formation concurrente, message politique, plainte sans rapport)
+- OK : avis légitime, même négatif ou critique, du moment qu'il porte sur la formation
 
 Règles :
 - Une critique négative argumentée = OK (les élèves ont le droit d'être insatisfaits).

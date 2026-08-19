@@ -16,7 +16,7 @@ export function CourseGrid({ courses, currency, className, emptyMessage }: Cours
   if (courses.length === 0) {
     return (
       <EmptyState
-        title={emptyMessage ?? "Aucun cours ne correspond à votre recherche pour le moment."}
+        title={emptyMessage ?? "Aucune formation ne correspond à votre recherche pour le moment."}
       />
     );
   }

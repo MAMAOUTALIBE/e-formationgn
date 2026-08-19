@@ -193,7 +193,7 @@ export async function tryApplyPromo({
       return {
         ok: false,
         message:
-          "Ce code n'est applicable que sur un panier composé exclusivement de cours de son formateur.",
+          "Ce code n'est applicable que sur un panier composé exclusivement de formations de son formateur.",
       };
     }
   }
@@ -204,7 +204,7 @@ export async function tryApplyPromo({
     if (!eligibleSubtotal) {
       return {
         ok: false,
-        message: "Ce code n'est pas applicable aux cours présents dans votre panier.",
+        message: "Ce code n'est pas applicable aux formations présentes dans votre panier.",
       };
     }
   }

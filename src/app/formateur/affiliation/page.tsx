@@ -87,7 +87,7 @@ export default async function InstructorAffiliationPage() {
         </h1>
         <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
           Recommandez Gandal avec votre lien personnel. Quand un élève
-          achète l&apos;un de vos cours via votre lien, votre taux de commission
+          achète l&apos;une de vos formations via votre lien, votre taux de commission
           passe à <strong>15 %</strong> au lieu de 30 %.
         </p>
       </header>
@@ -129,7 +129,7 @@ export default async function InstructorAffiliationPage() {
                   <CopyAffiliateLink url={baseLink ?? ""} />
                 </div>
                 <p className="mt-2 text-xs text-muted-foreground">
-                  Vous pouvez aussi pointer vers un cours précis :
+                  Vous pouvez aussi pointer vers une formation précise :
                   <br />
                   <code className="break-all">
                     {APP_URL}/cours/&lt;slug&gt;?ref={user.affiliateCode}
@@ -165,7 +165,7 @@ export default async function InstructorAffiliationPage() {
 
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">Top cours via lien (30 j)</CardTitle>
+              <CardTitle className="text-base">Top formations via lien (30 j)</CardTitle>
             </CardHeader>
             <CardContent>
               {topCourses.length === 0 ? (
@@ -207,16 +207,16 @@ export default async function InstructorAffiliationPage() {
                 <li>
                   <strong className="text-foreground">2.</strong> Le visiteur
                   arrive avec votre code → il est cookie pendant 30 jours
-                  (uniquement pour vos cours).
+                  (uniquement pour vos formations).
                 </li>
                 <li>
                   <strong className="text-foreground">3.</strong> S&apos;il
-                  achète l&apos;un de vos cours dans cette fenêtre, la commission
+                  achète l&apos;une de vos formations dans cette fenêtre, la commission
                   plateforme passe à 15 % au lieu de 30 % → vous gagnez plus.
                 </li>
                 <li>
                   <strong className="text-foreground">4.</strong> Le code n&apos;a
-                  pas d&apos;effet sur les cours d&apos;autres formateurs (la
+                  pas d&apos;effet sur les formations d&apos;autres formateurs (la
                   commission y reste à 30 %).
                 </li>
               </ol>
@@ -228,7 +228,7 @@ export default async function InstructorAffiliationPage() {
       {courseIds.length === 0 ? (
         <Card>
           <CardContent className="p-4 text-sm text-muted-foreground">
-            Vous n&apos;avez pas encore de cours publié — créez-en un pour que
+            Vous n&apos;avez pas encore de formation publiée — créez-en une pour que
             votre lien d&apos;affiliation prenne tout son sens.
           </CardContent>
         </Card>
@@ -236,4 +236,3 @@ export default async function InstructorAffiliationPage() {
     </div>
   );
 }
-

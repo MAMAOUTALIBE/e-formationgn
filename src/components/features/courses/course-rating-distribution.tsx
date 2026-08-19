@@ -33,7 +33,7 @@ export function CourseRatingDistribution({
         </div>
         <Stars rating={averageRating} size="md" totalRatings={totalRatings} />
         <p className="text-xs font-medium text-muted-foreground">
-          Note du cours
+          Note de la formation
         </p>
       </div>
 

@@ -15,7 +15,7 @@ interface LearningFilterTabsProps {
 }
 
 const TABS: Array<{ key: LearningFilter; label: string }> = [
-  { key: "all", label: "Tous mes cours" },
+  { key: "all", label: "Toutes mes formations" },
   { key: "in-progress", label: "En cours" },
   { key: "completed", label: "Terminés" },
   { key: "wishlist", label: "Liste d'envies" },
@@ -24,7 +24,7 @@ const TABS: Array<{ key: LearningFilter; label: string }> = [
 export function LearningFilterTabs({ active, counts }: LearningFilterTabsProps) {
   return (
     <nav
-      aria-label="Filtrer mes cours"
+      aria-label="Filtrer mes formations"
       className="-mb-px flex flex-wrap gap-1 border-b border-border"
     >
       {TABS.map((tab) => {

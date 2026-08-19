@@ -30,7 +30,7 @@ async function requireLessonAccess(userId: string, lessonId: string) {
     select: { id: true },
   });
   if (!enrollment && !lesson.isFreePreview) {
-    throw new Error("Inscrivez-vous au cours pour accéder à cette leçon.");
+    throw new Error("Inscrivez-vous à la formation pour accéder à cette leçon.");
   }
   return { lesson, courseId: lesson.section.courseId };
 }

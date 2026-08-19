@@ -28,7 +28,7 @@ export default async function SeoPage() {
           SEO
         </h1>
         <p className="text-sm text-muted-foreground">
-          Vérification rapide des metadonnées des 50 cours les plus inscrits.
+          Vérification rapide des metadonnées des 50 formations les plus suivies.
           L&apos;intégration GSC (Google Search Console) viendra dans une
           version future.
         </p>
@@ -36,7 +36,7 @@ export default async function SeoPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Cours sans metaDescription</CardTitle>
+          <CardTitle className="text-base">Formations sans metaDescription</CardTitle>
         </CardHeader>
         <CardContent>
           <ul className="space-y-2 text-sm">

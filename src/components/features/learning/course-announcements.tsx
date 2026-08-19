@@ -35,7 +35,7 @@ export function CourseAnnouncements({ announcements }: CourseAnnouncementsProps)
           Aucune annonce pour le moment
         </p>
         <p className="mt-1 max-w-md text-xs text-muted-foreground">
-          Quand le formateur publiera des informations importantes sur ce cours
+          Quand le formateur publiera des informations importantes sur cette formation
           (mises à jour, événements, ressources), elles apparaîtront ici.
         </p>
       </div>

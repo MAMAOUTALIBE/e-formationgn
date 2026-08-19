@@ -60,7 +60,7 @@ const KIND_LABEL: Record<ActionQueueKind, string> = {
   gdpr: "Demande RGPD",
   ticket: "Ticket support",
   report: "Signalement",
-  course: "Cours à modérer",
+  course: "Formation à modérer",
   payout: "Versement en attente",
 };
 
@@ -242,7 +242,7 @@ const REPORT_REASON_LABEL: Record<string, string> = {
 };
 
 const REPORT_TARGET_LABEL: Record<string, string> = {
-  COURSE: "cours",
+  COURSE: "formation",
   REVIEW: "avis",
   QUESTION: "question",
   ANSWER: "réponse",

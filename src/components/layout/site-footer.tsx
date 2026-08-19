@@ -57,7 +57,7 @@ export async function SiteFooter() {
             </li>
             <li>
               <Link href="/cours?sort=popular" className="hover:text-foreground">
-                Cours populaires
+                Formations populaires
               </Link>
             </li>
           </ul>

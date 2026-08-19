@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 const STEPS = [
   {
     icon: <PenLine className="h-5 w-5" aria-hidden />,
-    title: "1. Décrivez votre cours",
+    title: "1. Décrivez votre formation",
     text: "Titre, catégorie, description et image de couverture.",
   },
   {
@@ -17,7 +17,7 @@ const STEPS = [
   {
     icon: <Send className="h-5 w-5" aria-hidden />,
     title: "3. Soumettez à la publication",
-    text: "Notre équipe valide, puis votre cours part en ligne.",
+    text: "Notre équipe valide, puis votre formation est mise en ligne.",
   },
 ];
 
@@ -33,14 +33,14 @@ export function InstructorEmptyState() {
           <Rocket className="h-7 w-7" aria-hidden />
         </span>
         <h2 className="text-xl font-semibold tracking-tight text-foreground">
-          Lancez votre premier cours
+          Lancez votre première formation
         </h2>
         <p className="mx-auto mt-2 max-w-md text-sm text-muted-foreground">
           Partagez votre savoir avec des milliers d&apos;élèves. La création est
           guidée étape par étape — il suffit de commencer.
         </p>
         <Button asChild size="lg" className="mt-5">
-          <Link href="/formateur/cours/nouveau">Créer mon premier cours</Link>
+          <Link href="/formateur/cours/nouveau">Créer ma première formation</Link>
         </Button>
       </div>
 

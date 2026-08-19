@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { listCategories } from "@/server/queries/categories";
 
 export const metadata: Metadata = {
-  title: "Nouveau cours",
+  title: "Nouvelle formation",
 };
 
 export const dynamic = "force-dynamic";
@@ -20,14 +20,14 @@ export default async function NewCoursePage() {
         href="/formateur/cours"
         className="text-sm text-[color:var(--brand-secondary)] hover:underline"
       >
-        ← Retour à mes cours
+        ← Retour à mes formations
       </Link>
       <Card>
         <CardHeader>
-          <CardTitle as="h1">Créer un nouveau cours</CardTitle>
+          <CardTitle as="h1">Créer une nouvelle formation</CardTitle>
           <CardDescription>
             Donnez un titre et choisissez une catégorie pour démarrer. Vous pourrez tout
-            modifier ensuite, et le cours restera en brouillon jusqu&apos;à la soumission.
+            modifier ensuite, et la formation restera en brouillon jusqu&apos;à la soumission.
           </CardDescription>
         </CardHeader>
         <CardContent>

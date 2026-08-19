@@ -37,7 +37,7 @@ import { getAdminCourse } from "@/server/queries/admin";
 import { getCourseDeletionStatus } from "@/server/queries/course-deletion";
 
 export const metadata: Metadata = {
-  title: "Examiner un cours",
+  title: "Examiner une formation",
 };
 
 export const dynamic = "force-dynamic";
@@ -103,7 +103,7 @@ export default async function AdminCourseReviewPage({ params }: PageProps) {
       <header className="flex shrink-0 items-center justify-between gap-3">
         <div className="flex min-w-0 items-center gap-3">
           <Button asChild variant="ghost" size="icon" className="h-9 w-9 shrink-0">
-            <Link href="/admin/cours" aria-label="Retour à la liste des cours" title="Retour">
+            <Link href="/admin/cours" aria-label="Retour à la liste des formations" title="Retour">
               <ArrowLeft className="h-4 w-4" aria-hidden />
             </Link>
           </Button>
@@ -128,7 +128,7 @@ export default async function AdminCourseReviewPage({ params }: PageProps) {
             </Link>
           </Button>
           <Button asChild variant="outline" size="sm" className="max-sm:flex-1">
-            <Link href={`/formateur/cours/${course.id}`} title="Modifier le contenu du cours">
+            <Link href={`/formateur/cours/${course.id}`} title="Modifier le contenu de la formation">
               <Pencil className="h-4 w-4" aria-hidden />
               Modifier
             </Link>
@@ -190,7 +190,7 @@ function InformationCard({ course, totalLessons }: { course: AdminCourse; totalL
   return (
     <Card className="h-full overflow-hidden">
       <CardHeader className="px-4 pb-2 pt-4">
-        <CardTitle className="text-base">Informations du cours</CardTitle>
+        <CardTitle className="text-base">Informations de la formation</CardTitle>
       </CardHeader>
       <CardContent className="space-y-1.5 px-4 pb-2.5">
         <dl className="grid grid-cols-2 overflow-hidden rounded-md border border-border sm:grid-cols-4 lg:grid-cols-7">
@@ -261,7 +261,7 @@ function ProgramCard({ course, totalLessons }: { course: AdminCourse; totalLesso
           <EmptyState
             icon={<BookOpen className="h-5 w-5" />}
             title="Programme vide"
-            description="Ajoutez une première section depuis l’éditeur du cours."
+            description="Ajoutez une première section depuis l’éditeur de la formation."
             action={<Button asChild size="sm"><Link href={`/formateur/cours/${course.id}/programme`}>Créer le programme</Link></Button>}
             className="h-full p-5"
           />

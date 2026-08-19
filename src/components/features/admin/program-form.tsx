@@ -1,6 +1,6 @@
 "use client";
 
-// Formulaire de création / modification d'une formation (programme).
+// Formulaire de création / modification d'un programme de formation.
 
 import Link from "next/link";
 import { useActionState } from "react";
@@ -76,7 +76,7 @@ export function ProgramForm({
         </p>
       ) : null}
 
-      <FormField id="title" label="Intitulé de la formation" required error={err("title")}>
+      <FormField id="title" label="Intitulé du programme" required error={err("title")}>
         <Input id="title" name="title" defaultValue={values.title} required maxLength={200} />
       </FormField>
 
@@ -122,7 +122,7 @@ export function ProgramForm({
       </div>
 
       <div className="flex items-center gap-3">
-        <SubmitButton>{programId ? "Enregistrer" : "Créer la formation"}</SubmitButton>
+        <SubmitButton>{programId ? "Enregistrer" : "Créer le programme"}</SubmitButton>
         <Button variant="ghost" asChild>
           <Link href={cancelHref}>Annuler</Link>
         </Button>

@@ -7,7 +7,7 @@
 
 /** Description par défaut posée à la création (cf. instructor.ts createCourse). */
 export const PLACEHOLDER_DESCRIPTION =
-  "Décrivez votre cours pour aider les élèves à comprendre ce qu'ils vont apprendre.";
+  "Décrivez votre formation pour aider les élèves à comprendre ce qu'ils vont apprendre.";
 
 export interface PublishCriterion {
   key: string;

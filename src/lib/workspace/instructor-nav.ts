@@ -25,10 +25,10 @@ export const INSTRUCTOR_NAV: WorkspaceNavigation = {
     },
     {
       href: "/formateur/cours",
-      label: "Mes cours",
+      label: "Mes formations",
       icon: "book",
       group: "enseignement",
-      children: [{ href: "/formateur/cours/nouveau", label: "Créer un cours" }],
+      children: [{ href: "/formateur/cours/nouveau", label: "Créer une formation" }],
     },
     {
       href: "/formateur/questions",

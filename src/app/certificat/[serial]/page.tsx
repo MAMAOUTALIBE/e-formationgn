@@ -77,7 +77,7 @@ export default async function VerifyCertificatePage({ params }: PageProps) {
                   <dd className="font-medium text-foreground">{recipientName}</dd>
                 </div>
                 <div className="flex justify-between gap-4 border-b border-border pb-2">
-                  <dt className="text-muted-foreground">Cours</dt>
+                  <dt className="text-muted-foreground">Formation</dt>
                   <dd className="font-medium text-foreground">{certificate.course.title}</dd>
                 </div>
                 <div className="flex justify-between gap-4 border-b border-border pb-2">
@@ -94,7 +94,7 @@ export default async function VerifyCertificatePage({ params }: PageProps) {
               <p className="rounded-md bg-[color:var(--brand-success)]/10 p-3 text-xs text-foreground">
                 Ce certificat a été émis par Gandal. Il atteste que la
                 personne mentionnée a suivi avec succès l&apos;intégralité du
-                cours indiqué.
+                formation indiquée.
               </p>
             </CardContent>
           </Card>

@@ -23,7 +23,7 @@ import {
 } from "@/server/queries/instructor";
 
 export const metadata: Metadata = {
-  title: "Mes cours",
+  title: "Mes formations",
 };
 
 interface PageProps {
@@ -59,16 +59,16 @@ export default async function InstructorCoursesPage({ searchParams }: PageProps)
     <div className="min-w-0 max-w-full space-y-6 overflow-x-clip">
       <header className="flex flex-col items-start justify-between gap-3 sm:flex-row sm:items-center">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-foreground">Mes cours</h1>
+          <h1 className="text-2xl font-semibold tracking-tight text-foreground">Mes formations</h1>
           <p className="text-sm text-muted-foreground">
-            {courses.length.toLocaleString("fr-FR")} {pluralize(courses.length, "cours", "cours")}
+            {courses.length.toLocaleString("fr-FR")} {pluralize(courses.length, "formation", "formations")}
             {hasFilters ? ` · ${allCourses.length} au total` : ""}
           </p>
         </div>
         <Button asChild>
           <Link href="/formateur/cours/nouveau">
             <Plus className="h-4 w-4" />
-            Nouveau cours
+            Nouvelle formation
           </Link>
         </Button>
       </header>
@@ -79,13 +79,13 @@ export default async function InstructorCoursesPage({ searchParams }: PageProps)
         <Card>
           <CardContent className="flex flex-col items-center justify-center gap-3 p-10 text-center">
             <p className="text-base font-medium text-foreground">
-              Vous n&apos;avez pas encore créé de cours.
+              Vous n&apos;avez pas encore créé de formation.
             </p>
             <p className="text-sm text-muted-foreground">
-              Lancez-vous : un cours commence par un titre et une catégorie.
+              Lancez-vous : une formation commence par un titre et une catégorie.
             </p>
             <Button asChild>
-              <Link href="/formateur/cours/nouveau">Créer mon premier cours</Link>
+              <Link href="/formateur/cours/nouveau">Créer ma première formation</Link>
             </Button>
           </CardContent>
         </Card>
@@ -93,7 +93,7 @@ export default async function InstructorCoursesPage({ searchParams }: PageProps)
         <Card>
           <CardContent className="flex flex-col items-center justify-center gap-2 p-10 text-center">
             <p className="text-base font-medium text-foreground">
-              Aucun cours ne correspond à votre recherche.
+              Aucune formation ne correspond à votre recherche.
             </p>
             <Button asChild variant="link">
               <Link href="/formateur/cours">Réinitialiser les filtres</Link>
@@ -105,7 +105,7 @@ export default async function InstructorCoursesPage({ searchParams }: PageProps)
           <table className="w-full min-w-[640px] text-sm">
             <thead className="border-b border-border bg-muted/40 text-left text-xs uppercase tracking-wide text-muted-foreground">
               <tr>
-                <th className="px-4 py-3 font-medium">Cours</th>
+                <th className="px-4 py-3 font-medium">Formation</th>
                 <th className="px-4 py-3 font-medium">Statut</th>
                 <th className="px-4 py-3 font-medium">Catégorie</th>
                 <th className="hidden px-4 py-3 font-medium sm:table-cell">Élèves</th>
@@ -191,7 +191,7 @@ export default async function InstructorCoursesPage({ searchParams }: PageProps)
                           variant="ghost"
                           size="sm"
                           className="h-auto px-2 text-muted-foreground"
-                          title="Dupliquer ce cours"
+                          title="Dupliquer cette formation"
                         >
                           <Copy className="h-4 w-4" />
                           <span className="sr-only">Dupliquer</span>

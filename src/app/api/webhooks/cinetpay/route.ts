@@ -276,9 +276,9 @@ async function handleAccepted(orderId: string) {
         heading: "Merci pour votre paiement",
         body: `<p style="margin:0 0 12px 0;">Bonjour ${order.user.firstName ?? ""},</p>
                <p style="margin:0 0 12px 0;">Votre paiement de <strong>${formatMinor(order.totalCents, order.currency)}</strong> via Mobile Money / carte locale a bien été enregistré.</p>
-               <p style="margin:0 0 12px 0;">Cours auxquels vous êtes désormais inscrit·e :</p>
+               <p style="margin:0 0 12px 0;">Formations auxquelles vous êtes désormais inscrit·e :</p>
                <p style="margin:0 0 12px 0;">${itemsList}</p>`,
-        ctaLabel: "Accéder à mes cours",
+        ctaLabel: "Accéder à mes formations",
         ctaUrl: `${process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"}/apprentissage`,
       });
       await sendTransactionalEmail({

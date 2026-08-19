@@ -96,7 +96,7 @@ export default async function AdminClientsPage({ searchParams }: PageProps) {
               {formatMultiCurrency(kpis.aovCentsByCurrency)}
             </p>
             <p className="mt-2 text-xs text-muted-foreground">
-              Augmenter l&apos;AOV = vendre plus de cours par panier (bundles,
+              Augmenter l&apos;AOV = vendre plus de formations par panier (bundles,
               cross-sell, promo seuil).
             </p>
           </CardContent>
@@ -115,7 +115,7 @@ export default async function AdminClientsPage({ searchParams }: PageProps) {
             </p>
             <p className="mt-2 text-xs text-muted-foreground">
               Augmenter la LTV = fidéliser (newsletter, recommandations, séries
-              de cours).
+              de formations).
             </p>
           </CardContent>
         </Card>

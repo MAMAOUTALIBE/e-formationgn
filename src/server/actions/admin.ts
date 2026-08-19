@@ -174,7 +174,7 @@ export async function deleteCategory(categoryId: string): Promise<ActionResult> 
   if (count > 0) {
     return {
       success: false,
-      message: "Cette catégorie est utilisée par des cours. Désactivez-la plutôt.",
+      message: "Cette catégorie est utilisée par des formations. Désactivez-la plutôt.",
     };
   }
   await prisma.category.delete({ where: { id: categoryId } });

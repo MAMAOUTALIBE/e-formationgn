@@ -42,7 +42,7 @@ export function CourseCompleteBanner({ courseId }: { courseId: string }) {
           </span>
           <div>
             <p className="text-sm font-semibold text-foreground">
-              Félicitations, vous avez terminé ce cours&nbsp;! 🎉
+              Félicitations, vous avez terminé cette formation&nbsp;! 🎉
             </p>
             <p className="text-xs text-muted-foreground">
               Récupérez votre certificat de réussite, partageable et vérifiable.

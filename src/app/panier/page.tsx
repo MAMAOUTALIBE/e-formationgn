@@ -125,7 +125,7 @@ export default async function CartPage({ searchParams }: PageProps) {
             </h1>
             <p className="text-sm text-muted-foreground">
               {items.length.toLocaleString("fr-FR")}{" "}
-              {items.length > 1 ? "cours" : "cours"} dans votre panier.
+              {items.length > 1 ? "formations" : "formation"} dans votre panier.
             </p>
           </div>
 
@@ -144,7 +144,7 @@ export default async function CartPage({ searchParams }: PageProps) {
                       Votre panier est vide
                     </p>
                     <p className="mt-1 text-sm text-muted-foreground">
-                      Découvrez le catalogue, ou retrouvez vos cours sauvegardés
+                      Découvrez le catalogue, ou retrouvez vos formations sauvegardées
                       dans la wishlist.
                     </p>
                   </div>
@@ -272,7 +272,7 @@ export default async function CartPage({ searchParams }: PageProps) {
                 Vous pourriez aimer aussi
               </h2>
               <p className="mt-1 text-sm text-muted-foreground">
-                D&apos;autres cours dans les mêmes thématiques que votre panier.
+                D&apos;autres formations dans les mêmes thématiques que votre panier.
               </p>
               <div className="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
                 {crossSell.map((course, idx) => (

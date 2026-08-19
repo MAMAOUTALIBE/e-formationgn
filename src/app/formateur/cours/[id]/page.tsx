@@ -58,7 +58,7 @@ export default async function CourseGeneralPage({ params }: PageProps) {
           <CardTitle>Vidéo de présentation</CardTitle>
           <CardDescription>
             Court teaser (1–2 min recommandé) montré aux visiteurs sur la fiche du
-            cours, avant achat. Optionnel mais fortement recommandé pour
+            formation, avant achat. Optionnel mais fortement recommandé pour
             convertir.
           </CardDescription>
         </CardHeader>
@@ -77,7 +77,7 @@ export default async function CourseGeneralPage({ params }: PageProps) {
             Zone de danger
           </CardTitle>
           <CardDescription>
-            Supprimer définitivement ce cours. Cette action est irréversible.
+            Supprimer définitivement cette formation. Cette action est irréversible.
           </CardDescription>
         </CardHeader>
         <CardContent>

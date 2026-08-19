@@ -68,12 +68,12 @@ export default async function OrderConfirmationPage({ params }: PageProps) {
                   <strong className="text-foreground">
                     {formatPriceFromCents(order.totalCents, order.currency)}
                   </strong>{" "}
-                  a bien été enregistré. Vous avez maintenant accès à vos cours
+                  a bien été enregistré. Vous avez maintenant accès à vos formations
                   dans <em>Mon apprentissage</em>.
                 </p>
                 <div className="mt-2 flex flex-wrap items-center justify-center gap-2">
                   <Button asChild size="lg">
-                    <Link href="/apprentissage">Accéder à mes cours</Link>
+                    <Link href="/apprentissage">Accéder à mes formations</Link>
                   </Button>
                   {order.stripeReceiptUrl ? (
                     <Button asChild variant="outline">

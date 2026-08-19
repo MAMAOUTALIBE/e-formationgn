@@ -43,11 +43,11 @@ export function CourseEmptyState({
     <div className="space-y-6">
       <EmptyState
         icon={<SearchX className="h-6 w-6" aria-hidden />}
-        title="Aucun cours trouvé"
+        title="Aucune formation trouvée"
         description={
           hasFilters
-            ? "Aucun cours ne correspond à vos filtres. Essayez d'élargir votre sélection ou explorez une autre catégorie."
-            : "Aucun cours n'est encore disponible. Revenez bientôt !"
+            ? "Aucune formation ne correspond à vos filtres. Essayez d'élargir votre sélection ou explorez une autre catégorie."
+            : "Aucune formation n'est encore disponible. Revenez bientôt !"
         }
         action={
           hasFilters ? (

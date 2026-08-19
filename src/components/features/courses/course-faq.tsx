@@ -26,11 +26,11 @@ export function CourseFaq(props: CourseFaqProps = {}) {
   const { showCertificateQuestion = true } = props;
   const items: FaqItem[] = [
     {
-      q: "Quand puis-je commencer le cours ?",
-      a: "Dès que votre gestionnaire vous inscrit, le cours apparaît dans « Mon apprentissage ».",
+      q: "Quand puis-je commencer la formation ?",
+      a: "Dès que votre gestionnaire vous inscrit, la formation apparaît dans « Mon apprentissage ».",
     },
     {
-      q: "Combien de temps ai-je accès au cours ?",
+      q: "Combien de temps ai-je accès à la formation ?",
       a: "La durée d'accès dépend de la session organisée par votre société. Les dates sont indiquées dans votre espace d'apprentissage.",
     },
     ...(showCertificateQuestion
@@ -42,12 +42,12 @@ export function CourseFaq(props: CourseFaqProps = {}) {
         ]
       : []),
     {
-      q: "Puis-je suivre le cours sur mobile ?",
+      q: "Puis-je suivre la formation sur mobile ?",
       a: "Oui. Le site est responsive et fonctionne sur smartphone, tablette et ordinateur. Vous pouvez reprendre la lecture exactement où vous l'avez laissée d'un appareil à l'autre.",
     },
     {
       q: "Comment poser une question au formateur ?",
-      a: "Chaque cours dispose d'un espace « Q & R » où vous pouvez poser vos questions au formateur. Vous trouverez aussi un tuteur IA contextuel sur chaque leçon pour une aide immédiate.",
+      a: "Chaque formation dispose d'un espace « Q & R » où vous pouvez poser vos questions au formateur. Vous trouverez aussi un tuteur IA contextuel sur chaque leçon pour une aide immédiate.",
     },
   ];
 

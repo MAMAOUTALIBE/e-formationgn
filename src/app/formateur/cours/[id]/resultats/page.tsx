@@ -31,7 +31,7 @@ export default async function CourseQuizResultsPage({ params }: { params: Promis
   }
 
   return <div className="space-y-6">
-    <Breadcrumbs items={[{ label: "Formateur", href: "/formateur" }, { label: "Mes cours", href: "/formateur/cours" }, { label: course.title, href: `/formateur/cours/${id}` }, { label: "Résultats quiz" }]} />
+    <Breadcrumbs items={[{ label: "Formateur", href: "/formateur" }, { label: "Mes formations", href: "/formateur/cours" }, { label: course.title, href: `/formateur/cours/${id}` }, { label: "Résultats quiz" }]} />
     <header>
       <h2 className="flex items-center gap-2 text-2xl font-semibold"><BarChart3 className="h-6 w-6" aria-hidden />Résultats des quiz</h2>
       <p className="mt-1 text-sm text-muted-foreground">Suivez les acquis et repérez rapidement les élèves à accompagner.</p>
@@ -46,7 +46,7 @@ export default async function CourseQuizResultsPage({ params }: { params: Promis
 
     <section aria-labelledby="quiz-heading" className="space-y-3">
       <h2 id="quiz-heading" className="text-lg font-semibold">Par quiz</h2>
-      {quizzes.length === 0 ? <Card><CardContent className="py-8 text-center text-sm text-muted-foreground">Aucun quiz dans ce cours. Ajoutez-en depuis le programme.</CardContent></Card> :
+      {quizzes.length === 0 ? <Card><CardContent className="py-8 text-center text-sm text-muted-foreground">Aucun quiz dans cette formation. Ajoutez-en depuis le programme.</CardContent></Card> :
         <div className="grid gap-3 lg:grid-cols-2">{quizzes.map((quiz) => {
           const learners = new Set(quiz.attempts.map((a) => a.userId)).size;
           const passedLearners = new Set(quiz.attempts.filter((a) => a.passed).map((a) => a.userId));

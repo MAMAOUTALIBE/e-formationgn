@@ -59,7 +59,7 @@ export default async function InstructorQuestionsPage({ searchParams }: PageProp
           Centre Q&amp;A
         </h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          Toutes les questions posées par vos élèves, sur tous vos cours.
+          Toutes les questions posées par vos élèves, sur toutes vos formations.
         </p>
       </header>
 
@@ -149,7 +149,7 @@ export default async function InstructorQuestionsPage({ searchParams }: PageProp
                             >
                               {q.course.title}
                             </Link>
-                            {q.lesson ? ` · Leçon : ${q.lesson.title}` : " · Cours entier"}
+                            {q.lesson ? ` · Leçon : ${q.lesson.title}` : " · Formation entière"}
                           </p>
                         </div>
                       </div>

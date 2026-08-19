@@ -34,7 +34,7 @@ export function CourseStickyBuyBar({
     <div
       className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-card/95 px-4 py-3 shadow-[0_-2px_8px_rgba(0,0,0,0.06)] backdrop-blur supports-[backdrop-filter]:bg-card/80 lg:hidden"
       role="region"
-      aria-label="Achat du cours"
+      aria-label="Inscription à la formation"
     >
       <div className="flex items-center justify-between gap-3">
         <div className="min-w-0 flex-shrink">

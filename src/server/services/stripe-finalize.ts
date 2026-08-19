@@ -128,8 +128,8 @@ export async function finalizeStripeOrder(
         title: info.count > 1 ? `${info.count} nouvelles ventes 🎉` : "Nouvelle vente 🎉",
         body:
           info.count > 1
-            ? `${info.count} de vos cours viennent d'être achetés.`
-            : `Votre cours « ${info.title} » vient d'être acheté.`,
+            ? `${info.count} de vos formations viennent d'être achetées.`
+            : `Votre formation « ${info.title} » vient d'être achetée.`,
         url: "/formateur/paiements",
       })),
     });
@@ -207,9 +207,9 @@ export async function finalizeStripeOrder(
         heading: "Merci pour votre commande",
         body: `<p style="margin:0 0 12px 0;">Bonjour ${order.user.firstName ?? ""},</p>
                <p style="margin:0 0 12px 0;">Votre paiement de <strong>${formatPriceFromCents(order.totalCents, order.currency)}</strong> a bien été enregistré.</p>
-               <p style="margin:0 0 12px 0;">Cours auxquels vous êtes désormais inscrit·e :</p>
+               <p style="margin:0 0 12px 0;">Formations auxquelles vous êtes désormais inscrit·e :</p>
                <p style="margin:0 0 12px 0;">${itemsList}</p>`,
-        ctaLabel: "Accéder à mes cours",
+        ctaLabel: "Accéder à mes formations",
         ctaUrl: `${APP_URL}/apprentissage`,
       });
       await sendTransactionalEmail({

@@ -23,7 +23,7 @@ export default function AdminCourseDetailError({
         <span className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-red-50 text-destructive dark:bg-red-500/10">
           <AlertTriangle className="h-6 w-6" aria-hidden />
         </span>
-        <h1 className="mt-4 text-lg font-semibold">Impossible de charger ce cours</h1>
+        <h1 className="mt-4 text-lg font-semibold">Impossible de charger cette formation</h1>
         <p className="mt-1 text-sm text-muted-foreground">
           Une erreur est survenue. Aucune modification n’a été appliquée.
         </p>

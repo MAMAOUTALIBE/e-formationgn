@@ -97,7 +97,7 @@ function buildSnapshotBlock(s: AdminAssistantSnapshot): string {
     `Nouveaux inscrits : ${s.newSignups}`,
     `Élèves actifs (30 j) : ${s.activeStudents30d}`,
     `Complétion moyenne : ${s.averageCompletionPercent} %`,
-    `Cours en attente de modération : ${s.pendingCourses}`,
+    `Formations en attente de modération : ${s.pendingCourses}`,
     `Tickets support ouverts : ${s.openTickets}`,
     `Litiges ouverts : ${s.openDisputes}`,
     `Signalements en attente : ${s.pendingReports}`,

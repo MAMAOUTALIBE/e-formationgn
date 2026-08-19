@@ -4,7 +4,7 @@
 // accès par le statut.
 //
 // Les boutons de statut sont l'unique geste des points 8 et 9 du cahier des
-// charges : activer ouvre réellement les cours du programme, suspendre les
+// charges : activer ouvre réellement les formations du programme, suspendre les
 // retire. Rien n'est « masqué » — l'accès est retiré en base, donc les six
 // contrôles existants de l'application le refusent d'eux-mêmes.
 
@@ -125,7 +125,7 @@ export function StudentRegistrations({
                 </div>
                 <p className="mt-0.5 text-xs text-muted-foreground">
                   {r.sessionReference ? `${r.sessionReference} · ` : ""}
-                  {r.startDate} → {r.endDate} · {r.courseCount} cours
+                  {r.startDate} → {r.endDate} · {r.courseCount} formation{r.courseCount !== 1 ? "s" : ""}
                 </p>
                 <div className="mt-2 flex flex-wrap gap-2">
                   {(NEXT_STATUSES[r.status] ?? []).map((t) => (

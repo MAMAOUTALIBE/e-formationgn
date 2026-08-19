@@ -64,8 +64,8 @@ export async function MemberHome({ userId, userName }: MemberHomeProps) {
                 <input
                   type="search"
                   name="q"
-                  placeholder="Rechercher un cours…"
-                  aria-label="Rechercher un cours"
+                  placeholder="Rechercher une formation…"
+                  aria-label="Rechercher une formation"
                   className="min-w-0 flex-1 bg-transparent py-1.5 text-sm text-foreground outline-none placeholder:text-muted-foreground"
                 />
                 <Button type="submit" size="sm" className="shrink-0 rounded-full">
@@ -112,10 +112,10 @@ export async function MemberHome({ userId, userName }: MemberHomeProps) {
             ) : (
               <div className="mt-5 rounded-xl border border-dashed border-border bg-muted/30 p-8 text-center">
                 <p className="text-sm text-muted-foreground">
-                  Vous n&apos;avez pas encore commencé de cours.
+                  Vous n&apos;avez pas encore commencé de formation.
                 </p>
                 <Button asChild className="mt-3">
-                  <Link href="/cours">Découvrir un premier cours</Link>
+                  <Link href="/cours">Découvrir une première formation</Link>
                 </Button>
               </div>
             )}

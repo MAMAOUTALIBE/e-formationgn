@@ -50,7 +50,7 @@ export default async function CourseAnnouncementsPage({ params }: PageProps) {
       <Breadcrumbs
         items={[
           { label: "Formateur", href: "/formateur" },
-          { label: "Mes cours", href: "/formateur/cours" },
+          { label: "Mes formations", href: "/formateur/cours" },
           { label: course.title, href: `/formateur/cours/${id}` },
           { label: "Annonces" },
         ]}

@@ -2,7 +2,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 export default function CoursesLoading() {
   return (
-    <div className="flex h-full max-h-[calc(100dvh-12.5rem)] min-h-0 flex-col gap-3 overflow-hidden" aria-label="Chargement des cours">
+    <div className="flex h-full max-h-[calc(100dvh-12.5rem)] min-h-0 flex-col gap-3 overflow-hidden" aria-label="Chargement des formations">
       <div className="flex h-10 shrink-0 items-center justify-between"><Skeleton className="h-8 w-40" /><Skeleton className="h-10 w-36" /></div>
       <Skeleton className="h-16 shrink-0 rounded-xl" />
       <Skeleton className="h-14 shrink-0 rounded-xl" />

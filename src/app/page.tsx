@@ -115,7 +115,7 @@ export default async function HomePage() {
                     type="search"
                     name="q"
                     placeholder="Que voulez-vous apprendre ? (ex : Python, design, marketing…)"
-                    aria-label="Rechercher un cours"
+                    aria-label="Rechercher une formation"
                     className="min-w-0 flex-1 bg-transparent py-2 text-sm text-foreground outline-none placeholder:text-muted-foreground sm:text-base"
                   />
                   <Button
@@ -144,7 +144,7 @@ export default async function HomePage() {
 
                 {/* Signaux de confiance (qualitatifs — pas de compteurs faibles) */}
                 <p className="mt-5 text-sm text-white/75">
-                  {stats.totalCourses}+ cours · {stats.totalCategories} catégories ·
+                  {stats.totalCourses}+ formations · {stats.totalCategories} catégories ·
                   Formateurs francophones · Certificat à la clé
                 </p>
               </div>
@@ -227,7 +227,7 @@ export default async function HomePage() {
                   Des compétences pour révolutionner votre carrière
                 </h2>
                 <p className="mt-2 text-base text-muted-foreground">
-                  Des cours essentiels aux sujets techniques de pointe.
+                  Des formations essentielles aux sujets techniques de pointe.
                 </p>
               </div>
 
@@ -264,7 +264,7 @@ export default async function HomePage() {
             <Container>
               <div className="mx-auto max-w-2xl text-center">
                 <h2 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
-                  Les cours les plus populaires
+                  Les formations les plus populaires
                 </h2>
                 <p className="mt-3 text-base text-muted-foreground">
                   Une sélection plébiscitée par notre communauté.
@@ -374,7 +374,7 @@ export default async function HomePage() {
                     Dernières nouveautés
                   </h2>
                   <p className="mt-1 text-sm text-muted-foreground">
-                    Les cours fraîchement mis en ligne.
+                    Les formations fraîchement mises en ligne.
                   </p>
                 </div>
                 <Link
@@ -411,7 +411,7 @@ export default async function HomePage() {
                 Partagez votre expertise
               </h2>
               <p className="mt-3 text-base text-white/85">
-                Créez des cours structurés, accompagnez les apprenants et
+                Créez des formations structurées, accompagnez les apprenants et
                 suivez leur progression dans un espace pédagogique complet.
               </p>
             </div>

@@ -79,7 +79,7 @@ export function CategoryCard({
           </p>
         ) : null}
         <p className="mt-2 text-xs font-medium text-white/90">
-          {courseCount} {pluralize(courseCount, "cours", "cours")}
+          {courseCount} {pluralize(courseCount, "formation", "formations")}
         </p>
       </div>
     </Link>

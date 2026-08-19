@@ -173,7 +173,7 @@ export default function CreditsPage() {
               Pour les formateurs
             </h2>
             <p className="text-sm text-muted-foreground">
-              En téléversant un cours sur Gandal, vous garantissez
+              En téléversant une formation sur Gandal, vous garantissez
               détenir les droits sur les contenus diffusés (vidéos, images,
               textes) ou utiliser des œuvres sous licence permettant cette
               diffusion. Les contenus de démonstration ci-dessus sont utilisés

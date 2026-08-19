@@ -83,7 +83,7 @@ export async function askLessonTutor(
   if (!enrollment) {
     return {
       ok: false,
-      message: "Inscris-toi au cours pour utiliser le tuteur.",
+      message: "Inscris-toi à la formation pour utiliser le tuteur.",
     };
   }
 

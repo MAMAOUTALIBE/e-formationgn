@@ -122,7 +122,7 @@ export function buildWelcomeMessage(firstName?: string | null) {
     preview: "Bienvenue sur Gandal.",
     heading: "Bienvenue sur Gandal",
     body: `<p style="margin:0 0 12px 0;">${greeting}</p>
-           <p style="margin:0 0 12px 0;">Votre compte est confirmé. Vous pouvez désormais explorer le catalogue et suivre vos premiers cours.</p>`,
+           <p style="margin:0 0 12px 0;">Votre compte est confirmé. Vous pouvez désormais explorer le catalogue et suivre vos premières formations.</p>`,
     ctaLabel: "Découvrir le catalogue",
     ctaUrl: `${process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"}/cours`,
   });

@@ -84,7 +84,7 @@ export default async function InstructorPromoCodesPage() {
           Codes promo
         </h1>
         <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
-          Créez des codes de réduction applicables uniquement à vos cours. La
+          Créez des codes de réduction applicables uniquement à vos formations. La
           remise est imputée à votre part de revenu — la commission de la
           plateforme reste calculée sur le prix avant remise.
         </p>
@@ -205,7 +205,7 @@ export default async function InstructorPromoCodesPage() {
                           : ""}
                       </p>
                       <p className="mt-1 text-xs text-muted-foreground">
-                        Cours :{" "}
+                        Formation :{" "}
                         {promo.courses
                           .map((c) => c.course.title)
                           .join(", ") || "—"}
@@ -247,7 +247,7 @@ export default async function InstructorPromoCodesPage() {
           <CardContent>
             {courses.length === 0 ? (
               <p className="text-sm text-muted-foreground">
-                Vous devez d&apos;abord créer au moins un cours pour pouvoir
+                Vous devez d&apos;abord créer au moins une formation pour pouvoir
                 générer un code promo.
               </p>
             ) : (
@@ -299,7 +299,7 @@ export default async function InstructorPromoCodesPage() {
 
                 <FormField
                   id="courseIds"
-                  label="Cours concernés"
+                  label="Formations concernées"
                   required
                   hint="Maintenez Ctrl/Cmd pour en sélectionner plusieurs"
                 >

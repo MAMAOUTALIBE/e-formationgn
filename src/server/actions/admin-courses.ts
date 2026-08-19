@@ -61,13 +61,13 @@ function isModeratableStatus(value: unknown): value is ModeratableStatus {
 function statusSuccessMessage(status: ModeratableStatus): string {
   switch (status) {
     case "PUBLISHED":
-      return "Le cours a été publié avec succès.";
+      return "La formation a été publiée avec succès.";
     case "REJECTED":
-      return "Le cours a été refusé et le formateur a été notifié.";
+      return "La formation a été refusée et le formateur a été notifié.";
     case "PENDING_REVIEW":
-      return "Le cours est maintenant en attente de révision.";
+      return "La formation est maintenant en attente de révision.";
     case "DRAFT":
-      return "Le cours a été replacé en brouillon.";
+      return "La formation a été replacée en brouillon.";
   }
 }
 
@@ -99,9 +99,9 @@ async function performCourseStatusTransition(
       sections: { select: { lessons: { select: { id: true } } } },
     },
   });
-  if (!course) return { success: false, message: "Cours introuvable." };
+  if (!course) return { success: false, message: "Formation introuvable." };
   if (course.status === nextStatus) {
-    return { success: false, message: "Le cours possède déjà ce statut." };
+    return { success: false, message: "La formation possède déjà ce statut." };
   }
 
   if (nextStatus === "PUBLISHED") {
@@ -120,28 +120,28 @@ async function performCourseStatusTransition(
       case "PUBLISHED":
         return {
           kind: "COURSE_PUBLISHED" as const,
-          title: "Votre cours est publié",
+          title: "Votre formation est publiée",
           body: `« ${course.title} » est désormais visible dans le catalogue.`,
           url: `/cours/${course.slug}`,
         };
       case "REJECTED":
         return {
           kind: "COURSE_REJECTED" as const,
-          title: "Votre cours nécessite des modifications",
+          title: "Votre formation nécessite des modifications",
           body: reason,
           url: `/formateur/cours/${course.id}`,
         };
       case "PENDING_REVIEW":
         return {
           kind: "GENERIC" as const,
-          title: "Cours en cours de révision",
+          title: "Formation en cours de révision",
           body: `Le statut de « ${course.title} » a été remis en attente de révision.`,
           url: `/formateur/cours/${course.id}`,
         };
       case "DRAFT":
         return {
           kind: "GENERIC" as const,
-          title: "Cours replacé en brouillon",
+          title: "Formation replacée en brouillon",
           body: `« ${course.title} » a été replacé en brouillon par l’équipe de modération.`,
           url: `/formateur/cours/${course.id}`,
         };
@@ -189,7 +189,7 @@ export async function transitionCourseStatus(
   const admin = await requireAdmin();
   const nextStatus = formData.get("status");
   if (!isModeratableStatus(nextStatus)) {
-    return { success: false, message: "Statut de cours invalide." };
+    return { success: false, message: "Statut de formation invalide." };
   }
   return performCourseStatusTransition(
     admin.userId,
@@ -221,7 +221,7 @@ export async function unpublishCourse(courseId: string): Promise<ActionResult> {
   await audit(admin.userId, "course.unpublish", courseId);
   revalidatePath("/admin/cours");
   invalidateCatalogCaches();
-  return { success: true, message: "Cours archivé." };
+  return { success: true, message: "Formation archivée." };
 }
 
 export async function toggleFeaturedCourse(
@@ -249,13 +249,13 @@ export async function toggleFeaturedCourse(
   revalidatePath(`/admin/cours/${courseId}`);
   revalidatePath("/admin/cours/featured");
   invalidateCatalogCaches();
-  return { success: true, message: featured ? "Cours mis en avant." : "Retiré de la vitrine." };
+  return { success: true, message: featured ? "Formation mise en avant." : "Retirée de la vitrine." };
 }
 
 export async function bulkUnpublish(courseIds: string[]): Promise<ActionResult> {
   const admin = await requireAdmin();
   if (courseIds.length === 0) {
-    return { success: false, message: "Aucun cours sélectionné." };
+    return { success: false, message: "Aucune formation sélectionnée." };
   }
   await prisma.course.updateMany({
     where: { id: { in: courseIds } },
@@ -267,17 +267,17 @@ export async function bulkUnpublish(courseIds: string[]): Promise<ActionResult> 
   revalidatePath("/admin/cours");
   return {
     success: true,
-    message: `${courseIds.length} cours archivés.`,
+    message: `${courseIds.length} formation${courseIds.length > 1 ? "s" : ""} archivée${courseIds.length > 1 ? "s" : ""}.`,
   };
 }
 
 export async function bulkPublish(courseIds: string[]): Promise<ActionResult> {
-  if (courseIds.length === 0) return { success: false, message: "Aucun cours sélectionné." };
+  if (courseIds.length === 0) return { success: false, message: "Aucune formation sélectionnée." };
   for (const id of courseIds) {
     const result = await approveCourse(id);
     if (!result.success) return result;
   }
-  return { success: true, message: `${courseIds.length} cours publiés.` };
+  return { success: true, message: `${courseIds.length} formation${courseIds.length > 1 ? "s" : ""} publiée${courseIds.length > 1 ? "s" : ""}.` };
 }
 
 export async function duplicateCourse(courseId: string): Promise<ActionResult> {
@@ -297,7 +297,7 @@ export async function duplicateCourse(courseId: string): Promise<ActionResult> {
       },
     },
   });
-  if (!source) return { success: false, message: "Cours introuvable." };
+  if (!source) return { success: false, message: "Formation introuvable." };
 
   const copy = await prisma.course.create({
     data: {
@@ -354,7 +354,7 @@ export async function duplicateCourse(courseId: string): Promise<ActionResult> {
   });
   await audit(admin.userId, "course.duplicate", copy.id, { sourceId: courseId });
   revalidatePath("/admin/cours");
-  return { success: true, message: "Cours dupliqué en brouillon." };
+  return { success: true, message: "Formation dupliquée en brouillon." };
 }
 
 export async function bulkChangeCategory(
@@ -363,7 +363,7 @@ export async function bulkChangeCategory(
 ): Promise<ActionResult> {
   const admin = await requireAdmin();
   if (courseIds.length === 0) {
-    return { success: false, message: "Aucun cours sélectionné." };
+    return { success: false, message: "Aucune formation sélectionnée." };
   }
   await prisma.course.updateMany({
     where: { id: { in: courseIds } },
@@ -375,7 +375,7 @@ export async function bulkChangeCategory(
   revalidatePath("/admin/cours");
   return {
     success: true,
-    message: `${courseIds.length} cours déplacés.`,
+    message: `${courseIds.length} formation${courseIds.length > 1 ? "s" : ""} déplacée${courseIds.length > 1 ? "s" : ""}.`,
   };
 }
 
@@ -392,13 +392,13 @@ export async function adminDeleteCourse(courseId: string): Promise<ActionResult>
     where: { id: courseId },
     select: { title: true },
   });
-  if (!course) return { success: false, message: "Cours introuvable." };
+  if (!course) return { success: false, message: "Formation introuvable." };
 
   await prisma.course.delete({ where: { id: courseId } });
   await audit(admin.userId, "course.delete", courseId, { title: course.title });
   revalidatePath("/admin/cours");
   invalidateCatalogCaches();
-  return { success: true, message: "Cours supprimé définitivement." };
+  return { success: true, message: "Formation supprimée définitivement." };
 }
 
 export async function setInternalNotesOnCourse(

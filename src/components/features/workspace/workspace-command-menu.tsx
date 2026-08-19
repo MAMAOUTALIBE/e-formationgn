@@ -33,7 +33,7 @@ interface SearchHit {
 
 const TYPE_LABEL: Record<SearchHit["type"], string> = {
   user: "Utilisateur",
-  course: "Cours",
+  course: "Formation",
   order: "Commande",
   ticket: "Ticket",
 };

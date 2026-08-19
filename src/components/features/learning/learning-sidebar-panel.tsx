@@ -35,7 +35,7 @@ export function LearningSidebarPanel({
 
   return (
     <div className="flex h-full flex-col">
-      <div role="tablist" aria-label="Panneau du cours" className="flex border-b border-border">
+      <div role="tablist" aria-label="Panneau de la formation" className="flex border-b border-border">
         <button
           type="button"
           role="tab"
@@ -44,7 +44,7 @@ export function LearningSidebarPanel({
           className={tabClass(tab === "content")}
         >
           <ListVideo className="h-4 w-4" aria-hidden />
-          Contenu du cours
+          Contenu de la formation
         </button>
         <button
           type="button"

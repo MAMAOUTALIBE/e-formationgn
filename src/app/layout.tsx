@@ -37,7 +37,7 @@ export const metadata: Metadata = {
   keywords: [
     "formation en ligne",
     "e-learning",
-    "cours en ligne",
+    "formations en ligne",
     "francophone",
     "gestion de formation",
   ],

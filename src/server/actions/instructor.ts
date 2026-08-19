@@ -50,9 +50,9 @@ async function ensureCourseOwnership(courseId: string, ctx: AuthorizedCourseCont
     where: { id: courseId },
     select: { id: true, instructorId: true, status: true },
   });
-  if (!course) throw new Error("Cours introuvable.");
+  if (!course) throw new Error("Formation introuvable.");
   if (!ctx.isAdmin && course.instructorId !== ctx.userId) {
-    throw new Error("Vous n'êtes pas le propriétaire de ce cours.");
+    throw new Error("Vous n'êtes pas le propriétaire de cette formation.");
   }
   return course;
 }
@@ -134,7 +134,7 @@ export async function createCourse(
       slug,
       title: parsed.data.title,
       description:
-        "Décrivez votre cours pour aider les élèves à comprendre ce qu'ils vont apprendre.",
+        "Décrivez votre formation pour aider les élèves à comprendre ce qu'ils vont apprendre.",
       categoryId: parsed.data.categoryId,
       instructorId: ctx.userId,
       status: "DRAFT",
@@ -167,7 +167,7 @@ export async function duplicateCourse(courseId: string): Promise<void> {
       },
     },
   });
-  if (!source) throw new Error("Cours introuvable.");
+  if (!source) throw new Error("Formation introuvable.");
 
   const slug = appendSlugSuffix(slugify(source.title), nanoid(6).toLowerCase());
 
@@ -392,7 +392,7 @@ export async function submitCourseForReview(courseId: string): Promise<ActionRes
       sections: { include: { lessons: { select: { id: true } } } },
     },
   });
-  if (!course) return { success: false, message: "Cours introuvable." };
+  if (!course) return { success: false, message: "Formation introuvable." };
   if (!ctx.isAdmin && course.instructorId !== ctx.userId) {
     return { success: false, message: "Action non autorisée." };
   }
@@ -406,12 +406,12 @@ export async function submitCourseForReview(courseId: string): Promise<ActionRes
   }
 
   if (course.status === "PUBLISHED") {
-    return { success: false, message: "Ce cours est déjà publié." };
+    return { success: false, message: "Cette formation est déjà publiée." };
   }
   if (course.status === "PENDING_REVIEW") {
     return {
       success: false,
-      message: "Ce cours est déjà en attente de modération.",
+      message: "Cette formation est déjà en attente de modération.",
     };
   }
 
@@ -425,7 +425,7 @@ export async function submitCourseForReview(courseId: string): Promise<ActionRes
   return {
     success: true,
     message:
-      "Cours soumis à la modération. Vous serez notifié dès qu'il aura été examiné.",
+      "Formation soumise à la modération. Vous serez notifié dès qu’elle aura été examinée.",
   };
 }
 
@@ -436,7 +436,7 @@ export async function withdrawCourseSubmission(courseId: string): Promise<Action
   if (course.status !== "PENDING_REVIEW") {
     return {
       success: false,
-      message: "Ce cours n'est pas en attente de modération.",
+      message: "Cette formation n'est pas en attente de modération.",
     };
   }
 
@@ -446,7 +446,7 @@ export async function withdrawCourseSubmission(courseId: string): Promise<Action
   });
 
   revalidatePath(`/formateur/cours/${courseId}`);
-  return { success: true, message: "Soumission annulée. Le cours est repassé en brouillon." };
+  return { success: true, message: "Soumission annulée. La formation est repassée en brouillon." };
 }
 
 // Archive un cours quel que soit son statut (le retire des vues actives).
@@ -454,7 +454,7 @@ export async function archiveCourse(courseId: string): Promise<ActionResult> {
   const ctx = await requireInstructor();
   const course = await ensureCourseOwnership(courseId, ctx);
   if (course.status === "ARCHIVED") {
-    return { success: false, message: "Ce cours est déjà archivé." };
+    return { success: false, message: "Cette formation est déjà archivée." };
   }
   await prisma.course.update({
     where: { id: courseId },
@@ -463,7 +463,7 @@ export async function archiveCourse(courseId: string): Promise<ActionResult> {
   revalidatePath("/formateur/cours");
   revalidatePath(`/formateur/cours/${courseId}`);
   updateTag("courses");
-  return { success: true, message: "Cours archivé." };
+  return { success: true, message: "Formation archivée." };
 }
 
 // Restaure un cours archivé en brouillon (pour le reprendre / resoumettre).
@@ -473,7 +473,7 @@ export async function restoreArchivedCourse(
   const ctx = await requireInstructor();
   const course = await ensureCourseOwnership(courseId, ctx);
   if (course.status !== "ARCHIVED") {
-    return { success: false, message: "Ce cours n'est pas archivé." };
+    return { success: false, message: "Cette formation n'est pas archivée." };
   }
   await prisma.course.update({
     where: { id: courseId },
@@ -482,14 +482,14 @@ export async function restoreArchivedCourse(
   revalidatePath("/formateur/cours");
   revalidatePath(`/formateur/cours/${courseId}`);
   updateTag("courses");
-  return { success: true, message: "Cours restauré en brouillon." };
+  return { success: true, message: "Formation restaurée en brouillon." };
 }
 
 export async function unpublishCourse(courseId: string): Promise<ActionResult> {
   const ctx = await requireInstructor();
   const course = await ensureCourseOwnership(courseId, ctx);
   if (course.status !== "PUBLISHED") {
-    return { success: false, message: "Ce cours n'est pas publié." };
+    return { success: false, message: "Cette formation n'est pas publiée." };
   }
   await prisma.course.update({
     where: { id: courseId },
@@ -497,7 +497,7 @@ export async function unpublishCourse(courseId: string): Promise<ActionResult> {
   });
   revalidatePath(`/formateur/cours/${courseId}`);
   updateTag("courses");
-  return { success: true, message: "Cours archivé. Il n'est plus visible publiquement." };
+  return { success: true, message: "Formation archivée. Elle n'est plus visible publiquement." };
 }
 
 // ---------------------------------------------------------------------------

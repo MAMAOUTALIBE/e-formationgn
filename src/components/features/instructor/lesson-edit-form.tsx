@@ -162,7 +162,7 @@ export function LessonEditForm({ lessonId, returnHref, defaults }: LessonEditFor
         <span>
           Aperçu gratuit{" "}
           <span className="text-xs text-muted-foreground">
-            (visible sans achat sur la page du cours)
+            (visible sans achat sur la page de la formation)
           </span>
         </span>
       </label>

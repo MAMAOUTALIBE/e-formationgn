@@ -137,7 +137,7 @@ export function LiveActivityFeed() {
                   {it.kind === "signup" ? (
                     <StatusBadge tone="info">Inscription</StatusBadge>
                   ) : (
-                    <StatusBadge tone="success">Inscription cours</StatusBadge>
+                    <StatusBadge tone="success">Inscription formation</StatusBadge>
                   )}
                   <div className="min-w-0 flex-1">
                     <p className="truncate font-medium text-foreground">

@@ -30,7 +30,7 @@ import {
   type ProgramListRow,
 } from "@/server/queries/admin-programs";
 
-export const metadata: Metadata = { title: "Formations — CRM admin" };
+export const metadata: Metadata = { title: "Programmes de formation — CRM admin" };
 export const dynamic = "force-dynamic";
 
 interface Params {
@@ -68,7 +68,7 @@ export default async function ProgramsPage({
         </Link>
         <span className="px-2">/</span>
         <span className="font-medium text-foreground">
-          Gestion des formations
+          Programmes de formation
         </span>
       </div>
       <header className="flex flex-wrap items-center justify-between gap-4">
@@ -78,7 +78,7 @@ export default async function ProgramsPage({
           </span>
           <div>
             <h1 className="text-2xl font-semibold tracking-tight">
-              Gestion des formations
+              Programmes de formation
             </h1>
             <p className="mt-0.5 text-sm text-muted-foreground">
               Programmes pédagogiques, sessions et inscriptions centralisés.
@@ -90,7 +90,7 @@ export default async function ProgramsPage({
           <Button asChild>
             <Link href="/admin/formations/nouvelle">
               <Plus className="h-4 w-4" />
-              Nouvelle formation
+              Nouveau programme
             </Link>
           </Button>
         </div>
@@ -98,10 +98,10 @@ export default async function ProgramsPage({
 
       <section
         className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4"
-        aria-label="Statistiques des formations"
+        aria-label="Statistiques des programmes de formation"
       >
         <KpiCard
-          label="Total formations"
+          label="Total programmes"
           value={stats.total}
           icon={<FolderOpen className="h-5 w-5" />}
           tone="blue"
@@ -109,7 +109,7 @@ export default async function ProgramsPage({
           appearance="crm"
         />
         <KpiCard
-          label="Formations actives"
+          label="Programmes actifs"
           value={stats.active}
           icon={<GraduationCap className="h-5 w-5" />}
           tone="emerald"
@@ -149,7 +149,7 @@ export default async function ProgramsPage({
               <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
                 name="q"
-                aria-label="Rechercher une formation"
+                aria-label="Rechercher un programme"
                 defaultValue={params.q ?? ""}
                 placeholder="Intitulé, code, description…"
                 className="pl-9"
@@ -204,16 +204,16 @@ export default async function ProgramsPage({
             <div className="p-5">
               <EmptyState
                 icon={<GraduationCap className="h-6 w-6" />}
-                title="Aucune formation trouvée"
+                title="Aucun programme trouvé"
                 description={
                   hasFilters
                     ? "Modifiez ou réinitialisez les filtres."
-                    : "Créez une première formation pour organiser les cours et sessions."
+                    : "Créez un premier programme pour organiser les formations et sessions."
                 }
                 action={
                   <Button asChild>
                     <Link href="/admin/formations/nouvelle">
-                      Créer une formation
+                      Créer un programme
                     </Link>
                   </Button>
                 }
@@ -223,7 +223,7 @@ export default async function ProgramsPage({
           <footer className="flex flex-wrap items-center justify-between gap-3 border-t border-border/70 px-4 py-3 text-xs text-muted-foreground">
             <span>
               {allRows.length
-                ? `Affichage de ${(page - 1) * PAGE_SIZE + 1} à ${Math.min(page * PAGE_SIZE, allRows.length)} sur ${allRows.length} formation${allRows.length > 1 ? "s" : ""}`
+                ? `Affichage de ${(page - 1) * PAGE_SIZE + 1} à ${Math.min(page * PAGE_SIZE, allRows.length)} sur ${allRows.length} programme${allRows.length > 1 ? "s" : ""}`
                 : "Aucun résultat"}
             </span>
             {totalPages > 1 ? (
@@ -242,7 +242,7 @@ function ProgramsTable({ rows }: { rows: ProgramListRow[] }) {
     <table className="w-full min-w-[54rem] text-sm">
       <thead className="border-b border-border bg-muted/35 text-left text-[10px] uppercase tracking-[.08em] text-muted-foreground">
         <tr>
-          <th className="px-4 py-3">Formation</th>
+          <th className="px-4 py-3">Programme</th>
           <th className="px-4 py-3">Code</th>
           <th className="px-4 py-3 text-right">Durée</th>
           <th className="px-4 py-3">Statut</th>
@@ -265,7 +265,7 @@ function ProgramsTable({ rows }: { rows: ProgramListRow[] }) {
                     {program.title}
                   </Link>
                   <p className="text-[10px] text-muted-foreground">
-                    {program.courseCount} cours dans le parcours
+                    {program.courseCount} formation{program.courseCount !== 1 ? "s" : ""} dans le parcours
                   </p>
                 </div>
               </div>
@@ -337,19 +337,19 @@ function ProgramsSidebar({
     {
       href: "/admin/formations/nouvelle",
       icon: Plus,
-      title: "Nouvelle formation",
+      title: "Nouveau programme",
       text: "Créer un programme",
     },
     {
       href: "/admin/formations",
       icon: CalendarDays,
       title: "Gérer les sessions",
-      text: "Planifier depuis une formation",
+      text: "Planifier depuis un programme",
     },
     {
       href: "/admin/cours",
       icon: BookOpen,
-      title: "Gérer les cours",
+      title: "Gérer les formations",
       text: "Composer les parcours",
     },
     {
@@ -433,7 +433,7 @@ function StatusDonut({
         background: `conic-gradient(#10b981 0 ${active}%, #f59e0b ${active}% ${active + draft}%, #94a3b8 ${active + draft}% 100%)`,
       }}
       role="img"
-      aria-label={`${stats.active} formations actives sur ${stats.total}`}
+      aria-label={`${stats.active} programmes actifs sur ${stats.total}`}
     >
       <span className="absolute inset-[14px] flex items-center justify-center rounded-full bg-card text-xs font-bold">
         {Math.round(active)}%
@@ -497,7 +497,7 @@ function Pagination({
   return (
     <nav
       className="flex items-center gap-1"
-      aria-label="Pagination des formations"
+      aria-label="Pagination des programmes"
     >
       <Button
         size="icon"

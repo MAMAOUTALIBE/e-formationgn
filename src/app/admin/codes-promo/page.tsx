@@ -135,8 +135,8 @@ export default async function AdminPromoCodesPage() {
               </FormField>
               <FormField id="scope" label="Portée">
                 <Select id="scope" name="scope" defaultValue="GLOBAL">
-                  <option value="GLOBAL">Tous les cours</option>
-                  <option value="COURSE_SPECIFIC">Cours spécifiques</option>
+                  <option value="GLOBAL">Toutes les formations</option>
+                  <option value="COURSE_SPECIFIC">Formations spécifiques</option>
                 </Select>
               </FormField>
               <FormField id="maxRedemptions" label="Limite d'utilisations" hint="Optionnel">

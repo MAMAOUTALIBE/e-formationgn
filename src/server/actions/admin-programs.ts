@@ -98,7 +98,7 @@ export async function createProgram(
   });
 
   revalidatePath("/admin/formations");
-  return { success: true, programId: program.id, message: "Formation créée." };
+  return { success: true, programId: program.id, message: "Programme de formation créé." };
 }
 
 export async function updateProgram(
@@ -117,7 +117,7 @@ export async function updateProgram(
     where: { id: programId },
     select: { id: true, code: true, status: true },
   });
-  if (!current) return { success: false, message: "Formation introuvable." };
+  if (!current) return { success: false, message: "Programme de formation introuvable." };
 
   const raw = readProgramForm(formData);
   const parsed = programSchema.safeParse(raw);
@@ -161,7 +161,7 @@ export async function updateProgram(
 
   revalidatePath("/admin/formations");
   revalidatePath(`/admin/formations/${programId}`);
-  return { success: true, programId, message: "Formation mise à jour." };
+  return { success: true, programId, message: "Programme de formation mis à jour." };
 }
 
 /** Ajoute un cours à la composition d'une formation. */
@@ -180,7 +180,7 @@ export async function addCourseToProgram(
     prisma.program.findUnique({ where: { id: programId }, select: { id: true, title: true } }),
     prisma.course.findUnique({ where: { id: courseId }, select: { id: true, title: true } }),
   ]);
-  if (!program || !course) return { success: false, message: "Formation ou cours introuvable." };
+  if (!program || !course) return { success: false, message: "Programme ou formation introuvable." };
 
   // Position = fin de liste. `_max` plutôt qu'un count : après un retrait, le
   // nombre d'éléments ne correspond plus à la dernière position utilisée, et
@@ -222,7 +222,7 @@ export async function removeCourseFromProgram(
     where: { programId_courseId: { programId, courseId } },
     include: { course: { select: { title: true } } },
   });
-  if (!link) return { success: false, message: "Ce cours ne fait pas partie de la formation." };
+  if (!link) return { success: false, message: "Cette formation ne fait pas partie du programme." };
 
   await prisma.programCourse.delete({
     where: { programId_courseId: { programId, courseId } },
@@ -287,8 +287,8 @@ export async function createTrainingSession(
   if (!program || program.status === "ARCHIVED") {
     return {
       success: false,
-      message: "Formation invalide ou archivée.",
-      fieldErrors: { programId: "Sélectionnez une formation active." },
+      message: "Programme de formation invalide ou archivé.",
+      fieldErrors: { programId: "Sélectionnez un programme actif." },
       values: raw,
     };
   }

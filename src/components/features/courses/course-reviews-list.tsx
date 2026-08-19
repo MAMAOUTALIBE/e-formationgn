@@ -90,7 +90,7 @@ export function CourseReviewsList({
   if (totalRatings === 0) {
     return (
       <div className="rounded-md border border-dashed border-border bg-muted/40 p-6 text-center text-sm text-muted-foreground">
-        Ce cours n&apos;a pas encore reçu d&apos;avis. Soyez le premier à le noter une fois inscrit.
+        Cette formation n&apos;a pas encore reçu d&apos;avis. Soyez le premier à la noter une fois inscrit.
       </div>
     );
   }

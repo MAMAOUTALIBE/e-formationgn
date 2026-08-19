@@ -47,7 +47,7 @@ export const updateCourseGeneralSchema = z
     description: z
       .string()
       .trim()
-      .min(50, "Décrivez votre cours en au moins 50 caractères.")
+      .min(50, "Décrivez votre formation en au moins 50 caractères.")
       .max(8000, "La description est trop longue.")
       .refine((d) => d !== PLACEHOLDER_DESCRIPTION, {
         message: "Remplacez le texte par défaut par une vraie description.",

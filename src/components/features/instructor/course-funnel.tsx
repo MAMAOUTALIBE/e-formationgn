@@ -31,7 +31,7 @@ export function CourseFunnel({ funnel }: CourseFunnelProps) {
     },
     {
       key: "completions",
-      label: "Cours terminés",
+      label: "Formations terminées",
       value: completions,
       icon: <GraduationCap className="h-4 w-4" aria-hidden />,
       conv:

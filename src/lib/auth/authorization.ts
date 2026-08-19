@@ -136,12 +136,12 @@ export async function requireCourseOwnership(
     select: { id: true, instructorId: true },
   });
   if (!course) {
-    throw new AuthorizationError("NOT_FOUND", "Cours introuvable.");
+    throw new AuthorizationError("NOT_FOUND", "Formation introuvable.");
   }
   if (!ctx.isAdmin && course.instructorId !== ctx.userId) {
     throw new AuthorizationError(
       "FORBIDDEN",
-      "Vous n'êtes pas le propriétaire de ce cours.",
+      "Vous n'êtes pas le propriétaire de cette formation.",
     );
   }
   return { course, userId: ctx.userId, isAdmin: ctx.isAdmin };
@@ -248,7 +248,7 @@ export async function requireCourseEnrollment(
   if (!enrollment) {
     throw new AuthorizationError(
       "FORBIDDEN",
-      "Vous devez être inscrit à ce cours pour effectuer cette action.",
+      "Vous devez être inscrit à cette formation pour effectuer cette action.",
     );
   }
   return { enrollment, userId };

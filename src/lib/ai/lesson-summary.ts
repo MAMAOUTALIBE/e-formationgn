@@ -61,7 +61,7 @@ export async function generateLessonSummary(
       {
         role: "user",
         content: [
-          `Cours : ${input.courseTitle}`,
+          `Formation : ${input.courseTitle}`,
           `Leçon : ${input.lessonTitle}`,
           "",
           "Contenu source :",

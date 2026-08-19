@@ -174,7 +174,7 @@ export function MuxPromoUploader({
           </div>
           <p className="flex items-center gap-2 text-sm text-muted-foreground">
             <Video className="h-4 w-4" aria-hidden />
-            Vidéo de présentation prête — visible publiquement sur la fiche du cours.
+            Vidéo de présentation prête — visible publiquement sur la fiche de la formation.
           </p>
           <div className="flex flex-wrap gap-2">
             <Button type="button" variant="outline" onClick={pickFile}>

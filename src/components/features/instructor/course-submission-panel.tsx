@@ -33,7 +33,7 @@ export function CourseSubmissionPanel({ courseId, status }: CourseSubmissionPane
         message:
           result.message ??
           (result.success
-            ? "Cours soumis."
+            ? "Formation soumise."
             : "Erreur lors de la soumission."),
       });
     });
@@ -51,7 +51,7 @@ export function CourseSubmissionPanel({ courseId, status }: CourseSubmissionPane
         {status === "PENDING_REVIEW" ? (
           <ConfirmAction
             variant="outline"
-            message="Annuler la soumission ? Le cours repassera en brouillon."
+            message="Annuler la soumission ? La formation repassera en brouillon."
             onConfirm={async () => {
               const result = await withdrawCourseSubmission(courseId);
               setFeedback({
@@ -70,7 +70,7 @@ export function CourseSubmissionPanel({ courseId, status }: CourseSubmissionPane
         {status === "PUBLISHED" ? (
           <ConfirmAction
             variant="outline"
-            message="Archiver ce cours ? Il ne sera plus visible publiquement (mais les élèves inscrits y conserveront l'accès)."
+            message="Archiver cette formation ? Elle ne sera plus visible publiquement (mais les élèves inscrits y conserveront l'accès)."
             onConfirm={async () => {
               const result = await unpublishCourse(courseId);
               setFeedback({
@@ -80,7 +80,7 @@ export function CourseSubmissionPanel({ courseId, status }: CourseSubmissionPane
             }}
             pendingLabel="Archivage…"
           >
-            Archiver le cours
+            Archiver la formation
           </ConfirmAction>
         ) : null}
       </div>

@@ -160,7 +160,7 @@ export default async function AdminUserDetailPage({ params }: PageProps) {
           </>
         ) : (
           <>
-            <MiniStat label="Cours créés" value={user._count.coursesAuthored} />
+            <MiniStat label="Formations créées" value={user._count.coursesAuthored} />
             <MiniStat label="Avis" value={user._count.reviews} />
             <MiniStat label="Questions" value={user._count.questions} />
             <MiniStat
@@ -180,7 +180,7 @@ export default async function AdminUserDetailPage({ params }: PageProps) {
           </CardHeader>
           <CardContent>
             {/* Le statut d'inscription pilote les accès réels : activer ouvre
-                les cours du programme, suspendre les retire. */}
+                les formations du programme, suspendre les retire. */}
             <StudentRegistrations
               studentId={user.id}
               registrations={registrations.map((r) => ({

@@ -42,7 +42,7 @@ export default async function CourseEditLayout({ children, params }: LayoutProps
         <Button asChild variant="link" size="sm" className="h-auto px-0 text-muted-foreground">
           <Link href="/formateur/cours">
             <ArrowLeft className="h-4 w-4" />
-            Retour à mes cours
+            Retour à mes formations
           </Link>
         </Button>
       </div>

@@ -100,8 +100,8 @@ export function AdminCoursesTable({ rows, params, page, pageSize, total, totalPa
           <colgroup><col className="w-12" /><col className="w-[32%]" /><col className="w-32" /><col className="w-[17%]" /><col className="w-[15%]" /><col className="w-24" /><col className="w-36" /><col className="w-16" /></colgroup>
           <thead className="sticky top-0 z-20 border-b border-border bg-card text-left text-[10px] uppercase tracking-[.08em] text-muted-foreground shadow-[0_1px_0_var(--border)]">
             <tr className="h-10">
-              <th className="px-4"><Checkbox aria-label="Sélectionner les cours de cette page" checked={allSelected} onChange={(event) => setSelected(event.target.checked ? new Set(rows.map((row) => row.id)) : new Set())} /></th>
-              <SortableHeader label="Cours" field="title" params={params} />
+              <th className="px-4"><Checkbox aria-label="Sélectionner les formations de cette page" checked={allSelected} onChange={(event) => setSelected(event.target.checked ? new Set(rows.map((row) => row.id)) : new Set())} /></th>
+              <SortableHeader label="Formation" field="title" params={params} />
               <SortableHeader label="Statut" field="status" params={params} />
               <SortableHeader label="Formateur" field="instructor" params={params} />
               <SortableHeader label="Catégorie" field="category" params={params} />
@@ -136,7 +136,7 @@ export function AdminCoursesTable({ rows, params, page, pageSize, total, totalPa
         <span>{total ? `${(page - 1) * pageSize + 1}–${Math.min(page * pageSize, total)} sur ${total}` : "0 résultat"}</span>
         <div className="flex items-center gap-4">
           <label className="hidden items-center gap-2 sm:flex">Lignes par page<Select aria-label="Lignes par page" value={pageSize} className="h-8 w-20 py-1" onChange={(event) => router.push(href({ pageSize: event.target.value, page: "1" }))}><option value="25">25</option><option value="50">50</option><option value="100">100</option></Select></label>
-          <nav className="flex items-center gap-1" aria-label="Pagination des cours">
+          <nav className="flex items-center gap-1" aria-label="Pagination des formations">
             <PageLink href={href({ page: String(page - 1) })} disabled={page <= 1} label="Page précédente"><ChevronLeft className="h-4 w-4" /></PageLink>
             {pageNumbers.map((item, index) => item === "…" ? <span key={`ellipsis-${index}`} className="w-8 text-center">…</span> : <Link key={item} href={href({ page: String(item) })} aria-current={item === page ? "page" : undefined} className={`flex h-8 min-w-8 items-center justify-center rounded-md px-2 font-medium ${item === page ? "bg-primary text-primary-foreground" : "text-foreground hover:bg-muted"}`}>{item}</Link>)}
             <PageLink href={href({ page: String(page + 1) })} disabled={page >= totalPages} label="Page suivante"><ChevronRight className="h-4 w-4" /></PageLink>
@@ -144,7 +144,7 @@ export function AdminCoursesTable({ rows, params, page, pageSize, total, totalPa
         </div>
       </footer>
 
-      <ConfirmDialog open={Boolean(toDelete)} onClose={() => setToDelete(null)} title={`Supprimer « ${toDelete?.title ?? "ce cours"} » ?`} description="Cette action est définitive. Un cours lié à des ventes ou certificats ne pourra pas être supprimé." confirmLabel="Supprimer définitivement" destructive pending={pending} onConfirm={() => { if (toDelete) run(() => adminDeleteCourse(toDelete.id)); }} />
+      <ConfirmDialog open={Boolean(toDelete)} onClose={() => setToDelete(null)} title={`Supprimer « ${toDelete?.title ?? "cette formation"} » ?`} description="Cette action est définitive. Une formation liée à des ventes ou certificats ne pourra pas être supprimée." confirmLabel="Supprimer définitivement" destructive pending={pending} onConfirm={() => { if (toDelete) run(() => adminDeleteCourse(toDelete.id)); }} />
     </section>
   );
 }
@@ -174,7 +174,7 @@ function CourseMenu({ course, pending, onAction, onDelete }: { course: AdminCour
         className="fixed inset-x-4 bottom-4 z-50 w-auto overflow-hidden rounded-xl border-2 border-blue-300/70 bg-gradient-to-b from-brand-primary to-blue-950 p-1.5 text-left text-sm text-white shadow-[0_20px_50px_rgba(15,23,42,0.45)] ring-1 ring-white/20 group-open:block sm:inset-x-auto sm:bottom-auto sm:right-8 sm:mt-1 sm:w-48"
       >
         <p className="border-b border-white/20 px-2.5 pb-1.5 pt-1 text-[10px] font-bold uppercase tracking-[0.12em] text-blue-100">
-          Actions du cours
+          Actions de la formation
         </p>
         <div className="space-y-0.5 pt-1">
           <MenuLink href={`/admin/cours/${course.id}`} icon={<Pencil className="h-4 w-4" />}>Modifier</MenuLink>

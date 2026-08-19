@@ -128,8 +128,8 @@ export function HeaderSearch({ className }: { className?: string }) {
             }}
             onFocus={() => setOpen(true)}
             onKeyDown={handleKeyDown}
-            placeholder="Rechercher un cours…"
-            aria-label="Rechercher un cours"
+            placeholder="Rechercher une formation…"
+            aria-label="Rechercher une formation"
             aria-autocomplete="list"
             aria-controls={listboxId}
             aria-expanded={showPopover}

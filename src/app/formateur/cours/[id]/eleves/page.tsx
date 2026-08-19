@@ -21,7 +21,7 @@ export default async function CourseStudentsPage({ params }: { params: Promise<{
   const quizzes = lessons.flatMap((lesson) => lesson.quiz ? [lesson.quiz] : []);
 
   return <Card><CardHeader><CardTitle>Suivi des élèves ({data.course.enrollments.length})</CardTitle></CardHeader><CardContent>
-    {data.course.enrollments.length === 0 ? <p className="text-sm text-muted-foreground">Aucun élève inscrit à ce cours.</p> :
+    {data.course.enrollments.length === 0 ? <p className="text-sm text-muted-foreground">Aucun élève inscrit à cette formation.</p> :
       <div className="overflow-x-auto"><table className="w-full min-w-[1100px] text-left text-sm"><thead className="border-b text-xs uppercase text-muted-foreground"><tr>
         <th className="px-3 py-3">Élève</th><th className="px-3 py-3">Progression</th><th className="px-3 py-3">Dernière activité</th><th className="px-3 py-3">Temps actif</th><th className="px-3 py-3">Leçons / vidéos</th><th className="px-3 py-3">Quiz R / É / NF</th><th className="px-3 py-3">Score moyen</th><th className="px-3 py-3">Questions ouvertes</th><th className="px-3 py-3">Statut</th>
       </tr></thead><tbody className="divide-y">{data.course.enrollments.map((enrollment) => {

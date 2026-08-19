@@ -28,7 +28,7 @@ export default async function AdminCourseModerationPage() {
           File de modération
         </h1>
         <p className="text-sm text-muted-foreground">
-          {courses.length} cours en attente de validation. Approuvez ou rejetez
+          {courses.length} formation{courses.length !== 1 ? "s" : ""} en attente de validation. Approuvez ou rejetez
           avec un commentaire qui sera transmis au formateur.
         </p>
       </header>
@@ -36,7 +36,7 @@ export default async function AdminCourseModerationPage() {
       {courses.length === 0 ? (
         <Card>
           <CardContent className="p-10 text-center text-sm text-muted-foreground">
-            Aucun cours en attente. ✓
+            Aucune formation en attente. ✓
           </CardContent>
         </Card>
       ) : (

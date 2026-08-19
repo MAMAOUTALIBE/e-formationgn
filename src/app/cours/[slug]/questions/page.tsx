@@ -122,7 +122,7 @@ export default async function CourseQAPage({ params }: PageProps) {
                               </p>
                               <p className="mt-1 text-xs text-muted-foreground">
                                 {name} · {dateFormatter.format(question.createdAt)} ·{" "}
-                                {question.lesson ? `${question.lesson.title} · ` : "Cours entier · "}
+                                {question.lesson ? `${question.lesson.title} · ` : "Formation entière · "}
                                 {question._count.answers}{" "}
                                 {pluralize(question._count.answers, "réponse")}
                               </p>
@@ -146,7 +146,7 @@ export default async function CourseQAPage({ params }: PageProps) {
                     <AskQuestionForm courseId={course.id} />
                   ) : (
                     <p className="text-sm text-muted-foreground">
-                      Inscrivez-vous au cours pour poser une question au formateur.
+                      Inscrivez-vous à la formation pour poser une question au formateur.
                     </p>
                   )}
                 </CardContent>

@@ -46,7 +46,7 @@ export async function createInstructorPromoCode(
     return {
       success: false,
       message:
-        "Un ou plusieurs cours sélectionnés ne vous appartiennent pas. Rafraîchissez la page.",
+        "Une ou plusieurs formations sélectionnées ne vous appartiennent pas. Rafraîchissez la page.",
     };
   }
 

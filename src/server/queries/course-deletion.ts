@@ -34,4 +34,4 @@ export async function getCourseDeletionStatus(
 }
 
 export const COURSE_NOT_DELETABLE_MESSAGE =
-  "Ce cours a un historique de commandes ou de certificats : pour préserver la comptabilité, il ne peut pas être supprimé définitivement. Archivez-le à la place.";
+  "Cette formation a un historique de commandes ou de certificats : pour préserver la comptabilité, elle ne peut pas être supprimée définitivement. Archivez-la à la place.";

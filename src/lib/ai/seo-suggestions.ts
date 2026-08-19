@@ -41,7 +41,7 @@ export interface SeoSuggestion {
 }
 
 const SYSTEM_PROMPT = `Tu es un expert SEO francophone spécialisé en formation en ligne.
-Ton job : produire 3 éléments à partir d'un brouillon de cours :
+Ton job : produire 3 éléments à partir d'un brouillon de formation :
 1. metaTitle : titre SEO optimisé (60 caractères max, accroche claire)
 2. metaDescription : description SEO (155 caractères max, action + bénéfice)
 3. whatYouWillLearn : tableau de 4 à 6 puces concrètes, chacune commençant par un verbe d'action.

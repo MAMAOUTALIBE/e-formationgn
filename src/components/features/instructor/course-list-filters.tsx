@@ -59,8 +59,8 @@ export function CourseListFilters() {
           type="search"
           value={q}
           onChange={(e) => setQ(e.target.value)}
-          placeholder="Rechercher un cours…"
-          aria-label="Rechercher un cours"
+          placeholder="Rechercher une formation…"
+          aria-label="Rechercher une formation"
           className="pl-9"
         />
       </div>

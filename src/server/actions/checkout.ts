@@ -92,7 +92,7 @@ export async function startCheckout(formData: FormData): Promise<ActionResult> {
   if (result.kind === "no-eligible-line") {
     return {
       success: false,
-      message: "Aucun cours disponible dans votre panier (peut-être retirés du catalogue).",
+      message: "Aucune formation disponible dans votre panier (peut-être retirée du catalogue).",
     };
   }
   if (result.kind === "promo-error") {

@@ -32,7 +32,7 @@ export async function addCourseToCart(courseId: string): Promise<ActionResult> {
   if (!session?.user) {
     return {
       success: false,
-      message: "Vous devez être connecté pour ajouter un cours au panier.",
+      message: "Vous devez être connecté pour ajouter une formation au panier.",
     };
   }
 
@@ -48,7 +48,7 @@ export async function addCourseToCart(courseId: string): Promise<ActionResult> {
   if (await isUserEnrolledIn(session.user.id, courseId)) {
     return {
       success: false,
-      message: "Vous êtes déjà inscrit à ce cours.",
+      message: "Vous êtes déjà inscrit à cette formation.",
     };
   }
 
@@ -57,12 +57,12 @@ export async function addCourseToCart(courseId: string): Promise<ActionResult> {
     select: { id: true, status: true, instructorId: true },
   });
   if (!course || course.status !== "PUBLISHED") {
-    return { success: false, message: "Ce cours n'est pas disponible." };
+    return { success: false, message: "Cette formation n'est pas disponible." };
   }
   if (course.instructorId === session.user.id) {
     return {
       success: false,
-      message: "Vous ne pouvez pas acheter votre propre cours.",
+      message: "Vous ne pouvez pas acheter votre propre formation.",
     };
   }
 
@@ -74,7 +74,7 @@ export async function addCourseToCart(courseId: string): Promise<ActionResult> {
 
   revalidatePath("/panier");
   revalidatePath("/", "layout");
-  return { success: true, message: "Cours ajouté au panier." };
+  return { success: true, message: "Formation ajoutée au panier." };
 }
 
 // "Acheter maintenant" — ajoute le cours au panier (idempotent), puis
@@ -103,7 +103,7 @@ export async function moveCartItemToWishlist(courseId: string): Promise<ActionRe
   revalidatePath("/panier");
   revalidatePath("/wishlist");
   revalidatePath("/", "layout");
-  return { success: true, message: "Cours déplacé vers votre wishlist." };
+  return { success: true, message: "Formation déplacée vers votre liste d’envies." };
 }
 
 export async function removeCourseFromCart(courseId: string): Promise<ActionResult> {

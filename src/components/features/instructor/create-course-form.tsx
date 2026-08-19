@@ -32,7 +32,7 @@ export function CreateCourseForm({ categories }: CreateCourseFormProps) {
 
       <FormField
         id="title"
-        label="Titre du cours"
+        label="Titre de la formation"
         required
         error={errors.title?.[0]}
         hint="Vous pourrez l'affiner par la suite."
@@ -68,7 +68,7 @@ export function CreateCourseForm({ categories }: CreateCourseFormProps) {
         id="thumbnailUrl"
         label="Photo de couverture (optionnel)"
         error={errors.thumbnailUrl?.[0]}
-        hint="Vous pouvez la définir plus tard depuis l'onglet « Général » du cours. Sera demandée avant publication."
+        hint="Vous pouvez la définir plus tard depuis l'onglet « Général » de la formation. Sera demandée avant publication."
       >
         <ThumbnailUploader name="thumbnailUrl" disabled={pending} optional />
       </FormField>
@@ -79,7 +79,7 @@ export function CreateCourseForm({ categories }: CreateCourseFormProps) {
 
       <p className="rounded-md bg-muted/50 p-3 text-xs text-muted-foreground">
         💡 Après la création, vous pourrez ajouter description, programme, leçons
-        et <strong>vidéos</strong> depuis l&apos;onglet « Programme » du cours,
+        et <strong>vidéos</strong> depuis l&apos;onglet « Programme » de la formation,
         puis cliquer sur chaque leçon pour téléverser sa vidéo.
       </p>
     </form>

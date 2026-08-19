@@ -51,7 +51,7 @@ export function EnrollmentCard({ enrollment, resumeHref }: EnrollmentCardProps) 
 
   const href = resumeHref ?? `/apprentissage/${course.slug}`;
   const ctaLabel = isCompleted
-    ? "Revoir le cours"
+    ? "Revoir la formation"
     : hasStarted
       ? "Reprendre"
       : "Commencer";
@@ -65,7 +65,7 @@ export function EnrollmentCard({ enrollment, resumeHref }: EnrollmentCardProps) 
         {course.thumbnailUrl ? (
           <Image
             src={course.thumbnailUrl}
-            alt={`Vignette du cours ${course.title}`}
+            alt={`Vignette de la formation ${course.title}`}
             fill
             sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
             className="object-cover"
@@ -99,7 +99,7 @@ export function EnrollmentCard({ enrollment, resumeHref }: EnrollmentCardProps) 
         <div className="space-y-1">
           <div className="flex items-center justify-between text-xs">
             <span className="text-muted-foreground">
-              {isCompleted ? "Cours terminé" : "Progression"}
+              {isCompleted ? "Formation terminée" : "Progression"}
             </span>
             <span className="font-semibold tabular-nums text-foreground">
               {percent} %
@@ -166,7 +166,7 @@ export function WishlistCard({ course, addedAt }: WishlistCardProps) {
         {course.thumbnailUrl ? (
           <Image
             src={course.thumbnailUrl}
-            alt={`Vignette du cours ${course.title}`}
+            alt={`Vignette de la formation ${course.title}`}
             fill
             sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
             className="object-cover"
@@ -192,7 +192,7 @@ export function WishlistCard({ course, addedAt }: WishlistCardProps) {
           Ajouté le {dateFormatter.format(addedAt)}
         </p>
         <Button asChild className="w-full" variant="default">
-          <Link href={`/cours/${course.slug}`}>Voir le cours</Link>
+          <Link href={`/cours/${course.slug}`}>Voir la formation</Link>
         </Button>
       </CardContent>
     </Card>

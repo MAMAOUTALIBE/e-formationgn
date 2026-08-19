@@ -74,7 +74,7 @@ export function CourseAccessManager({
         {granted.length === 0 ? (
           <p className="text-sm text-muted-foreground">
             Aucune formation attribuée : ce compte voit le catalogue mais ne peut
-            suivre aucun cours.
+            suivre aucune formation.
           </p>
         ) : (
           <ul className="divide-y divide-border rounded-md border border-border">

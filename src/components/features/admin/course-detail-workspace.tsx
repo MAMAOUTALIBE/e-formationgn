@@ -93,7 +93,7 @@ export function CourseDetailWorkspace({
     <div className="flex min-h-0 flex-1 flex-col">
       <nav
         role="tablist"
-        aria-label="Sections de gestion du cours"
+        aria-label="Sections de gestion de la formation"
         className="-mx-1 flex shrink-0 gap-1 overflow-x-auto border-b border-border px-1 pb-1 xl:hidden"
       >
         {panels.map((panel, index) => {

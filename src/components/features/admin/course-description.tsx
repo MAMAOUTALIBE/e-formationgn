@@ -61,7 +61,7 @@ export function CourseDescription({ description }: { description: string }) {
           />
           <div className="relative flex max-h-[min(70dvh,42rem)] w-full max-w-2xl flex-col rounded-xl border border-border bg-background shadow-xl">
             <div className="flex shrink-0 items-center justify-between gap-3 border-b border-border px-4 py-3">
-              <h2 id="course-description-title" className="text-base font-semibold text-foreground">Description du cours</h2>
+              <h2 id="course-description-title" className="text-base font-semibold text-foreground">Description de la formation</h2>
               <Button
                 type="button"
                 variant="ghost"

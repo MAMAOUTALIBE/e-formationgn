@@ -37,7 +37,7 @@ async function recomputeCourseRating(courseId: string) {
 export async function upsertReview(formData: FormData): Promise<ActionResult> {
   const session = await auth();
   if (!session?.user) {
-    return { success: false, message: "Connectez-vous pour noter ce cours." };
+    return { success: false, message: "Connectez-vous pour noter cette formation." };
   }
 
   // Limite par couple user×course pour permettre la modification d'un avis
@@ -70,7 +70,7 @@ export async function upsertReview(formData: FormData): Promise<ActionResult> {
   if (!enrollment) {
     return {
       success: false,
-      message: "Vous devez être inscrit au cours pour le noter.",
+      message: "Vous devez être inscrit à la formation pour la noter.",
     };
   }
 
@@ -144,7 +144,7 @@ export async function upsertReview(formData: FormData): Promise<ActionResult> {
       data: {
         userId: course.instructorId,
         kind: "NEW_REVIEW",
-        title: "Nouvel avis sur votre cours",
+        title: "Nouvel avis sur votre formation",
         body: `Un élève a laissé un avis (${parsed.data.rating}/5).`,
         url: `/cours/${course.slug}`,
       },

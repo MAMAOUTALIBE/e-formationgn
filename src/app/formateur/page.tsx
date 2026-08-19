@@ -59,7 +59,7 @@ export default async function InstructorDashboardPage() {
         <Button asChild>
           <Link href="/formateur/cours/nouveau">
             <Plus className="h-4 w-4" />
-            Nouveau cours
+            Nouvelle formation
           </Link>
         </Button>
       </header>
@@ -73,9 +73,9 @@ export default async function InstructorDashboardPage() {
       <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard
           icon={<BookOpenText className="h-4 w-4" aria-hidden />}
-          label="Cours créés"
+          label="Formations créées"
           value={stats.totalCourses.toLocaleString("fr-FR")}
-          hint={`${stats.publishedCourses} publié${stats.publishedCourses > 1 ? "s" : ""} · ${stats.draftCourses} brouillon${stats.draftCourses > 1 ? "s" : ""}`}
+          hint={`${stats.publishedCourses} publiée${stats.publishedCourses > 1 ? "s" : ""} · ${stats.draftCourses} brouillon${stats.draftCourses > 1 ? "s" : ""}`}
         />
         <StatCard
           icon={<Users className="h-4 w-4" aria-hidden />}
@@ -97,7 +97,7 @@ export default async function InstructorDashboardPage() {
           icon={<FileText className="h-4 w-4" aria-hidden />}
           label="En modération"
           value={stats.pendingReviewCourses.toLocaleString("fr-FR")}
-          hint="Cours en attente de validation"
+          hint="Formations en attente de validation"
         />
       </section>
 
@@ -105,8 +105,8 @@ export default async function InstructorDashboardPage() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between gap-3">
             <div>
-              <CardTitle className="text-base">Vos cours récents</CardTitle>
-              <CardDescription>Les cinq derniers cours mis à jour.</CardDescription>
+              <CardTitle className="text-base">Vos formations récentes</CardTitle>
+              <CardDescription>Les cinq dernières formations mises à jour.</CardDescription>
             </div>
             <Button asChild variant="link" size="sm" className="h-auto px-0">
               <Link href="/formateur/cours">Voir tout</Link>
@@ -115,12 +115,12 @@ export default async function InstructorDashboardPage() {
           <CardContent>
             {recentCourses.length === 0 ? (
               <div className="rounded-md border border-dashed border-border bg-muted/40 p-6 text-center text-sm text-muted-foreground">
-                Vous n&apos;avez pas encore créé de cours.{" "}
+                Vous n&apos;avez pas encore créé de formation.{" "}
                 <Link
                   href="/formateur/cours/nouveau"
                   className="text-[color:var(--brand-secondary)] hover:underline"
                 >
-                  Créer mon premier cours
+                  Créer ma première formation
                 </Link>
               </div>
             ) : (

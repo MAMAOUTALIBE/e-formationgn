@@ -82,7 +82,7 @@ export default async function AdminFinancesPage({ searchParams }: PageProps) {
             </p>
             <p className="mt-0.5 text-muted-foreground">
               Seuil sain &lt; {REFUND_RATE_ALERT_THRESHOLD}%. Investiguer les
-              motifs récents pour identifier un cours problématique ou un bug
+              motifs récents pour identifier une formation problématique ou un bug
               d&apos;achat.
             </p>
           </div>

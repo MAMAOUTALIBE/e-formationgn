@@ -67,7 +67,7 @@ export function LessonQuestions({
                           </p>
                         </div>
                         <div className="flex gap-2">
-                          {question.lesson?.id !== lessonId ? <Badge variant="outline">Cours entier</Badge> : null}
+                          {question.lesson?.id !== lessonId ? <Badge variant="outline">Formation entière</Badge> : null}
                           {question.visibility === "PRIVATE" ? (
                             <Badge variant="secondary"><Lock className="h-3 w-3" /> Privée</Badge>
                           ) : null}

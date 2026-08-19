@@ -98,7 +98,7 @@ export function CourseCard({
         <h3 className="line-clamp-2 text-[15px] font-bold leading-snug text-foreground">
           <Link
             href={courseHref}
-            aria-label={`Voir le cours ${course.title}`}
+            aria-label={`Voir la formation ${course.title}`}
             className="after:absolute after:inset-0 after:z-0 after:content-[''] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
             {course.title}

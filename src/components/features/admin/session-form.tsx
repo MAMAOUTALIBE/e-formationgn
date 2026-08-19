@@ -1,8 +1,8 @@
 "use client";
 
-// Création d'une session pour une formation donnée.
+// Création d'une session pour un programme donné.
 //
-// Formulaire compact posé sous la liste des sessions de la fiche formation :
+// Formulaire compact posé sous la liste des sessions de la fiche programme :
 // créer une session est un geste courant, l'envoyer sur un écran séparé
 // coûterait deux navigations pour trois champs.
 

@@ -24,7 +24,7 @@ export async function issueCertificate(courseId: string): Promise<ActionResult &
     select: { id: true, completedAt: true, progressPercent: true, orderItemId: true },
   });
   if (!enrollment) {
-    return { success: false, message: "Vous n'êtes pas inscrit à ce cours." };
+    return { success: false, message: "Vous n'êtes pas inscrit à cette formation." };
   }
   if (enrollment.progressPercent < 100) {
     return {

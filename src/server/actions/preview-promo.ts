@@ -75,7 +75,7 @@ export async function previewCoursePromo(input: {
     },
   });
   if (!course || course.status !== "PUBLISHED") {
-    return { ok: false, message: "Ce cours n'est pas disponible." };
+    return { ok: false, message: "Cette formation n'est pas disponible." };
   }
 
   // Prix de référence pour le calcul = prix actuel (avec remise éventuelle déjà active).
@@ -110,7 +110,7 @@ export async function previewCoursePromo(input: {
   const baseMinor = amountToMinor(baseAmount, input.currency);
 
   if (baseMinor <= 0) {
-    return { ok: false, message: "Ce cours est déjà gratuit, aucun code à appliquer." };
+    return { ok: false, message: "Cette formation est déjà gratuite, aucun code à appliquer." };
   }
 
   // Délègue à la fonction commune — même checks que le checkout réel.

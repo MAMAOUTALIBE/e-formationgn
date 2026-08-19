@@ -43,13 +43,13 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     description:
       instructor.headline ??
       instructor.bio?.slice(0, 160) ??
-      `Découvrez les cours de ${name} sur Gandal.`,
+      `Découvrez les formations de ${name} sur Gandal.`,
     alternates: { canonical: `/formateurs/${code}` },
     openGraph: {
       title: `${name} · Formateur sur Gandal`,
       description:
         instructor.headline ??
-        `Découvrez les cours de ${name}, formateur sur la plateforme francophone Gandal.`,
+        `Découvrez les formations de ${name}, formateur sur la plateforme francophone Gandal.`,
       type: "profile",
     },
   };
@@ -190,7 +190,7 @@ export default async function PublicInstructorPage({ params }: PageProps) {
                     <BookOpenText className="h-4 w-4" aria-hidden />
                     <span className="font-semibold">{totalCourses}</span>
                     <span className="text-primary-foreground/70">
-                      {pluralize(totalCourses, "cours")}
+                      {pluralize(totalCourses, "formation", "formations")}
                     </span>
                   </li>
                   <li className="inline-flex items-center gap-2">
@@ -270,7 +270,7 @@ export default async function PublicInstructorPage({ params }: PageProps) {
                     <Award className="h-4 w-4" aria-hidden /> Formateur top noté
                   </p>
                   <p className="mt-1 text-xs text-foreground">
-                    Plus de {weightedRating.toFixed(1)}/5 sur l&apos;ensemble de ses cours.
+                    Plus de {weightedRating.toFixed(1)}/5 sur l&apos;ensemble de ses formations.
                   </p>
                 </div>
               ) : null}
@@ -279,12 +279,12 @@ export default async function PublicInstructorPage({ params }: PageProps) {
             {/* Cours du formateur */}
             <section aria-labelledby="courses-heading">
               <h2 id="courses-heading" className="text-xl font-semibold text-foreground">
-                Cours de {name}
+                Formations de {name}
               </h2>
 
               {instructor.coursesAuthored.length === 0 ? (
                 <div className="mt-4 rounded-md border border-dashed border-border bg-muted/40 p-6 text-center text-sm text-muted-foreground">
-                  Ce formateur n&apos;a pas encore publié de cours.
+                  Ce formateur n&apos;a pas encore publié de formation.
                 </div>
               ) : (
                 <div className="mt-6 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">

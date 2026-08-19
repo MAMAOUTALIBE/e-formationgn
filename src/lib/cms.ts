@@ -17,7 +17,7 @@ const FALLBACK_CONTENT: Record<string, DefaultCmsPage> = {
 Gandal, SAS au capital de — €. Siège social : —. SIREN —. Contact : contact@gandal.gn.
 
 2. Produits
-La plateforme propose l'accès à des cours en ligne créés par des formateurs indépendants. L'accès est nominatif et non transférable.
+La plateforme propose l'accès à des formations en ligne créées par des formateurs indépendants. L'accès est nominatif et non transférable.
 
 3. Prix
 Les prix sont indiqués TTC en euros (EUR) ou en dollars américains (USD) selon la devise sélectionnée. La TVA est facturée selon la législation applicable au pays de l'acheteur.
@@ -26,10 +26,10 @@ Les prix sont indiqués TTC en euros (EUR) ou en dollars américains (USD) selon
 Les paiements sont traités par Stripe. Gandal ne stocke aucune donnée bancaire.
 
 5. Droit de rétractation
-Conformément à l'article L221-28 du Code de la consommation, l'accès immédiat au contenu numérique entraîne la perte du droit de rétractation. Une politique de remboursement commerciale de 14 jours s'applique néanmoins, sous réserve de moins de 25 % du cours consulté.
+Conformément à l'article L221-28 du Code de la consommation, l'accès immédiat au contenu numérique entraîne la perte du droit de rétractation. Une politique de remboursement commerciale de 14 jours s'applique néanmoins, sous réserve de moins de 25 % de la formation consultée.
 
 6. Garanties
-Les cours sont fournis « en l'état ». Gandal s'engage à un effort raisonnable de qualité et de disponibilité.
+Les formations sont fournies « en l'état ». Gandal s'engage à un effort raisonnable de qualité et de disponibilité.
 
 7. Données personnelles
 Voir notre politique de confidentialité.
@@ -62,7 +62,7 @@ Données collectées :
 - cookies fonctionnels (devise, affiliation, session)
 
 Finalités :
-- fournir le service (compte, achats, accès aux cours)
+- fournir le service (compte, achats, accès aux formations)
 - émettre les certificats
 - statistiques anonymisées d'utilisation
 

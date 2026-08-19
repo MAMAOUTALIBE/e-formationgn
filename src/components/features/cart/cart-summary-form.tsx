@@ -100,7 +100,7 @@ export function CartSummaryForm({
         label="Code promo"
         hint={
           promoCode
-            ? "Code reporté depuis la page cours."
+            ? "Code reporté depuis la page de la formation."
             : "Optionnel"
         }
       >

@@ -17,7 +17,7 @@ interface CourseSearchBarProps {
 
 export function CourseSearchBar({
   className,
-  placeholder = "Rechercher un cours, un sujet, un formateur…",
+  placeholder = "Rechercher une formation, un sujet, un formateur…",
   redirectToCatalog = false,
 }: CourseSearchBarProps) {
   const router = useRouter();
@@ -56,7 +56,7 @@ export function CourseSearchBar({
           value={value}
           onChange={(event) => setValue(event.target.value)}
           className="pl-10"
-          aria-label="Rechercher des cours"
+          aria-label="Rechercher des formations"
         />
       </div>
       <Button type="submit" disabled={pending}>

@@ -16,7 +16,7 @@ export default async function AdminOverviewPage() {
   ]);
   const links = [
     [
-      "Gérer les formations",
+      "Gérer les programmes",
       "/admin/formations",
       "Programmes, sessions et inscriptions",
     ],
@@ -28,7 +28,7 @@ export default async function AdminOverviewPage() {
     [
       "Analyser l'apprentissage",
       "/admin/analytics/apprentissage",
-      "Activité et complétion des cours",
+      "Activité et complétion des formations",
     ],
   ];
   return (
@@ -38,7 +38,7 @@ export default async function AdminOverviewPage() {
           Pilotage pédagogique
         </h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          Vue d&apos;ensemble des sociétés, apprenants, cours et inscriptions.
+          Vue d&apos;ensemble des sociétés, apprenants, formations et inscriptions.
         </p>
       </header>
       <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
@@ -59,7 +59,7 @@ export default async function AdminOverviewPage() {
           appearance="crm"
         />
         <KpiCard
-          label="Cours publiés"
+          label="Formations publiées"
           value={courses}
           icon={<BookOpen className="h-5 w-5" />}
           tone="amber"

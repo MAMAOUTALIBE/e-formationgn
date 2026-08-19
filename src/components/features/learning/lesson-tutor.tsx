@@ -93,7 +93,7 @@ export function LessonTutor({ lessonId }: { lessonId: string }) {
           <div className="flex justify-between gap-3">
             <p className="text-xs text-muted-foreground">
               Limite : 10 questions / heure. Pour les sujets hors leçon, utilise
-              l&apos;onglet Q&amp;A du cours.
+              l&apos;onglet Q&amp;A de la formation.
             </p>
             <Button
               type="button"

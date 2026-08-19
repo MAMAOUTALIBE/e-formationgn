@@ -127,7 +127,7 @@ export async function generateQuizFromLesson(
       {
         role: "user",
         content: [
-          `Cours : ${input.courseTitle}`,
+          `Formation : ${input.courseTitle}`,
           `Leçon : ${input.lessonTitle}`,
           `Nombre de questions souhaitées : ${target}`,
           "",

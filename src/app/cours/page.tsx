@@ -18,7 +18,7 @@ import { getCourseFilterCounts, listPublishedCourses } from "@/server/queries/co
 import { COURSES_PER_PAGE, courseFiltersSchema } from "@/lib/validators/courses";
 
 export const metadata: Metadata = {
-  title: "Catalogue des cours",
+  title: "Catalogue des formations",
   description:
     "Parcourez tout le catalogue de formations Gandal : développement, design, business, langues, et bien plus.",
   alternates: { canonical: "/cours" },
@@ -61,7 +61,7 @@ export default async function CoursesCatalogPage({ searchParams }: PageProps) {
 
             <header className="space-y-4">
               <h1 className="text-3xl font-semibold tracking-tight text-foreground">
-                Catalogue des cours
+                Catalogue des formations
               </h1>
               <CourseSearchBar />
             </header>

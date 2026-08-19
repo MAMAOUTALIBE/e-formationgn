@@ -20,7 +20,7 @@ export function InstructorActionCenter({ items }: InstructorActionCenterProps) {
       href: "/formateur/cours",
       icon: <AlertTriangle className="h-4 w-4" aria-hidden />,
       label: (n: number) =>
-        `${n} cours refusé${n > 1 ? "s" : ""} à corriger`,
+        `${n} formation${n > 1 ? "s" : ""} refusée${n > 1 ? "s" : ""} à corriger`,
       tone: "danger" as const,
     },
     {

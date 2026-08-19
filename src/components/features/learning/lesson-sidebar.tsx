@@ -32,7 +32,7 @@ export function LessonSidebar({
   currentLessonId,
 }: LessonSidebarProps) {
   return (
-    <nav aria-label="Progression du cours" className="space-y-4">
+    <nav aria-label="Progression de la formation" className="space-y-4">
       {sections.map((section) => (
         <section key={section.id}>
           <h3 className="mb-2 px-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">

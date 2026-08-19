@@ -26,7 +26,7 @@ export function CourseReadinessChecklist({
         <div className="flex-1">
           <div className="flex items-center justify-between gap-3">
             <p className="text-sm font-medium text-foreground">
-              {ready ? "Prêt à publier ✓" : "Progression du cours"}
+              {ready ? "Prête à publier ✓" : "Progression de la formation"}
             </p>
             <span className="text-sm font-semibold text-muted-foreground">
               {percent}%

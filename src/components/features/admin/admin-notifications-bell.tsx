@@ -37,7 +37,7 @@ export function AdminNotificationsBell({ badges }: { badges: AdminSidebarBadges 
     {
       key: "pendingCourses",
       count: badges.pendingCourses,
-      label: `${badges.pendingCourses} cours en attente de modération`,
+      label: `${badges.pendingCourses} formation${badges.pendingCourses !== 1 ? "s" : ""} en attente de modération`,
       href: "/admin/cours/moderation",
       tone: "warning",
     },

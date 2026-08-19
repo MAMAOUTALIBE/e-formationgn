@@ -51,8 +51,8 @@ test("un quiz valide et la dernière étape offrent des sorties explicites", asy
     lessonPage,
     /returnHref=\{`\/formateur\/cours\/\$\{id\}\/programme`\}/,
   );
-  assert.match(seo, /Enregistrer le cours/);
-  assert.match(seo, /Votre cours a été enregistré avec succès\./);
+  assert.match(seo, /Enregistrer la formation/);
+  assert.match(seo, /Votre formation a été enregistrée avec succès\./);
   assert.match(seo, /Retour au programme/);
   assert.match(seo, /Voir l’aperçu/);
   assert.match(

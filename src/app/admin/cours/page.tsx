@@ -11,7 +11,7 @@ import type { CourseStatus } from "@/generated/prisma/enums";
 import { getAdminCoursesDashboardData, listAdminCourses, type AdminCoursesSort } from "@/server/queries/admin-courses";
 import { listFeaturedCategories } from "@/server/queries/categories";
 
-export const metadata: Metadata = { title: "Cours — CRM admin" };
+export const metadata: Metadata = { title: "Formations — CRM admin" };
 export const dynamic = "force-dynamic";
 
 interface Params {
@@ -51,13 +51,13 @@ export default async function AdminCoursesPage({ searchParams }: { searchParams:
       <header className="flex shrink-0 items-center justify-between gap-4">
         <div className="flex min-w-0 items-center gap-3">
           <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-100 text-emerald-700 ring-1 ring-inset ring-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-300"><BookOpen className="h-5 w-5" /></span>
-          <div className="flex min-w-0 items-baseline gap-3"><h1 className="text-2xl font-semibold tracking-tight">Cours</h1><span className="whitespace-nowrap text-sm text-muted-foreground">{dashboard.stats.total} cours</span></div>
+          <div className="flex min-w-0 items-baseline gap-3"><h1 className="text-2xl font-semibold tracking-tight">Formations</h1><span className="whitespace-nowrap text-sm text-muted-foreground">{dashboard.stats.total} formation{dashboard.stats.total !== 1 ? "s" : ""}</span></div>
         </div>
-        <Button asChild><Link href="/formateur/cours/nouveau"><Plus className="h-4 w-4" />Créer un cours</Link></Button>
+        <Button asChild><Link href="/formateur/cours/nouveau"><Plus className="h-4 w-4" />Créer une formation</Link></Button>
       </header>
 
-      <section className="grid shrink-0 grid-cols-2 overflow-hidden rounded-xl border border-border/75 bg-card shadow-sm sm:grid-cols-3 lg:grid-cols-5" aria-label="Statistiques des cours">
-        <CompactStat icon={<BookOpen className="h-4 w-4" />} label="Total des cours" value={dashboard.stats.total} tone="text-blue-700 bg-blue-50 dark:bg-blue-500/10 dark:text-blue-300" />
+      <section className="grid shrink-0 grid-cols-2 overflow-hidden rounded-xl border border-border/75 bg-card shadow-sm sm:grid-cols-3 lg:grid-cols-5" aria-label="Statistiques des formations">
+        <CompactStat icon={<BookOpen className="h-4 w-4" />} label="Total des formations" value={dashboard.stats.total} tone="text-blue-700 bg-blue-50 dark:bg-blue-500/10 dark:text-blue-300" />
         <CompactStat icon={<CheckCircle2 className="h-4 w-4" />} label="Publiés" value={dashboard.stats.published} tone="text-emerald-700 bg-emerald-50 dark:bg-emerald-500/10 dark:text-emerald-300" />
         <CompactStat icon={<FilePenLine className="h-4 w-4" />} label="Brouillons" value={dashboard.stats.draft} tone="text-amber-700 bg-amber-50 dark:bg-amber-500/10 dark:text-amber-300" />
         <CompactStat icon={<Clock3 className="h-4 w-4" />} label="À modérer" value={dashboard.stats.pending} tone="text-violet-700 bg-violet-50 dark:bg-violet-500/10 dark:text-violet-300" />
@@ -70,7 +70,7 @@ export default async function AdminCoursesPage({ searchParams }: { searchParams:
         <AdminCoursesTable rows={rows} params={params as Record<string, string | undefined>} page={page} pageSize={pageSize} total={total} totalPages={totalPages} />
       ) : (
         <section className="flex min-h-0 flex-1 items-center justify-center rounded-xl border border-border/75 bg-card">
-          <EmptyState icon={<BookOpen className="h-6 w-6" />} title="Aucun cours trouvé" description={hasFilters ? "Modifiez ou réinitialisez les filtres pour élargir la recherche." : "Aucun cours n’est encore disponible dans le catalogue."} action={hasFilters ? <Button asChild variant="outline"><Link href="/admin/cours">Réinitialiser les filtres</Link></Button> : <Button asChild><Link href="/formateur/cours/nouveau">Créer un cours</Link></Button>} />
+          <EmptyState icon={<BookOpen className="h-6 w-6" />} title="Aucune formation trouvée" description={hasFilters ? "Modifiez ou réinitialisez les filtres pour élargir la recherche." : "Aucune formation n’est encore disponible dans le catalogue."} action={hasFilters ? <Button asChild variant="outline"><Link href="/admin/cours">Réinitialiser les filtres</Link></Button> : <Button asChild><Link href="/formateur/cours/nouveau">Créer une formation</Link></Button>} />
         </section>
       )}
     </div>

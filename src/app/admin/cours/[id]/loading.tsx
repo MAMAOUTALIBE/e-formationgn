@@ -2,7 +2,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 export default function AdminCourseDetailLoading() {
   return (
-    <div className="page-course-detail flex h-full min-h-0 flex-col gap-3 overflow-hidden" aria-label="Chargement du cours">
+    <div className="page-course-detail flex h-full min-h-0 flex-col gap-3 overflow-hidden" aria-label="Chargement de la formation">
       <div className="flex h-10 shrink-0 items-center justify-between gap-4">
         <div className="flex items-center gap-3">
           <Skeleton className="h-9 w-9" />

@@ -86,7 +86,7 @@ export default async function CourseLearningPage({ params }: PageProps) {
                     <Link href={`/apprentissage/${course.slug}/lecons/${nextLesson.id}`}>
                       <BookOpenText className="h-4 w-4" />
                       {stats.progressPercent === 0
-                        ? "Commencer le cours"
+                        ? "Commencer la formation"
                         : "Reprendre où vous en étiez"}
                     </Link>
                   </Button>
@@ -171,7 +171,7 @@ export default async function CourseLearningPage({ params }: PageProps) {
             <div className="space-y-6">
               <Card>
                 <CardHeader>
-                  <CardTitle>À propos du cours</CardTitle>
+                  <CardTitle>À propos de la formation</CardTitle>
                 </CardHeader>
                 <CardContent className="prose prose-sm max-w-none whitespace-pre-line text-muted-foreground">
                   {course.description}

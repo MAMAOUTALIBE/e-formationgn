@@ -21,7 +21,7 @@ async function requireCourseOwnership(courseId: string, userId: string) {
     where: { id: courseId },
     select: { instructorId: true },
   });
-  if (!course) throw new Error("Cours introuvable.");
+  if (!course) throw new Error("Formation introuvable.");
   if (course.instructorId !== userId) throw new Error("Action non autorisée.");
 }
 

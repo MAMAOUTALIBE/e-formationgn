@@ -51,7 +51,7 @@ export async function generateMetadata({
       ? { viewerId: session.user.id, isAdmin: session.user.role === "ADMIN" }
       : undefined;
   const course = await getPublishedCourseBySlug(slug, previewCtx);
-  if (!course) return { title: "Cours introuvable" };
+  if (!course) return { title: "Formation introuvable" };
 
   const description =
     course.metaDescription ?? course.subtitle ?? course.description.slice(0, 160);
@@ -168,7 +168,7 @@ export default async function CourseDetailPage({
         // eslint-disable-next-line @next/next/no-img-element
         <img
           src={course.thumbnailUrl}
-          alt={`Aperçu du cours ${course.title}`}
+          alt={`Aperçu de la formation ${course.title}`}
           className="aspect-video w-full object-cover"
         />
       ) : (
@@ -200,7 +200,7 @@ export default async function CourseDetailPage({
           <Container className="flex flex-wrap items-center justify-between gap-2 text-sm">
             <span>
               👁️ <strong>Mode aperçu</strong> — voici comment les élèves verront
-              ce cours. Il n&apos;est pas encore public.
+              cette formation. Elle n&apos;est pas encore publique.
             </span>
             <Link
               href={`/formateur/cours/${course.id}`}
@@ -355,7 +355,7 @@ export default async function CourseDetailPage({
 
             <section aria-labelledby="curriculum">
               <h2 id="curriculum" className="text-xl font-semibold text-foreground">
-                Programme du cours
+                Programme de la formation
               </h2>
               <div className="mt-4">
                 <CourseCurriculum sections={course.sections} courseSlug={course.slug} />
@@ -387,7 +387,7 @@ export default async function CourseDetailPage({
             {course.targetAudience && course.targetAudience.length > 0 ? (
               <section aria-labelledby="audience">
                 <h2 id="audience" className="text-xl font-semibold text-foreground">
-                  À qui s&apos;adresse ce cours
+                  À qui s&apos;adresse cette formation
                 </h2>
                 <ul className="mt-4 list-disc space-y-1 pl-6 text-sm text-muted-foreground">
                   {course.targetAudience.map((item, index) => (

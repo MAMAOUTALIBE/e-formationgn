@@ -15,7 +15,7 @@ import {
   listAssignableCourses,
 } from "@/server/queries/admin-programs";
 
-export const metadata: Metadata = { title: "Fiche formation — CRM admin" };
+export const metadata: Metadata = { title: "Fiche programme — CRM admin" };
 export const dynamic = "force-dynamic";
 
 const SESSION_STATUS: Record<string, { label: string; tone: "success" | "warning" | "neutral" }> = {
@@ -54,13 +54,13 @@ export default async function ProgramDetailPage({
   return (
     <div className="space-y-6">
       <Breadcrumbs
-        items={[{ label: "Formations", href: "/admin/formations" }, { label: program.title }]}
+        items={[{ label: "Programmes", href: "/admin/formations" }, { label: program.title }]}
       />
 
       <header>
         <h1 className="text-2xl font-semibold tracking-tight text-foreground">{program.title}</h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          {program.courses.length} cours · {program.sessions.length} session
+          {program.courses.length} formation{program.courses.length !== 1 ? "s" : ""} · {program.sessions.length} session
           {program.sessions.length > 1 ? "s" : ""}
           {program.code ? ` · code ${program.code}` : ""}
         </p>
@@ -69,7 +69,7 @@ export default async function ProgramDetailPage({
       <div className="grid gap-6 lg:grid-cols-2">
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">Parcours — cours de la formation</CardTitle>
+            <CardTitle className="text-base">Parcours — formations du programme</CardTitle>
           </CardHeader>
           <CardContent>
             <ProgramComposition
@@ -93,7 +93,7 @@ export default async function ProgramDetailPage({
             {program.sessions.length === 0 ? (
               <p className="rounded-lg border border-dashed border-border px-3 py-6 text-center text-sm text-muted-foreground">
                 Aucune session. Les élèves s&apos;inscrivent à une session, jamais
-                directement à la formation.
+                directement au programme.
               </p>
             ) : (
               <ul className="space-y-2">

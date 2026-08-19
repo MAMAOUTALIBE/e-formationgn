@@ -62,7 +62,7 @@ export default async function AdminInstructorsPage({
         <div>
           <h1 className="text-2xl font-semibold">Gestion des formateurs</h1>
           <p className="text-sm text-muted-foreground">
-            Suivez les cours publiés et les apprenants accompagnés.
+            Suivez les formations publiées et les apprenants accompagnés.
           </p>
         </div>
         <Button asChild>
@@ -81,14 +81,14 @@ export default async function AdminInstructorsPage({
           appearance="crm"
         />
         <KpiCard
-          label="Cours publiés"
+          label="Formations publiées"
           value={published}
           icon={<GraduationCap className="h-5 w-5" />}
           tone="emerald"
           appearance="crm"
         />
         <KpiCard
-          label="Inscriptions aux cours"
+          label="Inscriptions aux formations"
           value={learners}
           icon={<UsersRound className="h-5 w-5" />}
           tone="sky"
@@ -131,7 +131,7 @@ export default async function AdminInstructorsPage({
                         {user.name ?? user.email}
                       </strong>
                       <span className="block text-xs text-muted-foreground">
-                        {user._count.coursesAuthored} cours · {enrollments}{" "}
+                        {user._count.coursesAuthored} formation{user._count.coursesAuthored !== 1 ? "s" : ""} · {enrollments}{" "}
                         inscriptions
                       </span>
                     </span>

@@ -49,7 +49,7 @@ export default async function WishlistPage() {
               Liste de souhaits
             </h1>
             <p className="text-sm text-muted-foreground">
-              {items.length.toLocaleString("fr-FR")} cours
+              {items.length.toLocaleString("fr-FR")} {items.length > 1 ? "formations" : "formation"}
             </p>
           </header>
 

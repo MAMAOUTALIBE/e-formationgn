@@ -31,7 +31,7 @@ export function CourseEditorTabs({
   const completed = new Set(completedSlugs);
 
   return (
-    <nav aria-label="Étapes de création du cours" className="border-b border-border">
+    <nav aria-label="Étapes de création de la formation" className="border-b border-border">
       {/* Étapes numérotées (parcours guidé) */}
       <ol className="flex flex-wrap items-center gap-x-1 gap-y-2 py-1">
         {WIZARD_STEPS.map((step, i) => {

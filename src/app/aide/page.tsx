@@ -70,19 +70,19 @@ const SECTIONS: FaqSection[] = [
     id: "apprentissage",
     title: "Apprentissage et progression",
     icon: GraduationCap,
-    description: "Accès aux cours, certificats, lecture vidéo.",
+    description: "Accès aux formations, certificats, lecture vidéo.",
     items: [
       {
         q: "Comment accéder à une formation ?",
-        a: "Votre société ou le gestionnaire de formation vous inscrit à un programme. Les cours attribués apparaissent ensuite dans « Mon apprentissage ».",
+        a: "Votre société ou le gestionnaire de formation vous inscrit à un programme. Les formations attribuées apparaissent ensuite dans « Mon apprentissage ».",
       },
       {
-        q: "Puis-je suivre un cours sur mobile ?",
+        q: "Puis-je suivre une formation sur mobile ?",
         a: "Oui. Le site est responsive et fonctionne sur smartphone, tablette et ordinateur. La lecture reprend automatiquement où vous l'avez laissée d'un appareil à l'autre.",
       },
       {
         q: "Comment obtenir mon certificat ?",
-        a: "Le certificat est généré automatiquement dès que vous avez complété 100 % des leçons d'un cours. Téléchargeable en PDF depuis votre profil. Chaque certificat est vérifiable publiquement via un numéro de série unique.",
+        a: "Le certificat est généré automatiquement dès que vous avez complété 100 % des leçons d'une formation. Téléchargeable en PDF depuis votre profil. Chaque certificat est vérifiable publiquement via un numéro de série unique.",
       },
       {
         q: "Comment fonctionne le tuteur IA ?",
@@ -90,7 +90,7 @@ const SECTIONS: FaqSection[] = [
       },
       {
         q: "Puis-je télécharger les vidéos pour les regarder hors-ligne ?",
-        a: "Le téléchargement vidéo n'est pas autorisé pour respecter les droits des formateurs. En revanche, certains cours proposent des PDF ou des ressources téléchargeables (visibles dans l'onglet « Ressources » de chaque leçon).",
+        a: "Le téléchargement vidéo n'est pas autorisé pour respecter les droits des formateurs. En revanche, certaines formations proposent des PDF ou des ressources téléchargeables (visibles dans l'onglet « Ressources » de chaque leçon).",
       },
     ],
   },
@@ -98,15 +98,15 @@ const SECTIONS: FaqSection[] = [
     id: "formateurs",
     title: "Devenir formateur",
     icon: GraduationCap,
-    description: "Création de cours et accompagnement pédagogique.",
+    description: "Création de formations et accompagnement pédagogique.",
     items: [
       {
-        q: "Qui peut publier un cours sur Gandal ?",
-        a: "Les comptes formateurs sont créés et habilités par le gestionnaire de la plateforme. Les cours suivent ensuite le processus de validation pédagogique.",
+        q: "Qui peut publier une formation sur Gandal ?",
+        a: "Les comptes formateurs sont créés et habilités par le gestionnaire de la plateforme. Les formations suivent ensuite le processus de validation pédagogique.",
       },
       {
         q: "Comment suivre les apprenants ?",
-        a: "L'espace formateur permet de consulter l'activité pédagogique, les questions et les avis liés à vos cours.",
+        a: "L'espace formateur permet de consulter l'activité pédagogique, les questions et les avis liés à vos formations.",
       },
     ],
   },
@@ -121,8 +121,8 @@ const SECTIONS: FaqSection[] = [
         a: "Oui. Les mots de passe sont hashés, les sessions signées et les accès protégés par rôle. La plateforme ne collecte aucune donnée bancaire.",
       },
       {
-        q: "Comment signaler un cours problématique ou un comportement abusif ?",
-        a: "Chaque cours, avis ou question dispose d'un bouton « Signaler ». L'équipe modération examine chaque signalement sous 48h ouvrées.",
+        q: "Comment signaler une formation problématique ou un comportement abusif ?",
+        a: "Chaque formation, avis ou question dispose d'un bouton « Signaler ». L'équipe modération examine chaque signalement sous 48h ouvrées.",
       },
       {
         q: "Comment exercer mes droits RGPD ?",

@@ -162,7 +162,7 @@ export function CourseCardHoverFlyout({
         href={`/cours/${course.slug}`}
         className="mt-2 block text-center text-xs font-medium text-[color:var(--brand-secondary)] hover:underline"
       >
-        Voir le détail du cours →
+        Voir le détail de la formation →
       </Link>
     </div>
   );

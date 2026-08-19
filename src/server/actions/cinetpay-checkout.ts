@@ -87,7 +87,7 @@ export async function startCinetPayCheckout(
     return { success: false, message: "Votre panier est vide." };
   }
   if (result.kind === "no-eligible-line") {
-    return { success: false, message: "Aucun cours disponible dans votre panier." };
+    return { success: false, message: "Aucune formation disponible dans votre panier." };
   }
   if (result.kind === "promo-error") {
     return { success: false, message: result.message };

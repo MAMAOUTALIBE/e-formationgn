@@ -69,7 +69,7 @@ export function AnnouncementForm({ courseId }: AnnouncementFormProps) {
       </div>
       <div className="flex items-center justify-between gap-3">
         <p className="text-xs text-muted-foreground">
-          Visible par tous les élèves inscrits à ce cours.
+          Visible par tous les élèves inscrits à cette formation.
         </p>
         <Button type="submit" disabled={pending}>
           <Send className="h-4 w-4" aria-hidden />

@@ -85,7 +85,7 @@ export function CourseGeneralForm({
         label="Description"
         required
         error={errors.description?.[0]}
-        hint="Présentez le cours, son contenu, ses bénéfices. Markdown léger supporté."
+        hint="Présentez la formation, son contenu et ses bénéfices. Markdown léger supporté."
       >
         <Textarea
           id="description"
@@ -124,7 +124,7 @@ export function CourseGeneralForm({
         id="thumbnailUrl"
         label="Photo de couverture"
         error={errors.thumbnailUrl?.[0]}
-        hint="Format 16:9, idéalement ≥ 1280×720. Sert aussi de visuel sur la fiche du cours."
+        hint="Format 16:9, idéalement ≥ 1280×720. Sert aussi de visuel sur la fiche de la formation."
       >
         <ThumbnailUploader
           name="thumbnailUrl"

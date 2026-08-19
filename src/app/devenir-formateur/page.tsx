@@ -20,7 +20,7 @@ import { becomeInstructor } from "@/server/actions/instructor";
 export const metadata: Metadata = {
   title: "Devenir formateur",
   description:
-    "Créez des cours structurés et accompagnez les apprenants tout au long de leur progression.",
+    "Créez des formations structurées et accompagnez les apprenants tout au long de leur progression.",
   alternates: { canonical: "/devenir-formateur" },
 };
 
@@ -49,7 +49,7 @@ export default async function BecomeInstructorPage() {
               Partagez votre expertise
             </h1>
             <p className="mx-auto mt-4 max-w-2xl text-base text-primary-foreground/80">
-              Créez des cours structurés, animez vos formations et accompagnez
+              Créez des formations structurées, animez vos formations et accompagnez
               les apprenants tout au long de leur progression.
             </p>
 
@@ -116,7 +116,7 @@ export default async function BecomeInstructorPage() {
                 Comment ça marche
               </h2>
               <p className="mt-3 text-sm text-muted-foreground">
-                Quatre étapes simples pour publier votre premier cours.
+                Quatre étapes simples pour publier votre première formation.
               </p>
             </div>
             <ol className="space-y-4 text-sm">
@@ -171,7 +171,7 @@ const STEPS = [
       "Le gestionnaire valide votre rôle et vous ouvre l'accès à l'espace formateur.",
   },
   {
-    title: "Créez votre cours",
+    title: "Créez votre formation",
     description:
       "Renseignez le titre, la catégorie et structurez votre programme en sections et leçons.",
   },
@@ -183,7 +183,7 @@ const STEPS = [
   {
     title: "Soumettez à la modération",
     description:
-      "Notre équipe valide votre cours et il devient achetable par toute la communauté.",
+      "Notre équipe valide votre formation et elle devient accessible à toute la communauté.",
   },
 ] as const;
 

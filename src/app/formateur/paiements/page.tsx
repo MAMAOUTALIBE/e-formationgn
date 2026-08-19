@@ -163,7 +163,7 @@ export default async function InstructorPayoutsPage({ searchParams }: PageProps)
         </CardHeader>
         <CardContent className="space-y-2 text-sm text-muted-foreground">
           <p>
-            Quand un élève achète l&apos;un de vos cours, la plateforme encaisse
+            Quand un élève achète l&apos;une de vos formations, la plateforme encaisse
             le paiement, puis vous reverse votre part — diminuée de la
             commission — directement sur votre compte Stripe Connect.
           </p>

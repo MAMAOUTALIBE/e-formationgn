@@ -72,7 +72,7 @@ export function LearningSidebar({
     .filter(({ section }) => section.lessons.length > 0);
 
   return (
-    <nav aria-label="Programme du cours" className="divide-y divide-border">
+    <nav aria-label="Programme de la formation" className="divide-y divide-border">
       <div className="border-b border-border p-3">
         <div className="relative">
           <Search

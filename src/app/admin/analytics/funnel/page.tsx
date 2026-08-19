@@ -45,7 +45,7 @@ export default async function ConversionFunnelPage({ searchParams }: PageProps) 
     },
     {
       key: "cart",
-      label: "Cours ajoutés au panier",
+      label: "Formations ajoutées au panier",
       value: funnel.cartItemsCreated,
       icon: <ShoppingCart className="h-5 w-5" aria-hidden />,
       hint: "Intention d'achat",

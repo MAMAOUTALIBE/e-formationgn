@@ -231,7 +231,7 @@ export default async function AdminModerationHubPage() {
               href="/admin/moderation/signalements"
               icon={<Flag className="h-4 w-4" />}
               label="Signalements"
-              description="Avis, Q&A, utilisateurs et cours signalés."
+              description="Avis, Q&A, utilisateurs et formations signalés."
             />
             <Tile
               href="/admin/moderation/regles"

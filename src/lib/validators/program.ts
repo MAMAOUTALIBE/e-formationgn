@@ -31,7 +31,7 @@ export const programSchema = z
 
 export const sessionSchema = z
   .object({
-    programId: z.string().trim().min(1, "Formation obligatoire."),
+    programId: z.string().trim().min(1, "Programme de formation obligatoire."),
     reference: optionalText(60),
     startDate: z.string().trim().min(1, "Date de début obligatoire."),
     endDate: z.string().trim().min(1, "Date de fin obligatoire."),

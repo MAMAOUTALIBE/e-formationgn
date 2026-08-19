@@ -97,7 +97,7 @@ export function CourseSeoForm({
               Suggestions automatiques
             </p>
             <p className="text-xs text-muted-foreground">
-              Génère des champs SEO à partir du titre et de la description du cours.
+              Génère des champs SEO à partir du titre et de la description de la formation.
               5 utilisations / heure.
             </p>
           </div>
@@ -122,7 +122,7 @@ export function CourseSeoForm({
         <Alert variant="success">
           <CheckCircle2 className="h-4 w-4" aria-hidden />
           <AlertDescription>
-            Votre cours a été enregistré avec succès.
+            Votre formation a été enregistrée avec succès.
           </AlertDescription>
         </Alert>
       ) : null}
@@ -194,7 +194,7 @@ export function CourseSeoForm({
 
       <FormField
         id="targetAudience"
-        label="À qui s'adresse ce cours"
+        label="À qui s'adresse cette formation"
         error={errors.targetAudience?.[0]}
         hint="Un profil par ligne."
       >
@@ -225,7 +225,7 @@ export function CourseSeoForm({
             ) : null}
           </div>
         ) : <span />}
-        <SubmitButton>Enregistrer le cours</SubmitButton>
+        <SubmitButton>Enregistrer la formation</SubmitButton>
       </div>
     </form>
   );

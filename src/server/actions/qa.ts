@@ -57,12 +57,12 @@ export async function createQuestion(formData: FormData): Promise<ActionResult> 
   if (!enrollment) {
     return {
       success: false,
-      message: "Inscrivez-vous au cours pour poser une question.",
+      message: "Inscrivez-vous à la formation pour poser une question.",
     };
   }
-  if (!course) return { success: false, message: "Cours introuvable." };
+  if (!course) return { success: false, message: "Formation introuvable." };
   if (parsed.data.lessonId && !lesson) {
-    return { success: false, message: "Cette leçon n’appartient pas au cours." };
+    return { success: false, message: "Cette leçon n’appartient pas à la formation." };
   }
 
   await prisma.$transaction(async (tx) => {
@@ -82,7 +82,7 @@ export async function createQuestion(formData: FormData): Promise<ActionResult> 
         kind: "NEW_QUESTION",
         title: lesson
           ? `Nouvelle question sur « ${lesson.title} »`
-          : "Nouvelle question sur votre cours",
+          : "Nouvelle question sur votre formation",
         body: `${parsed.data.title} (${course.title})`,
         url: `/cours/${course.slug}/questions/${created.id}`,
       },

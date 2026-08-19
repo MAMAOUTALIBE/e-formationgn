@@ -1,6 +1,6 @@
 "use client";
 
-// Composition d'une formation : ajout et retrait de cours (points 6 et 7 du
+// Composition d'un programme : ajout et retrait de formations (points 6 et 7 du
 // cahier des charges, au niveau du programme).
 //
 // `useTransition` plutôt qu'un formulaire : chaque ligne a son propre bouton
@@ -68,7 +68,7 @@ export function ProgramComposition({
 
       {courses.length === 0 ? (
         <p className="rounded-lg border border-dashed border-border px-3 py-6 text-center text-sm text-muted-foreground">
-          Aucun cours dans cette formation. Ajoutez-en pour définir le parcours.
+          Aucune formation dans ce programme. Ajoutez-en pour définir le parcours.
         </p>
       ) : (
         <ol className="space-y-2">
@@ -103,7 +103,7 @@ export function ProgramComposition({
       <div className="flex flex-wrap items-end gap-2">
         <div className="min-w-0 flex-1 sm:max-w-md">
           <label htmlFor="addCourse" className="mb-1 block text-xs font-medium text-muted-foreground">
-            Ajouter un cours
+            Ajouter une formation
           </label>
           <Select
             id="addCourse"
@@ -113,8 +113,8 @@ export function ProgramComposition({
           >
             <option value="">
               {assignable.length === 0
-                ? "Tous les cours sont déjà dans la formation"
-                : "Sélectionner un cours…"}
+                ? "Toutes les formations sont déjà dans le programme"
+                : "Sélectionner une formation…"}
             </option>
             {assignable.map((c) => (
               <option key={c.id} value={c.id}>

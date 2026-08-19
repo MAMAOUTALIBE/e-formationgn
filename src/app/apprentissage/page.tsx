@@ -168,7 +168,7 @@ export default async function LearningPage({ searchParams }: PageProps) {
             </h1>
             <p className="mt-1 text-sm text-muted-foreground">
               {counts.all.toLocaleString("fr-FR")}{" "}
-              {pluralize(counts.all, "cours suivi", "cours suivis")}
+              {pluralize(counts.all, "formation suivie", "formations suivies")}
               {counts["in-progress"] > 0 ? ` · ${counts["in-progress"]} en cours` : ""}
               {counts.completed > 0
                 ? ` · ${counts.completed} terminé${counts.completed > 1 ? "s" : ""}`
@@ -184,17 +184,17 @@ export default async function LearningPage({ searchParams }: PageProps) {
               <EmptyState
                 title={
                   activeFilter === "in-progress"
-                    ? "Aucun cours en cours."
+                    ? "Aucune formation en cours."
                     : activeFilter === "completed"
-                      ? "Vous n'avez encore terminé aucun cours."
-                      : "Vous n'avez pas encore acheté de cours."
+                      ? "Vous n'avez encore terminé aucune formation."
+                      : "Vous n'avez pas encore acheté de formation."
                 }
                 description={
                   activeFilter === "in-progress"
-                    ? "Reprenez un cours dans « Tous mes cours » ou démarrez-en un nouveau."
+                    ? "Reprenez une formation dans « Toutes mes formations » ou démarrez-en une nouvelle."
                     : activeFilter === "completed"
-                      ? "Terminez les leçons d'un cours en cours pour le voir apparaître ici."
-                      : "Parcourez le catalogue et achetez un cours pour le retrouver ici."
+                      ? "Terminez les leçons d'une formation en cours pour la voir apparaître ici."
+                      : "Parcourez le catalogue et achetez une formation pour la retrouver ici."
                 }
                 action={
                   <Button asChild>
@@ -237,7 +237,7 @@ export default async function LearningPage({ searchParams }: PageProps) {
             wishlistItems.length === 0 ? (
               <EmptyState
                 title="Votre liste d'envies est vide."
-                description="Ajoutez des cours via le bouton ♥ sur la page d'un cours pour les retrouver ici."
+                description="Ajoutez des formations via le bouton ♥ sur leur page pour les retrouver ici."
                 action={
                   <Button asChild>
                     <Link href="/cours">Explorer le catalogue</Link>
@@ -265,7 +265,7 @@ export default async function LearningPage({ searchParams }: PageProps) {
               <CardContent className="flex flex-wrap items-center justify-between gap-3 p-4">
                 <div>
                   <p className="text-sm font-medium text-foreground">
-                    Vous cherchez un nouveau cours ?
+                    Vous cherchez une nouvelle formation ?
                   </p>
                   <p className="text-xs text-muted-foreground">
                     Le catalogue est mis à jour chaque semaine avec de nouvelles formations.

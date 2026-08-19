@@ -49,7 +49,7 @@ export default async function CourseInsightsPage({ params }: PageProps) {
           <CardHeader>
             <CardTitle className="text-base">Entonnoir de conversion</CardTitle>
             <p className="mt-1 text-sm text-muted-foreground">
-              Du visiteur de la fiche à l&apos;élève qui termine le cours.
+              Du visiteur de la fiche à l&apos;élève qui termine la formation.
             </p>
           </CardHeader>
           <CardContent className="space-y-4">

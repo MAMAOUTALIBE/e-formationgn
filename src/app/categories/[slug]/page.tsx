@@ -32,7 +32,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     title: category.name,
     description:
       category.description ??
-      `Tous les cours de la catégorie ${category.name} sur Gandal.`,
+      `Toutes les formations de la catégorie ${category.name} sur Gandal.`,
     alternates: { canonical: `/categories/${category.slug}` },
   };
 }
@@ -94,7 +94,7 @@ export default async function CategoryDetailPage({ params, searchParams }: PageP
               </p>
             ) : null}
             <p className="mt-2 text-sm text-muted-foreground">
-              {total.toLocaleString("fr-FR")} {total > 1 ? "cours disponibles" : "cours disponible"}
+              {total.toLocaleString("fr-FR")} {total > 1 ? "formations disponibles" : "formation disponible"}
             </p>
           </header>
 

@@ -113,7 +113,7 @@ export function CourseCarousel({
           type="button"
           onClick={() => scrollByPage(-1)}
           disabled={!canPrev}
-          aria-label="Cours précédents"
+          aria-label="Formations précédentes"
           className="absolute left-0 top-1/2 hidden -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border border-border bg-card text-foreground shadow-md transition hover:bg-muted disabled:pointer-events-none disabled:opacity-0 sm:flex h-10 w-10"
         >
           <ChevronLeft className="h-5 w-5" />
@@ -123,7 +123,7 @@ export function CourseCarousel({
           type="button"
           onClick={() => scrollByPage(1)}
           disabled={!canNext}
-          aria-label="Cours suivants"
+          aria-label="Formations suivantes"
           className="absolute right-0 top-1/2 hidden translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border border-border bg-card text-foreground shadow-md transition hover:bg-muted disabled:pointer-events-none disabled:opacity-0 sm:flex h-10 w-10"
         >
           <ChevronRight className="h-5 w-5" />

@@ -6,7 +6,7 @@ import { toggleFeaturedCourse } from "@/server/actions/admin-courses";
 import { listFeaturedCoursesAdmin } from "@/server/queries/admin-courses";
 
 export const metadata: Metadata = {
-  title: "Cours en vedette",
+  title: "Formations en vedette",
 };
 
 export const dynamic = "force-dynamic";
@@ -18,18 +18,18 @@ export default async function FeaturedCoursesPage() {
     <div className="space-y-5">
       <header>
         <h1 className="text-2xl font-semibold tracking-tight text-foreground">
-          Cours en vedette
+          Formations en vedette
         </h1>
         <p className="text-sm text-muted-foreground">
-          Les cours mis en avant sont affichés en priorité sur la page
-          d&apos;accueil. {courses.length} cours actuellement en vedette.
+          Les formations mises en avant sont affichées en priorité sur la page
+          d&apos;accueil. {courses.length} formation{courses.length !== 1 ? "s" : ""} actuellement en vedette.
         </p>
       </header>
 
       {courses.length === 0 ? (
         <Card>
           <CardContent className="p-10 text-center text-sm text-muted-foreground">
-            Aucun cours en vedette. Ajoutez-en depuis la fiche détail d&apos;un cours.
+            Aucune formation en vedette. Ajoutez-en depuis la fiche détail d&apos;une formation.
           </CardContent>
         </Card>
       ) : (

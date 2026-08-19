@@ -24,7 +24,7 @@ import type { FeaturedInstructor } from "@/server/queries/instructors-public";
 const STEPS = [
   {
     icon: Search,
-    title: "Choisissez un cours",
+    title: "Choisissez une formation",
     text: "Parcourez le catalogue par catégorie ou recherchez le sujet qui vous intéresse.",
   },
   {
@@ -35,7 +35,7 @@ const STEPS = [
   {
     icon: Award,
     title: "Obtenez votre certificat",
-    text: "Terminez le cours et recevez un certificat à partager sur votre CV ou LinkedIn.",
+    text: "Terminez la formation et recevez un certificat à partager sur votre CV ou LinkedIn.",
   },
 ];
 
@@ -81,7 +81,7 @@ export function HowItWorks() {
 const PERKS = [
   { icon: Award, title: "Certificat à la clé", text: "Valorisez vos acquis avec un certificat reconnu." },
   { icon: Languages, title: "100% francophone", text: "Des formateurs et un contenu en français." },
-  { icon: InfinityIcon, title: "Accès à vie", text: "Revenez sur vos cours quand vous voulez." },
+  { icon: InfinityIcon, title: "Accès à vie", text: "Revenez sur vos formations quand vous voulez." },
   { icon: Smartphone, title: "Paiement Mobile Money", text: "Orange Money, MTN, Moov — et carte bancaire." },
   { icon: GraduationCap, title: "Formateurs experts", text: "Apprenez auprès de professionnels confirmés." },
   { icon: Clock, title: "À votre rythme", text: "Apprenez où et quand vous le souhaitez." },
@@ -173,7 +173,7 @@ export function FeaturedInstructors({
                   </p>
                 ) : null}
                 <p className="mt-2 text-xs font-medium text-[color:var(--brand-secondary)]">
-                  {ins.courseCount} cours
+                  {ins.courseCount} {ins.courseCount > 1 ? "formations" : "formation"}
                 </p>
               </div>
             );

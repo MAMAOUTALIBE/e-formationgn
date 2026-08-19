@@ -311,7 +311,7 @@ export async function getTopCoursesByRevenue(
     const c = courseMap.get(i.courseId);
     return {
       id: i.courseId,
-      title: c?.title ?? "(cours supprimé)",
+      title: c?.title ?? "(formation supprimée)",
       thumbnailUrl: c?.thumbnailUrl ?? null,
       revenueCents: i._sum.totalCents ?? 0,
       ordersCount: i._count._all,
@@ -447,7 +447,7 @@ export async function getAdminAlerts(): Promise<AdminAlert[]> {
       kind: "pending-courses",
       count: pendingCourses,
       href: "/admin/cours?status=PENDING_REVIEW",
-      label: `${pendingCourses} cours en attente de modération`,
+      label: `${pendingCourses} formation${pendingCourses > 1 ? "s" : ""} en attente de modération`,
     });
   if (openDisputes > 0)
     alerts.push({
@@ -556,7 +556,7 @@ export async function getRecentActivity(limit = 20): Promise<ActivityItem[]> {
     ...publications.map((c) => ({
       id: `c-${c.id}`,
       kind: "course-published" as const,
-      title: `Cours publié : ${c.title}`,
+      title: `Formation publiée : ${c.title}`,
       subtitle: c.instructor.name ?? c.instructor.email,
       href: `/admin/cours/${c.id}`,
       createdAt: c.publishedAt ?? new Date(),

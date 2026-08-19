@@ -76,7 +76,7 @@ export async function generateCertificatePdf(
     font: helveticaBold,
     color: rgb(1, 1, 1),
   });
-  page.drawText("Certificat de fin de cours", {
+  page.drawText("Certificat de fin de formation", {
     x: 56,
     y: height - 96,
     size: 11,
@@ -131,7 +131,7 @@ export async function generateCertificatePdf(
 
   drawCenteredText(
     page,
-    "pour avoir suivi avec succès le cours",
+    "pour avoir suivi avec succès la formation",
     helvetica,
     14,
     height - 270,
