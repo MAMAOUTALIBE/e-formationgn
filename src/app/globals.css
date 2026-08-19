@@ -143,6 +143,9 @@
 
 html {
   color-scheme: light;
+  /* Le viewport ne doit jamais devenir un second scroller horizontal quand
+     un tableau possède déjà son propre conteneur `overflow-x-auto`. */
+  overflow-x: clip;
   /* 16 px = défaut navigateur, aligné sur Udemy / Coursera / LinkedIn
      Learning. L'échelle Tailwind (text-xs 12px, text-sm 14px, text-base
      16px, text-lg 18px, text-3xl 30px) reste la référence du marché. */

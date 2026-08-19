@@ -14,12 +14,13 @@ test("la navigation formateur n’expose pas l’ancien écran Insights", async 
 });
 
 test("la liste des cours contient son tableau large sur mobile", async () => {
-  const source = await readFile(
-    path.join(root, "src/app/formateur/cours/page.tsx"),
-    "utf8",
-  );
+  const [source, globalCss] = await Promise.all([
+    readFile(path.join(root, "src/app/formateur/cours/page.tsx"), "utf8"),
+    readFile(path.join(root, "src/app/globals.css"), "utf8"),
+  ]);
   assert.match(source, /overflow-x-clip/);
   assert.match(source, /overflow-x-auto[^\n]+\[contain:inline-size\]/);
+  assert.match(globalCss, /html\s*\{[\s\S]*?overflow-x:\s*clip/);
 });
 
 test("les métadonnées de l’aperçu utilisent le contexte propriétaire", async () => {
