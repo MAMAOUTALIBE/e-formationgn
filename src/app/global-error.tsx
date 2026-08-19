@@ -36,7 +36,7 @@ export default function GlobalError({
       >
         <div style={{ maxWidth: 480, padding: 24, textAlign: "center" }}>
           <p style={{ fontSize: 32, fontWeight: 700, margin: 0, color: "#1E3A8A" }}>
-            Gandal
+            Aiduca
           </p>
           <h1 style={{ fontSize: 22, marginTop: 16 }}>
             Une erreur critique est survenue

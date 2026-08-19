@@ -41,7 +41,7 @@ export async function listFeaturedInstructors(
     id: r.id,
     name:
       r.name ??
-      ([r.firstName, r.lastName].filter(Boolean).join(" ") || "Formateur Gandal"),
+      ([r.firstName, r.lastName].filter(Boolean).join(" ") || "Formateur Aiduca"),
     headline: r.headline,
     image: r.image,
     affiliateCode: r.affiliateCode,

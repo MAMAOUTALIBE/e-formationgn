@@ -9,7 +9,7 @@ import { Container } from "@/components/ui/container";
 export const metadata: Metadata = {
   title: "Crédits et licences",
   description:
-    "Attribution des contenus tiers utilisés en environnement de démonstration sur Gandal.",
+    "Attribution des contenus tiers utilisés en environnement de démonstration sur Aiduca.",
   robots: { index: false, follow: false },
 };
 
@@ -28,7 +28,7 @@ export default function CreditsPage() {
               Crédits et licences
             </h1>
             <p className="text-sm text-muted-foreground">
-              Cette page liste les contenus tiers utilisés sur Gandal
+              Cette page liste les contenus tiers utilisés sur Aiduca
               dans un cadre de démonstration. Aucun de ces contenus n&apos;est
               vendu ; ils servent uniquement à animer la plateforme pendant la
               phase de tests.
@@ -173,7 +173,7 @@ export default function CreditsPage() {
               Pour les formateurs
             </h2>
             <p className="text-sm text-muted-foreground">
-              En téléversant une formation sur Gandal, vous garantissez
+              En téléversant une formation sur Aiduca, vous garantissez
               détenir les droits sur les contenus diffusés (vidéos, images,
               textes) ou utiliser des œuvres sous licence permettant cette
               diffusion. Les contenus de démonstration ci-dessus sont utilisés

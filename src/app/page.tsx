@@ -11,7 +11,7 @@ import { HeroTechBackground } from "@/components/features/marketing/hero-tech-bg
 import {
   FeaturedInstructors,
   HowItWorks,
-  WhyGandal,
+  WhyAiduca,
 } from "@/components/features/marketing/home-sections";
 import { MemberHome } from "@/components/features/marketing/member-home";
 import { HomeTestimonials } from "@/components/features/marketing/testimonials";
@@ -287,7 +287,7 @@ export default async function HomePage() {
         ) : null}
 
         {/* POURQUOI GANDAL — grille d'atouts */}
-        <WhyGandal />
+        <WhyAiduca />
 
         {/* FORMATEURS EN VEDETTE */}
         <FeaturedInstructors instructors={featuredInstructors} />

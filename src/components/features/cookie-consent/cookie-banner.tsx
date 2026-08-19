@@ -52,7 +52,7 @@ export function CookieBanner() {
     >
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <p className="text-sm text-foreground">
-          Gandal utilise uniquement des cookies nécessaires au
+          Aiduca utilise uniquement des cookies nécessaires au
           fonctionnement (session, sécurité et préférences d&apos;interface). Pas de
           traceur publicitaire.{" "}
           <Link href="/cookies" className="text-[color:var(--brand-secondary)] hover:underline">

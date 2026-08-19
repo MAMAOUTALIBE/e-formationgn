@@ -22,7 +22,7 @@ export function CourseCompleteBanner({ courseId }: { courseId: string }) {
     try {
       const result = await issueCertificate(courseId);
       if (!result.success || !result.serialNumber) {
-        toast.error(result.message ?? "Impossible de générer le certificat.");
+        toast.error(result.message ?? "Impossible de générer l’attestation.");
         return;
       }
       router.push(`/certificat/${result.serialNumber}`);
@@ -45,7 +45,7 @@ export function CourseCompleteBanner({ courseId }: { courseId: string }) {
               Félicitations, vous avez terminé cette formation&nbsp;! 🎉
             </p>
             <p className="text-xs text-muted-foreground">
-              Récupérez votre certificat de réussite, partageable et vérifiable.
+              Récupérez votre attestation de fin de formation, partageable et vérifiable.
             </p>
           </div>
         </div>
@@ -58,7 +58,7 @@ export function CourseCompleteBanner({ courseId }: { courseId: string }) {
           ) : (
             <>
               <Award className="h-4 w-4" aria-hidden />
-              Obtenir mon certificat
+              Obtenir mon attestation
             </>
           )}
         </Button>

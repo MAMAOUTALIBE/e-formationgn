@@ -1,7 +1,7 @@
 {
-  "name": "Gandal",
-  "short_name": "Gandal",
-  "description": "Plateforme francophone de formation en ligne — savoir en peul",
+  "name": "Aiduca",
+  "short_name": "Aiduca",
+  "description": "Formations qualifiantes pour les professionnels du bâtiment",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#ffffff",
@@ -20,12 +20,12 @@
     {
       "name": "Catalogue",
       "url": "/cours",
-      "description": "Explorer le catalogue de cours"
+      "description": "Explorer le catalogue de formations"
     },
     {
       "name": "Mon apprentissage",
       "url": "/apprentissage",
-      "description": "Reprendre mes cours"
+      "description": "Reprendre mes formations"
     }
   ]
 }

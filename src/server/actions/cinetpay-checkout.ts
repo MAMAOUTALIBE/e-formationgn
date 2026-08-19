@@ -111,7 +111,7 @@ export async function startCinetPayCheckout(
 
   // Init transaction CinetPay
   try {
-    const description = `Gandal — Commande ${orderId.slice(0, 8)}`;
+    const description = `Aiduca — Commande ${orderId.slice(0, 8)}`;
     const initResult = await initTransaction({
       transactionId: orderId,
       // CinetPay attend la valeur en unité entière, dans la devise de l'order.

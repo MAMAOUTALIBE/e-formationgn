@@ -79,7 +79,7 @@ export async function addCourseToCart(courseId: string): Promise<ActionResult> {
 
 // "Acheter maintenant" — ajoute le cours au panier (idempotent), puis
 // redirige vers /panier où l'utilisateur sélectionne le PSP et finalise.
-// Pourquoi pas direct Stripe : Gandal supporte Stripe + CinetPay selon devise,
+// Pourquoi pas direct Stripe : Aiduca supporte Stripe + CinetPay selon devise,
 // le panier est l'endroit qui pilote ce choix. Reste 1 clic vs 2 normalement.
 export async function buyCourseNow(courseId: string): Promise<void> {
   void courseId;

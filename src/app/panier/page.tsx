@@ -75,7 +75,7 @@ export default async function CartPage({ searchParams }: PageProps) {
     const instructorName =
       item.course.instructor.name ??
       item.course.instructor.firstName ??
-      "Formateur Gandal";
+      "Formateur Aiduca";
     return {
       courseId: item.course.id,
       slug: item.course.slug,
@@ -251,7 +251,7 @@ export default async function CartPage({ searchParams }: PageProps) {
                         />
                         <span>
                           <strong className="text-foreground">Paiement sécurisé SSL</strong>{" "}
-                          — Stripe + CinetPay (PCI-DSS), aucune carte stockée chez Gandal.
+                          — Stripe + CinetPay (PCI-DSS), aucune carte stockée chez Aiduca.
                         </span>
                       </li>
                     </ul>

@@ -63,7 +63,7 @@ export async function GET(_request: Request, context: RouteContext) {
   return new NextResponse(pdf as unknown as BodyInit, {
     headers: {
       "Content-Type": "application/pdf",
-      "Content-Disposition": `attachment; filename="certificat-${certificate.serialNumber}.pdf"`,
+      "Content-Disposition": `attachment; filename="attestation-aiduca-${certificate.serialNumber}.pdf"`,
       "Cache-Control": "no-store",
     },
   });

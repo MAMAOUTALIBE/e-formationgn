@@ -24,7 +24,7 @@ export function CourseCardList({ course }: CourseCardListProps) {
   const instructorName =
     course.instructor.name ??
     ([course.instructor.firstName, course.instructor.lastName].filter(Boolean).join(" ") ||
-      "Formateur Gandal");
+      "Formateur Aiduca");
 
   const badges = getCourseBadges({
     totalEnrollments: course.totalEnrollments,
@@ -53,7 +53,7 @@ export function CourseCardList({ course }: CourseCardListProps) {
           ) : (
             <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-[color:var(--brand-primary)]/10 via-muted to-[color:var(--brand-accent)]/10">
               <span className="text-xs uppercase tracking-wide text-muted-foreground">
-                Gandal
+                Aiduca
               </span>
             </div>
           )}

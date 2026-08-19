@@ -51,7 +51,7 @@ export function HomeTestimonials() {
       <Container>
         <div className="mx-auto max-w-2xl text-center">
           <p className="text-sm font-semibold uppercase tracking-wide text-[color:var(--brand-secondary)]">
-            Ils ont changé de carrière avec Gandal
+            Ils ont changé de carrière avec Aiduca
           </p>
           <h2 className="mt-2 text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">
             Ce que disent nos élèves

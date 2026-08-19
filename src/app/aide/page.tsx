@@ -24,7 +24,7 @@ import { Container } from "@/components/ui/container";
 export const metadata: Metadata = {
   title: "Centre d'aide",
   description:
-    "Trouvez rapidement des réponses sur Gandal : compte, accès aux formations, apprentissage et formateurs.",
+    "Trouvez rapidement des réponses sur Aiduca : compte, accès aux formations, apprentissage et formateurs.",
   alternates: { canonical: "/aide" },
 };
 
@@ -46,7 +46,7 @@ const SECTIONS: FaqSection[] = [
     id: "compte",
     title: "Compte et inscription",
     icon: User,
-    description: "Créer, gérer et sécuriser votre compte Gandal.",
+    description: "Créer, gérer et sécuriser votre compte Aiduca.",
     items: [
       {
         q: "Comment créer un compte ?",
@@ -101,7 +101,7 @@ const SECTIONS: FaqSection[] = [
     description: "Création de formations et accompagnement pédagogique.",
     items: [
       {
-        q: "Qui peut publier une formation sur Gandal ?",
+        q: "Qui peut publier une formation sur Aiduca ?",
         a: "Les comptes formateurs sont créés et habilités par le gestionnaire de la plateforme. Les formations suivent ensuite le processus de validation pédagogique.",
       },
       {

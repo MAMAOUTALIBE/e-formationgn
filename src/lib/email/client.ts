@@ -15,7 +15,7 @@ interface SendEmailParams {
 
 const apiKey = process.env.RESEND_API_KEY;
 const fromEmail =
-  process.env.RESEND_FROM_EMAIL ?? "Gandal <onboarding@resend.dev>";
+  process.env.RESEND_FROM_EMAIL ?? "Aiduca <onboarding@resend.dev>";
 
 let resendClient: Resend | null = null;
 function getResend(): Resend | null {

@@ -1,8 +1,9 @@
-// Génère un certificat PDF brandé Gandal avec pdf-lib.
+// Génère une attestation PDF brandée Aiduca avec pdf-lib.
 // Format A4 paysage, palette corporate. Pas d'image hébergée externe pour
 // éviter les dépendances réseau au moment de la génération.
 
 import { PDFDocument, rgb, StandardFonts } from "pdf-lib";
+import { BRAND } from "@/lib/brand";
 
 const BRAND_PRIMARY = rgb(30 / 255, 58 / 255, 138 / 255);
 const BRAND_SECONDARY = rgb(37 / 255, 99 / 255, 235 / 255);
@@ -29,10 +30,10 @@ export async function generateCertificatePdf(
   params: CertificateParams,
 ): Promise<Uint8Array> {
   const pdf = await PDFDocument.create();
-  pdf.setTitle(`Certificat Gandal — ${params.courseTitle}`);
-  pdf.setAuthor("Gandal");
-  pdf.setProducer("Gandal");
-  pdf.setCreator("Gandal");
+  pdf.setTitle(`Attestation Aiduca — ${params.courseTitle}`);
+  pdf.setAuthor("AIDUCA");
+  pdf.setProducer("AIDUCA");
+  pdf.setCreator("AIDUCA");
 
   // A4 paysage : 842 × 595 pt
   const page = pdf.addPage([842, 595]);
@@ -69,14 +70,14 @@ export async function generateCertificatePdf(
     color: BRAND_PRIMARY,
   });
 
-  page.drawText("Gandal", {
+  page.drawText("AIDUCA", {
     x: 56,
     y: height - 80,
     size: 22,
     font: helveticaBold,
     color: rgb(1, 1, 1),
   });
-  page.drawText("Certificat de fin de formation", {
+  page.drawText("Attestation de fin de formation", {
     x: 56,
     y: height - 96,
     size: 11,
@@ -103,7 +104,7 @@ export async function generateCertificatePdf(
   // Titre principal
   drawCenteredText(
     page,
-    "Certificat décerné à",
+    "Attestation délivrée à",
     helvetica,
     14,
     height - 160,
@@ -188,14 +189,14 @@ export async function generateCertificatePdf(
     thickness: 0.7,
     color: MUTED,
   });
-  page.drawText("Signature de l'équipe Gandal", {
+  page.drawText("Signature de l'équipe AIDUCA", {
     x: 80,
     y: 115,
     size: 9,
     font: helvetica,
     color: MUTED,
   });
-  page.drawText("Gandal — Marketplace de formation francophone", {
+  page.drawText("AIDUCA — Organisme de formation certifié Qualiopi", {
     x: 80,
     y: 100,
     size: 9,
@@ -203,8 +204,16 @@ export async function generateCertificatePdf(
     color: MUTED,
   });
 
+  page.drawText("NDA 11922091192 · SIREN 523 611 523 · Qualiopi FP 2020/0005-6", {
+    x: 80,
+    y: 84,
+    size: 8,
+    font: helvetica,
+    color: MUTED,
+  });
+
   page.drawText(
-    `Vérifiez l'authenticité : ${process.env.NEXT_PUBLIC_APP_URL ?? "https://gandal.org"}/certificat/${params.serialNumber}`,
+    `Vérifiez l'authenticité : ${process.env.NEXT_PUBLIC_APP_URL ?? BRAND.website}/certificat/${params.serialNumber}`,
     {
       x: width - 460,
       y: 100,
@@ -213,6 +222,14 @@ export async function generateCertificatePdf(
       color: MUTED,
     },
   );
+
+  page.drawText(`91 avenue Aristide Briand, 92120 Montrouge · info@aiduca.fr · valide Qualiopi jusqu'au 20/10/2027`, {
+    x: 80,
+    y: 68,
+    size: 7.5,
+    font: helvetica,
+    color: MUTED,
+  });
 
   return pdf.save();
 }

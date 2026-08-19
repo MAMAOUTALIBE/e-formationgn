@@ -13,7 +13,7 @@ interface CourseFaqProps {
   /** Inclut une question dynamique sur la garantie remboursement. */
   showMoneyBackQuestion?: boolean;
   /** Inclut une question sur les certificats — utile pour les cours avec
-   *  délivrance de certificat (cas par défaut chez Gandal). */
+   *  délivrance de certificat (cas par défaut chez Aiduca). */
   showCertificateQuestion?: boolean;
 }
 
@@ -36,8 +36,8 @@ export function CourseFaq(props: CourseFaqProps = {}) {
     ...(showCertificateQuestion
       ? [
           {
-            q: "Vais-je recevoir un certificat ?",
-            a: "Oui. Dès que vous avez complété 100 % des leçons, un certificat nominatif vérifiable en ligne est généré dans votre profil — téléchargeable en PDF.",
+            q: "Vais-je recevoir une attestation ?",
+            a: "Oui. Dès que vous avez complété 100 % des leçons, une attestation nominative vérifiable en ligne est générée dans votre profil — téléchargeable en PDF.",
           },
         ]
       : []),

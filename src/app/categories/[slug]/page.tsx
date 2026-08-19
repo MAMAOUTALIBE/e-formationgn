@@ -32,7 +32,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     title: category.name,
     description:
       category.description ??
-      `Toutes les formations de la catégorie ${category.name} sur Gandal.`,
+      `Toutes les formations de la catégorie ${category.name} sur Aiduca.`,
     alternates: { canonical: `/categories/${category.slug}` },
   };
 }

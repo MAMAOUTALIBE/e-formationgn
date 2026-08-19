@@ -31,7 +31,7 @@ export function LearningHeader({
       <div className="flex h-14 items-center gap-4 px-4 sm:px-6">
         <Link
           href="/"
-          aria-label="Retour à l'accueil Gandal"
+          aria-label="Retour à l'accueil Aiduca"
           className="shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
           <Logo width={120} />

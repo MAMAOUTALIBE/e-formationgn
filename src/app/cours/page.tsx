@@ -20,7 +20,7 @@ import { COURSES_PER_PAGE, courseFiltersSchema } from "@/lib/validators/courses"
 export const metadata: Metadata = {
   title: "Catalogue des formations",
   description:
-    "Parcourez tout le catalogue de formations Gandal : développement, design, business, langues, et bien plus.",
+    "Parcourez tout le catalogue de formations Aiduca : développement, design, business, langues, et bien plus.",
   alternates: { canonical: "/cours" },
 };
 

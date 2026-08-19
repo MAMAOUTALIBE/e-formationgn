@@ -72,7 +72,7 @@ export function EnrollmentCard({ enrollment, resumeHref }: EnrollmentCardProps) 
           />
         ) : (
           <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-[color:var(--brand-primary)]/10 via-muted to-[color:var(--brand-accent)]/10 text-xs uppercase tracking-wide text-muted-foreground">
-            Gandal
+            Aiduca
           </div>
         )}
         {isCompleted ? (
@@ -173,7 +173,7 @@ export function WishlistCard({ course, addedAt }: WishlistCardProps) {
           />
         ) : (
           <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-[color:var(--brand-primary)]/10 via-muted to-[color:var(--brand-accent)]/10 text-xs uppercase tracking-wide text-muted-foreground">
-            Gandal
+            Aiduca
           </div>
         )}
       </Link>

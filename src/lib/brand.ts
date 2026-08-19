@@ -1,0 +1,16 @@
+export const BRAND = {
+  name: "Aiduca",
+  legalName: "AIDUCA",
+  tagline: "Les formations qualifiantes pour les professionnels du bâtiment",
+  email: "info@aiduca.fr",
+  phone: "01 58 42 38 30",
+  mobile: "06 77 89 41 89",
+  address: "91 avenue Aristide Briand, 92120 Montrouge",
+  siren: "523 611 523",
+  activityDeclaration: "11922091192",
+  qualiopiCertificate: "FP 2020/0005-6",
+  qualiopiValidUntil: "20 octobre 2027",
+  website: "https://www.aiduca.fr",
+  logoUrl: "https://www.aiduca.fr/wp-content/uploads/2025/12/aiduca-logo.png",
+  qualiopiLogoUrl: "https://www.aiduca.fr/wp-content/uploads/2026/05/logo.png",
+} as const;

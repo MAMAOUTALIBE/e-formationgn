@@ -20,7 +20,7 @@ export function CourseInstructorCard({ instructor }: CourseInstructorCardProps) 
   const name =
     instructor.name ??
     ([instructor.firstName, instructor.lastName].filter(Boolean).join(" ") ||
-      "Formateur Gandal");
+      "Formateur Aiduca");
 
   const initials =
     `${instructor.firstName?.[0] ?? ""}${instructor.lastName?.[0] ?? ""}`.trim() ||

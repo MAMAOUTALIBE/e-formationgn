@@ -9,7 +9,7 @@ import { listCategories } from "@/server/queries/categories";
 
 export const metadata: Metadata = {
   title: "Catégories",
-  description: "Toutes les catégories de formations sur Gandal.",
+  description: "Toutes les catégories de formations sur Aiduca.",
   alternates: { canonical: "/categories" },
 };
 

@@ -71,7 +71,7 @@ export function CartRow({
           />
         ) : (
           <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-[color:var(--brand-primary)]/10 via-muted to-[color:var(--brand-accent)]/10 text-[10px] uppercase tracking-wide text-muted-foreground">
-            Gandal
+            Aiduca
           </div>
         )}
       </Link>

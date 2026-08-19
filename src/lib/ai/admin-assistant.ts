@@ -53,7 +53,7 @@ export interface AdminAssistantSnapshot {
   alerts: string[];
 }
 
-const SYSTEM_PROMPT = `Tu es l'assistant d'exploitation du CRM de la plateforme de formation Gandal.
+const SYSTEM_PROMPT = `Tu es l'assistant d'exploitation du CRM de la plateforme de formation Aiduca.
 Tu réponds à des administrateurs, pas à des élèves.
 
 RÈGLES :

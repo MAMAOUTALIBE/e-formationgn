@@ -16,6 +16,7 @@ import { SiteHeader } from "@/components/layout/site-header";
 import { Avatar } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Breadcrumbs } from "@/components/ui/breadcrumbs";
+import { BRAND } from "@/lib/brand";
 import { Container } from "@/components/ui/container";
 import { pluralize } from "@/lib/format/labels";
 import { prisma } from "@/lib/prisma";
@@ -43,13 +44,13 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     description:
       instructor.headline ??
       instructor.bio?.slice(0, 160) ??
-      `Découvrez les formations de ${name} sur Gandal.`,
+      `Découvrez les formations de ${name} sur Aiduca.`,
     alternates: { canonical: `/formateurs/${code}` },
     openGraph: {
-      title: `${name} · Formateur sur Gandal`,
+      title: `${name} · Formateur sur Aiduca`,
       description:
         instructor.headline ??
-        `Découvrez les formations de ${name}, formateur sur la plateforme francophone Gandal.`,
+        `Découvrez les formations de ${name}, formateur sur la plateforme francophone Aiduca.`,
       type: "profile",
     },
   };
@@ -133,7 +134,7 @@ export default async function PublicInstructorPage({ params }: PageProps) {
     name,
     description: instructor.headline ?? instructor.bio?.slice(0, 200),
     image: instructor.image ?? undefined,
-    url: `${process.env.NEXT_PUBLIC_APP_URL ?? "https://gandal.org"}/formateurs/${instructor.affiliateCode}`,
+    url: `${process.env.NEXT_PUBLIC_APP_URL ?? BRAND.website}/formateurs/${instructor.affiliateCode}`,
     sameAs: [
       instructor.websiteUrl,
       instructor.linkedinUrl,
@@ -173,7 +174,7 @@ export default async function PublicInstructorPage({ params }: PageProps) {
 
               <div>
                 <Badge variant="secondary" className="bg-white/15 text-primary-foreground">
-                  Formateur sur Gandal
+                  Formateur sur Aiduca
                 </Badge>
                 <h1 className="mt-3 text-3xl font-semibold tracking-tight sm:text-4xl">
                   {name}

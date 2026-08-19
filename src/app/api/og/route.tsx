@@ -26,7 +26,7 @@ const PALETTE = {
 export async function GET(req: NextRequest) {
   const params = req.nextUrl.searchParams;
   const kind = params.get("kind") ?? "site"; // "site" | "course"
-  const title = (params.get("title") ?? "Gandal").slice(0, 120);
+  const title = (params.get("title") ?? "Aiduca").slice(0, 120);
   const subtitle = (params.get("subtitle") ?? "Apprendre. Enseigner. Progresser.").slice(0, 160);
   const rating = params.get("rating");
   const totalRatings = params.get("totalRatings");
@@ -72,9 +72,9 @@ export async function GET(req: NextRequest) {
                 fontSize: 32,
               }}
             >
-              G
+              A
             </div>
-            <span>Gandal</span>
+            <span>Aiduca</span>
           </div>
           {kind === "course" ? (
             <div
@@ -118,7 +118,7 @@ export async function GET(req: NextRequest) {
 
         {/* Footer : URL + rating éventuel */}
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-          <div style={{ fontSize: 24, color: PALETTE.textDim }}>gandal.org</div>
+          <div style={{ fontSize: 24, color: PALETTE.textDim }}>aiduca.fr</div>
           {rating && Number(rating) > 0 ? (
             <div
               style={{

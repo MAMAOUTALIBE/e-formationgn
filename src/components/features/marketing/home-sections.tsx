@@ -1,4 +1,4 @@
-// Sections de la page d'accueil : « Comment ça marche », « Pourquoi Gandal »,
+// Sections de la page d'accueil : « Comment ça marche », « Pourquoi Aiduca »,
 // « Formateurs en vedette ». Composants serveur (pas d'interactivité), aux
 // couleurs de la marque.
 
@@ -34,8 +34,8 @@ const STEPS = [
   },
   {
     icon: Award,
-    title: "Obtenez votre certificat",
-    text: "Terminez la formation et recevez un certificat à partager sur votre CV ou LinkedIn.",
+    title: "Obtenez votre attestation",
+    text: "Terminez la formation et recevez une attestation nominative vérifiable en ligne.",
   },
 ];
 
@@ -76,10 +76,10 @@ export function HowItWorks() {
   );
 }
 
-// --- Pourquoi Gandal -------------------------------------------------------
+// --- Pourquoi Aiduca -------------------------------------------------------
 
 const PERKS = [
-  { icon: Award, title: "Certificat à la clé", text: "Valorisez vos acquis avec un certificat reconnu." },
+  { icon: Award, title: "Attestation à la clé", text: "Valorisez le suivi de votre formation avec une attestation Aiduca." },
   { icon: Languages, title: "100% francophone", text: "Des formateurs et un contenu en français." },
   { icon: InfinityIcon, title: "Accès à vie", text: "Revenez sur vos formations quand vous voulez." },
   { icon: Smartphone, title: "Paiement Mobile Money", text: "Orange Money, MTN, Moov — et carte bancaire." },
@@ -87,13 +87,13 @@ const PERKS = [
   { icon: Clock, title: "À votre rythme", text: "Apprenez où et quand vous le souhaitez." },
 ];
 
-export function WhyGandal() {
+export function WhyAiduca() {
   return (
     <section className="border-y border-border bg-muted/30 py-12">
       <Container>
         <div className="mx-auto max-w-2xl text-center">
           <h2 className="text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
-            Pourquoi choisir Gandal ?
+            Pourquoi choisir Aiduca ?
           </h2>
           <p className="mt-2 text-sm text-muted-foreground">
             Une plateforme pensée pour la réussite des apprenants francophones.

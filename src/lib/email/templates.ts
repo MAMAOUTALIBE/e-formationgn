@@ -1,4 +1,4 @@
-// Templates HTML/text pour les emails transactionnels Gandal.
+// Templates HTML/text pour les emails transactionnels Aiduca.
 // Volontairement minimalistes, sobres, conformes au branding (bleu corporate).
 
 interface BrandedEmailParams {
@@ -74,7 +74,7 @@ export function renderBrandedEmail({
             </tr>
           </table>
           <p style="margin:16px 0 0 0;font-size:12px;color:${MUTED};">
-            © ${new Date().getFullYear()} Gandal — Tous droits réservés.
+            © ${new Date().getFullYear()} Aiduca — Tous droits réservés.
           </p>
         </td>
       </tr>
@@ -83,7 +83,7 @@ export function renderBrandedEmail({
 </html>`;
 
   const textCta = ctaLabel && ctaUrl ? `\n\n${ctaLabel} : ${ctaUrl}\n` : "";
-  const text = `${heading}\n\n${body.replace(/<[^>]+>/g, "")}${textCta}\n\nSi vous n'êtes pas à l'origine de cette demande, ignorez cet email.\n\nGandal`;
+  const text = `${heading}\n\n${body.replace(/<[^>]+>/g, "")}${textCta}\n\nSi vous n'êtes pas à l'origine de cette demande, ignorez cet email.\n\nAiduca`;
 
   return { html, text };
 }
@@ -93,10 +93,10 @@ export function renderBrandedEmail({
 export function buildVerifyEmailMessage(verifyUrl: string, firstName?: string | null) {
   const greeting = firstName ? `Bonjour ${firstName},` : "Bonjour,";
   return renderBrandedEmail({
-    preview: "Confirmez votre adresse email pour activer votre compte Gandal.",
+    preview: "Confirmez votre adresse email pour activer votre compte Aiduca.",
     heading: "Confirmez votre email",
     body: `<p style="margin:0 0 12px 0;">${greeting}</p>
-           <p style="margin:0 0 12px 0;">Bienvenue sur Gandal. Pour activer votre compte, cliquez sur le bouton ci-dessous.</p>
+           <p style="margin:0 0 12px 0;">Bienvenue sur Aiduca. Pour activer votre compte, cliquez sur le bouton ci-dessous.</p>
            <p style="margin:0;">Ce lien est valable 24 heures.</p>`,
     ctaLabel: "Confirmer mon email",
     ctaUrl: verifyUrl,
@@ -106,7 +106,7 @@ export function buildVerifyEmailMessage(verifyUrl: string, firstName?: string | 
 export function buildPasswordResetMessage(resetUrl: string, firstName?: string | null) {
   const greeting = firstName ? `Bonjour ${firstName},` : "Bonjour,";
   return renderBrandedEmail({
-    preview: "Réinitialisation de votre mot de passe Gandal.",
+    preview: "Réinitialisation de votre mot de passe Aiduca.",
     heading: "Réinitialiser votre mot de passe",
     body: `<p style="margin:0 0 12px 0;">${greeting}</p>
            <p style="margin:0 0 12px 0;">Vous avez demandé la réinitialisation de votre mot de passe. Cliquez sur le bouton ci-dessous pour en définir un nouveau.</p>
@@ -119,8 +119,8 @@ export function buildPasswordResetMessage(resetUrl: string, firstName?: string |
 export function buildWelcomeMessage(firstName?: string | null) {
   const greeting = firstName ? `Bonjour ${firstName},` : "Bonjour,";
   return renderBrandedEmail({
-    preview: "Bienvenue sur Gandal.",
-    heading: "Bienvenue sur Gandal",
+    preview: "Bienvenue sur Aiduca.",
+    heading: "Bienvenue sur Aiduca",
     body: `<p style="margin:0 0 12px 0;">${greeting}</p>
            <p style="margin:0 0 12px 0;">Votre compte est confirmé. Vous pouvez désormais explorer le catalogue et suivre vos premières formations.</p>`,
     ctaLabel: "Découvrir le catalogue",

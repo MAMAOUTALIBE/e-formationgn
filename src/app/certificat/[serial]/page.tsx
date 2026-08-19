@@ -11,7 +11,7 @@ import { Container } from "@/components/ui/container";
 import { prisma } from "@/lib/prisma";
 
 export const metadata: Metadata = {
-  title: "Vérification de certificat",
+  title: "Vérification d’attestation",
 };
 
 export const dynamic = "force-dynamic";
@@ -92,8 +92,8 @@ export default async function VerifyCertificatePage({ params }: PageProps) {
                 </div>
               </dl>
               <p className="rounded-md bg-[color:var(--brand-success)]/10 p-3 text-xs text-foreground">
-                Ce certificat a été émis par Gandal. Il atteste que la
-                personne mentionnée a suivi avec succès l&apos;intégralité du
+                Cette attestation a été émise par AIDUCA. Elle confirme que la
+                personne mentionnée a suivi avec succès l&apos;intégralité de la
                 formation indiquée.
               </p>
             </CardContent>

@@ -35,7 +35,7 @@ export default function Error({
           href="/"
           className="text-2xl font-bold text-[color:var(--brand-primary)]"
         >
-          Gandal
+          Aiduca
         </Link>
         <p className="mt-8 text-5xl font-bold text-[color:var(--brand-primary)]">
           Oups

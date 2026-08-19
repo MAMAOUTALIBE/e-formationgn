@@ -42,13 +42,13 @@ export default async function BrandingSettingsPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Wordmark Gandal</CardTitle>
+          <CardTitle className="text-base">Logo officiel Aiduca</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <p className="text-sm text-muted-foreground">
-            Le logo est un wordmark texte (style Udemy) défini dans{" "}
-            <code>src/components/branding/logo.tsx</code>. Pour modifier la
-            graisse, l&apos;italique ou le point coloré, éditer ce fichier.
+            Le composant utilise le logo officiel publié par Aiduca. Son URL et
+            les coordonnées institutionnelles sont centralisées dans{" "}
+            <code>src/lib/brand.ts</code>.
           </p>
 
           <div className="grid gap-4 sm:grid-cols-3">

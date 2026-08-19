@@ -95,7 +95,7 @@ export function NewsletterForm({
       <label className="flex items-start gap-2 text-xs text-muted-foreground">
         <Checkbox name="consent" defaultChecked={false} required disabled={pending} />
         <span>
-          J&apos;accepte de recevoir des emails de Gandal (1 à 2 par mois,
+          J&apos;accepte de recevoir des emails de Aiduca (1 à 2 par mois,
           désinscription en un clic). Voir notre{" "}
           <a
             href="/confidentialite"

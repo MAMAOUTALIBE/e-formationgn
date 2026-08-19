@@ -135,13 +135,13 @@ export default async function CourseLearningPage({ params }: PageProps) {
                     }}
                   >
                     <Button type="submit" className="w-full">
-                      Générer mon certificat
+                      Générer mon attestation
                     </Button>
                   </form>
                 ) : (
                   <p className="text-xs text-muted-foreground">
                     Encore {stats.totalLessons - stats.completedLessons} leçon(s) à
-                    terminer pour débloquer le certificat.
+                    terminer pour débloquer l&apos;attestation.
                   </p>
                 )}
               </CardContent>

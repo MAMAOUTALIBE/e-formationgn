@@ -82,17 +82,17 @@ const fr: Dictionary = {
     loading: "Chargement…",
   },
   hero: {
-    badge: "Plateforme N°1 de formation en Guinée",
+    badge: "Organisme de formation certifié Qualiopi",
     headline1: "Développez des compétences",
     headline2: "recherchées",
     description:
-      "Accédez à des centaines de formations dispensées par des formateurs francophones confirmés. Apprenez à votre rythme et obtenez votre certification.",
+      "Développez vos compétences avec les formations qualifiantes d’Aiduca, conçues pour les professionnels du bâtiment.",
     ctaPrimary: "Commencer maintenant",
     ctaSecondary: "Devenir formateur",
     activeStudents: "élèves actifs",
   },
   footer: {
-    tagline: "La marketplace francophone de formation en ligne.",
+    tagline: "Les formations qualifiantes pour les professionnels du bâtiment.",
     platform: "Plateforme",
     about: "À propos",
     legal: "Légal",
@@ -127,17 +127,17 @@ const en: Dictionary = {
     loading: "Loading…",
   },
   hero: {
-    badge: "#1 training platform in Guinea",
+    badge: "Qualiopi-certified training provider",
     headline1: "Build the skills",
     headline2: "employers want",
     description:
-      "Access hundreds of training courses taught by experienced French-speaking instructors. Learn at your own pace and earn your certification.",
+      "Develop your skills with Aiduca’s qualifying courses for building professionals.",
     ctaPrimary: "Start now",
     ctaSecondary: "Become an instructor",
     activeStudents: "active students",
   },
   footer: {
-    tagline: "The francophone marketplace for online learning.",
+    tagline: "Qualifying courses for building professionals.",
     platform: "Platform",
     about: "About",
     legal: "Legal",

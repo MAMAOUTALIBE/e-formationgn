@@ -22,7 +22,7 @@ export function HomeTrustedBy() {
     <section className="border-y border-border bg-muted/30 py-8">
       <Container>
         <p className="text-center text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
-          Ils forment leurs équipes sur Gandal
+          Ils forment leurs équipes sur Aiduca
         </p>
         <ul className="mt-6 flex flex-wrap items-center justify-center gap-x-10 gap-y-4">
           {TRUSTED_BY.map((name) => (

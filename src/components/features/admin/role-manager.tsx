@@ -95,7 +95,7 @@ export function CreateStaffAccountForm({
             name="email"
             type="email"
             defaultValue={values?.email ?? ""}
-            placeholder="prenom.nom@gandal.org"
+            placeholder="prenom.nom@aiduca.fr"
             required
           />
         </FormField>
@@ -148,7 +148,7 @@ export function RoleAssignForm() {
             name="email"
             type="email"
             required
-            placeholder="personne@gandal.org"
+            placeholder="personne@aiduca.fr"
           />
         </FormField>
         <FormField id="staff-role-role" label="Nouveau rôle" error={errors.role?.[0]}>

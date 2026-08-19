@@ -30,7 +30,7 @@ export async function issueCertificate(courseId: string): Promise<ActionResult &
     return {
       success: false,
       message:
-        "Terminez l'ensemble des leçons avant de générer votre certificat.",
+        "Terminez l'ensemble des leçons avant de générer votre attestation.",
     };
   }
 

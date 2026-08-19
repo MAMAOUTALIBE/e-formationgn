@@ -2,9 +2,10 @@
 // Voir https://schema.org/Course et https://developers.google.com/search/docs/appearance/structured-data/course-info
 
 import type { PublicCourseDetail } from "@/server/queries/courses";
+import { BRAND } from "@/lib/brand";
 
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "https://gandal.org";
-const SITE_NAME = process.env.NEXT_PUBLIC_APP_NAME ?? "Gandal";
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? BRAND.website;
+const SITE_NAME = process.env.NEXT_PUBLIC_APP_NAME ?? "Aiduca";
 
 interface BreadcrumbItem {
   label: string;

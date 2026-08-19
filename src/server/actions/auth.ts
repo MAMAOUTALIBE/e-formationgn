@@ -186,7 +186,7 @@ async function issueVerificationEmail(
 
   await sendTransactionalEmail({
     to: email,
-    subject: "Confirmez votre adresse email — Gandal",
+    subject: "Confirmez votre adresse email — Aiduca",
     html,
     text,
   });
@@ -235,7 +235,7 @@ export async function verifyEmailToken(token: string): Promise<VerifyEmailOutcom
   const { html, text } = buildWelcomeMessage(user.firstName);
   await sendTransactionalEmail({
     to: user.email,
-    subject: "Bienvenue sur Gandal",
+    subject: "Bienvenue sur Aiduca",
     html,
     text,
   });
@@ -397,7 +397,7 @@ export async function requestPasswordReset(
 
     await sendTransactionalEmail({
       to: user.email,
-      subject: "Réinitialisation de votre mot de passe — Gandal",
+      subject: "Réinitialisation de votre mot de passe — Aiduca",
       html,
       text,
     });

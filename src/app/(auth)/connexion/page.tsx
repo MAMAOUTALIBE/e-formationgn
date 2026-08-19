@@ -9,7 +9,7 @@ import { Separator } from "@/components/ui/separator";
 
 export const metadata: Metadata = {
   title: "Connexion",
-  description: "Connectez-vous à votre compte Gandal.",
+  description: "Connectez-vous à votre compte Aiduca.",
 };
 
 const hasGoogleProvider = Boolean(

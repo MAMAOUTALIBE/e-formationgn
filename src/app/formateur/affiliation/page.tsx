@@ -86,7 +86,7 @@ export default async function InstructorAffiliationPage() {
           Affiliation
         </h1>
         <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
-          Recommandez Gandal avec votre lien personnel. Quand un élève
+          Recommandez Aiduca avec votre lien personnel. Quand un élève
           achète l&apos;une de vos formations via votre lien, votre taux de commission
           passe à <strong>15 %</strong> au lieu de 30 %.
         </p>

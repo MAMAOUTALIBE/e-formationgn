@@ -203,7 +203,7 @@ export async function finalizeStripeOrder(
         .map((i) => `• ${i.course.title}`)
         .join("<br />");
       const { html, text } = renderBrandedEmail({
-        preview: "Confirmation de votre commande Gandal",
+        preview: "Confirmation de votre commande Aiduca",
         heading: "Merci pour votre commande",
         body: `<p style="margin:0 0 12px 0;">Bonjour ${order.user.firstName ?? ""},</p>
                <p style="margin:0 0 12px 0;">Votre paiement de <strong>${formatPriceFromCents(order.totalCents, order.currency)}</strong> a bien été enregistré.</p>
@@ -214,7 +214,7 @@ export async function finalizeStripeOrder(
       });
       await sendTransactionalEmail({
         to: order.user.email,
-        subject: "Confirmation de commande — Gandal",
+        subject: "Confirmation de commande — Aiduca",
         html,
         text,
       });

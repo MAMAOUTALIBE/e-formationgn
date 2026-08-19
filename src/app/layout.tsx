@@ -9,6 +9,7 @@ import { SitewideBanner } from "@/components/features/marketing/sitewide-banner"
 import { ServiceWorkerRegister } from "@/components/features/pwa/sw-register";
 import { ThemeProvider } from "@/components/features/theme/theme-provider";
 import { Toaster } from "@/components/ui/toaster";
+import { BRAND } from "@/lib/brand";
 
 import "./globals.css";
 
@@ -22,18 +23,18 @@ const inter = Inter({
 // ne résout pas : les balises canonical et og:url de tout le site désignaient
 // donc une adresse inexistante, ce qui suffit à faire désindexer les pages.
 // Il vient maintenant de l'environnement, comme le sitemap et le JSON-LD.
-const SITE_URL = process.env.NEXT_PUBLIC_APP_URL ?? "https://gandal.org";
+const SITE_URL = process.env.NEXT_PUBLIC_APP_URL ?? BRAND.website;
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   title: {
-    default: "Gandal — Plateforme de formation en ligne",
-    template: "%s · Gandal",
+    default: "Aiduca — Formations qualifiantes pour les professionnels du bâtiment",
+    template: "%s · Aiduca",
   },
   description:
-    "Gandal accompagne les sociétés dans la gestion de leurs formations, des inscriptions à la certification.",
-  applicationName: "Gandal",
-  authors: [{ name: "Gandal" }],
+    "Aiduca accompagne les professionnels du bâtiment avec des formations qualifiantes, opérationnelles et certifiées Qualiopi.",
+  applicationName: "Aiduca",
+  authors: [{ name: "Aiduca" }],
   keywords: [
     "formation en ligne",
     "e-learning",
@@ -61,17 +62,17 @@ export const metadata: Metadata = {
     locale: "fr_FR",
     alternateLocale: ["fr_BE", "fr_CA", "fr_CI", "fr_SN"],
     url: SITE_URL,
-    siteName: "Gandal",
-    title: "Gandal — Plateforme de formation en ligne",
+    siteName: "Aiduca",
+    title: "Aiduca — Formations qualifiantes pour les professionnels du bâtiment",
     description:
-      "Apprenez à votre rythme avec des formateurs experts ou partagez votre savoir sur Gandal.",
-    images: [{ url: "/api/og", width: 1200, height: 630, alt: "Gandal" }],
+      "Développez vos compétences avec les formations qualifiantes Aiduca, organisme certifié Qualiopi.",
+    images: [{ url: "/api/og", width: 1200, height: 630, alt: "Aiduca" }],
   },
   twitter: {
     card: "summary_large_image",
-    title: "Gandal — Plateforme de formation en ligne",
+    title: "Aiduca — Formations qualifiantes pour les professionnels du bâtiment",
     description:
-      "Apprenez à votre rythme avec des formateurs experts ou partagez votre savoir sur Gandal.",
+      "Développez vos compétences avec les formations qualifiantes Aiduca, organisme certifié Qualiopi.",
     images: ["/api/og"],
   },
   icons: {
