@@ -39,4 +39,5 @@ test("la coquille occupe toujours tout le viewport sans espace sous le footer", 
   assert.match(source, /workspace-main min-h-0 min-w-0 flex-1 overflow-y-auto/);
   assert.match(styles, /html:has\(\.workspace-shell\),\s*body:has\(\.workspace-shell\)/);
   assert.match(styles, /height: 100%;\s*overflow: hidden;/);
+  assert.match(styles, /\.workspace-main \{\s*contain: paint;/);
 });

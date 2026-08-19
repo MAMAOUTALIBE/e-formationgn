@@ -175,6 +175,12 @@ body:has(.workspace-shell) {
   overflow: hidden;
 }
 
+/* Le contenu long reste mesurable et défilable dans `.workspace-main`, mais
+ * son débordement ne doit pas agrandir la zone de défilement de `<html>`. */
+.workspace-main {
+  contain: paint;
+}
+
 img,
 video,
 svg {
