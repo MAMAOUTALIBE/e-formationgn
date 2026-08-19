@@ -19,7 +19,7 @@ test("la liste des cours contient son tableau large sur mobile", async () => {
     readFile(path.join(root, "src/app/globals.css"), "utf8"),
   ]);
   assert.match(source, /overflow-x-clip/);
-  assert.match(source, /overflow-x-auto[^\n]+\[contain:inline-size\]/);
+  assert.match(source, /overflow-x-auto[^\n]+\[contain:paint\]/);
   assert.match(globalCss, /html\s*\{[\s\S]*?overflow-x:\s*clip/);
 });
 

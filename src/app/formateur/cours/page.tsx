@@ -101,7 +101,7 @@ export default async function InstructorCoursesPage({ searchParams }: PageProps)
           </CardContent>
         </Card>
       ) : (
-        <div className="min-w-0 max-w-full overflow-x-auto rounded-lg border border-border bg-card [contain:inline-size]">
+        <div className="min-w-0 max-w-full overflow-x-auto rounded-lg border border-border bg-card [contain:paint]">
           <table className="w-full min-w-[640px] text-sm">
             <thead className="border-b border-border bg-muted/40 text-left text-xs uppercase tracking-wide text-muted-foreground">
               <tr>
