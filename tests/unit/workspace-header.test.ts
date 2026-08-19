@@ -24,3 +24,14 @@ test("le header réserve et espace les commandes sans recouvrir la recherche", a
   assert.match(userMenuSource, /text-left xl:block/);
   assert.doesNotMatch(userMenuSource, /showIdentity && "lg:pr-2\.5"/);
 });
+
+test("la coquille occupe toujours tout le viewport sans espace sous le footer", async () => {
+  const source = await readFile(
+    path.join(root, "src/components/features/workspace/workspace-shell.tsx"),
+    "utf8",
+  );
+
+  assert.match(source, /h-\[100dvh\] min-h-\[100dvh\]/);
+  assert.match(source, /min-w-0 shrink-0 overflow-hidden/);
+  assert.match(source, /workspace-main min-h-0 min-w-0 flex-1 overflow-y-auto/);
+});

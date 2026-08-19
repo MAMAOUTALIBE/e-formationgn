@@ -105,7 +105,7 @@ export async function WorkspaceShell({
     <div
       style={themeStyle}
       data-admin-text={theme.textScale}
-      className="workspace-shell flex h-[100dvh] min-w-0 overflow-hidden border-t-[3px] border-t-[color:var(--brand-danger)] bg-muted/30"
+      className="workspace-shell flex h-[100dvh] min-h-[100dvh] min-w-0 shrink-0 overflow-hidden border-t-[3px] border-t-[color:var(--brand-danger)] bg-muted/30"
     >
       {extras}
 
