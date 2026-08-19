@@ -367,7 +367,6 @@ function QualityAndPublicationCard({
         <div className="shrink-0 border-t border-border pt-3">
           <p className="mb-2 text-sm font-medium text-foreground">Décision de modération</p>
           <ModerationForm
-            key={currentStatus}
             courseId={courseId}
             currentStatus={currentStatus}
             publishable={publishable}

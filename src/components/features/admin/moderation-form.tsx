@@ -54,50 +54,61 @@ export function ModerationForm({
   const [targetStatus, setTargetStatus] = useState<CourseStatus>(
     currentStatus === "PENDING_REVIEW" ? "PUBLISHED" : currentStatus,
   );
+  const [confirmation, setConfirmation] = useState<string | null>(null);
   const errors = state.fieldErrors ?? {};
   const rejecting = targetStatus === "REJECTED";
   const publicationBlocked = targetStatus === "PUBLISHED" && !publishable;
 
   useEffect(() => {
     if (!state.success) return;
-    const refreshTimer = window.setTimeout(() => router.refresh(), 1_200);
-    return () => window.clearTimeout(refreshTimer);
-  }, [router, state.success]);
+    const displayTimer = window.setTimeout(() => {
+      setEditing(false);
+      setConfirmation(state.message ?? "Statut mis à jour avec succès.");
+      router.refresh();
+    }, 0);
+    const confirmationTimer = window.setTimeout(() => setConfirmation(null), 3_600);
+    return () => {
+      window.clearTimeout(displayTimer);
+      window.clearTimeout(confirmationTimer);
+    };
+  }, [router, state]);
 
-  if (state.success) {
-    return (
-      <Alert variant="success" className="animate-in fade-in slide-in-from-bottom-1 duration-300">
-        <CheckCircle2 className="h-4 w-4" aria-hidden="true" />
-        <AlertDescription aria-live="polite">{state.message}</AlertDescription>
-      </Alert>
-    );
-  }
+  const confirmationAlert = confirmation ? (
+    <Alert variant="success" className="animate-in fade-in slide-in-from-bottom-1 duration-300">
+      <CheckCircle2 className="h-4 w-4" aria-hidden="true" />
+      <AlertDescription aria-live="polite">{confirmation}</AlertDescription>
+    </Alert>
+  ) : null;
 
   if (!editing) {
     return (
-      <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-center gap-2">
-          <span className="text-sm text-muted-foreground">Statut actuel :</span>
-          <CourseStatusBadge status={currentStatus} />
+      <div className="space-y-3">
+        {confirmationAlert}
+        <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-muted-foreground">Statut actuel :</span>
+            <CourseStatusBadge status={currentStatus} />
+          </div>
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            onClick={() => {
+              setTargetStatus(currentStatus === "ARCHIVED" ? "DRAFT" : currentStatus);
+              setEditing(true);
+            }}
+          >
+            Modifier le statut
+          </Button>
         </div>
-        <Button
-          type="button"
-          size="sm"
-          variant="outline"
-          onClick={() => {
-            setTargetStatus(currentStatus === "ARCHIVED" ? "DRAFT" : currentStatus);
-            setEditing(true);
-          }}
-        >
-          Modifier le statut
-        </Button>
       </div>
     );
   }
 
   return (
     <form action={formAction} className="animate-in space-y-3 fade-in slide-in-from-top-1 duration-200">
-      {state.message ? (
+      {confirmationAlert}
+      {state.message && !state.success ? (
         <Alert variant="destructive" className="py-2">
           <AlertDescription aria-live="assertive" className="text-xs">{state.message}</AlertDescription>
         </Alert>

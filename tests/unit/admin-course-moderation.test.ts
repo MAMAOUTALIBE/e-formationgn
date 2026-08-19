@@ -49,6 +49,10 @@ test("le formulaire propose les décisions rapides puis l’édition complète e
   assert.match(form, /aria-busy=\{pending\}/);
   assert.match(form, /CheckCircle2/);
   assert.match(form, /animate-in/);
+  assert.match(form, /setConfirmation\(state\.message/);
+  assert.match(form, /3_600/);
+  assert.match(form, /\[router, state\]/);
   assert.match(form, /router\.refresh\(\)/);
+  assert.doesNotMatch(page, /key=\{currentStatus\}/);
   assert.match(form, />\s*Annuler\s*</);
 });
