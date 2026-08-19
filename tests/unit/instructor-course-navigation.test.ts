@@ -18,7 +18,8 @@ test("la liste des cours contient son tableau large sur mobile", async () => {
     path.join(root, "src/app/formateur/cours/page.tsx"),
     "utf8",
   );
-  assert.match(source, /min-w-0 max-w-full overflow-x-auto/);
+  assert.match(source, /overflow-x-clip/);
+  assert.match(source, /overflow-x-auto[^\n]+\[contain:inline-size\]/);
 });
 
 test("les métadonnées de l’aperçu utilisent le contexte propriétaire", async () => {
