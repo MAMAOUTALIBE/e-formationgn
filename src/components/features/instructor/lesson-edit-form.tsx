@@ -1,6 +1,7 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 
 import { FormDraft } from "@/components/ui/form-draft";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -18,6 +19,7 @@ const initialState: ActionResult = { success: false };
 
 interface LessonEditFormProps {
   lessonId: string;
+  returnHref: string;
   defaults: {
     title: string;
     type: LessonType;
@@ -29,10 +31,18 @@ interface LessonEditFormProps {
   };
 }
 
-export function LessonEditForm({ lessonId, defaults }: LessonEditFormProps) {
+export function LessonEditForm({ lessonId, returnHref, defaults }: LessonEditFormProps) {
+  const router = useRouter();
   const action = updateLesson.bind(null, lessonId);
   const [state, formAction] = useActionState(action, initialState);
   const [type, setType] = useState<LessonType>(defaults.type);
+
+  useEffect(() => {
+    if (!state.success || type === "QUIZ") return;
+
+    const timeout = window.setTimeout(() => router.push(returnHref), 900);
+    return () => window.clearTimeout(timeout);
+  }, [returnHref, router, state.success, type]);
 
   const errors = state.fieldErrors ?? {};
 

@@ -183,7 +183,7 @@ export default async function CourseProgramPage({ params }: PageProps) {
                     </ul>
                   )}
 
-                  <LessonCreateForm sectionId={section.id} />
+                  <LessonCreateForm courseId={course.id} sectionId={section.id} />
                 </li>
               ))}
             </ul>

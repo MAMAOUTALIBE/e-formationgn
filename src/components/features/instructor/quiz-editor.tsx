@@ -22,6 +22,7 @@ type QuestionKind = "SINGLE_CHOICE" | "MULTIPLE_CHOICE" | "TRUE_FALSE";
 interface QuizEditorProps {
   lessonId: string;
   lessonTitle: string;
+  returnHref: string;
   quiz: {
     title: string;
     description: string | null;
@@ -54,7 +55,7 @@ const EMPTY_OPTIONS = [
   { label: "", isCorrect: false },
 ];
 
-export function QuizEditor({ lessonId, lessonTitle, quiz }: QuizEditorProps) {
+export function QuizEditor({ lessonId, lessonTitle, returnHref, quiz }: QuizEditorProps) {
   const router = useRouter();
   const questionFormRef = useRef<HTMLFormElement>(null);
   const [pending, startTransition] = useTransition();
@@ -342,6 +343,17 @@ export function QuizEditor({ lessonId, lessonTitle, quiz }: QuizEditorProps) {
           </Button>
         </div>
       </form>
+
+      <div className="flex justify-end border-t pt-6">
+        <Button
+          type="button"
+          onClick={() => router.push(returnHref)}
+          disabled={pending || !quiz || quiz.questions.length === 0}
+        >
+          <CheckCircle2 className="h-4 w-4" />
+          Valider le quiz et revenir au programme
+        </Button>
+      </div>
     </div>
   );
 }

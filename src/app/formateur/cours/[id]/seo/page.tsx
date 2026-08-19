@@ -35,6 +35,8 @@ export default async function CourseSeoPage({ params }: PageProps) {
       <CardContent>
         <CourseSeoForm
           courseId={course.id}
+          returnHref={`/formateur/cours/${course.id}/programme`}
+          previewHref={`/cours/${course.slug}?preview=1`}
           aiAvailable={isSeoAiConfigured()}
           defaults={{
             metaTitle: course.metaTitle ?? "",

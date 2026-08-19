@@ -1,6 +1,8 @@
 "use client";
 
+import Link from "next/link";
 import { useActionState, useRef, useState, useTransition } from "react";
+import { ArrowLeft, CheckCircle2, Eye } from "lucide-react";
 
 import { FormDraft } from "@/components/ui/form-draft";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -17,6 +19,8 @@ const initialState: ActionResult = { success: false };
 
 interface CourseSeoFormProps {
   courseId: string;
+  previewHref?: string;
+  returnHref: string;
   defaults: {
     metaTitle: string;
     metaDescription: string;
@@ -30,6 +34,8 @@ interface CourseSeoFormProps {
 
 export function CourseSeoForm({
   courseId,
+  previewHref,
+  returnHref,
   defaults,
   aiAvailable,
 }: CourseSeoFormProps) {
@@ -112,9 +118,12 @@ export function CourseSeoForm({
         </Alert>
       ) : null}
 
-      {state.success && state.message ? (
+      {state.success ? (
         <Alert variant="success">
-          <AlertDescription>{state.message}</AlertDescription>
+          <CheckCircle2 className="h-4 w-4" aria-hidden />
+          <AlertDescription>
+            Votre cours a été enregistré avec succès.
+          </AlertDescription>
         </Alert>
       ) : null}
       {state.message && !state.success ? (
@@ -197,8 +206,26 @@ export function CourseSeoForm({
         />
       </FormField>
 
-      <div className="flex justify-end">
-        <SubmitButton>Enregistrer</SubmitButton>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        {state.success ? (
+          <div className="flex flex-wrap gap-2">
+            <Button asChild variant="outline">
+              <Link href={returnHref}>
+                <ArrowLeft className="h-4 w-4" />
+                Retour au programme
+              </Link>
+            </Button>
+            {previewHref ? (
+              <Button asChild variant="secondary">
+                <Link href={previewHref} target="_blank" rel="noopener noreferrer">
+                  <Eye className="h-4 w-4" />
+                  Voir l’aperçu
+                </Link>
+              </Button>
+            ) : null}
+          </div>
+        ) : <span />}
+        <SubmitButton>Enregistrer le cours</SubmitButton>
       </div>
     </form>
   );

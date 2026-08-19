@@ -1,6 +1,7 @@
 "use client";
 
-import { useActionState, useEffect, useRef } from "react";
+import { useActionState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { FormField } from "@/components/ui/form-field";
@@ -12,24 +13,31 @@ import type { ActionResult } from "@/server/actions/auth";
 
 const initialState: ActionResult = { success: false };
 
+type LessonCreateResult = ActionResult & { lessonId?: string };
+
 interface LessonCreateFormProps {
+  courseId: string;
   sectionId: string;
 }
 
-export function LessonCreateForm({ sectionId }: LessonCreateFormProps) {
+export function LessonCreateForm({ courseId, sectionId }: LessonCreateFormProps) {
+  const router = useRouter();
   const action = createLesson.bind(null, sectionId);
-  const [state, formAction] = useActionState(action, initialState);
-  const formRef = useRef<HTMLFormElement>(null);
+  const [state, formAction] = useActionState<LessonCreateResult, FormData>(
+    action,
+    initialState,
+  );
 
   useEffect(() => {
-    if (state.success) formRef.current?.reset();
-  }, [state]);
+    if (state.success && state.lessonId) {
+      router.push(`/formateur/cours/${courseId}/lecons/${state.lessonId}`);
+    }
+  }, [courseId, router, state.lessonId, state.success]);
 
   const errors = state.fieldErrors ?? {};
 
   return (
     <form
-      ref={formRef}
       action={formAction}
       className="grid gap-3 rounded-md border border-dashed border-border p-3 sm:grid-cols-[1fr_180px_auto] sm:items-end"
     >

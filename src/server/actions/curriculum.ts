@@ -174,7 +174,7 @@ export async function createLesson(
   sectionId: string,
   _prev: ActionResult | undefined,
   formData: FormData,
-): Promise<ActionResult> {
+): Promise<ActionResult & { lessonId?: string }> {
   const { section } = await requireSectionOwnership(sectionId);
 
   const parsed = lessonSchema.safeParse({
@@ -198,7 +198,7 @@ export async function createLesson(
     _max: { displayOrder: true },
   });
 
-  await prisma.lesson.create({
+  const createdLesson = await prisma.lesson.create({
     data: {
       sectionId,
       title: parsed.data.title,
@@ -215,7 +215,11 @@ export async function createLesson(
   });
 
   revalidatePath(`/formateur/cours/${section.course.id}/programme`);
-  return { success: true, message: "Leçon créée." };
+  return {
+    success: true,
+    message: "Leçon créée.",
+    lessonId: createdLesson.id,
+  };
 }
 
 export async function updateLesson(

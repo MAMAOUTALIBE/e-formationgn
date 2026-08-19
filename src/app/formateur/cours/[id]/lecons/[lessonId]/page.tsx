@@ -72,6 +72,7 @@ export default async function LessonEditPage({ params }: PageProps) {
           <CardContent>
             <LessonEditForm
               lessonId={lesson.id}
+              returnHref={`/formateur/cours/${id}/programme`}
               defaults={{
                 title: lesson.title,
                 type: lesson.type,
@@ -120,6 +121,7 @@ export default async function LessonEditPage({ params }: PageProps) {
             <QuizEditor
               lessonId={lesson.id}
               lessonTitle={lesson.title}
+              returnHref={`/formateur/cours/${id}/programme`}
               quiz={lesson.quiz}
             />
           </CardContent>
