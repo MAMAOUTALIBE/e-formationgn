@@ -7,8 +7,8 @@ export const moderateCourseSchema = z
     reason: z.string().trim().max(500).optional().or(z.literal("")),
   })
   .strict()
-  .refine((data) => data.action !== "reject" || (data.reason && data.reason.length > 5), {
-    message: "Précisez la raison du refus.",
+  .refine((data) => data.action !== "reject" || (data.reason && data.reason.length >= 10), {
+    message: "Le motif doit faire au moins 10 caractères.",
     path: ["reason"],
   });
 

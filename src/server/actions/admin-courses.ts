@@ -13,6 +13,7 @@ import {
   getCourseDeletionStatus,
 } from "@/server/queries/course-deletion";
 import { createAuditLog } from "@/server/services/audit-log";
+import type { CourseStatus } from "@/generated/prisma/enums";
 
 import type { ActionResult } from "./auth";
 
@@ -44,37 +45,163 @@ async function audit(
   });
 }
 
-export async function approveCourse(courseId: string): Promise<ActionResult> {
-  const admin = await requireAdmin();
+const MODERATABLE_STATUSES = [
+  "DRAFT",
+  "PENDING_REVIEW",
+  "PUBLISHED",
+  "REJECTED",
+] as const satisfies readonly CourseStatus[];
+
+type ModeratableStatus = (typeof MODERATABLE_STATUSES)[number];
+
+function isModeratableStatus(value: unknown): value is ModeratableStatus {
+  return typeof value === "string" && MODERATABLE_STATUSES.some((status) => status === value);
+}
+
+function statusSuccessMessage(status: ModeratableStatus): string {
+  switch (status) {
+    case "PUBLISHED":
+      return "Le cours a été publié avec succès.";
+    case "REJECTED":
+      return "Le cours a été refusé et le formateur a été notifié.";
+    case "PENDING_REVIEW":
+      return "Le cours est maintenant en attente de révision.";
+    case "DRAFT":
+      return "Le cours a été replacé en brouillon.";
+  }
+}
+
+async function performCourseStatusTransition(
+  actorId: string,
+  courseId: string,
+  nextStatus: ModeratableStatus,
+  rejectionReason?: string,
+): Promise<ActionResult> {
+  const reason = rejectionReason?.trim() ?? "";
+  if (nextStatus === "REJECTED" && reason.length < 10) {
+    return {
+      success: false,
+      message: "Le motif de rejet doit faire au moins 10 caractères.",
+      fieldErrors: { reason: ["Le motif doit faire au moins 10 caractères."] },
+    };
+  }
+
   const course = await prisma.course.findUnique({
     where: { id: courseId },
     select: {
+      id: true,
+      instructorId: true,
+      slug: true,
       title: true,
+      status: true,
       description: true,
       thumbnailUrl: true,
       sections: { select: { lessons: { select: { id: true } } } },
     },
   });
   if (!course) return { success: false, message: "Cours introuvable." };
-
-  // Garde qualité — même règle que la file de modération.
-  const failed = failedCriteriaLabels(course);
-  if (failed.length > 0) {
-    return {
-      success: false,
-      message: `Publication refusée — critères qualité non remplis : ${failed.join(" · ")}.`,
-    };
+  if (course.status === nextStatus) {
+    return { success: false, message: "Le cours possède déjà ce statut." };
   }
 
-  await prisma.course.update({
-    where: { id: courseId },
-    data: { status: "PUBLISHED", publishedAt: new Date(), rejectionReason: null },
+  if (nextStatus === "PUBLISHED") {
+    const failed = failedCriteriaLabels(course);
+    if (failed.length > 0) {
+      return {
+        success: false,
+        message: `Publication refusée — critères qualité non remplis : ${failed.join(" · ")}.`,
+      };
+    }
+  }
+
+  const oldStatus = course.status;
+  const notification = (() => {
+    switch (nextStatus) {
+      case "PUBLISHED":
+        return {
+          kind: "COURSE_PUBLISHED" as const,
+          title: "Votre cours est publié",
+          body: `« ${course.title} » est désormais visible dans le catalogue.`,
+          url: `/cours/${course.slug}`,
+        };
+      case "REJECTED":
+        return {
+          kind: "COURSE_REJECTED" as const,
+          title: "Votre cours nécessite des modifications",
+          body: reason,
+          url: `/formateur/cours/${course.id}`,
+        };
+      case "PENDING_REVIEW":
+        return {
+          kind: "GENERIC" as const,
+          title: "Cours en cours de révision",
+          body: `Le statut de « ${course.title} » a été remis en attente de révision.`,
+          url: `/formateur/cours/${course.id}`,
+        };
+      case "DRAFT":
+        return {
+          kind: "GENERIC" as const,
+          title: "Cours replacé en brouillon",
+          body: `« ${course.title} » a été replacé en brouillon par l’équipe de modération.`,
+          url: `/formateur/cours/${course.id}`,
+        };
+    }
+  })();
+
+  await prisma.$transaction([
+    prisma.course.update({
+      where: { id: course.id },
+      data: {
+        status: nextStatus,
+        publishedAt: nextStatus === "PUBLISHED" ? new Date() : null,
+        rejectionReason: nextStatus === "REJECTED" ? reason : null,
+      },
+    }),
+    prisma.notification.create({
+      data: { userId: course.instructorId, ...notification },
+    }),
+  ]);
+
+  await audit(actorId, "course.status-change", course.id, {
+    oldStatus,
+    newStatus: nextStatus,
+    ...(nextStatus === "REJECTED" ? { reason } : {}),
   });
-  await audit(admin.userId, "course.approve", courseId);
+
   revalidatePath("/admin/cours");
+  revalidatePath(`/admin/cours/${course.id}`);
   revalidatePath("/admin/cours/moderation");
-  invalidateCatalogCaches();
-  return { success: true, message: "Cours publié." };
+  revalidatePath("/formateur");
+  revalidatePath("/formateur/cours");
+  revalidatePath(`/formateur/cours/${course.id}`);
+  revalidatePath(`/cours/${course.slug}`);
+  if (oldStatus === "PUBLISHED" || nextStatus === "PUBLISHED") {
+    invalidateCatalogCaches();
+  }
+  return { success: true, message: statusSuccessMessage(nextStatus) };
+}
+
+export async function transitionCourseStatus(
+  courseId: string,
+  _previousState: ActionResult,
+  formData: FormData,
+): Promise<ActionResult> {
+  const admin = await requireAdmin();
+  const nextStatus = formData.get("status");
+  if (!isModeratableStatus(nextStatus)) {
+    return { success: false, message: "Statut de cours invalide." };
+  }
+  return performCourseStatusTransition(
+    admin.userId,
+    courseId,
+    nextStatus,
+    String(formData.get("reason") ?? ""),
+  );
+}
+
+export async function approveCourse(courseId: string): Promise<ActionResult> {
+  const admin = await requireAdmin();
+  return performCourseStatusTransition(admin.userId, courseId, "PUBLISHED");
 }
 
 export async function rejectCourse(
@@ -82,20 +209,7 @@ export async function rejectCourse(
   reason: string,
 ): Promise<ActionResult> {
   const admin = await requireAdmin();
-  if (reason.trim().length < 10) {
-    return {
-      success: false,
-      message: "Le motif de rejet doit faire au moins 10 caractères.",
-    };
-  }
-  await prisma.course.update({
-    where: { id: courseId },
-    data: { status: "REJECTED", rejectionReason: reason },
-  });
-  await audit(admin.userId, "course.reject", courseId, { reason });
-  revalidatePath("/admin/cours");
-  revalidatePath("/admin/cours/moderation");
-  return { success: true, message: "Cours rejeté." };
+  return performCourseStatusTransition(admin.userId, courseId, "REJECTED", reason);
 }
 
 export async function unpublishCourse(courseId: string): Promise<ActionResult> {

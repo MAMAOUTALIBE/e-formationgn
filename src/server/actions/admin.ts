@@ -16,8 +16,8 @@ import {
   promoCodeSchema,
   userActionSchema,
 } from "@/lib/validators/admin";
-import { failedCriteriaLabels } from "@/lib/validators/course-publish";
 import { createAuditLog } from "@/server/services/audit-log";
+import { approveCourse, rejectCourse } from "./admin-courses";
 
 import type { ActionResult } from "./auth";
 
@@ -40,7 +40,6 @@ async function audit(
 // --- Modération des cours -------------------------------------------------
 
 export async function moderateCourse(formData: FormData): Promise<ActionResult> {
-  const admin = await requireAdmin();
   const parsed = moderateCourseSchema.safeParse({
     courseId: formData.get("courseId"),
     action: formData.get("action"),
@@ -50,70 +49,9 @@ export async function moderateCourse(formData: FormData): Promise<ActionResult> 
     return { success: false, fieldErrors: parsed.error.flatten().fieldErrors };
   }
 
-  const course = await prisma.course.findUnique({
-    where: { id: parsed.data.courseId },
-    select: {
-      id: true,
-      instructorId: true,
-      slug: true,
-      title: true,
-      status: true,
-      description: true,
-      thumbnailUrl: true,
-      sections: { select: { lessons: { select: { id: true } } } },
-    },
-  });
-  if (!course) return { success: false, message: "Cours introuvable." };
-
-  if (parsed.data.action === "approve") {
-    // Garde qualité : on ne publie pas un cours incomplet (ex : description
-    // restée sur le texte par défaut, pas d'image, pas de leçon).
-    const failed = failedCriteriaLabels(course);
-    if (failed.length > 0) {
-      return {
-        success: false,
-        message: `Publication refusée — critères qualité non remplis : ${failed.join(" · ")}.`,
-      };
-    }
-    await prisma.course.update({
-      where: { id: course.id },
-      data: { status: "PUBLISHED", publishedAt: new Date(), rejectionReason: null },
-    });
-    await prisma.notification.create({
-      data: {
-        userId: course.instructorId,
-        kind: "COURSE_PUBLISHED",
-        title: "Votre cours est publié",
-        body: `« ${course.title} » est désormais visible dans le catalogue.`,
-        url: `/cours/${course.slug}`,
-      },
-    });
-  } else {
-    await prisma.course.update({
-      where: { id: course.id },
-      data: {
-        status: "REJECTED",
-        rejectionReason: parsed.data.reason || "Non précisée.",
-      },
-    });
-    await prisma.notification.create({
-      data: {
-        userId: course.instructorId,
-        kind: "COURSE_REJECTED",
-        title: "Votre cours nécessite des modifications",
-        body: parsed.data.reason ?? "Non précisée.",
-        url: `/formateur/cours/${course.id}`,
-      },
-    });
-  }
-
-  await audit(admin.userId, `course.${parsed.data.action}`, "Course", course.id, {
-    reason: parsed.data.reason,
-  });
-
-  revalidatePath("/admin/cours");
-  revalidatePath(`/admin/cours/${course.id}`);
-  return { success: true, message: "Décision enregistrée." };
+  return parsed.data.action === "approve"
+    ? approveCourse(parsed.data.courseId)
+    : rejectCourse(parsed.data.courseId, parsed.data.reason ?? "");
 }
 
 // --- Utilisateurs ---------------------------------------------------------

@@ -168,6 +168,7 @@ export default async function AdminCourseReviewPage({ params }: PageProps) {
         quality={
           <QualityAndPublicationCard
             courseId={course.id}
+            currentStatus={course.status}
             criteria={publishCriteria}
             completed={completedCriteria}
             publishable={publishable}
@@ -318,11 +319,13 @@ function ProgramCard({ course, totalLessons }: { course: AdminCourse; totalLesso
 
 function QualityAndPublicationCard({
   courseId,
+  currentStatus,
   criteria,
   completed,
   publishable,
 }: {
   courseId: string;
+  currentStatus: AdminCourse["status"];
   criteria: ReturnType<typeof getPublishCriteria>;
   completed: number;
   publishable: boolean;
@@ -363,7 +366,12 @@ function QualityAndPublicationCard({
         </ul>
         <div className="shrink-0 border-t border-border pt-3">
           <p className="mb-2 text-sm font-medium text-foreground">Décision de modération</p>
-          <ModerationForm courseId={courseId} publishable={publishable} />
+          <ModerationForm
+            key={currentStatus}
+            courseId={courseId}
+            currentStatus={currentStatus}
+            publishable={publishable}
+          />
         </div>
       </CardContent>
     </Card>
