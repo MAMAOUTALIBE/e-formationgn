@@ -59,12 +59,12 @@ export default async function VerifyEmailPage({ searchParams }: PageProps) {
         <Alert variant="destructive">
           <AlertDescription>
             {result.status === "expired"
-              ? "Ce lien de vérification a expiré. Veuillez recommencer l'inscription pour recevoir un nouvel email."
+              ? "Ce lien de vérification a expiré. Contactez le centre pour recevoir de nouvelles instructions."
               : "Ce lien est invalide ou a déjà été utilisé."}
           </AlertDescription>
         </Alert>
         <Button asChild className="w-full">
-          <Link href="/inscription">Recommencer l&apos;inscription</Link>
+          <Link href="/contact">Contacter le centre</Link>
         </Button>
       </CardContent>
     </Card>

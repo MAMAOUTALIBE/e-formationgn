@@ -106,15 +106,7 @@ export function MobileMenu({ isLoggedIn, role }: MobileMenuProps) {
                   >
                     Mon apprentissage
                   </DrawerLink>
-                ) : (
-                  <DrawerLink
-                    href="/devenir-formateur"
-                    active={pathname.startsWith("/devenir-formateur")}
-                    onClick={close}
-                  >
-                    Devenir formateur
-                  </DrawerLink>
-                )}
+                ) : null}
                 {isLoggedIn ? (
                   <>
                     <DrawerLink
@@ -172,8 +164,8 @@ export function MobileMenu({ isLoggedIn, role }: MobileMenuProps) {
                     asChild
                     className="bg-[color:var(--brand-mint)] text-[color:var(--neutral-900)] hover:bg-[color:var(--brand-mint-deep)]"
                   >
-                    <Link href="/inscription" onClick={close}>
-                      S&apos;inscrire
+                    <Link href="/contact" onClick={close}>
+                      Contacter le centre
                     </Link>
                   </Button>
                 </div>

@@ -46,11 +46,13 @@ Le script refuse de construire si le dépôt contient un changement non commité
 ou un fichier non suivi, si `HEAD` est détaché, ou si le commit courant n'est
 pas exactement celui publié sur `origin/<branche>`.
 
-`.env.deploy` doit définir explicitement `NEXT_PUBLIC_APP_URL` et
-`NEXT_PUBLIC_PLATFORM_MODE`. Si `VPS_SSH` est fourni, un préflight distant
-contrôle avant le build les variables runtime obligatoires, la correspondance
-du mode public/serveur, la paire Upstash et le secret Turnstile lorsque sa clé
-publique est activée. Les valeurs et secrets ne sont jamais affichés.
+`.env.deploy` doit définir explicitement `NEXT_PUBLIC_APP_URL`,
+`NEXT_PUBLIC_PLATFORM_MODE`, `NEXT_PUBLIC_SENTRY_DSN` et
+`NEXT_PUBLIC_TURNSTILE_SITE_KEY`. `VPS_SSH` est obligatoire : avant tout push,
+un préflight distant strict exige aussi `SENTRY_DSN`, la copie runtime du DSN
+public et la paire Turnstile complète (obligatoire en mode centre). Il contrôle
+la correspondance exacte des deux valeurs publiques build/runtime, le mode et
+la paire Upstash sans jamais afficher les valeurs.
 
 ### 2. VPS — pull + redémarrage
 
@@ -119,10 +121,9 @@ Le [docker-compose.yml](docker-compose.yml) du repo est la **source de vérité*
 - **Ne jamais supprimer** le dossier `/docker/e-formationgn/` ni le volume `eformationgn_db_data`.
 - Garde une **copie sûre du `.env`** (gestionnaire de mots de passe) — il a déjà été perdu une fois ; il a fallu le reconstruire depuis le conteneur.
 - Mot de passe Postgres : **hex uniquement** (`openssl rand -hex 24`). Un mot de passe base64 (caractères `+` `/`) casse le parseur de connexion `pg` au runtime (`28P01`), alors même que `prisma migrate deploy` l'accepte.
-- Sauvegarde DB recommandée (cron système sur le VPS) :
-  ```bash
-  docker exec eformationgn-db-1 pg_dump -U postgres postgres | gzip > efgn-$(date +%F).sql.gz
-  ```
+- Sauvegarde DB : utiliser le dépôt restic chiffré hors site et le drill isolé
+  décrits dans [DEPLOY.md](DEPLOY.md). Un dump stocké uniquement sur le VPS ne
+  constitue pas un plan de reprise.
 
 ---
 

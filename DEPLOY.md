@@ -182,28 +182,45 @@ docker compose up -d app
 # Les migrations Prisma s'appliquent au démarrage via docker-entrypoint.sh
 ```
 
-### Sauvegarde Postgres
+### Sauvegarde Postgres hors site et drill de restauration
+
+Les dumps laissés sur le VPS ne protègent pas contre la perte du serveur. Le
+script [backup-offsite.sh](scripts/backup-offsite.sh) envoie directement un dump
+custom PostgreSQL vers un dépôt **restic chiffré** distant. Il est non mutatif
+par défaut et n'écrit aucun secret :
+
+Pré-requis sur le VPS : installer `restic` et le client PostgreSQL fournissant
+`pg_restore` (paquet `postgresql-client` sous Debian/Ubuntu).
 
 ```bash
-# Dump quotidien (à mettre en cron système)
-docker compose exec -T db pg_dump -U eformationgn eformationgn \
-  | gzip > /var/backups/efgn-$(date +%F).sql.gz
-
-# Restauration
-gunzip < /var/backups/efgn-2026-01-15.sql.gz \
-  | docker compose exec -T db psql -U eformationgn eformationgn
+bash scripts/backup-offsite.sh --dry-run
+export RESTIC_REPOSITORY='s3:https://stockage.example.invalid/bucket/aiduca'
+export RESTIC_PASSWORD_FILE='/root/.config/restic/aiduca-password'
+bash scripts/backup-offsite.sh --execute
 ```
 
-Cron système suggéré dans `/etc/cron.daily/efgn-backup` :
+Le dépôt doit être distant : `s3:`, `sftp:`, `rclone:` ou `rest:https://`.
+Les chemins locaux, relatifs et `local:` sont refusés. Stocker le fichier de
+mot de passe hors du dépôt Git, mode `0600`, et tester l'accès avant de poser
+le cron. Exemple de cron :
+
+```cron
+15 2 * * * cd /docker/e-formationgn && /usr/bin/bash scripts/backup-offsite.sh --execute >>/var/log/aiduca-backup.log 2>&1
+```
+
+Une restauration ne doit jamais viser la base de production. Le drill exige
+une cible suffixée `_restore_drill` et une confirmation explicite :
 
 ```bash
-#!/bin/bash
-mkdir -p /var/backups/efgn
-cd /opt/e-formationgn/e-formationgn
-docker compose exec -T db pg_dump -U eformationgn eformationgn \
-  | gzip > /var/backups/efgn/efgn-$(date +%F).sql.gz
-find /var/backups/efgn -mtime +30 -delete
+bash scripts/restore-drill.sh --dry-run
+export RESTORE_DRILL_DB=aiduca_20260820_restore_drill
+export RESTORE_DRILL_CONFIRM=CREATE_ISOLATED_DATABASE
+bash scripts/restore-drill.sh --execute
 ```
+
+La base isolée est conservée pour inspection et n'est jamais supprimée par le
+script. Documenter date, snapshot, nombre de tables, résultat fonctionnel, RPO
+et RTO avant une suppression séparée et autorisée.
 
 ### Rotation des secrets
 
@@ -212,7 +229,8 @@ find /var/backups/efgn -mtime +30 -delete
 ### Monitoring
 
 - **Healthcheck** : Docker check toutes les 30 s sur `/api/health`
-- **Sentry** : si `SENTRY_DSN` est configuré, toutes les erreurs serveur remontent
+- **Sentry** : `SENTRY_DSN` et `NEXT_PUBLIC_SENTRY_DSN` sont obligatoires en
+  production ; toutes les erreurs serveur et client remontent
 - **UptimeRobot / BetterStack** (gratuit) : pointe sur `https://${DOMAIN}/api/health`, alerte SMS/email
 
 ## 9. Dépannage
@@ -222,7 +240,7 @@ find /var/backups/efgn -mtime +30 -delete
 | Caddy boucle sur le challenge ACME | DNS pas encore propagé | `dig +short ${DOMAIN}` et attendre |
 | `app` redémarre en boucle | Migration Prisma échoue | `docker compose logs app` puis `docker compose exec app npx prisma migrate status` |
 | 503 sur `/api/webhooks/stripe` | `STRIPE_SECRET_KEY` ou `STRIPE_WEBHOOK_SECRET` absent | Renseigne `.env` puis `docker compose up -d app` |
-| Emails non envoyés | `RESEND_API_KEY` absent | App fallback : log dans stdout. Voir `docker compose logs app \| grep email` |
+| Emails non envoyés | Configuration Resend invalide | Rechercher l'identifiant de corrélation dans Sentry ; aucun destinataire, sujet ou jeton n'est journalisé |
 | 401 sur `/api/cron/cleanup` | `CRON_SECRET` côté `app` ≠ celui du `cron` | Les deux conteneurs lisent la même var depuis `.env` — recrée les deux : `docker compose up -d app cron` |
 
 ## 10. Sécurité — checklist post-déploiement
@@ -235,7 +253,9 @@ find /var/backups/efgn -mtime +30 -delete
 - [ ] Rate-limit auth actif (login 10/15 min, register 5/h, reset 5/h par IP)
 - [ ] LoginAttempt logué en base, visible sur `/admin/securite/logs`
 - [ ] CSP en mode report-only (à durcir après 48h sans violation)
-- [ ] Backup DB quotidien configuré
+- [ ] Backup DB quotidien chiffré hors site configuré
+- [ ] Drill de restauration isolé réussi et RPO/RTO documentés
+- [ ] Sentry serveur/client et paire Turnstile configurés
 - [ ] DNS SPF + DKIM Resend validés
 - [ ] Compte admin créé et premier login OK
 - [ ] Stripe webhook test → événement reçu (`stripe trigger checkout.session.completed`)

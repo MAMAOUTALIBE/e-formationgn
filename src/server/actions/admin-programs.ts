@@ -8,7 +8,12 @@
 
 import { revalidatePath } from "next/cache";
 
+import { Prisma } from "@/generated/prisma/client";
 import { requireAnyAdminRole } from "@/lib/auth/authorization";
+import {
+  ACTIVE_PROGRAM_REQUIRES_COURSE,
+  canActivateProgram,
+} from "@/lib/domain/training-integrity";
 import { prisma } from "@/lib/prisma";
 import { programSchema, sessionSchema } from "@/lib/validators/program";
 import { createAuditLog } from "@/server/services/audit-log";
@@ -87,7 +92,12 @@ export async function createProgram(
     }
   }
 
-  const program = await prisma.program.create({ data: parsed.data });
+  // La composition n'est disponible qu'après la création. Un nouveau
+  // programme est donc toujours un brouillon, même si un client forgé envoie
+  // ACTIVE dans le formulaire.
+  const program = await prisma.program.create({
+    data: { ...parsed.data, status: "DRAFT" },
+  });
 
   await createAuditLog({
     actorId: actor.userId,
@@ -98,7 +108,11 @@ export async function createProgram(
   });
 
   revalidatePath("/admin/formations");
-  return { success: true, programId: program.id, message: "Programme de formation créé." };
+  return {
+    success: true,
+    programId: program.id,
+    message: "Programme de formation créé en brouillon. Ajoutez au moins un cours avant de l’activer.",
+  };
 }
 
 export async function updateProgram(
@@ -145,7 +159,31 @@ export async function updateProgram(
     }
   }
 
-  await prisma.program.update({ where: { id: programId }, data: parsed.data });
+  try {
+    await prisma.$transaction(
+      async (tx) => {
+        if (parsed.data.status === "ACTIVE") {
+          const courseCount = await tx.programCourse.count({ where: { programId } });
+          if (!canActivateProgram(courseCount)) throw new ActiveProgramWithoutCourseError();
+        }
+        await tx.program.update({ where: { id: programId }, data: parsed.data });
+      },
+      { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+    );
+  } catch (error) {
+    if (error instanceof ActiveProgramWithoutCourseError) {
+      return {
+        success: false,
+        message: ACTIVE_PROGRAM_REQUIRES_COURSE,
+        fieldErrors: { status: ACTIVE_PROGRAM_REQUIRES_COURSE },
+        values: raw,
+      };
+    }
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2034") {
+      return { success: false, message: "Modification concurrente détectée. Réessayez." };
+    }
+    throw error;
+  }
 
   await createAuditLog({
     actorId: actor.userId,
@@ -218,27 +256,61 @@ export async function removeCourseFromProgram(
     return { success: false, message: "Accès refusé." };
   }
 
-  const link = await prisma.programCourse.findUnique({
-    where: { programId_courseId: { programId, courseId } },
-    include: { course: { select: { title: true } } },
-  });
-  if (!link) return { success: false, message: "Cette formation ne fait pas partie du programme." };
+  let removed;
+  try {
+    removed = await prisma.$transaction(
+      async (tx) => {
+        const link = await tx.programCourse.findUnique({
+          where: { programId_courseId: { programId, courseId } },
+          include: {
+            course: { select: { title: true } },
+            program: { select: { status: true } },
+          },
+        });
+        if (!link) return { kind: "missing" as const };
 
-  await prisma.programCourse.delete({
-    where: { programId_courseId: { programId, courseId } },
-  });
+        if (link.program.status === "ACTIVE") {
+          const courseCount = await tx.programCourse.count({ where: { programId } });
+          if (!canActivateProgram(courseCount - 1)) return { kind: "last-active" as const };
+        }
+
+        await tx.programCourse.delete({
+          where: { programId_courseId: { programId, courseId } },
+        });
+        return { kind: "removed" as const, title: link.course.title };
+      },
+      { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+    );
+  } catch (error) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2034") {
+      return { success: false, message: "Modification concurrente détectée. Réessayez." };
+    }
+    throw error;
+  }
+
+  if (removed.kind === "missing") {
+    return { success: false, message: "Cette formation ne fait pas partie du programme." };
+  }
+  if (removed.kind === "last-active") {
+    return {
+      success: false,
+      message: `${ACTIVE_PROGRAM_REQUIRES_COURSE} Passez-le en brouillon avant de retirer son dernier cours.`,
+    };
+  }
 
   await createAuditLog({
     actorId: actor.userId,
     action: "program.course_remove",
     targetType: "Program",
     targetId: programId,
-    metadata: { course: link.course.title },
+    metadata: { course: removed.title },
   });
 
   revalidatePath(`/admin/formations/${programId}`);
-  return { success: true, programId, message: `« ${link.course.title} » retiré.` };
+  return { success: true, programId, message: `« ${removed.title} » retiré.` };
 }
+
+class ActiveProgramWithoutCourseError extends Error {}
 
 // ---------------------------------------------------------------------------
 // Sessions

@@ -111,8 +111,9 @@ API sensibles (`/api/admin/search`) : `Cache-Control: private, no-store, max-age
 - Stripe `accountId` / Mux secrets : jamais exposés au client
 - Cookies : HttpOnly + Secure (en prod, gérés par NextAuth)
 - IP : hashée (sha-256 + secret) avant stockage (`LoginAttempt.ipHash`)
-- LOG : Sentry route les erreurs serveur ; pas de mot de passe / secret
-  dans les payloads (vérifié manuellement)
+- LOG : le module email ne transmet à Sentry qu'une erreur générique et un
+  identifiant de corrélation aléatoire ; destinataire, sujet, corps et réponse
+  brute du fournisseur sont exclus
 
 ## Observabilité
 
@@ -134,13 +135,14 @@ API sensibles (`/api/admin/search`) : `Cache-Control: private, no-store, max-age
 
 ## CVE résiduelles connues
 
-`npm audit --omit=dev` : 7 CVE moderate dans la chaîne tooling
-(prisma → @prisma/dev → hono ; next → postcss). **Non exploitables
-en production** : ces packages servent au build (postcss) ou à Prisma
-Studio (hono), jamais dans le runtime servi au public. À résoudre quand
-les upstreams patcheront sans rupture API. Tracking :
-- `npm audit fix --force` proposerait des breaking changes (downgrades
-  Prisma 6, Next 9) — refusé.
+Au 2026-08-20, `npm audit --omit=dev` signale `deepmerge-ts@7.1.5` via
+`prisma -> @prisma/config`. Le correctif est une version majeure 8 hors plage
+déclarée par Prisma. Aucun override n'est forcé : cette chaîne sert à la CLI et
+à la lecture de configuration Prisma pendant build/migrations, elle n'est pas
+appelée par une requête HTTP du runtime Next.js. Risque accepté temporairement,
+à réévaluer à chaque mise à jour Prisma et au plus tard le 2026-09-20. Une
+résolution ne sera acceptée qu'avec lockfile reproductible puis `prisma
+validate`, typecheck, tests unitaires et build complets.
 
 ## Hardening recommandé (post-MVP)
 
@@ -152,7 +154,8 @@ les upstreams patcheront sans rupture API. Tracking :
   sans violation observée
 - [ ] **Rotate `NEXTAUTH_SECRET`** tous les 6-12 mois
   (déconnecte tous les utilisateurs — communiquer)
-- [ ] **Backup chiffré** des dumps Postgres (cf. cron Hostinger DEPLOY.md)
+- [ ] **Backup chiffré hors site** et drill de restauration trimestriel
+  (scripts et procédure dans DEPLOY.md)
 - [ ] **Rate-limit distribué** (Redis) si passage en multi-instance
 - [ ] **WAF** (Cloudflare ou Hostinger) pour bloquer les patterns
   d'injection au niveau edge

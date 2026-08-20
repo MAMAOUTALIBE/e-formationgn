@@ -22,10 +22,25 @@ export type LearningCourse = Prisma.CourseGetPayload<{
   include: typeof LEARNING_COURSE_INCLUDE;
 }>;
 
+interface LearningEnrollmentSummary {
+  id: string;
+  enrolledAt: Date;
+  completedAt: Date | null;
+  user: {
+    name: string | null;
+    firstName: string | null;
+    lastName: string | null;
+  };
+}
+
 export async function getLearningCourse(
   userId: string,
   slug: string,
-): Promise<{ course: LearningCourse; enrollmentId: string } | null> {
+): Promise<{
+  course: LearningCourse;
+  enrollmentId: string;
+  enrollment: LearningEnrollmentSummary;
+} | null> {
   const course = await prisma.course.findUnique({
     where: { slug },
     include: LEARNING_COURSE_INCLUDE,
@@ -33,10 +48,21 @@ export async function getLearningCourse(
   if (!course) return null;
   const enrollment = await prisma.enrollment.findUnique({
     where: { userId_courseId: { userId, courseId: course.id } },
-    select: { id: true },
+    select: {
+      id: true,
+      enrolledAt: true,
+      completedAt: true,
+      user: {
+        select: { name: true, firstName: true, lastName: true },
+      },
+    },
   });
   if (!enrollment) return null;
-  return { course: course as LearningCourse, enrollmentId: enrollment.id };
+  return {
+    course: course as LearningCourse,
+    enrollmentId: enrollment.id,
+    enrollment,
+  };
 }
 
 export async function getLessonProgress(userId: string, courseId: string) {

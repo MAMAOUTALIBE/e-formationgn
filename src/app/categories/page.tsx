@@ -9,8 +9,13 @@ import { listCategories } from "@/server/queries/categories";
 
 export const metadata: Metadata = {
   title: "Catégories",
-  description: "Toutes les catégories de formations sur Aiduca.",
+  description: "Explorez les domaines de formation professionnelle proposés par Aiduca.",
   alternates: { canonical: "/categories" },
+  openGraph: {
+    url: "/categories",
+    title: "Catégories de formations · Aiduca",
+    description: "Explorez les domaines de formation professionnelle proposés par Aiduca.",
+  },
 };
 
 // Les catégories peuvent évoluer (admin, nouveaux cours) — on rend la page

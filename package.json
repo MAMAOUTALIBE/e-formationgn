@@ -9,7 +9,7 @@
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
     "test:unit": "tsx --test tests/unit/*.test.ts",
-    "test:scripts": "bash tests/scripts/validate-production-env.sh",
+    "test:scripts": "bash tests/scripts/validate-production-env.sh && bash tests/scripts/backup-restore-safety.sh",
     "test:e2e": "playwright test",
     "test:e2e:install": "playwright install --with-deps chromium",
     "db:seed": "tsx prisma/seed.ts",

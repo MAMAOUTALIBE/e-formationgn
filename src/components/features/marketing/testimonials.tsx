@@ -41,7 +41,7 @@ const TESTIMONIALS: Testimonial[] = [
     role: "Designer UI · Abidjan",
     rating: 5,
     quote:
-      "Enfin une plateforme francophone de qualité ! L'accès illimité aux formations et le certificat à la fin font vraiment la différence sur mon CV. Je recommande à 100 %.",
+      "Enfin une plateforme francophone de qualité ! Le suivi clair des formations et l’attestation de fin de formation font vraiment la différence sur mon CV. Je recommande à 100 %.",
   },
 ];
 

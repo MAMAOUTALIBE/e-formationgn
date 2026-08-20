@@ -1,16 +1,19 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { Award, BookOpenText } from "lucide-react";
+import { Award, BookOpenText, Download } from "lucide-react";
 
 import { auth } from "@/auth";
 import { LessonSidebar } from "@/components/features/learning/lesson-sidebar";
+import { CertificatePreview } from "@/components/features/learning/certificate-preview";
 import { AccountShell } from "@/components/features/workspace/account-shell";
 import { Badge } from "@/components/ui/badge";
 import { Breadcrumbs } from "@/components/ui/breadcrumbs";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Container } from "@/components/ui/container";
+import { getAiducaTrainingLocation } from "@/lib/certificate-template";
+import { formatDurationFromSeconds } from "@/lib/format/duration";
 import {
   computeCourseProgress,
   getCertificateForUser,
@@ -39,7 +42,7 @@ export default async function CourseLearningPage({ params }: PageProps) {
     redirect(`/cours/${slug}`);
   }
 
-  const { course } = data;
+  const { course, enrollment } = data;
   const [progressList, stats, certificate] = await Promise.all([
     getLessonProgress(session.user.id, course.id),
     computeCourseProgress(session.user.id, course.id),
@@ -52,6 +55,23 @@ export default async function CourseLearningPage({ params }: PageProps) {
   const firstLesson = course.sections[0]?.lessons[0];
   const nextLesson = findNextLesson(course.sections, completedIds);
   const completed = stats.progressPercent === 100;
+  const recipientName =
+    enrollment.user.name ??
+    ([enrollment.user.firstName, enrollment.user.lastName].filter(Boolean).join(" ") ||
+      "Stagiaire");
+  const certificateDate = certificate?.issuedAt ?? enrollment.completedAt ?? new Date();
+  const certificateData = {
+    recipientName,
+    courseTitle: course.title,
+    durationLabel: course.durationSeconds
+      ? formatDurationFromSeconds(course.durationSeconds)
+      : "Non renseignée",
+    startDate: enrollment.enrolledAt,
+    endDate: enrollment.completedAt ?? certificateDate,
+    issuedAt: certificateDate,
+    trainingLocation: getAiducaTrainingLocation(),
+    serialNumber: certificate?.serialNumber,
+  };
 
   // Coquille appliquée ICI et non par un layout : un layout couvrirait
   // aussi le lecteur de leçon, qui est immersif et porte déjà sa propre
@@ -105,7 +125,7 @@ export default async function CourseLearningPage({ params }: PageProps) {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-base">
                   <Award className="h-5 w-5 text-[color:var(--brand-warning)]" />
-                  Certificat
+                  Attestation
                 </CardTitle>
                 <CardDescription>
                   Disponible une fois toutes les leçons terminées.
@@ -114,12 +134,13 @@ export default async function CourseLearningPage({ params }: PageProps) {
               <CardContent className="space-y-3 text-sm">
                 {certificate ? (
                   <>
-                    <Badge variant="success">Certificat émis</Badge>
+                    <Badge variant="success">Attestation générée</Badge>
                     <p className="text-xs text-muted-foreground">
                       Référence : <code>{certificate.serialNumber}</code>
                     </p>
                     <Button asChild className="w-full" variant="outline">
-                      <Link href={`/api/certificats/${certificate.serialNumber}`}>
+                      <Link href={`/api/certificats/${certificate.serialNumber}`} download>
+                        <Download className="h-4 w-4" aria-hidden />
                         Télécharger le PDF
                       </Link>
                     </Button>
@@ -130,12 +151,12 @@ export default async function CourseLearningPage({ params }: PageProps) {
                       "use server";
                       const result = await issueCertificate(course.id);
                       if (result.success && result.serialNumber) {
-                        redirect(`/api/certificats/${result.serialNumber}`);
+                        redirect(`/apprentissage/${course.slug}`);
                       }
                     }}
                   >
                     <Button type="submit" className="w-full">
-                      Générer mon attestation
+                      Générer l’attestation
                     </Button>
                   </form>
                 ) : (
@@ -147,6 +168,30 @@ export default async function CourseLearningPage({ params }: PageProps) {
               </CardContent>
             </Card>
           </header>
+
+          {completed ? (
+            <section className="space-y-3" aria-labelledby="certificate-preview-title">
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+                <div>
+                  <h2 id="certificate-preview-title" className="text-lg font-semibold text-foreground">
+                    Aperçu de l’attestation
+                  </h2>
+                  <p className="text-sm text-muted-foreground">
+                    Format A4 paysage · les informations sont remplies automatiquement.
+                  </p>
+                </div>
+                {certificate ? (
+                  <Button asChild>
+                    <Link href={`/api/certificats/${certificate.serialNumber}`} download>
+                      <Download className="h-4 w-4" aria-hidden />
+                      Télécharger en PDF
+                    </Link>
+                  </Button>
+                ) : null}
+              </div>
+              <CertificatePreview data={certificateData} showModel={!certificate} />
+            </section>
+          ) : null}
 
           <div className="grid gap-6 lg:grid-cols-[280px_1fr]">
             <aside className="rounded-lg border border-border bg-card p-4">

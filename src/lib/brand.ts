@@ -1,7 +1,7 @@
 export const BRAND = {
   name: "Aiduca",
   legalName: "AIDUCA",
-  tagline: "Les formations qualifiantes pour les professionnels du bâtiment",
+  tagline: "Des formations professionnelles pour développer vos compétences",
   email: "info@aiduca.fr",
   phone: "01 58 42 38 30",
   mobile: "06 77 89 41 89",

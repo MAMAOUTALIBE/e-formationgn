@@ -1,254 +1,237 @@
-// Génère une attestation PDF brandée Aiduca avec pdf-lib.
-// Format A4 paysage, palette corporate. Pas d'image hébergée externe pour
-// éviter les dépendances réseau au moment de la génération.
+import {
+  PDFDocument,
+  type PDFFont,
+  type PDFImage,
+  type PDFPage,
+  rgb,
+  StandardFonts,
+} from "pdf-lib";
 
-import { PDFDocument, rgb, StandardFonts } from "pdf-lib";
 import { BRAND } from "@/lib/brand";
+import {
+  type CertificateTemplateData,
+  formatCertificateDate,
+} from "@/lib/certificate-template";
 
-const BRAND_PRIMARY = rgb(30 / 255, 58 / 255, 138 / 255);
-const BRAND_SECONDARY = rgb(37 / 255, 99 / 255, 235 / 255);
-const BRAND_ACCENT = rgb(14 / 255, 165 / 255, 233 / 255);
-const TEXT = rgb(15 / 255, 23 / 255, 42 / 255);
-const MUTED = rgb(71 / 255, 85 / 255, 105 / 255);
-
-interface CertificateParams {
-  recipientName: string;
-  courseTitle: string;
-  instructorName: string;
-  serialNumber: string;
-  issuedAt: Date;
-  durationLabel?: string;
-}
-
-const dateFormatter = new Intl.DateTimeFormat("fr-FR", {
-  day: "numeric",
-  month: "long",
-  year: "numeric",
-});
+const GREEN = rgb(11 / 255, 74 / 255, 45 / 255);
+const GOLD = rgb(184 / 255, 134 / 255, 27 / 255);
+const TEXT = rgb(21 / 255, 21 / 255, 21 / 255);
+const WHITE = rgb(1, 254 / 255, 251 / 255);
 
 export async function generateCertificatePdf(
-  params: CertificateParams,
+  params: CertificateTemplateData,
 ): Promise<Uint8Array> {
   const pdf = await PDFDocument.create();
   pdf.setTitle(`Attestation Aiduca — ${params.courseTitle}`);
-  pdf.setAuthor("AIDUCA");
-  pdf.setProducer("AIDUCA");
-  pdf.setCreator("AIDUCA");
+  pdf.setAuthor(BRAND.legalName);
+  pdf.setProducer(BRAND.legalName);
+  pdf.setCreator(BRAND.legalName);
+  pdf.setSubject(
+    `Attestation de fin de formation · Qualiopi ${BRAND.qualiopiCertificate} · NDA ${BRAND.activityDeclaration}`,
+  );
 
-  // A4 paysage : 842 × 595 pt
-  const page = pdf.addPage([842, 595]);
+  // A4 paysage. La mention « MODÈLE » n'est volontairement jamais dessinée
+  // dans ce document définitif.
+  const page = pdf.addPage([841.89, 595.28]);
   const { width, height } = page.getSize();
+  const sans = await pdf.embedFont(StandardFonts.Helvetica);
+  const bold = await pdf.embedFont(StandardFonts.HelveticaBold);
+  const serif = await pdf.embedFont(StandardFonts.TimesRoman);
+  const serifBold = await pdf.embedFont(StandardFonts.TimesRomanBold);
+  const logo = await loadLogo(pdf);
 
-  const helvetica = await pdf.embedFont(StandardFonts.Helvetica);
-  const helveticaBold = await pdf.embedFont(StandardFonts.HelveticaBold);
-  const helveticaOblique = await pdf.embedFont(StandardFonts.HelveticaOblique);
+  page.drawRectangle({ x: 0, y: 0, width, height, color: WHITE });
+  drawFrames(page, width, height);
+  drawCorners(page, serif, width, height);
 
-  // Cadre extérieur
-  page.drawRectangle({
-    x: 24,
-    y: 24,
-    width: width - 48,
-    height: height - 48,
-    borderColor: BRAND_PRIMARY,
-    borderWidth: 2,
-  });
-  page.drawRectangle({
-    x: 32,
-    y: 32,
-    width: width - 64,
-    height: height - 64,
-    borderColor: BRAND_ACCENT,
-    borderWidth: 0.6,
-  });
-
-  // Bandeau supérieur
-  page.drawRectangle({
-    x: 32,
-    y: height - 100,
-    width: width - 64,
-    height: 60,
-    color: BRAND_PRIMARY,
-  });
-
-  page.drawText("AIDUCA", {
-    x: 56,
-    y: height - 80,
-    size: 22,
-    font: helveticaBold,
-    color: rgb(1, 1, 1),
-  });
-  page.drawText("Attestation de fin de formation", {
-    x: 56,
-    y: height - 96,
-    size: 11,
-    font: helvetica,
-    color: rgb(0.85, 0.92, 1),
-  });
-
-  // Numéro de série (haut droit)
-  page.drawText(`Référence : ${params.serialNumber}`, {
-    x: width - 220,
-    y: height - 76,
-    size: 9,
-    font: helvetica,
-    color: rgb(0.85, 0.92, 1),
-  });
-  page.drawText(`Émis le ${dateFormatter.format(params.issuedAt)}`, {
-    x: width - 220,
-    y: height - 92,
-    size: 9,
-    font: helvetica,
-    color: rgb(0.85, 0.92, 1),
-  });
-
-  // Titre principal
-  drawCenteredText(
-    page,
-    "Attestation délivrée à",
-    helvetica,
-    14,
-    height - 160,
-    width,
-    MUTED,
-  );
-
-  drawCenteredText(
-    page,
-    params.recipientName,
-    helveticaBold,
-    36,
-    height - 220,
-    width,
-    TEXT,
-  );
-
-  // Sous-ligne
-  page.drawLine({
-    start: { x: width / 2 - 200, y: height - 235 },
-    end: { x: width / 2 + 200, y: height - 235 },
-    thickness: 1,
-    color: BRAND_SECONDARY,
-  });
-
-  drawCenteredText(
-    page,
-    "pour avoir suivi avec succès la formation",
-    helvetica,
-    14,
-    height - 270,
-    width,
-    MUTED,
-  );
-
-  drawCenteredText(
-    page,
-    `« ${params.courseTitle} »`,
-    helveticaBold,
-    22,
-    height - 320,
-    width,
-    BRAND_PRIMARY,
-  );
-
-  if (params.durationLabel) {
-    drawCenteredText(
-      page,
-      `Durée totale : ${params.durationLabel}`,
-      helvetica,
-      11,
-      height - 350,
-      width,
-      MUTED,
-    );
+  if (logo) {
+    page.drawImage(logo, { x: width / 2 - 48, y: height - 101, width: 96, height: 68 });
+    page.drawImage(logo, {
+      x: width / 2 - 195,
+      y: 155,
+      width: 390,
+      height: 277,
+      opacity: 0.035,
+    });
+  } else {
+    drawCentered(page, BRAND.name, bold, 25, height - 66, width, GREEN);
   }
 
-  drawCenteredText(
-    page,
-    "dispensé par",
-    helvetica,
-    11,
-    height - 380,
-    width,
-    MUTED,
-  );
+  drawCentered(page, "ATTESTATION DE FIN DE FORMATION", serif, 29, height - 132, width, GREEN);
+  drawTitleOrnament(page, width, height - 151);
 
-  drawCenteredText(
+  let y = height - 178;
+  drawCentered(page, "L'Institut AIDUCA atteste que", sans, 13, y, width, TEXT);
+  y -= 24;
+  drawMixedCentered(page, "M./Mme : ", params.recipientName, sans, bold, 13, y, width);
+  y -= 28;
+  drawCentered(page, "a suivi avec assiduité la formation :", sans, 13, y, width, TEXT);
+  y -= 26;
+  y = drawWrappedCentered(
     page,
-    params.instructorName,
-    helveticaOblique,
+    `« ${params.courseTitle.toLocaleUpperCase("fr-FR")} »`,
+    serifBold,
     16,
-    height - 405,
+    y,
+    width,
+    650,
+    GREEN,
+    20,
+  );
+  y -= 4;
+  drawCentered(page, `Durée : ${params.durationLabel}`, sans, 12, y, width, TEXT);
+  y -= 20;
+  drawCentered(
+    page,
+    `Du : ${formatCertificateDate(params.startDate)} au : ${formatCertificateDate(params.endDate)}`,
+    sans,
+    12,
+    y,
+    width,
+    TEXT,
+  );
+  y -= 19;
+  drawCentered(page, `Lieu : ${params.trainingLocation}`, sans, 12, y, width, TEXT);
+  y -= 28;
+  drawCentered(
+    page,
+    `Fait à Montrouge, le ${formatCertificateDate(params.issuedAt)}`,
+    sans,
+    12,
+    y,
     width,
     TEXT,
   );
 
-  // Pied : signature & vérification
-  page.drawLine({
-    start: { x: 80, y: 130 },
-    end: { x: 280, y: 130 },
-    thickness: 0.7,
-    color: MUTED,
-  });
-  page.drawText("Signature de l'équipe AIDUCA", {
-    x: 80,
-    y: 115,
-    size: 9,
-    font: helvetica,
-    color: MUTED,
-  });
-  page.drawText("AIDUCA — Organisme de formation certifié Qualiopi", {
-    x: 80,
-    y: 100,
-    size: 9,
-    font: helvetica,
-    color: MUTED,
-  });
+  drawSignatures(page, sans, serif, width);
+  drawFooter(page, sans, bold, width);
 
-  page.drawText("NDA 11922091192 · SIREN 523 611 523 · Qualiopi FP 2020/0005-6", {
-    x: 80,
-    y: 84,
-    size: 8,
-    font: helvetica,
-    color: MUTED,
-  });
-
-  page.drawText(
-    `Vérifiez l'authenticité : ${process.env.NEXT_PUBLIC_APP_URL ?? BRAND.website}/certificat/${params.serialNumber}`,
-    {
-      x: width - 460,
-      y: 100,
-      size: 9,
-      font: helvetica,
-      color: MUTED,
-    },
-  );
-
-  page.drawText(`91 avenue Aristide Briand, 92120 Montrouge · info@aiduca.fr · valide Qualiopi jusqu'au 20/10/2027`, {
-    x: 80,
-    y: 68,
-    size: 7.5,
-    font: helvetica,
-    color: MUTED,
-  });
+  if (params.serialNumber) {
+    page.drawText(`Réf. ${params.serialNumber}`, {
+      x: width - 140,
+      y: 27,
+      size: 6,
+      font: sans,
+      color: rgb(75 / 255, 85 / 255, 99 / 255),
+    });
+  }
 
   return pdf.save();
 }
 
-function drawCenteredText(
-  page: ReturnType<PDFDocument["addPage"]>,
+async function loadLogo(pdf: PDFDocument): Promise<PDFImage | null> {
+  try {
+    const response = await fetch(BRAND.logoUrl, { cache: "force-cache" });
+    if (!response.ok) return null;
+    return await pdf.embedPng(await response.arrayBuffer());
+  } catch {
+    return null;
+  }
+}
+
+function drawFrames(page: PDFPage, width: number, height: number) {
+  page.drawRectangle({ x: 10, y: 10, width: width - 20, height: height - 20, borderColor: GREEN, borderWidth: 2 });
+  page.drawRectangle({ x: 16, y: 16, width: width - 32, height: height - 32, borderColor: GOLD, borderWidth: 0.8 });
+  page.drawRectangle({ x: 20, y: 20, width: width - 40, height: height - 40, borderColor: GREEN, borderWidth: 0.55 });
+}
+
+function drawCorners(page: PDFPage, font: PDFFont, width: number, height: number) {
+  for (const position of [
+    { x: 24, y: height - 54 },
+    { x: width - 50, y: height - 54 },
+    { x: 24, y: 28 },
+    { x: width - 50, y: 28 },
+  ]) {
+    page.drawText("*", { ...position, size: 28, font, color: GREEN });
+  }
+}
+
+function drawTitleOrnament(page: PDFPage, width: number, y: number) {
+  page.drawLine({ start: { x: 125, y }, end: { x: width / 2 - 26, y }, thickness: 0.6, color: GOLD });
+  page.drawCircle({ x: width / 2, y, size: 2.5, color: GOLD });
+  page.drawLine({ start: { x: width / 2 + 26, y }, end: { x: width - 125, y }, thickness: 0.6, color: GOLD });
+}
+
+function drawSignatures(page: PDFPage, sans: PDFFont, serif: PDFFont, width: number) {
+  page.drawText("Le responsable de formation", { x: 110, y: 103, size: 10, font: sans, color: TEXT });
+  page.drawLine({ start: { x: 95, y: 72 }, end: { x: 285, y: 72 }, thickness: 0.65, color: GOLD });
+  drawCentered(page, "*", serif, 43, 65, width, GOLD);
+  page.drawText("Signature du stagiaire", { x: width - 260, y: 103, size: 10, font: sans, color: TEXT });
+  page.drawLine({ start: { x: width - 285, y: 72 }, end: { x: width - 95, y: 72 }, thickness: 0.65, color: GOLD });
+}
+
+function drawFooter(page: PDFPage, sans: PDFFont, bold: PDFFont, width: number) {
+  page.drawLine({ start: { x: 84, y: 47 }, end: { x: width - 84, y: 47 }, thickness: 0.65, color: GREEN });
+  drawCentered(page, `Institut AIDUCA — ${BRAND.address}`, sans, 7.5, 35, width, TEXT);
+  drawCentered(
+    page,
+    `${BRAND.phone} • ${BRAND.mobile} • ${BRAND.email} • www.aiduca.fr`,
+    bold,
+    7.5,
+    24,
+    width,
+    GREEN,
+  );
+}
+
+function drawMixedCentered(
+  page: PDFPage,
+  prefix: string,
+  emphasized: string,
+  regular: PDFFont,
+  bold: PDFFont,
+  size: number,
+  y: number,
+  pageWidth: number,
+) {
+  const totalWidth = regular.widthOfTextAtSize(prefix, size) + bold.widthOfTextAtSize(emphasized, size);
+  const x = (pageWidth - totalWidth) / 2;
+  page.drawText(prefix, { x, y, size, font: regular, color: TEXT });
+  page.drawText(emphasized, {
+    x: x + regular.widthOfTextAtSize(prefix, size), y, size, font: bold, color: GREEN,
+  });
+}
+
+function drawWrappedCentered(
+  page: PDFPage,
   text: string,
-  font: ReturnType<PDFDocument["embedFont"]> extends Promise<infer F> ? F : never,
+  font: PDFFont,
+  size: number,
+  y: number,
+  pageWidth: number,
+  maxWidth: number,
+  color: ReturnType<typeof rgb>,
+  lineHeight: number,
+): number {
+  const words = text.split(/\s+/);
+  const lines: string[] = [];
+  let current = "";
+  for (const word of words) {
+    const candidate = current ? `${current} ${word}` : word;
+    if (current && font.widthOfTextAtSize(candidate, size) > maxWidth) {
+      lines.push(current);
+      current = word;
+    } else {
+      current = candidate;
+    }
+  }
+  if (current) lines.push(current);
+  for (const line of lines.slice(0, 2)) {
+    drawCentered(page, line, font, size, y, pageWidth, color);
+    y -= lineHeight;
+  }
+  return y;
+}
+
+function drawCentered(
+  page: PDFPage,
+  text: string,
+  font: PDFFont,
   size: number,
   y: number,
   pageWidth: number,
   color: ReturnType<typeof rgb>,
 ) {
-  const width = font.widthOfTextAtSize(text, size);
-  page.drawText(text, {
-    x: (pageWidth - width) / 2,
-    y,
-    size,
-    font,
-    color,
-  });
+  const textWidth = font.widthOfTextAtSize(text, size);
+  page.drawText(text, { x: (pageWidth - textWidth) / 2, y, size, font, color });
 }

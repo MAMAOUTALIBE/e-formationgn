@@ -61,6 +61,7 @@ services:
   # -------- Cron sidecar --------
   # Tâches planifiées, toutes protégées par le Bearer CRON_SECRET (les routes
   # renvoient 401 sans). CRON_SECRET DOIT être présent dans le .env du VPS.
+  # En mode marketplace uniquement :
   #   - process-webhooks (10 min) : rejoue les webhooks PSP non traités
   #   - reconcile-orders (15 min) : réconcilie les commandes PENDING (webhook
   #     perdu/tardif → l'élève a payé mais n'a pas accès → corrigé ici)
@@ -70,12 +71,15 @@ services:
     restart: unless-stopped
     environment:
       CRON_SECRET: ${CRON_SECRET}
+      PLATFORM_MODE: ${PLATFORM_MODE}
     command: >
       sh -c "
         apk add --no-cache curl tini >/dev/null;
         {
-          echo '*/10 * * * * curl -fsS -H \"Authorization: Bearer $$CRON_SECRET\" http://app:3000/api/cron/process-webhooks >/proc/1/fd/1 2>/proc/1/fd/2';
-          echo '*/15 * * * * curl -fsS -H \"Authorization: Bearer $$CRON_SECRET\" http://app:3000/api/cron/reconcile-orders >/proc/1/fd/1 2>/proc/1/fd/2';
+          if [ \"$$PLATFORM_MODE\" = 'marketplace' ]; then
+            echo '*/10 * * * * curl -fsS -H \"Authorization: Bearer $$CRON_SECRET\" http://app:3000/api/cron/process-webhooks >/proc/1/fd/1 2>/proc/1/fd/2';
+            echo '*/15 * * * * curl -fsS -H \"Authorization: Bearer $$CRON_SECRET\" http://app:3000/api/cron/reconcile-orders >/proc/1/fd/1 2>/proc/1/fd/2';
+          fi;
           echo '0 3 * * * curl -fsS -H \"Authorization: Bearer $$CRON_SECRET\" http://app:3000/api/cron/cleanup >/proc/1/fd/1 2>/proc/1/fd/2';
         } > /etc/crontabs/root;
         exec /sbin/tini -- crond -f -d 8

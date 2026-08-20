@@ -6,12 +6,11 @@ import {
   Award,
   Clock,
   GraduationCap,
-  Infinity as InfinityIcon,
+  ChartNoAxesCombined,
   Languages,
   PlayCircle,
-  Plus,
   Search,
-  Smartphone,
+  MonitorSmartphone,
 } from "lucide-react";
 import Link from "next/link";
 
@@ -30,7 +29,7 @@ const STEPS = [
   {
     icon: PlayCircle,
     title: "Apprenez à votre rythme",
-    text: "Vidéos, quiz et ressources accessibles à vie, sur ordinateur comme sur mobile.",
+    text: "Vidéos, quiz et ressources accessibles selon votre parcours, sur ordinateur comme sur mobile.",
   },
   {
     icon: Award,
@@ -81,8 +80,8 @@ export function HowItWorks() {
 const PERKS = [
   { icon: Award, title: "Attestation à la clé", text: "Valorisez le suivi de votre formation avec une attestation Aiduca." },
   { icon: Languages, title: "100% francophone", text: "Des formateurs et un contenu en français." },
-  { icon: InfinityIcon, title: "Accès à vie", text: "Revenez sur vos formations quand vous voulez." },
-  { icon: Smartphone, title: "Paiement Mobile Money", text: "Orange Money, MTN, Moov — et carte bancaire." },
+  { icon: ChartNoAxesCombined, title: "Progression suivie", text: "Retrouvez votre avancement dans chaque formation attribuée." },
+  { icon: MonitorSmartphone, title: "Accessible partout", text: "Suivez vos formations sur ordinateur, tablette ou mobile." },
   { icon: GraduationCap, title: "Formateurs experts", text: "Apprenez auprès de professionnels confirmés." },
   { icon: Clock, title: "À votre rythme", text: "Apprenez où et quand vous le souhaitez." },
 ];
@@ -186,19 +185,6 @@ export function FeaturedInstructors({
             );
           })}
 
-          {/* Carte CTA : devenir formateur */}
-          <Link
-            href="/devenir-formateur"
-            className="flex h-full flex-col items-center justify-center rounded-xl border border-dashed border-[color:var(--brand-secondary)]/40 bg-[color:var(--brand-secondary)]/5 p-5 text-center transition-colors hover:bg-[color:var(--brand-secondary)]/10"
-          >
-            <span className="inline-flex h-[72px] w-[72px] items-center justify-center rounded-full bg-[color:var(--brand-secondary)]/10 text-[color:var(--brand-secondary)]">
-              <Plus className="h-7 w-7" aria-hidden />
-            </span>
-            <p className="mt-3 font-semibold text-foreground">Et vous ?</p>
-            <p className="mt-0.5 text-xs text-muted-foreground">
-              Partagez votre expertise — devenez formateur.
-            </p>
-          </Link>
         </div>
       </Container>
     </section>

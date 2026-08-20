@@ -28,11 +28,11 @@ const SITE_URL = process.env.NEXT_PUBLIC_APP_URL ?? BRAND.website;
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   title: {
-    default: "Aiduca — Formations qualifiantes pour les professionnels du bâtiment",
+    default: "Aiduca — Formations professionnelles en ligne",
     template: "%s · Aiduca",
   },
   description:
-    "Aiduca accompagne les professionnels du bâtiment avec des formations qualifiantes, opérationnelles et certifiées Qualiopi.",
+    "Aiduca propose des formations professionnelles en ligne pour développer vos compétences, avec un suivi pédagogique structuré.",
   applicationName: "Aiduca",
   authors: [{ name: "Aiduca" }],
   keywords: [
@@ -63,14 +63,14 @@ export const metadata: Metadata = {
     alternateLocale: ["fr_BE", "fr_CA", "fr_CI", "fr_SN"],
     url: SITE_URL,
     siteName: "Aiduca",
-    title: "Aiduca — Formations qualifiantes pour les professionnels du bâtiment",
+    title: "Aiduca — Formations professionnelles en ligne",
     description:
       "Développez vos compétences avec les formations qualifiantes Aiduca, organisme certifié Qualiopi.",
     images: [{ url: "/api/og", width: 1200, height: 630, alt: "Aiduca" }],
   },
   twitter: {
     card: "summary_large_image",
-    title: "Aiduca — Formations qualifiantes pour les professionnels du bâtiment",
+    title: "Aiduca — Formations professionnelles en ligne",
     description:
       "Développez vos compétences avec les formations qualifiantes Aiduca, organisme certifié Qualiopi.",
     images: ["/api/og"],

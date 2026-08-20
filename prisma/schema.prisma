@@ -991,6 +991,7 @@ model Certificate {
   issuedAt     DateTime   @default(now())
   pdfUrl       String?
 
+  @@unique([userId, courseId])
   @@index([userId])
   @@index([courseId])
 }

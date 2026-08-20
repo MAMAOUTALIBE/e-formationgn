@@ -5,6 +5,7 @@
 import { NextResponse } from "next/server";
 
 import { auth } from "@/auth";
+import { getAiducaTrainingLocation } from "@/lib/certificate-template";
 import { generateCertificatePdf } from "@/lib/pdf-certificate";
 import { formatDurationFromSeconds } from "@/lib/format/duration";
 import { prisma } from "@/lib/prisma";
@@ -23,9 +24,6 @@ export async function GET(_request: Request, context: RouteContext) {
         select: {
           title: true,
           durationSeconds: true,
-          instructor: {
-            select: { name: true, firstName: true, lastName: true },
-          },
         },
       },
     },
@@ -44,20 +42,29 @@ export async function GET(_request: Request, context: RouteContext) {
     (`${certificate.user.firstName ?? ""} ${certificate.user.lastName ?? ""}`.trim() ||
       "Apprenant·e");
 
-  const instructorName =
-    certificate.course.instructor.name ??
-    (`${certificate.course.instructor.firstName ?? ""} ${certificate.course.instructor.lastName ?? ""}`.trim() ||
-      "Formateur");
+  const enrollment = await prisma.enrollment.findUnique({
+    where: {
+      userId_courseId: {
+        userId: certificate.userId,
+        courseId: certificate.courseId,
+      },
+    },
+    select: { enrolledAt: true, completedAt: true },
+  });
+
+  const endDate = enrollment?.completedAt ?? certificate.issuedAt;
 
   const pdf = await generateCertificatePdf({
     recipientName,
     courseTitle: certificate.course.title,
-    instructorName,
     serialNumber: certificate.serialNumber,
     issuedAt: certificate.issuedAt,
+    startDate: enrollment?.enrolledAt ?? certificate.issuedAt,
+    endDate,
+    trainingLocation: getAiducaTrainingLocation(),
     durationLabel: certificate.course.durationSeconds
       ? formatDurationFromSeconds(certificate.course.durationSeconds)
-      : undefined,
+      : "Non renseignée",
   });
 
   return new NextResponse(pdf as unknown as BodyInit, {

@@ -1,8 +1,9 @@
-// Wrapper Resend — fournit un client unique et un mode "dev fallback".
-// Si RESEND_API_KEY n'est pas défini, les emails sont logués sur stdout
-// (utile en local pour suivre le lien de vérification sans configurer Resend).
+// Wrapper Resend — fournit un client unique.
+// Les contenus transactionnels contiennent parfois des jetons à usage unique :
+// ils ne doivent donc jamais être écrits dans les journaux, même en local.
 
 import { Resend } from "resend";
+import { randomUUID } from "node:crypto";
 
 import { logError } from "@/lib/logger";
 
@@ -14,8 +15,7 @@ interface SendEmailParams {
 }
 
 const apiKey = process.env.RESEND_API_KEY;
-const fromEmail =
-  process.env.RESEND_FROM_EMAIL ?? "Aiduca <onboarding@resend.dev>";
+const fromEmail = process.env.RESEND_FROM_EMAIL ?? "onboarding@resend.dev";
 
 let resendClient: Resend | null = null;
 function getResend(): Resend | null {
@@ -24,39 +24,45 @@ function getResend(): Resend | null {
   return resendClient;
 }
 
+export function isTransactionalEmailConfigured(): boolean {
+  return Boolean(apiKey);
+}
+
 export async function sendTransactionalEmail(
   params: SendEmailParams,
 ): Promise<{ ok: true } | { ok: false; error: string }> {
   const client = getResend();
+  const correlationId = randomUUID();
 
   if (!client) {
-    // Mode développement : on log au lieu d'envoyer
-    console.warn(
-      `\n[email] RESEND_API_KEY absent — email NON envoyé (mode dev).\n` +
-        `  À : ${params.to}\n` +
-        `  Sujet : ${params.subject}\n` +
-        `  --- Contenu texte ---\n${params.text}\n` +
-        `  ---\n`,
-    );
-    return { ok: true };
+    console.warn("[email] Fournisseur transactionnel non configuré ; email non envoyé.");
+    return { ok: false, error: "Fournisseur email non configuré." };
   }
 
   try {
     const result = await client.emails.send({
-      from: fromEmail,
+      from: `Aiduca <${fromEmail}>`,
       to: params.to,
       subject: params.subject,
       html: params.html,
       text: params.text,
     });
     if (result.error) {
-      logError("email", result.error, { to: params.to, subject: params.subject });
+      // Le fournisseur peut inclure le destinataire ou le sujet dans son objet
+      // d'erreur. Ne jamais transmettre cet objet brut au logger/Sentry.
+      logError("email", new Error("Échec du fournisseur transactionnel."), {
+        correlationId,
+      });
       return { ok: false, error: result.error.message };
     }
     return { ok: true };
   } catch (error) {
     const message = error instanceof Error ? error.message : "Erreur inconnue";
-    logError("email", error, { to: params.to, subject: params.subject });
+    // Même règle pour les exceptions réseau : seul un identifiant opaque et
+    // non corrélable à un utilisateur quitte ce module.
+    logError("email", new Error("Exception du fournisseur transactionnel."), {
+      correlationId,
+    });
     return { ok: false, error: message };
   }
 }

@@ -20,8 +20,13 @@ import { COURSES_PER_PAGE, courseFiltersSchema } from "@/lib/validators/courses"
 export const metadata: Metadata = {
   title: "Catalogue des formations",
   description:
-    "Parcourez tout le catalogue de formations Aiduca : développement, design, business, langues, et bien plus.",
+    "Découvrez les formations professionnelles proposées par Aiduca et trouvez le parcours adapté à vos objectifs.",
   alternates: { canonical: "/cours" },
+  openGraph: {
+    url: "/cours",
+    title: "Catalogue des formations · Aiduca",
+    description: "Découvrez les formations professionnelles proposées par Aiduca.",
+  },
 };
 
 interface PageProps {

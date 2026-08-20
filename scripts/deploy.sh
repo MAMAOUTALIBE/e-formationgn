@@ -96,6 +96,15 @@ case "${NEXT_PUBLIC_PLATFORM_MODE}" in
     ;;
 esac
 
+if [ -z "${NEXT_PUBLIC_SENTRY_DSN}" ]; then
+  echo "❌ NEXT_PUBLIC_SENTRY_DSN est obligatoire dans .env.deploy." >&2
+  exit 1
+fi
+if [ -z "${NEXT_PUBLIC_TURNSTILE_SITE_KEY}" ]; then
+  echo "❌ NEXT_PUBLIC_TURNSTILE_SITE_KEY est obligatoire dans .env.deploy." >&2
+  exit 1
+fi
+
 echo "▶ Variables publiques embarquées dans l'image :"
 printf "    NEXT_PUBLIC_APP_URL            = %s\n" "${NEXT_PUBLIC_APP_URL}"
 printf "    NEXT_PUBLIC_PLATFORM_MODE      = %s\n" "${NEXT_PUBLIC_PLATFORM_MODE}"
@@ -115,16 +124,18 @@ case "${NEXT_PUBLIC_APP_URL}" in
     ;;
 esac
 
-# Les secrets restent exclusivement sur le VPS. Avant de publier l'image, on
-# valide leur présence et leur cohérence sans les rapatrier ni les afficher.
+# Les secrets restent exclusivement sur le VPS. Aucun artefact de production
+# n'est publié sans préflight strict sur la configuration qui l'exécutera.
+if [ -z "${VPS_SSH:-}" ]; then
+  echo "❌ VPS_SSH est obligatoire pour le préflight strict de production." >&2
+  echo "   Le script refuse de pousser une image non validée contre son runtime." >&2
+  exit 1
+fi
 if [ -n "${VPS_SSH:-}" ]; then
-  require_turnstile=0
-  if [ -n "${NEXT_PUBLIC_TURNSTILE_SITE_KEY}" ]; then
-    require_turnstile=1
-  fi
   echo "▶ Préflight des variables runtime sur ${VPS_SSH}…"
-  ssh "${VPS_SSH}" sh -s -- "${NEXT_PUBLIC_PLATFORM_MODE}" "${require_turnstile}" \
-    "${NEXT_PUBLIC_APP_URL}" \
+  ssh "${VPS_SSH}" sh -s -- "${NEXT_PUBLIC_PLATFORM_MODE}" \
+    "${NEXT_PUBLIC_TURNSTILE_SITE_KEY}" "${NEXT_PUBLIC_APP_URL}" 1 \
+    "${NEXT_PUBLIC_SENTRY_DSN}" \
     < scripts/validate-production-env.sh
 fi
 

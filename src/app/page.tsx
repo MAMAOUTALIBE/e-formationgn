@@ -15,7 +15,6 @@ import {
 } from "@/components/features/marketing/home-sections";
 import { MemberHome } from "@/components/features/marketing/member-home";
 import { HomeTestimonials } from "@/components/features/marketing/testimonials";
-import { HomeTrustedBy } from "@/components/features/marketing/trusted-by";
 import { SiteFooter } from "@/components/layout/site-footer";
 import { SiteHeader } from "@/components/layout/site-header";
 import { Badge } from "@/components/ui/badge";
@@ -145,15 +144,12 @@ export default async function HomePage() {
                 {/* Signaux de confiance (qualitatifs — pas de compteurs faibles) */}
                 <p className="mt-5 text-sm text-white/75">
                   {stats.totalCourses}+ formations · {stats.totalCategories} catégories ·
-                  Formateurs francophones · Certificat à la clé
+                  Formateurs francophones · Attestation de fin de formation
                 </p>
               </div>
             </div>
           </Container>
         </section>
-
-        {/* TRUSTED BY — preuve sociale immédiate, juste sous le hero */}
-        <HomeTrustedBy />
 
         {/* COURS POPULAIRES — vrais cours, juste sous le hero */}
         {featuredCourses.length > 0 ? (
@@ -311,15 +307,15 @@ export default async function HomePage() {
                     variant="secondary"
                     className="mb-4 border-white/20 bg-white/10 text-white"
                   >
-                    Abonnement individuel
+                    Formation professionnelle
                   </Badge>
                   <h2 className="text-3xl font-bold leading-tight tracking-tight sm:text-4xl">
                     Réinventez votre carrière à l&apos;ère du numérique
                   </h2>
                   <p className="mt-4 max-w-lg text-white/80">
-                    Pérennisez vos compétences avec un accès illimité à notre
-                    catalogue. Apprenez auprès des meilleurs formateurs
-                    francophones et préparez votre certification.
+                    Pérennisez vos compétences grâce aux formations qui vous
+                    sont attribuées. Progressez à votre rythme avec un suivi
+                    pédagogique clair et préparez votre attestation.
                   </p>
 
                   <ul className="mt-6 grid gap-3 sm:grid-cols-2">
@@ -329,7 +325,7 @@ export default async function HomePage() {
                     />
                     <Bullet
                       icon={<Award className="h-4 w-4" />}
-                      label="Préparez vos certifications"
+                      label="Validez vos acquis"
                     />
                     <Bullet
                       icon={<Target className="h-4 w-4" />}
@@ -347,7 +343,7 @@ export default async function HomePage() {
                       size="lg"
                       className="bg-[color:var(--brand-mint)] text-[color:var(--neutral-900)] hover:bg-[color:var(--brand-mint-deep)]"
                     >
-                      <Link href="/cours">Commencer maintenant</Link>
+                      <Link href="/cours">Découvrir le catalogue</Link>
                     </Button>
                     <Button
                       asChild
@@ -400,32 +396,8 @@ export default async function HomePage() {
           </section>
         ) : null}
 
-        {/* TESTIMONIALS — preuve sociale juste avant le CTA formateur */}
+        {/* TÉMOIGNAGES */}
         <HomeTestimonials />
-
-        {/* DEVENIR FORMATEUR */}
-        <section className="border-t border-border bg-gradient-to-br from-[color:var(--brand-primary)] via-[color:var(--brand-violet-deep)] to-[color:var(--brand-violet)] py-12 text-white">
-          <Container className="grid items-center gap-8 md:grid-cols-2">
-            <div>
-              <h2 className="text-3xl font-bold tracking-tight">
-                Partagez votre expertise
-              </h2>
-              <p className="mt-3 text-base text-white/85">
-                Créez des formations structurées, accompagnez les apprenants et
-                suivez leur progression dans un espace pédagogique complet.
-              </p>
-            </div>
-            <div className="md:justify-self-end">
-              <Button
-                asChild
-                size="lg"
-                className="bg-[color:var(--brand-mint)] text-[color:var(--neutral-900)] hover:bg-[color:var(--brand-mint-deep)]"
-              >
-                <Link href="/devenir-formateur">Devenir formateur</Link>
-              </Button>
-            </div>
-          </Container>
-        </section>
       </main>
 
       <SiteFooter />

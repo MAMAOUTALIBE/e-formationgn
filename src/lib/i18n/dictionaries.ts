@@ -20,12 +20,10 @@ export const LOCALE_SHORT: Record<Locale, string> = {
 interface Dictionary {
   common: {
     login: string;
-    register: string;
     logout: string;
     search: string;
     catalog: string;
     categories: string;
-    becomeInstructor: string;
     myLearning: string;
     cart: string;
     profile: string;
@@ -64,12 +62,10 @@ interface Dictionary {
 const fr: Dictionary = {
   common: {
     login: "Connexion",
-    register: "S'inscrire",
     logout: "Déconnexion",
     search: "Rechercher une formation…",
     catalog: "Catalogue",
     categories: "Catégories",
-    becomeInstructor: "Devenir formateur",
     myLearning: "Mon apprentissage",
     cart: "Panier",
     profile: "Profil",
@@ -86,20 +82,20 @@ const fr: Dictionary = {
     headline1: "Développez des compétences",
     headline2: "recherchées",
     description:
-      "Développez vos compétences avec les formations qualifiantes d’Aiduca, conçues pour les professionnels du bâtiment.",
+      "Développez vos compétences avec les formations professionnelles d’Aiduca, conçues pour accompagner votre progression.",
     ctaPrimary: "Commencer maintenant",
-    ctaSecondary: "Devenir formateur",
+    ctaSecondary: "Découvrir Aiduca",
     activeStudents: "élèves actifs",
   },
   footer: {
-    tagline: "Les formations qualifiantes pour les professionnels du bâtiment.",
+    tagline: "Des formations professionnelles pour développer vos compétences.",
     platform: "Plateforme",
     about: "À propos",
     legal: "Légal",
     contact: "Contact",
     blog: "Blog",
     rights: "Tous droits réservés.",
-    rgpd: "Conformité RGPD · Données hébergées dans l'Union européenne",
+    rgpd: "Protection des données · Consultez notre politique de confidentialité",
   },
   language: {
     label: "Langue",
@@ -109,12 +105,10 @@ const fr: Dictionary = {
 const en: Dictionary = {
   common: {
     login: "Sign in",
-    register: "Sign up",
     logout: "Sign out",
     search: "Search a training course…",
     catalog: "Catalog",
     categories: "Categories",
-    becomeInstructor: "Become an instructor",
     myLearning: "My learning",
     cart: "Cart",
     profile: "Profile",
@@ -131,20 +125,20 @@ const en: Dictionary = {
     headline1: "Build the skills",
     headline2: "employers want",
     description:
-      "Develop your skills with Aiduca’s qualifying courses for building professionals.",
+      "Develop your skills with Aiduca’s professional training courses, designed to support your progress.",
     ctaPrimary: "Start now",
-    ctaSecondary: "Become an instructor",
+    ctaSecondary: "Discover Aiduca",
     activeStudents: "active students",
   },
   footer: {
-    tagline: "Qualifying courses for building professionals.",
+    tagline: "Professional training courses to build your skills.",
     platform: "Platform",
     about: "About",
     legal: "Legal",
     contact: "Contact",
     blog: "Blog",
     rights: "All rights reserved.",
-    rgpd: "GDPR compliant · Data hosted in the European Union",
+    rgpd: "Data protection · Read our privacy policy",
   },
   language: {
     label: "Language",

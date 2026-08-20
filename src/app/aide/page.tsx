@@ -46,15 +46,15 @@ const SECTIONS: FaqSection[] = [
     id: "compte",
     title: "Compte et inscription",
     icon: User,
-    description: "Créer, gérer et sécuriser votre compte Aiduca.",
+    description: "Accéder, gérer et sécuriser votre compte Aiduca.",
     items: [
       {
         q: "Comment créer un compte ?",
-        a: "Rendez-vous sur la page Inscription. Renseignez votre email + mot de passe (ou utilisez « Continuer avec Google »). Un email de vérification est envoyé pour confirmer votre adresse.",
+        a: "Les comptes sont créés par le centre de formation. Si votre inscription a été validée mais que vous n'avez pas reçu vos informations d'accès, contactez votre gestionnaire ou le support Aiduca.",
       },
       {
-        q: "Je n'ai pas reçu l'email de vérification.",
-        a: "Vérifiez vos spams. Si rien après 5 minutes, recliquez sur le bouton « Renvoyer l'email » depuis la page de connexion. Si l'email reste introuvable, contactez le support.",
+        q: "Je n'ai pas reçu mes informations d'accès.",
+        a: "Vérifiez vos courriers indésirables, puis contactez votre gestionnaire ou le support. L'équipe pourra contrôler votre inscription et vous indiquer la marche à suivre sans vous demander votre mot de passe.",
       },
       {
         q: "Comment changer mon mot de passe ?",
@@ -81,8 +81,8 @@ const SECTIONS: FaqSection[] = [
         a: "Oui. Le site est responsive et fonctionne sur smartphone, tablette et ordinateur. La lecture reprend automatiquement où vous l'avez laissée d'un appareil à l'autre.",
       },
       {
-        q: "Comment obtenir mon certificat ?",
-        a: "Le certificat est généré automatiquement dès que vous avez complété 100 % des leçons d'une formation. Téléchargeable en PDF depuis votre profil. Chaque certificat est vérifiable publiquement via un numéro de série unique.",
+        q: "Comment obtenir mon attestation ?",
+        a: "Après avoir terminé 100 % des leçons d'une formation, vous pouvez générer votre attestation de fin de formation depuis votre espace d'apprentissage, puis la télécharger en PDF. Chaque attestation définitive possède un numéro de série vérifiable en ligne.",
       },
       {
         q: "Comment fonctionne le tuteur IA ?",

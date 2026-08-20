@@ -1,10 +1,10 @@
 // Footer 6 colonnes inspiré Udemy — adapté Aiduca :
 //   - Col 1 (double) : logo + tagline + newsletter inline
 //   - Col 2 : Découvrir (catalogue, catégories, nouveautés)
-//   - Col 3 : Enseigner sur Aiduca (devenir formateur, conditions, dashboard)
+//   - Col 3 : Accès et accompagnement
 //   - Col 4 : Aiduca (à propos, blog, contact, crédits)
 //   - Col 5 : Aide & support + mentions légales
-// Bottom bar : copyright + sélecteurs langue/devise + RGPD
+// Bottom bar : copyright + information RGPD
 
 import Link from "next/link";
 
@@ -64,26 +64,23 @@ export async function SiteFooter() {
           </ul>
         </div>
 
-        {/* Col 3 — Enseigner */}
+        {/* Col 3 — Accès et accompagnement */}
         <div>
-          <h3 className="text-sm font-semibold text-foreground">Enseigner</h3>
+          <h3 className="text-sm font-semibold text-foreground">Accès</h3>
           <ul className="mt-3 space-y-2 text-sm text-muted-foreground">
             <li>
-              <Link href="/devenir-formateur" className="hover:text-foreground">
-                Devenir formateur
+              <Link href="/connexion" className="hover:text-foreground">
+                Se connecter
               </Link>
             </li>
             <li>
-              <Link
-                href="/devenir-formateur#conditions"
-                className="hover:text-foreground"
-              >
-                Conditions et rémunération
+              <Link href="/aide" className="hover:text-foreground">
+                Centre d&apos;aide
               </Link>
             </li>
             <li>
-              <Link href="/formateur" className="hover:text-foreground">
-                Tableau de bord formateur
+              <Link href="/contact" className="hover:text-foreground">
+                Contacter le centre
               </Link>
             </li>
           </ul>
@@ -180,7 +177,7 @@ export async function SiteFooter() {
         </div>
       </Container>
 
-      {/* Bottom bar — copyright + sélecteurs */}
+      {/* Bottom bar — copyright + information RGPD */}
       <div className="border-t border-border">
         <Container className="flex flex-col items-center justify-between gap-3 py-6 text-xs text-muted-foreground sm:flex-row">
           <p>

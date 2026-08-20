@@ -57,11 +57,7 @@ export async function SiteHeader() {
             label={t.common.categories}
           />
           <NavLink href="/cours">{t.common.catalog}</NavLink>
-          {user ? (
-            <NavLink href="/apprentissage">{t.common.myLearning}</NavLink>
-          ) : (
-            <NavLink href="/devenir-formateur">{t.common.becomeInstructor}</NavLink>
-          )}
+          {user ? <NavLink href="/apprentissage">{t.common.myLearning}</NavLink> : null}
         </nav>
 
         <div className="hidden flex-1 max-w-md lg:block">
@@ -94,7 +90,7 @@ export async function SiteHeader() {
                 size="sm"
                 className="hidden bg-[color:var(--brand-mint)] text-[color:var(--neutral-900)] shadow-sm hover:bg-[color:var(--brand-mint-deep)] sm:inline-flex"
               >
-                <Link href="/inscription">{t.common.register}</Link>
+                <Link href="/contact">Contacter le centre</Link>
               </Button>
             </>
           )}

@@ -29,7 +29,10 @@ import {
   generateToken,
   passwordResetExpiry,
 } from "@/lib/auth/tokens";
-import { sendTransactionalEmail } from "@/lib/email/client";
+import {
+  isTransactionalEmailConfigured,
+  sendTransactionalEmail,
+} from "@/lib/email/client";
 import {
   buildPasswordResetMessage,
   buildVerifyEmailMessage,
@@ -375,6 +378,18 @@ export async function requestPasswordReset(
     };
   }
 
+  // Ce contrôle précède la recherche utilisateur afin que l'indisponibilité
+  // globale du fournisseur produise exactement la même réponse pour toutes
+  // les adresses (anti-énumération).
+  if (!isTransactionalEmailConfigured()) {
+    await fakeVerifyPassword(parsed.data.email);
+    return {
+      success: false,
+      message:
+        "Le service de récupération est temporairement indisponible. Veuillez réessayer plus tard.",
+    };
+  }
+
   const user = await prisma.user.findUnique({
     where: { email: parsed.data.email },
   });
@@ -384,7 +399,7 @@ export async function requestPasswordReset(
   // pour égaliser le timing avec un envoi email réel (anti timing-leak).
   if (user && user.hashedPassword) {
     const token = generateToken();
-    await prisma.passwordResetToken.create({
+    const resetToken = await prisma.passwordResetToken.create({
       data: {
         userId: user.id,
         token,
@@ -395,12 +410,16 @@ export async function requestPasswordReset(
     const resetUrl = `${APP_URL}/reinitialiser-mot-de-passe?token=${encodeURIComponent(token)}`;
     const { html, text } = buildPasswordResetMessage(resetUrl, user.firstName);
 
-    await sendTransactionalEmail({
+    const delivery = await sendTransactionalEmail({
       to: user.email,
       subject: "Réinitialisation de votre mot de passe — Aiduca",
       html,
       text,
     });
+
+    if (!delivery.ok) {
+      await prisma.passwordResetToken.delete({ where: { id: resetToken.id } });
+    }
   } else {
     await fakeVerifyPassword(parsed.data.email);
   }
@@ -408,7 +427,7 @@ export async function requestPasswordReset(
   return {
     success: true,
     message:
-      "Si un compte est associé à cette adresse, un email de réinitialisation vient d'être envoyé.",
+      "Votre demande a été traitée. Si un compte est associé à cette adresse et que le service est disponible, vous recevrez les instructions par email.",
   };
 }
 

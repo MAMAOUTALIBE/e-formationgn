@@ -14,6 +14,8 @@ test("l’identité institutionnelle Aiduca est centralisée et complète", () =
   assert.equal(BRAND.activityDeclaration, "11922091192");
   assert.equal(BRAND.qualiopiCertificate, "FP 2020/0005-6");
   assert.equal(BRAND.qualiopiValidUntil, "20 octobre 2027");
+  assert.match(BRAND.tagline, /formations professionnelles/i);
+  assert.doesNotMatch(BRAND.tagline, /bâtiment/i);
 });
 
 test("les surfaces de marque principales n’affichent plus l’ancienne identité", () => {

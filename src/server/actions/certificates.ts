@@ -3,6 +3,11 @@
 import { randomBytes } from "node:crypto";
 
 import { auth } from "@/auth";
+import { Prisma } from "@/generated/prisma/client";
+import {
+  CERTIFICATE_REQUIRES_COMPLETION,
+  canIssueCertificate,
+} from "@/lib/domain/training-integrity";
 import { prisma } from "@/lib/prisma";
 
 import type { ActionResult } from "./auth";
@@ -26,11 +31,10 @@ export async function issueCertificate(courseId: string): Promise<ActionResult &
   if (!enrollment) {
     return { success: false, message: "Vous n'êtes pas inscrit à cette formation." };
   }
-  if (enrollment.progressPercent < 100) {
+  if (!canIssueCertificate(enrollment)) {
     return {
       success: false,
-      message:
-        "Terminez l'ensemble des leçons avant de générer votre attestation.",
+      message: CERTIFICATE_REQUIRES_COMPLETION,
     };
   }
 
@@ -54,15 +58,29 @@ export async function issueCertificate(courseId: string): Promise<ActionResult &
     serial = buildSerial();
   }
 
-  const cert = await prisma.certificate.create({
-    data: {
-      userId: session.user.id,
-      courseId,
-      serialNumber: serial,
-      orderItemId: enrollment.orderItemId,
-    },
-    select: { serialNumber: true },
-  });
+  let cert: { serialNumber: string };
+  try {
+    cert = await prisma.certificate.create({
+      data: {
+        userId: session.user.id,
+        courseId,
+        serialNumber: serial,
+        orderItemId: enrollment.orderItemId,
+      },
+      select: { serialNumber: true },
+    });
+  } catch (error) {
+    // Deux clics concurrents peuvent franchir le premier SELECT. La contrainte
+    // composite garantit l'idempotence ; le perdant réutilise l'attestation.
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
+      const concurrent = await prisma.certificate.findFirst({
+        where: { userId: session.user.id, courseId },
+        select: { serialNumber: true },
+      });
+      if (concurrent) return { success: true, serialNumber: concurrent.serialNumber };
+    }
+    throw error;
+  }
 
   return { success: true, serialNumber: cert.serialNumber };
 }

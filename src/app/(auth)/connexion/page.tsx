@@ -61,9 +61,9 @@ export default async function ConnexionPage({ searchParams }: PageProps) {
         <LoginForm callbackUrl={callbackUrl} />
 
         <p className="text-center text-sm text-muted-foreground">
-          Pas encore de compte ?{" "}
-          <Link href="/inscription" className="text-[color:var(--brand-secondary)] hover:underline">
-            Créer un compte
+          Vous n&apos;avez pas reçu vos accès ?{" "}
+          <Link href="/contact" className="text-[color:var(--brand-secondary)] hover:underline">
+            Contacter le centre
           </Link>
         </p>
       </CardContent>
