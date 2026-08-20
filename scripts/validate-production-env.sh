@@ -9,6 +9,11 @@ expected_app_url="${3:-${EXPECTED_APP_URL:-}}"
 strict_production="${4:-${STRICT_PRODUCTION:-0}}"
 expected_public_sentry="${5:-${EXPECTED_PUBLIC_SENTRY_DSN:-}}"
 
+# SSH concatène sa commande distante et peut perdre les arguments réellement
+# vides. Le script de déploiement utilise ce marqueur pour préserver leur place.
+[ "${expected_public_turnstile}" = "__AIDUCA_EMPTY__" ] && expected_public_turnstile=""
+[ "${expected_public_sentry}" = "__AIDUCA_EMPTY__" ] && expected_public_sentry=""
+
 if [ ! -r "${env_file}" ]; then
   echo "❌ Fichier d'environnement production illisible : ${env_file}" >&2
   exit 1

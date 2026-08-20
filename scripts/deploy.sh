@@ -146,9 +146,11 @@ if [ -n "${VPS_SSH:-}" ]; then
     strict_production=0
   fi
   echo "▶ Préflight des variables runtime sur ${VPS_SSH}…"
+  remote_turnstile="${NEXT_PUBLIC_TURNSTILE_SITE_KEY:-__AIDUCA_EMPTY__}"
+  remote_sentry="${NEXT_PUBLIC_SENTRY_DSN:-__AIDUCA_EMPTY__}"
   ssh "${VPS_SSH}" sh -s -- "${NEXT_PUBLIC_PLATFORM_MODE}" \
-    "${NEXT_PUBLIC_TURNSTILE_SITE_KEY}" "${NEXT_PUBLIC_APP_URL}" "${strict_production}" \
-    "${NEXT_PUBLIC_SENTRY_DSN}" \
+    "${remote_turnstile}" "${NEXT_PUBLIC_APP_URL}" "${strict_production}" \
+    "${remote_sentry}" \
     < scripts/validate-production-env.sh
 fi
 
