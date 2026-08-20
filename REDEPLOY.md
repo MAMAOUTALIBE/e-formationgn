@@ -55,8 +55,9 @@ la correspondance exacte des deux valeurs publiques build/runtime, le mode et
 la paire Upstash sans jamais afficher les valeurs.
 
 Exception temporaire : `ALLOW_OPTIONAL_MONITORING=1 npm run deploy` autorise
-une livraison sans Sentry ni Turnstile. Les autres secrets et contrôles restent
-obligatoires. Cette option doit être retirée dès que les deux services sont
+une livraison sans Sentry, Turnstile ni Resend. Les secrets indispensables à
+l'exécution (base de données, Auth et cron) et les autres contrôles restent
+obligatoires. Cette option doit être retirée dès que les services externes sont
 configurés.
 
 ### 2. VPS — pull + redémarrage

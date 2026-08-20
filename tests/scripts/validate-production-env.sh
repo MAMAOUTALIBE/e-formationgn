@@ -46,8 +46,8 @@ PRODUCTION_ENV_FILE="${fixture}" "${validator}" centre_formation \
 
 sed -i.bak '/RESEND_API_KEY/d' "${fixture}"
 if PRODUCTION_ENV_FILE="${fixture}" EXPECTED_PLATFORM_MODE=centre_formation \
-  "${validator}" >/dev/null 2>&1; then
-  echo "Une production sans fournisseur email aurait dû échouer." >&2
+  STRICT_PRODUCTION=1 "${validator}" >/dev/null 2>&1; then
+  echo "Une production stricte sans fournisseur email aurait dû échouer." >&2
   exit 1
 fi
 
@@ -56,6 +56,18 @@ sed -i.bak '/^SENTRY_DSN=/d' "${fixture}"
 if PRODUCTION_ENV_FILE="${fixture}" EXPECTED_PLATFORM_MODE=centre_formation \
   STRICT_PRODUCTION=1 "${validator}" >/dev/null 2>&1; then
   echo "Une production stricte sans Sentry aurait dû échouer." >&2
+  exit 1
+fi
+
+write_valid_fixture
+sed -i.bak '/^RESEND_API_KEY=/d' "${fixture}"
+sed -i.bak '/^RESEND_FROM_EMAIL=/d' "${fixture}"
+PRODUCTION_ENV_FILE="${fixture}" EXPECTED_PLATFORM_MODE=centre_formation \
+  STRICT_PRODUCTION=0 "${validator}" >/dev/null
+
+if PRODUCTION_ENV_FILE="${fixture}" EXPECTED_PLATFORM_MODE=centre_formation \
+  STRICT_PRODUCTION=1 "${validator}" >/dev/null 2>&1; then
+  echo "Une production stricte sans Resend aurait dû échouer." >&2
   exit 1
 fi
 

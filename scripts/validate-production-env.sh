@@ -39,16 +39,15 @@ require_value DIRECT_URL
 require_value NEXTAUTH_URL
 require_value NEXTAUTH_SECRET
 require_value CRON_SECRET
-require_value RESEND_API_KEY
-require_value RESEND_FROM_EMAIL
 
 resend_api_key="$(env_value RESEND_API_KEY)"
-if ! printf '%s' "${resend_api_key}" | grep -Eq '^re_[A-Za-z0-9_-]{8,}$'; then
+if [ -n "${resend_api_key}" ] &&
+  ! printf '%s' "${resend_api_key}" | grep -Eq '^re_[A-Za-z0-9_-]{8,}$'; then
   echo "❌ RESEND_API_KEY doit utiliser le préfixe re_ et un format valide." >&2
   exit 1
 fi
 resend_from_email="$(env_value RESEND_FROM_EMAIL)"
-if ! printf '%s' "${resend_from_email}" |
+if [ -n "${resend_from_email}" ] && ! printf '%s' "${resend_from_email}" |
   grep -Eq '^[A-Za-z0-9.!#$%&'\''*+/=?^_`{|}~-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$'; then
   echo "❌ RESEND_FROM_EMAIL doit être une adresse nue valide, sans display-name." >&2
   exit 1
@@ -60,6 +59,8 @@ case "${strict_production}" in
 esac
 
 if [ "${strict_production}" = "1" ]; then
+  require_value RESEND_API_KEY
+  require_value RESEND_FROM_EMAIL
   require_value SENTRY_DSN
   require_value NEXT_PUBLIC_SENTRY_DSN
 fi
