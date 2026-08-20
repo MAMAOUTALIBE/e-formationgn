@@ -1,7 +1,22 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { CalendarClock, CheckCircle2, Globe2, MessageSquare, Users } from "lucide-react";
+import {
+  Award,
+  BookOpen,
+  CalendarClock,
+  CheckCircle2,
+  CircleHelp,
+  Globe2,
+  GraduationCap,
+  Home,
+  Layers3,
+  ListTree,
+  MessageSquare,
+  Star,
+  Target,
+  Users,
+} from "lucide-react";
 
 import { auth } from "@/auth";
 import { JsonLd } from "@/components/seo/json-ld";
@@ -19,7 +34,6 @@ import { PromoVideoPlayer } from "@/components/features/courses/promo-video-play
 import { ReviewForm } from "@/components/features/reviews/review-form";
 import { SiteFooter } from "@/components/layout/site-footer";
 import { SiteHeader } from "@/components/layout/site-header";
-import { Badge } from "@/components/ui/badge";
 import { Breadcrumbs } from "@/components/ui/breadcrumbs";
 import { Container } from "@/components/ui/container";
 import { Stars } from "@/components/ui/stars";
@@ -156,7 +170,7 @@ export default async function CourseDetailPage({
   // Card prix : extraite en fragment pour être réutilisée dans la sticky
   // desktop ET dans la version inline mobile (sous le hero).
   const accessCard = (
-    <div className="overflow-hidden rounded-lg border border-border bg-card text-card-foreground shadow-md">
+    <div className="overflow-hidden rounded-xl border border-[#d8e4df] bg-card text-card-foreground shadow-[0_14px_36px_rgba(15,45,30,0.12)]">
       {course.promoVideoPlaybackId || course.promoVideoUrl ? (
         <PromoVideoPlayer
           playbackId={course.promoVideoPlaybackId}
@@ -176,7 +190,7 @@ export default async function CourseDetailPage({
           Aiduca
         </div>
       )}
-      <div className="space-y-5 p-5">
+      <div className="space-y-5 p-6">
         <CourseAccessNotice alreadyEnrolled={alreadyEnrolled} slug={course.slug} />
 
         <div className="border-t border-border pt-5">
@@ -199,7 +213,7 @@ export default async function CourseDetailPage({
         <div className="border-b border-amber-300 bg-amber-50 py-2 text-amber-900">
           <Container className="flex flex-wrap items-center justify-between gap-2 text-sm">
             <span>
-              👁️ <strong>Mode aperçu</strong> — voici comment les élèves verront
+              👁️ <strong>Mode aperçu</strong> — voici comment les apprenants verront
               cette formation. Elle n&apos;est pas encore publique.
             </span>
             <Link
@@ -216,7 +230,7 @@ export default async function CourseDetailPage({
         {/* Hero — fond plein largeur ; la sticky card de droite (desktop)
             est positionnée par-dessus via le grid du bloc suivant avec
             marge négative `lg:-mt-72`. */}
-        <section className="border-b border-border bg-[color:var(--brand-primary)] py-8 text-primary-foreground">
+        <section className="border-b border-[#d8e4df] bg-[linear-gradient(125deg,#f1faf6_0%,#f8fcfa_72%,#edf8f2_100%)] py-6 text-foreground sm:py-8">
           <Container className="grid gap-8 lg:grid-cols-[1fr_360px]">
             <div>
               <Breadcrumbs
@@ -229,7 +243,7 @@ export default async function CourseDetailPage({
                   },
                   { label: course.title },
                 ]}
-                className="text-primary-foreground/70 [&_a]:text-primary-foreground/80 [&_a:hover]:text-primary-foreground [&_[aria-current=page]]:text-primary-foreground"
+                className="[&_a]:text-[#405168] [&_a:hover]:text-[#07883f] [&_[aria-current=page]]:text-[#405168]"
               />
 
               {badges.length > 0 ? (
@@ -238,15 +252,20 @@ export default async function CourseDetailPage({
                 </div>
               ) : null}
 
-              <h1 className="mt-4 text-3xl font-semibold tracking-tight sm:text-4xl">
+              <div className="mt-5 inline-flex items-center gap-2 rounded-lg border border-[#cae7d6] bg-[#eaf7ef] px-3 py-2 text-sm font-semibold text-[#08763a]">
+                <BookOpen className="h-4 w-4" aria-hidden />
+                {course.category.name}
+              </div>
+
+              <h1 className="mt-4 max-w-5xl text-3xl font-bold leading-tight tracking-tight text-[#10213d] sm:text-4xl xl:text-[2.65rem]">
                 {course.title}
               </h1>
               {course.subtitle ? (
-                <p className="mt-3 text-base text-primary-foreground/80">{course.subtitle}</p>
+                <p className="mt-3 max-w-4xl text-base leading-7 text-[#3f5068] sm:text-lg">{course.subtitle}</p>
               ) : null}
 
               {/* Trust signals : rating + count élèves (gros, mis en avant) */}
-              <div className="mt-5 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
+              <div className="mt-5 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-[#405168]">
                 <span className="inline-flex items-center gap-1.5">
                   <Stars
                     rating={course.averageRating}
@@ -254,22 +273,22 @@ export default async function CourseDetailPage({
                     totalRatings={course.totalRatings}
                   />
                   <span className="font-medium">{course.averageRating.toFixed(1)}</span>
-                  <span className="text-primary-foreground/70">
+                  <span className="text-[#5a6a7f]">
                     ({course.totalRatings.toLocaleString("fr-FR")}{" "}
                     {pluralize(course.totalRatings, "avis")})
                   </span>
                 </span>
-                <span className="inline-flex items-center gap-1.5 text-primary-foreground/80">
+                <span className="inline-flex items-center gap-1.5">
                   <Users className="h-4 w-4" aria-hidden />
                   {course.totalEnrollments.toLocaleString("fr-FR")}{" "}
-                  {pluralize(course.totalEnrollments, "élève")}
+                  {pluralize(course.totalEnrollments, "apprenant")}
                 </span>
               </div>
 
               {/* Meta enrichi (pattern Udemy) : dernière mise à jour, langue
                   audio, sous-titres. updatedAt vs publishedAt = signal de
                   fraîcheur (le cours est-il maintenu ?). */}
-              <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-primary-foreground/70">
+              <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-[#5a6a7f]">
                 <span className="inline-flex items-center gap-1">
                   <CalendarClock className="h-3.5 w-3.5" aria-hidden />
                   Dernière mise à jour :{" "}
@@ -288,31 +307,37 @@ export default async function CourseDetailPage({
                 </span>
               </div>
 
-              <p className="mt-3 text-sm text-primary-foreground/80">
+              <p className="mt-3 text-sm text-[#405168]">
                 Créé par{" "}
                 <Link
                   href={`/cours?q=${encodeURIComponent(instructorName)}`}
-                  className="font-medium underline-offset-2 hover:underline"
+                  className="font-semibold text-[#07883f] underline-offset-2 hover:underline"
                 >
                   {instructorName}
                 </Link>
               </p>
 
-              <div className="mt-6 flex flex-wrap gap-2">
-                <Badge variant="accent">{COURSE_LEVEL_LABELS[course.level]}</Badge>
-                <Badge variant="secondary" className="bg-white/10 text-primary-foreground">
-                  {course.category.name}
-                </Badge>
-                {course.tags.slice(0, 3).map((tag) => (
-                  <Badge
-                    key={tag.id}
-                    variant="outline"
-                    className="border-white/20 text-primary-foreground"
-                  >
-                    {tag.name}
-                  </Badge>
-                ))}
+              <div className="mt-5 flex flex-wrap items-center gap-x-5 gap-y-3 text-sm text-[#405168]">
+                <span className="inline-flex items-center gap-2 rounded-md border border-[#d7e4df] bg-white/85 px-3 py-2"><GraduationCap className="h-5 w-5 text-[#07883f]" aria-hidden />{COURSE_LEVEL_LABELS[course.level]}</span>
+                <span className="inline-flex items-center gap-2 rounded-md border border-[#d7e4df] bg-white/85 px-3 py-2"><Globe2 className="h-5 w-5 text-[#07883f]" aria-hidden />Français</span>
+                <span className="inline-flex items-center gap-2"><Layers3 className="h-5 w-5 text-[#07883f]" aria-hidden />{course.sections.length} {pluralize(course.sections.length, "section")}</span>
+                <span className="inline-flex items-center gap-2"><ListTree className="h-5 w-5 text-[#07883f]" aria-hidden />{totalLessons} {pluralize(totalLessons, "leçon")}</span>
+                <span className="inline-flex items-center gap-2 rounded-md border border-[#d7e4df] bg-white/85 px-3 py-2"><Award className="h-5 w-5 text-[#07883f]" aria-hidden />Attestation de fin de formation</span>
               </div>
+
+              <nav aria-label="Navigation de la formation" className="mt-6 overflow-x-auto border-b border-[#d8e4df]">
+                <ul className="flex min-w-max items-center gap-1">
+                  {[
+                    { href: "#apercu", label: "Aperçu", icon: Home },
+                    { href: "#programme", label: "Programme", icon: ListTree },
+                    { href: "#formateur", label: "Formateur", icon: GraduationCap },
+                    { href: "#avis", label: "Avis", icon: Star },
+                    { href: "#faq", label: "FAQ", icon: CircleHelp },
+                  ].map(({ href, label, icon: Icon }, index) => (
+                    <li key={href}><a href={href} className={`inline-flex h-14 items-center gap-2 border-b-2 px-4 text-sm font-medium transition-colors hover:text-[#07883f] ${index === 0 ? "border-[#07883f] text-[#07883f]" : "border-transparent text-[#42526a]"}`}><Icon className="h-5 w-5" aria-hidden />{label}</a></li>
+                  ))}
+                </ul>
+              </nav>
             </div>
 
             {/* Slot vide à droite du hero — la sticky card est rendue dans
@@ -330,30 +355,34 @@ export default async function CourseDetailPage({
 
             {course.whatYouWillLearn && course.whatYouWillLearn.length > 0 ? (
               <section
+                id="apercu"
                 aria-labelledby="objectives"
-                className="rounded-lg border border-border bg-card p-6"
+                className="scroll-mt-28 rounded-xl border border-[#d6e3de] bg-card p-5 shadow-[0_1px_2px_rgba(15,23,42,0.03)] sm:p-6"
               >
-                <h2 id="objectives" className="text-xl font-semibold text-foreground">
-                  Ce que vous allez apprendre
-                </h2>
-                <ul className="mt-4 grid gap-x-8 gap-y-2 sm:grid-cols-2">
+                <div className="flex items-start gap-4">
+                  <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl bg-[#e8f7ee] text-[#07883f]"><Target className="h-7 w-7" aria-hidden /></div>
+                  <div className="min-w-0">
+                <h2 id="objectives" className="text-lg font-semibold text-[#13213a]">Ce que vous allez apprendre</h2>
+                <ul className="mt-2 grid gap-x-8 gap-y-2 sm:grid-cols-2">
                   {course.whatYouWillLearn.map((item, index) => (
                     <li
                       key={index}
                       className="flex items-start gap-2 text-sm text-foreground"
                     >
                       <CheckCircle2
-                        className="mt-0.5 h-4 w-4 shrink-0 text-[color:var(--brand-success)]"
+                        className="mt-0.5 h-4 w-4 shrink-0 text-[#07883f]"
                         aria-hidden
                       />
                       <span>{item}</span>
                     </li>
                   ))}
                 </ul>
+                  </div>
+                </div>
               </section>
             ) : null}
 
-            <section aria-labelledby="curriculum">
+            <section id="programme" aria-labelledby="curriculum" className="scroll-mt-28">
               <h2 id="curriculum" className="text-xl font-semibold text-foreground">
                 Programme de la formation
               </h2>
@@ -397,7 +426,7 @@ export default async function CourseDetailPage({
               </section>
             ) : null}
 
-            <section aria-labelledby="instructor-section">
+            <section id="formateur" aria-labelledby="instructor-section" className="scroll-mt-28">
               <h2 id="instructor-section" className="text-xl font-semibold text-foreground">
                 Votre formateur
               </h2>
@@ -417,10 +446,10 @@ export default async function CourseDetailPage({
               </section>
             ) : null}
 
-            <section aria-labelledby="reviews">
+            <section id="avis" aria-labelledby="reviews" className="scroll-mt-28">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <h2 id="reviews" className="text-xl font-semibold text-foreground">
-                  Avis des élèves
+                  Avis des apprenants
                 </h2>
                 <Link
                   href={`/cours/${course.slug}/questions`}
@@ -458,7 +487,7 @@ export default async function CourseDetailPage({
           {/* Carte d'accès desktop — chevauche le hero via marge négative.
               `lg:-mt-72` (≈18 rem) fait remonter la card sur le bandeau bleu,
               `lg:sticky lg:top-24` la garde visible pendant tout le scroll. */}
-          <aside className="hidden lg:block lg:-mt-72">
+          <aside className="hidden lg:block lg:-mt-[27rem]">
             <div className="sticky top-24">{accessCard}</div>
           </aside>
         </Container>

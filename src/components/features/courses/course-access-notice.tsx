@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { CheckCircle2, Lock } from "lucide-react";
+import { CheckCircle2, LockKeyhole, Mail } from "lucide-react";
 
 /**
  * Remplace le bloc prix / achat en mode centre de formation.
@@ -18,14 +18,14 @@ export function CourseAccessNotice({
 }) {
   if (alreadyEnrolled) {
     return (
-      <div className="space-y-3">
+      <div className="space-y-4">
         <div className="flex items-center gap-2 rounded-md border border-[color:var(--brand-success)]/30 bg-[color:var(--brand-success)]/10 px-3 py-2.5 text-sm text-[color:var(--brand-success)]">
           <CheckCircle2 className="h-4 w-4 shrink-0" aria-hidden />
           <span className="font-medium">Cette formation vous est attribuée</span>
         </div>
         <Link
           href={`/apprentissage/${slug}`}
-          className="inline-flex h-11 w-full items-center justify-center rounded-md bg-[color:var(--brand-secondary)] px-4 text-sm font-medium text-white transition-opacity hover:opacity-90"
+          className="inline-flex h-12 w-full items-center justify-center rounded-md bg-[#07883f] px-4 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[#067437] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#07883f] focus-visible:ring-offset-2"
         >
           Accéder à la formation
         </Link>
@@ -34,17 +34,25 @@ export function CourseAccessNotice({
   }
 
   return (
-    <div className="space-y-3">
-      <div className="flex items-start gap-2 rounded-md border border-border bg-muted/50 px-3 py-2.5 text-sm text-muted-foreground">
-        <Lock className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
+    <div className="space-y-5">
+      <div className="flex items-start gap-3 text-sm text-muted-foreground">
+        <LockKeyhole className="mt-0.5 h-6 w-6 shrink-0 text-[#07883f]" aria-hidden />
         <div>
-          <p className="font-medium text-foreground">Formation non attribuée</p>
-          <p className="mt-1">
-            L&apos;accès est ouvert par le centre de formation. Rapprochez-vous du
-            secrétariat pour être inscrit à cette formation.
+          <p className="text-base font-semibold text-foreground">
+            Accès réservé aux apprenants inscrits
+          </p>
+          <p className="mt-2 leading-6">
+            Contactez AIDUCA pour demander votre inscription à cette formation.
           </p>
         </div>
       </div>
+      <Link
+        href="/contact"
+        className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-md bg-[#07883f] px-4 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[#067437] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#07883f] focus-visible:ring-offset-2"
+      >
+        <Mail className="h-5 w-5" aria-hidden />
+        Demander mon inscription
+      </Link>
     </div>
   );
 }

@@ -77,7 +77,7 @@ export function CourseCurriculum({ sections, courseSlug }: CourseCurriculumProps
   );
 
   return (
-    <div className="rounded-lg border border-border bg-card">
+    <div className="overflow-hidden rounded-xl border border-[#d8e4df] bg-card shadow-[0_1px_2px_rgba(15,23,42,0.03)]">
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-4 py-3">
         <p className="text-sm text-muted-foreground">
           {sections.length} {pluralize(sections.length, "section")} ·{" "}
@@ -92,7 +92,7 @@ export function CourseCurriculum({ sections, courseSlug }: CourseCurriculumProps
           {allOpen ? "Tout masquer" : "Tout afficher"}
         </button>
       </div>
-      <ul className="divide-y divide-border">
+      <ul className="divide-y divide-[#d8e4df]">
         {sections.map((section) => {
           const isOpen = openIds.has(section.id);
           const lessonCount = section.lessons.length;
@@ -106,13 +106,16 @@ export function CourseCurriculum({ sections, courseSlug }: CourseCurriculumProps
               <button
                 type="button"
                 onClick={() => toggle(section.id)}
-                className="flex w-full items-center justify-between gap-4 px-4 py-3 text-left hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                className="flex w-full items-center justify-between gap-4 px-5 py-4 text-left hover:bg-[#f3faf6] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#07883f]"
                 aria-expanded={isOpen}
               >
                 <span className="flex items-center gap-3">
+                  <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[#e9f7ef] text-xs font-semibold text-[#07883f]">
+                    {sections.indexOf(section) + 1}
+                  </span>
                   <ChevronDown
                     className={cn(
-                      "h-4 w-4 shrink-0 text-muted-foreground transition-transform",
+                      "h-4 w-4 shrink-0 text-[#345044] transition-transform",
                       !isOpen && "-rotate-90",
                     )}
                     aria-hidden
@@ -136,7 +139,9 @@ export function CourseCurriculum({ sections, courseSlug }: CourseCurriculumProps
                     >
                       <span className="flex min-w-0 items-center gap-2">
                         <LessonIcon type={lesson.type} />
-                        <span className="truncate text-foreground">{lesson.title}</span>
+                        <span className="truncate text-foreground">
+                          {lesson.type === "QUIZ" ? "Quiz de validation" : lesson.title}
+                        </span>
                         {lesson.isFreePreview ? (
                           // Si on a le slug du cours, le badge devient un lien
                           // cliquable qui ouvre la leçon en mode aperçu (le
