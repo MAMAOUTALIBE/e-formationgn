@@ -86,6 +86,7 @@ fi
 : "${NEXT_PUBLIC_TURNSTILE_SITE_KEY:=}"
 : "${NEXT_PUBLIC_SENTRY_DSN:=}"
 : "${NEXT_PUBLIC_PLATFORM_MODE:=}"
+: "${ALLOW_OPTIONAL_MONITORING:=0}"
 
 case "${NEXT_PUBLIC_PLATFORM_MODE}" in
   marketplace|centre_formation) ;;
@@ -96,13 +97,21 @@ case "${NEXT_PUBLIC_PLATFORM_MODE}" in
     ;;
 esac
 
-if [ -z "${NEXT_PUBLIC_SENTRY_DSN}" ]; then
+case "${ALLOW_OPTIONAL_MONITORING}" in
+  0|1) ;;
+  *) echo "❌ ALLOW_OPTIONAL_MONITORING doit valoir 0 ou 1." >&2; exit 1 ;;
+esac
+
+if [ "${ALLOW_OPTIONAL_MONITORING}" != "1" ] && [ -z "${NEXT_PUBLIC_SENTRY_DSN}" ]; then
   echo "❌ NEXT_PUBLIC_SENTRY_DSN est obligatoire dans .env.deploy." >&2
   exit 1
 fi
-if [ -z "${NEXT_PUBLIC_TURNSTILE_SITE_KEY}" ]; then
+if [ "${ALLOW_OPTIONAL_MONITORING}" != "1" ] && [ -z "${NEXT_PUBLIC_TURNSTILE_SITE_KEY}" ]; then
   echo "❌ NEXT_PUBLIC_TURNSTILE_SITE_KEY est obligatoire dans .env.deploy." >&2
   exit 1
+fi
+if [ "${ALLOW_OPTIONAL_MONITORING}" = "1" ]; then
+  echo "⚠ Sentry et Turnstile temporairement optionnels pour ce déploiement."
 fi
 
 echo "▶ Variables publiques embarquées dans l'image :"
@@ -132,9 +141,13 @@ if [ -z "${VPS_SSH:-}" ]; then
   exit 1
 fi
 if [ -n "${VPS_SSH:-}" ]; then
+  strict_production=1
+  if [ "${ALLOW_OPTIONAL_MONITORING}" = "1" ]; then
+    strict_production=0
+  fi
   echo "▶ Préflight des variables runtime sur ${VPS_SSH}…"
   ssh "${VPS_SSH}" sh -s -- "${NEXT_PUBLIC_PLATFORM_MODE}" \
-    "${NEXT_PUBLIC_TURNSTILE_SITE_KEY}" "${NEXT_PUBLIC_APP_URL}" 1 \
+    "${NEXT_PUBLIC_TURNSTILE_SITE_KEY}" "${NEXT_PUBLIC_APP_URL}" "${strict_production}" \
     "${NEXT_PUBLIC_SENTRY_DSN}" \
     < scripts/validate-production-env.sh
 fi

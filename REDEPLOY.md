@@ -54,6 +54,11 @@ public et la paire Turnstile complète (obligatoire en mode centre). Il contrôl
 la correspondance exacte des deux valeurs publiques build/runtime, le mode et
 la paire Upstash sans jamais afficher les valeurs.
 
+Exception temporaire : `ALLOW_OPTIONAL_MONITORING=1 npm run deploy` autorise
+une livraison sans Sentry ni Turnstile. Les autres secrets et contrôles restent
+obligatoires. Cette option doit être retirée dès que les deux services sont
+configurés.
+
 ### 2. VPS — pull + redémarrage
 
 Dans le Terminal Hostinger :
