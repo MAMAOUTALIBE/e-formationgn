@@ -21,12 +21,14 @@ interface ProfileFormProps {
     bio: string;
     websiteUrl: string;
     linkedinUrl: string;
+    facebookUrl: string;
     twitterUrl: string;
     youtubeUrl: string;
   };
+  identityLocked?: boolean;
 }
 
-export function ProfileForm({ defaultValues }: ProfileFormProps) {
+export function ProfileForm({ defaultValues, identityLocked = false }: ProfileFormProps) {
   const [state, formAction, pending] = useActionState(updateProfile, initialState);
   const errors = state.fieldErrors ?? {};
 
@@ -47,22 +49,44 @@ export function ProfileForm({ defaultValues }: ProfileFormProps) {
         </Alert>
       ) : null}
 
+      {identityLocked ? (
+        <Alert>
+          <AlertDescription>
+            Votre identité est verrouillée. Contactez l’administration pour corriger votre prénom, votre nom ou votre photo.
+          </AlertDescription>
+        </Alert>
+      ) : null}
+
       <div className="grid gap-4 sm:grid-cols-2">
-        <FormField id="firstName" label="Prénom" required error={errors.firstName?.[0]}>
+        <FormField
+          id="firstName"
+          label="Prénom"
+          required={!identityLocked}
+          error={errors.firstName?.[0]}
+        >
           <Input
             id="firstName"
-            name="firstName"
+            name={identityLocked ? undefined : "firstName"}
             defaultValue={defaultValues.firstName}
-            required
+            required={!identityLocked}
+            readOnly={identityLocked}
+            aria-readonly={identityLocked}
             disabled={pending}
           />
         </FormField>
-        <FormField id="lastName" label="Nom" required error={errors.lastName?.[0]}>
+        <FormField
+          id="lastName"
+          label="Nom"
+          required={!identityLocked}
+          error={errors.lastName?.[0]}
+        >
           <Input
             id="lastName"
-            name="lastName"
+            name={identityLocked ? undefined : "lastName"}
             defaultValue={defaultValues.lastName}
-            required
+            required={!identityLocked}
+            readOnly={identityLocked}
+            aria-readonly={identityLocked}
             disabled={pending}
           />
         </FormField>
@@ -123,6 +147,16 @@ export function ProfileForm({ defaultValues }: ProfileFormProps) {
             defaultValue={defaultValues.twitterUrl}
             disabled={pending}
             placeholder="https://twitter.com/..."
+          />
+        </FormField>
+        <FormField id="facebookUrl" label="Facebook" error={errors.facebookUrl?.[0]}>
+          <Input
+            id="facebookUrl"
+            name="facebookUrl"
+            type="url"
+            defaultValue={defaultValues.facebookUrl}
+            disabled={pending}
+            placeholder="https://facebook.com/..."
           />
         </FormField>
         <FormField id="youtubeUrl" label="YouTube" error={errors.youtubeUrl?.[0]}>

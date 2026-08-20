@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { auth } from "@/auth";
+import { canUpdateProfileIdentity } from "@/lib/profile-update";
 import { createLocalUpload } from "@/lib/storage/local";
 import { createPresignedUpload, isR2Configured } from "@/lib/storage/r2";
 
@@ -43,7 +44,12 @@ export async function POST(request: Request) {
   if (!session?.user) {
     return NextResponse.json({ error: "Non authentifié." }, { status: 401 });
   }
-  // Pas de restriction de rôle : tout user connecté peut uploader son avatar.
+  if (!canUpdateProfileIdentity(session.user.role)) {
+    return NextResponse.json(
+      { error: "La photo de profil d’un apprenant ne peut pas être modifiée." },
+      { status: 403 },
+    );
+  }
 
   let body: RequestBody;
   try {

@@ -6,16 +6,17 @@
 import { revalidatePath } from "next/cache";
 
 import { auth } from "@/auth";
+import {
+  buildProfileUpdate,
+  canUpdateProfileIdentity,
+} from "@/lib/profile-update";
 import { prisma } from "@/lib/prisma";
-import { updateProfileSchema } from "@/lib/validators/auth";
+import {
+  updateProfileSchema,
+  updateStudentPublicProfileSchema,
+} from "@/lib/validators/auth";
 
 import type { ActionResult } from "./auth";
-
-function emptyToNull(value: string | undefined | null): string | null {
-  if (!value) return null;
-  const trimmed = value.trim();
-  return trimmed.length === 0 ? null : trimmed;
-}
 
 export async function updateProfile(
   _prevState: ActionResult | undefined,
@@ -33,11 +34,15 @@ export async function updateProfile(
     bio: formData.get("bio") ?? "",
     websiteUrl: formData.get("websiteUrl") ?? "",
     linkedinUrl: formData.get("linkedinUrl") ?? "",
+    facebookUrl: formData.get("facebookUrl") ?? "",
     twitterUrl: formData.get("twitterUrl") ?? "",
     youtubeUrl: formData.get("youtubeUrl") ?? "",
   };
 
-  const parsed = updateProfileSchema.safeParse(raw);
+  const schema = session.user.role === "STUDENT"
+    ? updateStudentPublicProfileSchema
+    : updateProfileSchema;
+  const parsed = schema.safeParse(raw);
   if (!parsed.success) {
     return {
       success: false,
@@ -46,20 +51,9 @@ export async function updateProfile(
     };
   }
 
-  const data = parsed.data;
   await prisma.user.update({
     where: { id: session.user.id },
-    data: {
-      firstName: data.firstName,
-      lastName: data.lastName,
-      name: `${data.firstName} ${data.lastName}`,
-      headline: emptyToNull(data.headline),
-      bio: emptyToNull(data.bio),
-      websiteUrl: emptyToNull(data.websiteUrl),
-      linkedinUrl: emptyToNull(data.linkedinUrl),
-      twitterUrl: emptyToNull(data.twitterUrl),
-      youtubeUrl: emptyToNull(data.youtubeUrl),
-    },
+    data: buildProfileUpdate(session.user.role, parsed.data),
   });
 
   revalidatePath("/profil");
@@ -79,6 +73,13 @@ export async function updateAvatarUrl(
   const session = await auth();
   if (!session?.user) {
     return { success: false, message: "Vous devez être connecté." };
+  }
+
+  if (!canUpdateProfileIdentity(session.user.role)) {
+    return {
+      success: false,
+      message: "La photo de profil d’un apprenant ne peut pas être modifiée.",
+    };
   }
 
   let validated: string | null = null;

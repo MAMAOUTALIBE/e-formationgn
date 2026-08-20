@@ -69,9 +69,22 @@ export const updateProfileSchema = z
     bio: z.string().trim().max(2000).optional().or(z.literal("")),
     websiteUrl: z.string().trim().url("URL invalide.").optional().or(z.literal("")),
     linkedinUrl: z.string().trim().url("URL invalide.").optional().or(z.literal("")),
+    facebookUrl: z.string().trim().url("URL invalide.").optional().or(z.literal("")),
     twitterUrl: z.string().trim().url("URL invalide.").optional().or(z.literal("")),
     youtubeUrl: z.string().trim().url("URL invalide.").optional().or(z.literal("")),
   })
   .strict();
 
 export type UpdateProfileInput = z.infer<typeof updateProfileSchema>;
+
+// Un apprenant ne peut enrichir que les informations publiques de son profil.
+// Son identité est gérée par l'administration et n'entre jamais dans cette
+// validation, même si une requête forgée envoie des champs supplémentaires.
+export const updateStudentPublicProfileSchema = updateProfileSchema.omit({
+  firstName: true,
+  lastName: true,
+}).strip();
+
+export type UpdateStudentPublicProfileInput = z.infer<
+  typeof updateStudentPublicProfileSchema
+>;

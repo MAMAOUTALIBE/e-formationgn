@@ -174,11 +174,17 @@ export default async function ProfilePage() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <AvatarUploader
-                currentUrl={user.image}
-                userName={user.name ?? user.email}
-                initials={initials}
-              />
+              {user.role === "STUDENT" ? (
+                <p className="text-sm text-muted-foreground">
+                  Votre photo fait partie de votre identité et ne peut pas être modifiée depuis l’espace apprenant.
+                </p>
+              ) : (
+                <AvatarUploader
+                  currentUrl={user.image}
+                  userName={user.name ?? user.email}
+                  initials={initials}
+                />
+              )}
             </CardContent>
           </Card>
 
@@ -196,6 +202,7 @@ export default async function ProfilePage() {
             </CardHeader>
             <CardContent>
               <ProfileForm
+                identityLocked={user.role === "STUDENT"}
                 defaultValues={{
                   firstName: user.firstName ?? "",
                   lastName: user.lastName ?? "",
@@ -203,6 +210,7 @@ export default async function ProfilePage() {
                   bio: user.bio ?? "",
                   websiteUrl: user.websiteUrl ?? "",
                   linkedinUrl: user.linkedinUrl ?? "",
+                  facebookUrl: user.facebookUrl ?? "",
                   twitterUrl: user.twitterUrl ?? "",
                   youtubeUrl: user.youtubeUrl ?? "",
                 }}
