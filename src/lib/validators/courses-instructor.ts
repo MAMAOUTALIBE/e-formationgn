@@ -221,6 +221,32 @@ export const lessonVideoUrlSchema = z
   })
   .strict();
 
+// Ressource téléchargeable jointe à une leçon. `url` suit la même règle que
+// la vidéo externe : lien public http(s) (R2) ou chemin servi par l'app quand
+// le stockage objet n'est pas configuré.
+export const lessonResourceSchema = z
+  .object({
+    title: z
+      .string()
+      .trim()
+      .min(1, "Donnez un nom à la ressource.")
+      .max(160, "Nom trop long."),
+    url: z
+      .string()
+      .trim()
+      .max(2000, "URL trop longue.")
+      .refine(
+        (u) => /^https?:\/\//i.test(u) || u.startsWith("/uploads/"),
+        "L'URL doit être un lien http(s) ou un fichier téléversé.",
+      ),
+    // Métadonnée d'affichage uniquement : le plafond réel dépend du type et
+    // est appliqué par la route de presign (aucun pour la vidéo). Le borner
+    // ici rejetterait l'enregistrement d'une vidéo pourtant déjà téléversée.
+    fileSizeBytes: z.coerce.number().int().positive().safe().optional(),
+  })
+  .strict();
+export type LessonResourceInput = z.infer<typeof lessonResourceSchema>;
+
 export const reorderItemsSchema = z
   .object({
     ids: z.array(z.string().min(1)).min(1).max(200),

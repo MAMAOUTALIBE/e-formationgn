@@ -27,6 +27,7 @@ import {
 import { Container } from "@/components/ui/container";
 import { formatDurationFromSeconds } from "@/lib/format/duration";
 import { prisma } from "@/lib/prisma";
+import { canUpdateProfileIdentity } from "@/lib/profile-update";
 
 export const metadata: Metadata = {
   title: "Mon profil",
@@ -88,6 +89,10 @@ export default async function ProfilePage() {
   if (!user) {
     redirect("/connexion");
   }
+
+  // Une seule source de vérité, partagée avec les Server Actions : l'écran ne
+  // peut pas proposer un champ que l'action refusera d'enregistrer.
+  const identityLocked = !canUpdateProfileIdentity(user);
 
   const initials =
     `${user.firstName?.[0] ?? ""}${user.lastName?.[0] ?? ""}`.trim() ||
@@ -174,7 +179,7 @@ export default async function ProfilePage() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              {user.role === "STUDENT" ? (
+              {identityLocked ? (
                 <p className="text-sm text-muted-foreground">
                   Votre photo fait partie de votre identité et ne peut pas être modifiée depuis l’espace apprenant.
                 </p>
@@ -202,7 +207,7 @@ export default async function ProfilePage() {
             </CardHeader>
             <CardContent>
               <ProfileForm
-                identityLocked={user.role === "STUDENT"}
+                identityLocked={identityLocked}
                 defaultValues={{
                   firstName: user.firstName ?? "",
                   lastName: user.lastName ?? "",

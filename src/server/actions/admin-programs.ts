@@ -10,6 +10,7 @@ import { revalidatePath } from "next/cache";
 
 import { Prisma } from "@/generated/prisma/client";
 import { requireAnyAdminRole } from "@/lib/auth/authorization";
+import { adminRolesForScreen } from "@/lib/workspace/admin-screen-roles";
 import {
   ACTIVE_PROGRAM_REQUIRES_COURSE,
   canActivateProgram,
@@ -59,7 +60,7 @@ export async function createProgram(
 ): Promise<ProgramActionResult> {
   let actor;
   try {
-    actor = await requireAnyAdminRole();
+    actor = await requireAnyAdminRole(...adminRolesForScreen("/admin/formations"));
   } catch {
     return { success: false, message: "Accès refusé." };
   }
@@ -122,7 +123,7 @@ export async function updateProgram(
 ): Promise<ProgramActionResult> {
   let actor;
   try {
-    actor = await requireAnyAdminRole();
+    actor = await requireAnyAdminRole(...adminRolesForScreen("/admin/formations"));
   } catch {
     return { success: false, message: "Accès refusé." };
   }
@@ -209,7 +210,7 @@ export async function addCourseToProgram(
 ): Promise<ProgramActionResult> {
   let actor;
   try {
-    actor = await requireAnyAdminRole();
+    actor = await requireAnyAdminRole(...adminRolesForScreen("/admin/formations"));
   } catch {
     return { success: false, message: "Accès refusé." };
   }
@@ -251,7 +252,7 @@ export async function removeCourseFromProgram(
 ): Promise<ProgramActionResult> {
   let actor;
   try {
-    actor = await requireAnyAdminRole();
+    actor = await requireAnyAdminRole(...adminRolesForScreen("/admin/formations"));
   } catch {
     return { success: false, message: "Accès refusé." };
   }
@@ -336,7 +337,7 @@ export async function createTrainingSession(
 ): Promise<ProgramActionResult> {
   let actor;
   try {
-    actor = await requireAnyAdminRole();
+    actor = await requireAnyAdminRole(...adminRolesForScreen("/admin/formations"));
   } catch {
     return { success: false, message: "Accès refusé." };
   }
@@ -401,7 +402,7 @@ export async function setSessionStatus(
 ): Promise<ProgramActionResult> {
   let actor;
   try {
-    actor = await requireAnyAdminRole();
+    actor = await requireAnyAdminRole(...adminRolesForScreen("/admin/formations"));
   } catch {
     return { success: false, message: "Accès refusé." };
   }

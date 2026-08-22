@@ -7,36 +7,41 @@ import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
-import type { CourseStatus } from "@/generated/prisma/enums";
-import { getAdminCoursesDashboardData, listAdminCourses, type AdminCoursesSort } from "@/server/queries/admin-courses";
+import { CourseStatus } from "@/generated/prisma/enums";
+import { parseListFilter } from "@/lib/admin/list-filters";
+import { ADMIN_COURSES_SORTS, getAdminCoursesDashboardData, listAdminCourses } from "@/server/queries/admin-courses";
 import { listFeaturedCategories } from "@/server/queries/categories";
 
 export const metadata: Metadata = { title: "Formations — CRM admin" };
 export const dynamic = "force-dynamic";
 
 interface Params {
+  // Chaînes brutes : ce qui vient de l'URL se valide avant d'atteindre
+  // Prisma. Un statut inconnu doit être ignoré, pas provoquer une erreur
+  // d'énumération et donc une page en échec.
   q?: string;
-  status?: CourseStatus;
+  status?: string;
   categoryId?: string;
   instructorId?: string;
   page?: string;
   pageSize?: string;
-  sort?: AdminCoursesSort;
-  direction?: "asc" | "desc";
+  sort?: string;
+  direction?: string;
 }
 
 export default async function AdminCoursesPage({ searchParams }: { searchParams: Promise<Params> }) {
   const params = await searchParams;
   const pageSize = [25, 50, 100].includes(Number(params.pageSize)) ? Number(params.pageSize) : 50;
+  const status = parseListFilter(params.status, Object.values(CourseStatus));
   const filters = {
     q: params.q,
-    status: params.status,
+    status,
     categoryId: params.categoryId,
     instructorId: params.instructorId,
     page: Number(params.page) || 1,
     pageSize,
-    sort: params.sort,
-    direction: params.direction,
+    sort: parseListFilter(params.sort, ADMIN_COURSES_SORTS),
+    direction: parseListFilter(params.direction, ["asc", "desc"] as const),
   };
   const [{ rows, total, page }, categories, dashboard] = await Promise.all([
     listAdminCourses(filters),
@@ -44,7 +49,7 @@ export default async function AdminCoursesPage({ searchParams }: { searchParams:
     getAdminCoursesDashboardData(),
   ]);
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
-  const hasFilters = Boolean(params.q || params.status || params.categoryId || params.instructorId);
+  const hasFilters = Boolean(filters.q || filters.status || filters.categoryId || filters.instructorId);
 
   return (
     <div className="flex h-full max-h-[calc(100dvh-12.5rem)] min-h-0 flex-col gap-3 overflow-hidden" data-testid="courses-workspace">
@@ -82,5 +87,5 @@ function CompactStat({ icon, label, value, tone }: { icon: React.ReactNode; labe
 }
 
 function CourseFilters({ params, categories, instructors, hasFilters }: { params: Params; categories: Array<{ id: string; name: string }>; instructors: Array<{ id: string; name: string | null; email: string }>; hasFilters: boolean }) {
-  return <form className="flex shrink-0 flex-wrap items-center gap-2 rounded-xl border border-border/75 bg-card p-2.5 shadow-sm xl:flex-nowrap" role="search"><div className="relative min-w-60 flex-[2_1_22rem]"><Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" /><Input name="q" aria-label="Rechercher par titre ou slug" defaultValue={params.q ?? ""} placeholder="Rechercher par titre ou slug…" className="h-9 pl-9" /></div><Select name="status" defaultValue={params.status ?? ""} aria-label="Statut" className="h-9 min-w-36 flex-1 py-1"><option value="">Statut · Tous</option><option value="DRAFT">Brouillons</option><option value="PENDING_REVIEW">À modérer</option><option value="PUBLISHED">Publiés</option><option value="REJECTED">Rejetés</option><option value="ARCHIVED">Archivés</option></Select><Select name="instructorId" defaultValue={params.instructorId ?? ""} aria-label="Formateur" className="h-9 min-w-40 flex-1 py-1"><option value="">Formateur · Tous</option>{instructors.map((instructor) => <option key={instructor.id} value={instructor.id}>{instructor.name ?? instructor.email}</option>)}</Select><Select name="categoryId" defaultValue={params.categoryId ?? ""} aria-label="Catégorie" className="h-9 min-w-40 flex-1 py-1"><option value="">Catégorie · Toutes</option>{categories.map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}</Select><Button type="submit" variant="outline" size="sm" className="h-9"><SlidersHorizontal className="h-4 w-4" />Filtres</Button>{hasFilters ? <Button variant="ghost" size="icon" className="h-9 w-9" asChild><Link href="/admin/cours" aria-label="Réinitialiser les filtres" title="Réinitialiser les filtres"><RotateCcw className="h-4 w-4" /></Link></Button> : null}</form>;
+  return <form className="flex shrink-0 flex-wrap items-center gap-2 rounded-xl border border-border/75 bg-card p-2.5 shadow-sm xl:flex-nowrap" role="search"><div className="relative min-w-60 flex-[2_1_22rem]"><Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" /><Input name="q" aria-label="Rechercher par titre ou slug" defaultValue={params.q ?? ""} placeholder="Rechercher par titre ou slug…" className="h-9 pl-9" /></div><Select name="status" defaultValue={status ?? ""} aria-label="Statut" className="h-9 min-w-36 flex-1 py-1"><option value="">Statut · Tous</option><option value="DRAFT">Brouillons</option><option value="PENDING_REVIEW">À modérer</option><option value="PUBLISHED">Publiés</option><option value="REJECTED">Rejetés</option><option value="ARCHIVED">Archivés</option></Select><Select name="instructorId" defaultValue={params.instructorId ?? ""} aria-label="Formateur" className="h-9 min-w-40 flex-1 py-1"><option value="">Formateur · Tous</option>{instructors.map((instructor) => <option key={instructor.id} value={instructor.id}>{instructor.name ?? instructor.email}</option>)}</Select><Select name="categoryId" defaultValue={params.categoryId ?? ""} aria-label="Catégorie" className="h-9 min-w-40 flex-1 py-1"><option value="">Catégorie · Toutes</option>{categories.map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}</Select><Button type="submit" variant="outline" size="sm" className="h-9"><SlidersHorizontal className="h-4 w-4" />Filtres</Button>{hasFilters ? <Button variant="ghost" size="icon" className="h-9 w-9" asChild><Link href="/admin/cours" aria-label="Réinitialiser les filtres" title="Réinitialiser les filtres"><RotateCcw className="h-4 w-4" /></Link></Button> : null}</form>;
 }

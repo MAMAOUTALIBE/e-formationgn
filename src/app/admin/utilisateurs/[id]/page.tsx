@@ -3,6 +3,9 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { AccountCredentials } from "@/components/features/admin/account-credentials";
+import { AccountIdentityForm } from "@/components/features/admin/account-identity-form";
+import { toDateInputValue } from "@/components/features/admin/civil-status-fields";
+import { DeleteAccountButton } from "@/components/features/admin/delete-account-button";
 import { CourseAccessManager } from "@/components/features/admin/course-access-manager";
 import { StudentRegistrations } from "@/components/features/admin/student-registrations";
 import { Badge } from "@/components/ui/badge";
@@ -10,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { STAFF_ROLE_LABELS, STAFF_ROLES, type StaffRole } from "@/lib/account-audience";
+import { joinFullName } from "@/lib/identity-name";
 import { isTrainingCenterMode } from "@/lib/platform-mode";
 import { prisma } from "@/lib/prisma";
 import {
@@ -202,6 +206,35 @@ export default async function AdminUserDetailPage({ params }: PageProps) {
           </CardContent>
         </Card>
       ) : null}
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Identité</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {user.identityLockedAt ? (
+            <p className="text-xs text-muted-foreground">
+              Identité verrouillée depuis le{" "}
+              {user.identityLockedAt.toLocaleDateString("fr-FR")} : le titulaire
+              la voit en lecture seule dans son espace. Elle ne se corrige que
+              d&apos;ici.
+            </p>
+          ) : null}
+          <AccountIdentityForm
+            userId={user.id}
+            certificatesCount={user._count.certificates}
+            values={{
+              fullName: joinFullName(user),
+              birthDate: toDateInputValue(user.birthDate),
+              birthPlace: user.birthPlace ?? "",
+              gender: user.gender ?? "",
+              phone: user.phone ?? "",
+              country: user.country ?? "",
+              address: user.address ?? "",
+            }}
+          />
+        </CardContent>
+      </Card>
 
       {isTrainingCenterMode() ? (
         <Card>
@@ -429,13 +462,21 @@ export default async function AdminUserDetailPage({ params }: PageProps) {
             }}
             className="flex items-center justify-between gap-3"
           >
-            <span className="text-sm text-red-900 dark:text-red-200">
-              Demande de suppression définitive (RGPD)
+            <span className="text-sm text-foreground">
+              Archiver le compte (demande RGPD) — réversible
             </span>
             <Button type="submit" size="sm" variant="outline">
-              Supprimer
+              Archiver
             </Button>
           </form>
+          {isLearner ? (
+            <DeleteAccountButton
+              userId={user.id}
+              email={user.email}
+              certificatesCount={user._count.certificates}
+              enrollmentsCount={user._count.enrollments}
+            />
+          ) : null}
         </CardContent>
       </Card>
     </div>

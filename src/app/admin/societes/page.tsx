@@ -22,7 +22,9 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { Input } from "@/components/ui/input";
 import { KpiCard } from "@/components/ui/kpi-card";
 import { StatusBadge } from "@/components/ui/status-badge";
+import { parseListFilter } from "@/lib/admin/list-filters";
 import {
+  COMPANY_STATUSES,
   getCompanyDashboardStats,
   listCompanies,
   type CompanyListRow,
@@ -43,7 +45,7 @@ interface PageProps {
 
 export default async function CompaniesPage({ searchParams }: PageProps) {
   const params = await searchParams;
-  const status = isCompanyStatus(params.statut) ? params.statut : undefined;
+  const status = parseListFilter(params.statut, COMPANY_STATUSES);
   const [result, stats] = await Promise.all([
     listCompanies({
       search: params.q,
@@ -55,7 +57,7 @@ export default async function CompaniesPage({ searchParams }: PageProps) {
   ]);
   const { rows, total, page, pageSize } = result;
   const lastPage = Math.max(1, Math.ceil(total / pageSize));
-  const hasFilters = Boolean(params.q || params.statut || params.ville);
+  const hasFilters = Boolean(params.q?.trim() || status || params.ville);
 
   return (
     <div className="space-y-5" data-testid="companies-workspace">
@@ -104,7 +106,7 @@ export default async function CompaniesPage({ searchParams }: PageProps) {
             </div>
             <div>
               <label htmlFor="statut" className="mb-1.5 block text-xs font-semibold text-foreground">Statut</label>
-              <select id="statut" name="statut" defaultValue={params.statut ?? ""} className="h-10 w-full rounded-md border border-border bg-background px-3 text-sm">
+              <select id="statut" name="statut" defaultValue={status ?? ""} className="h-10 w-full rounded-md border border-border bg-background px-3 text-sm">
                 <option value="">Tous les statuts</option>
                 <option value="ACTIVE">Actives</option>
                 <option value="INACTIVE">Inactives</option>
@@ -230,10 +232,6 @@ function Pagination({ params, page, lastPage }: { params: PageProps["searchParam
       <Button variant="outline" size="icon" className="h-8 w-8" asChild={page < lastPage} disabled={page >= lastPage}>{page < lastPage ? <Link href={buildPageHref(params, page + 1)} aria-label="Page suivante"><ArrowRight className="h-3.5 w-3.5" /></Link> : <ArrowRight className="h-3.5 w-3.5" />}</Button>
     </nav>
   );
-}
-
-function isCompanyStatus(value?: string): value is "ACTIVE" | "INACTIVE" | "ARCHIVED" {
-  return value === "ACTIVE" || value === "INACTIVE" || value === "ARCHIVED";
 }
 
 function formatSiret(siret: string | null): string {

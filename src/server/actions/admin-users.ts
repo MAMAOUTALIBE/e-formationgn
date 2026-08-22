@@ -10,6 +10,7 @@ import { isStaffRole } from "@/lib/account-audience";
 import { requireAdmin } from "@/lib/auth/authorization";
 import { checkUserRateLimit, rateLimitMessage } from "@/lib/auth/rate-limit-ip";
 import { csvResponseHeaders, rowsToCsv } from "@/lib/csv";
+import { joinFullName } from "@/lib/identity-name";
 import { prisma } from "@/lib/prisma";
 import { listAdminUsers } from "@/server/queries/admin-users";
 import { createAuditLog } from "@/server/services/audit-log";
@@ -200,6 +201,13 @@ export async function addAdminNoteOnUser(
   return { success: true, message: "Note enregistrée." };
 }
 
+/** Libellés lisibles du sexe, dans les termes du formulaire de saisie. */
+const GENDER_LABELS: Record<string, string> = {
+  FEMALE: "Féminin",
+  MALE: "Masculin",
+  OTHER: "Autre",
+};
+
 export async function exportUsersCsv(): Promise<{ csv: string; filename: string } | { error: string }> {
   let session;
   try {
@@ -225,6 +233,13 @@ export async function exportUsersCsv(): Promise<{ csv: string; filename: string 
       id: true,
       email: true,
       name: true,
+      firstName: true,
+      lastName: true,
+      birthDate: true,
+      birthPlace: true,
+      gender: true,
+      phone: true,
+      address: true,
       role: true,
       status: true,
       country: true,
@@ -233,13 +248,20 @@ export async function exportUsersCsv(): Promise<{ csv: string; filename: string 
       lastLoginAt: true,
     },
   });
+  // Les intitulés sont ceux que l'import sait relire : un export réimporté
+  // n'a donc pas à être retaillé à la main.
   const rows = users.map((u) => ({
     id: u.id,
+    "nom et prenom": joinFullName(u),
     email: u.email,
-    name: u.name ?? "",
+    "date de naissance": u.birthDate ? u.birthDate.toISOString().slice(0, 10) : "",
+    "lieu de naissance": u.birthPlace ?? "",
+    sexe: GENDER_LABELS[u.gender ?? ""] ?? "",
+    telephone: u.phone ?? "",
+    pays: u.country ?? "",
+    adresse: u.address ?? "",
     role: u.role,
     status: u.status,
-    country: u.country ?? "",
     isInstructor: u.isInstructor ? "oui" : "non",
     createdAt: u.createdAt.toISOString(),
     lastLoginAt: u.lastLoginAt?.toISOString() ?? "",

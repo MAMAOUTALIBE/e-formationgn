@@ -179,6 +179,12 @@ export const authConfig = {
         return true;
       }
 
+      // Ressources de leçon : la route vérifie l'inscription elle-même et doit
+      // répondre 401/403 en JSON. Sans cette entrée, le proxy renverrait une
+      // redirection HTML vers /connexion, qu'une balise <video> ou <img> ne
+      // sait pas interpréter — le média échouerait sans message.
+      if (pathname.startsWith("/api/lecons/")) return true;
+
       // API admin : la route handler fait sa propre vérification d'auth + rôle.
       // On laisse passer pour qu'elle puisse répondre 401/403/429 plutôt que 302.
       if (pathname.startsWith("/api/admin/")) return true;

@@ -27,7 +27,15 @@ test("les rôles internes et le rôle apprenant sont disjoints", () => {
 });
 
 test("les lectures et actions apprenants imposent STUDENT côté serveur", async () => {
-  const [queries, usersActions, enrollments, accounts, importStudents, csvParser] =
+  const [
+    queries,
+    usersActions,
+    enrollments,
+    accounts,
+    importStudents,
+    csvParser,
+    identityValidators,
+  ] =
     await Promise.all([
       readFile(path.join(root, "src/server/queries/admin-users.ts"), "utf8"),
       readFile(path.join(root, "src/server/actions/admin-users.ts"), "utf8"),
@@ -35,6 +43,7 @@ test("les lectures et actions apprenants imposent STUDENT côté serveur", async
       readFile(path.join(root, "src/server/actions/admin-accounts.ts"), "utf8"),
       readFile(path.join(root, "src/server/actions/admin-import-students.ts"), "utf8"),
       readFile(path.join(root, "src/lib/admin/csv-students.ts"), "utf8"),
+      readFile(path.join(root, "src/lib/validators/identity.ts"), "utf8"),
     ]);
 
   assert.match(queries, /const where: Prisma\.UserWhereInput = \{ role: "STUDENT" \}/);
@@ -44,7 +53,13 @@ test("les lectures et actions apprenants imposent STUDENT côté serveur", async
   assert.match(usersActions, /role: "STUDENT"/);
   assert.match(enrollments, /where: \{ id: \{ in: userIds \}, role: "STUDENT" \}/);
   assert.doesNotMatch(enrollments, /role: \{ in: \["STUDENT", "INSTRUCTOR"\] \}/);
-  assert.match(accounts, /const CREATABLE_ROLES = \["STUDENT"\]/);
+  // Le périmètre des rôles créables a rejoint les validateurs ; l'écran de
+  // création doit lire CE schéma-là et pas en redéfinir un plus permissif.
+  assert.match(accounts, /createCenterAccountSchema/);
+  assert.match(
+    identityValidators,
+    /const CREATABLE_ACCOUNT_ROLES = \["STUDENT"\]/,
+  );
   assert.match(importStudents, /role: "STUDENT"/);
   assert.match(csvParser, /Un compte interne ne peut pas être importé comme apprenant/);
 });

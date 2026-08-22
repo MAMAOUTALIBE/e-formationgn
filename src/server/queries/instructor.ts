@@ -641,6 +641,7 @@ export async function getLessonForInstructor(
           },
         },
       },
+      resources: { orderBy: { createdAt: "asc" } },
       section: {
         include: { course: { select: { id: true, instructorId: true, slug: true } } },
       },

@@ -10,6 +10,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
 import { requireAnyAdminRole } from "@/lib/auth/authorization";
+import { adminRolesForScreen } from "@/lib/workspace/admin-screen-roles";
 import { prisma } from "@/lib/prisma";
 import { createAuditLog } from "@/server/services/audit-log";
 import { syncRegistrationAccess } from "@/server/services/registration-access";
@@ -41,7 +42,7 @@ export async function registerStudentToSession(
 ): Promise<RegistrationActionResult> {
   let actor;
   try {
-    actor = await requireAnyAdminRole();
+    actor = await requireAnyAdminRole(...adminRolesForScreen("/admin/utilisateurs"));
   } catch {
     return { success: false, message: "Accès refusé." };
   }
@@ -127,7 +128,7 @@ export async function setRegistrationStatus(
 ): Promise<RegistrationActionResult> {
   let actor;
   try {
-    actor = await requireAnyAdminRole();
+    actor = await requireAnyAdminRole(...adminRolesForScreen("/admin/utilisateurs"));
   } catch {
     return { success: false, message: "Accès refusé." };
   }

@@ -14,6 +14,7 @@ import { nanoid } from "nanoid";
 
 import { auth } from "@/auth";
 import { requireInstructorOrAdmin } from "@/lib/auth/authorization";
+import { isTrainingCenterMode } from "@/lib/platform-mode";
 import { prisma } from "@/lib/prisma";
 import { appendSlugSuffix, slugify } from "@/lib/slug";
 import {
@@ -62,6 +63,19 @@ async function ensureCourseOwnership(courseId: string, ctx: AuthorizedCourseCont
 // ---------------------------------------------------------------------------
 
 export async function becomeInstructor(): Promise<void> {
+  // En mode centre de formation, l'habilitation formateur relève du centre :
+  // `/devenir-formateur` le dit déjà à l'écran, et cette action doit le dire
+  // au serveur. Une action serveur s'invoque par son identifiant, sans passer
+  // par le bouton qui la déclenchait — retirer le bouton n'a jamais fermé une
+  // porte.
+  //
+  // Ce refus tient aussi le verrou d'identité : sans lui, un apprenant se
+  // promeut formateur et récupère du même coup la main sur le prénom, le nom
+  // et la photo que le centre a saisis pour ses certificats.
+  if (isTrainingCenterMode()) {
+    redirect("/devenir-formateur");
+  }
+
   const session = await auth();
   if (!session?.user) {
     redirect("/connexion?callbackUrl=/devenir-formateur");

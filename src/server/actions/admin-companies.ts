@@ -10,6 +10,7 @@
 import { revalidatePath } from "next/cache";
 
 import { requireAnyAdminRole } from "@/lib/auth/authorization";
+import { adminRolesForScreen } from "@/lib/workspace/admin-screen-roles";
 import { prisma } from "@/lib/prisma";
 import { companySchema } from "@/lib/validators/company";
 import { createAuditLog } from "@/server/services/audit-log";
@@ -70,7 +71,7 @@ export async function createCompany(
 ): Promise<CompanyActionResult> {
   let actor;
   try {
-    actor = await requireAnyAdminRole();
+    actor = await requireAnyAdminRole(...adminRolesForScreen("/admin/societes"));
   } catch {
     return { success: false, message: "Accès refusé." };
   }
@@ -125,7 +126,7 @@ export async function updateCompany(
 ): Promise<CompanyActionResult> {
   let actor;
   try {
-    actor = await requireAnyAdminRole();
+    actor = await requireAnyAdminRole(...adminRolesForScreen("/admin/societes"));
   } catch {
     return { success: false, message: "Accès refusé." };
   }
@@ -195,7 +196,7 @@ export async function setCompanyStatus(
 ): Promise<CompanyActionResult> {
   let actor;
   try {
-    actor = await requireAnyAdminRole();
+    actor = await requireAnyAdminRole(...adminRolesForScreen("/admin/societes"));
   } catch {
     return { success: false, message: "Accès refusé." };
   }

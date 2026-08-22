@@ -13,6 +13,7 @@ const LEARNING_COURSE_INCLUDE = {
     include: {
       lessons: {
         orderBy: { displayOrder: "asc" },
+        include: { resources: { orderBy: { createdAt: "asc" } } },
       },
     },
   },

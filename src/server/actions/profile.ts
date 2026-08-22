@@ -27,6 +27,17 @@ export async function updateProfile(
     return { success: false, message: "Vous devez être connecté." };
   }
 
+  // Rôle ET verrou relus en base : le JWT porte un rôle qui peut dater, et
+  // il ne porte pas le verrou du tout. Décider ici à partir du jeton
+  // laisserait passer une identité que l'administration vient de figer.
+  const account = await prisma.user.findUnique({
+    where: { id: session.user.id },
+    select: { role: true, identityLockedAt: true },
+  });
+  if (!account) {
+    return { success: false, message: "Compte introuvable." };
+  }
+
   const raw = {
     firstName: formData.get("firstName"),
     lastName: formData.get("lastName"),
@@ -39,9 +50,9 @@ export async function updateProfile(
     youtubeUrl: formData.get("youtubeUrl") ?? "",
   };
 
-  const schema = session.user.role === "STUDENT"
-    ? updateStudentPublicProfileSchema
-    : updateProfileSchema;
+  const schema = canUpdateProfileIdentity(account)
+    ? updateProfileSchema
+    : updateStudentPublicProfileSchema;
   const parsed = schema.safeParse(raw);
   if (!parsed.success) {
     return {
@@ -53,7 +64,7 @@ export async function updateProfile(
 
   await prisma.user.update({
     where: { id: session.user.id },
-    data: buildProfileUpdate(session.user.role, parsed.data),
+    data: buildProfileUpdate(account, parsed.data),
   });
 
   revalidatePath("/profil");
@@ -75,10 +86,14 @@ export async function updateAvatarUrl(
     return { success: false, message: "Vous devez être connecté." };
   }
 
-  if (!canUpdateProfileIdentity(session.user.role)) {
+  const account = await prisma.user.findUnique({
+    where: { id: session.user.id },
+    select: { role: true, identityLockedAt: true },
+  });
+  if (!account || !canUpdateProfileIdentity(account)) {
     return {
       success: false,
-      message: "La photo de profil d’un apprenant ne peut pas être modifiée.",
+      message: "Votre photo fait partie de votre identité et ne peut pas être modifiée ici.",
     };
   }
 

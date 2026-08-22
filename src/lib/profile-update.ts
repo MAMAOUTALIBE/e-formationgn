@@ -12,8 +12,22 @@ function emptyToNull(value: string | undefined | null): string | null {
 
 type PublicProfileInput = UpdateStudentPublicProfileInput;
 
-export function canUpdateProfileIdentity(role: UserRole): boolean {
-  return role !== "STUDENT";
+/**
+ * Ce qu'il faut connaître d'un compte pour savoir s'il peut se renommer.
+ *
+ * Le rôle ne suffit pas. Un apprenant habilité formateur change de rôle, et
+ * une règle qui ne lirait que le rôle lui rendrait à cet instant la main sur
+ * le prénom et le nom que le centre avait saisis — ceux-là mêmes qui figurent
+ * sur ses certificats. D'où le second critère, durable : `identityLockedAt`.
+ */
+export interface IdentitySubject {
+  role: UserRole;
+  identityLockedAt?: Date | null;
+}
+
+export function canUpdateProfileIdentity(subject: IdentitySubject): boolean {
+  if (subject.identityLockedAt) return false;
+  return subject.role !== "STUDENT";
 }
 
 export function buildPublicProfileUpdate(
@@ -31,11 +45,11 @@ export function buildPublicProfileUpdate(
 }
 
 export function buildProfileUpdate(
-  role: UserRole,
+  subject: IdentitySubject,
   data: UpdateProfileInput | PublicProfileInput,
 ): Prisma.UserUpdateInput {
   const publicData = buildPublicProfileUpdate(data);
-  if (!canUpdateProfileIdentity(role)) return publicData;
+  if (!canUpdateProfileIdentity(subject)) return publicData;
 
   const identity = data as UpdateProfileInput;
   return {

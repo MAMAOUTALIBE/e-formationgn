@@ -6,6 +6,7 @@ import { auth } from "@/auth";
 import { ConfirmAction } from "@/components/features/instructor/confirm-action";
 import { LessonAiTools } from "@/components/features/instructor/lesson-ai-tools";
 import { LessonEditForm } from "@/components/features/instructor/lesson-edit-form";
+import { LessonResourcesManager } from "@/components/features/instructor/lesson-resources-manager";
 import { LessonVideoSource } from "@/components/features/instructor/lesson-video-source";
 import { QuizEditor } from "@/components/features/instructor/quiz-editor";
 import { Button } from "@/components/ui/button";
@@ -127,6 +128,28 @@ export default async function LessonEditPage({ params }: PageProps) {
           </CardContent>
         </Card>
       ) : null}
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Ressources téléchargeables</CardTitle>
+          <CardDescription>
+            Supports de cours joints à cette leçon : PDF, diaporamas, tableurs,
+            images, archives. L&apos;élève inscrit les retrouve dans l&apos;onglet
+            « Ressources » du lecteur.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <LessonResourcesManager
+            lessonId={lesson.id}
+            resources={lesson.resources.map((resource) => ({
+              id: resource.id,
+              title: resource.title,
+              url: resource.url,
+              fileSizeBytes: resource.fileSizeBytes,
+            }))}
+          />
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>

@@ -9,6 +9,7 @@ import {
   AuthorizationError,
   requireCourseOwnership,
   requireInstructorOrAdmin,
+  toActionResult,
 } from "@/lib/auth/authorization";
 import {
   createDirectUpload,
@@ -19,6 +20,7 @@ import {
 import { prisma } from "@/lib/prisma";
 import { safeDeleteMuxAsset } from "@/server/services/mux-service";
 import {
+  lessonResourceSchema,
   lessonSchema,
   lessonVideoUrlSchema,
   reorderItemsSchema,
@@ -30,6 +32,9 @@ import type { ActionResult } from "./auth";
 // Alias : la sémantique « est-ce que cet utilisateur peut éditer ce cours ? »
 // est centralisée dans `requireCourseOwnership` (lib/auth/authorization).
 const requireOwnership = requireCourseOwnership;
+
+/** Plafond de pièces jointes par leçon. */
+const MAX_RESOURCES_PER_LESSON = 20;
 
 // Helpers locaux qui chargent davantage que la version centrale (la relation
 // `course` complète + tous les champs lesson/section), pour éviter un second
@@ -302,8 +307,19 @@ export async function duplicateLesson(lessonId: string): Promise<void> {
     _max: { displayOrder: true },
   });
 
+  // Les pièces jointes suivent la copie : elles pointent vers le même objet de
+  // stockage, ce qui est voulu — dupliquer une leçon ne doit pas re-téléverser
+  // ses supports. C'est aussi pourquoi `deleteLessonResource` ne supprime que
+  // la ligne, jamais le fichier.
+  const resources = await prisma.lessonResource.findMany({
+    where: { lessonId },
+    orderBy: { createdAt: "asc" },
+    select: { title: true, url: true, fileSizeBytes: true },
+  });
+
   await prisma.lesson.create({
     data: {
+      resources: resources.length > 0 ? { create: resources } : undefined,
       sectionId: lesson.sectionId,
       title: `${lesson.title} (copie)`,
       description: lesson.description,
@@ -330,7 +346,12 @@ export async function duplicateSection(sectionId: string): Promise<void> {
 
   const full = await prisma.section.findUnique({
     where: { id: sectionId },
-    include: { lessons: { orderBy: { displayOrder: "asc" } } },
+    include: {
+      lessons: {
+        orderBy: { displayOrder: "asc" },
+        include: { resources: { orderBy: { createdAt: "asc" } } },
+      },
+    },
   });
   if (!full) throw new AuthorizationError("NOT_FOUND", "Section introuvable.");
 
@@ -347,6 +368,16 @@ export async function duplicateSection(sectionId: string): Promise<void> {
       displayOrder: (lastOrder._max.displayOrder ?? -1) + 1,
       lessons: {
         create: full.lessons.map((l) => ({
+          resources:
+            l.resources.length > 0
+              ? {
+                  create: l.resources.map((r) => ({
+                    title: r.title,
+                    url: r.url,
+                    fileSizeBytes: r.fileSizeBytes,
+                  })),
+                }
+              : undefined,
           title: l.title,
           description: l.description,
           type: l.type,
@@ -388,6 +419,128 @@ export async function reorderLessons(
 
   revalidatePath(`/formateur/cours/${section.course.id}/programme`);
   return { success: true };
+}
+
+// ---------------------------------------------------------------------------
+// Ressources téléchargeables d'une leçon
+// ---------------------------------------------------------------------------
+
+/**
+ * Rattache un fichier déjà téléversé à une leçon.
+ *
+ * La route de presign (`/api/upload/lesson-resource`) ne sait pas sur quelle
+ * leçon le fichier atterrira : elle vérifie seulement que l'appelant est
+ * formateur. C'est donc ici, et seulement ici, qu'on contrôle la propriété du
+ * cours — sinon un formateur pourrait déposer une pièce jointe dans le cours
+ * d'un confrère en changeant l'identifiant dans la requête.
+ */
+export async function addLessonResource(
+  lessonId: string,
+  input: { title: string; url: string; fileSizeBytes?: number },
+): Promise<ActionResult> {
+  let lesson;
+  try {
+    ({ lesson } = await requireLessonOwnership(lessonId));
+  } catch (error) {
+    return toActionResult(error);
+  }
+
+  const parsed = lessonResourceSchema.safeParse(input);
+  if (!parsed.success) {
+    return {
+      success: false,
+      message:
+        parsed.error.flatten().fieldErrors.url?.[0] ??
+        parsed.error.flatten().fieldErrors.title?.[0] ??
+        "Ressource invalide.",
+    };
+  }
+
+  // Plafond par leçon : la liste est destinée à être lue par l'élève, pas à
+  // servir d'espace de stockage.
+  const existing = await prisma.lessonResource.count({ where: { lessonId } });
+  if (existing >= MAX_RESOURCES_PER_LESSON) {
+    return {
+      success: false,
+      message: `Maximum ${MAX_RESOURCES_PER_LESSON} ressources par leçon.`,
+    };
+  }
+
+  await prisma.lessonResource.create({
+    data: {
+      lessonId,
+      title: parsed.data.title,
+      url: parsed.data.url,
+      fileSizeBytes: parsed.data.fileSizeBytes ?? null,
+    },
+  });
+
+  const courseId = lesson.section.course.id;
+  revalidatePath(`/formateur/cours/${courseId}/lecons/${lessonId}`);
+  revalidatePath(`/formateur/cours/${courseId}/programme`);
+  return { success: true, message: "Ressource ajoutée." };
+}
+
+/** Renomme une ressource sans toucher au fichier stocké. */
+export async function renameLessonResource(
+  resourceId: string,
+  title: string,
+): Promise<ActionResult> {
+  const resource = await prisma.lessonResource.findUnique({
+    where: { id: resourceId },
+    select: { id: true, lessonId: true },
+  });
+  if (!resource) return { success: false, message: "Ressource introuvable." };
+
+  let lesson;
+  try {
+    ({ lesson } = await requireLessonOwnership(resource.lessonId));
+  } catch (error) {
+    return toActionResult(error);
+  }
+
+  const parsed = lessonResourceSchema.shape.title.safeParse(title);
+  if (!parsed.success) {
+    return { success: false, message: parsed.error.issues[0]?.message ?? "Nom invalide." };
+  }
+
+  await prisma.lessonResource.update({
+    where: { id: resource.id },
+    data: { title: parsed.data },
+  });
+
+  const courseId = lesson.section.course.id;
+  revalidatePath(`/formateur/cours/${courseId}/lecons/${resource.lessonId}`);
+  return { success: true, message: "Ressource renommée." };
+}
+
+/**
+ * Détache une ressource de la leçon.
+ *
+ * Le fichier lui-même reste en stockage : il peut avoir été dupliqué avec la
+ * leçon (`duplicateLesson`), et supprimer l'objet casserait alors la copie.
+ * Le nettoyage des orphelins relève du cron, pas de cette action.
+ */
+export async function deleteLessonResource(resourceId: string): Promise<ActionResult> {
+  const resource = await prisma.lessonResource.findUnique({
+    where: { id: resourceId },
+    select: { id: true, lessonId: true },
+  });
+  if (!resource) return { success: true, message: "Ressource déjà supprimée." };
+
+  let lesson;
+  try {
+    ({ lesson } = await requireLessonOwnership(resource.lessonId));
+  } catch (error) {
+    return toActionResult(error);
+  }
+
+  await prisma.lessonResource.delete({ where: { id: resource.id } });
+
+  const courseId = lesson.section.course.id;
+  revalidatePath(`/formateur/cours/${courseId}/lecons/${resource.lessonId}`);
+  revalidatePath(`/formateur/cours/${courseId}/programme`);
+  return { success: true, message: "Ressource supprimée." };
 }
 
 // ---------------------------------------------------------------------------

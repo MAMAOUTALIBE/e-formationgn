@@ -4,6 +4,7 @@
 
 import type { Prisma } from "@/generated/prisma/client";
 import type { AccountStatus } from "@/generated/prisma/enums";
+import { allOf } from "@/lib/admin/list-filters";
 import { prisma } from "@/lib/prisma";
 
 export interface AdminUsersFilters {
@@ -20,12 +21,20 @@ export interface AdminUsersFilters {
   direction?: "asc" | "desc";
 }
 
-export type AdminUsersSort =
-  | "name"
-  | "company"
-  | "status"
-  | "country"
-  | "createdAt";
+/**
+ * Colonnes de tri admises. Déclarées comme valeurs et non comme simple type :
+ * la page doit pouvoir VÉRIFIER ce qui arrive de l'URL, pas seulement
+ * l'annoter.
+ */
+export const ADMIN_USERS_SORTS = [
+  "name",
+  "company",
+  "status",
+  "country",
+  "createdAt",
+] as const;
+
+export type AdminUsersSort = (typeof ADMIN_USERS_SORTS)[number];
 
 export interface AdminUserRow {
   id: string;
@@ -54,26 +63,50 @@ export async function listAdminUsers(
   // Cette requête alimente exclusivement l'espace Apprenants. La frontière
   // est imposée ici, côté serveur, et ne dépend donc pas d'un filtre d'URL.
   const where: Prisma.UserWhereInput = { role: "STUDENT" };
-  const ors: Prisma.UserWhereInput[] = [];
-  if (filters.q && filters.q.trim().length > 0) {
-    const q = filters.q.trim();
-    ors.push(
-      { email: { contains: q, mode: "insensitive" } },
-      { name: { contains: q, mode: "insensitive" } },
-      { firstName: { contains: q, mode: "insensitive" } },
-      { lastName: { contains: q, mode: "insensitive" } },
-    );
-  }
   if (filters.companyId) where.companyId = filters.companyId;
-  if (filters.status) where.status = filters.status;
+
+  if (filters.status) {
+    where.status = filters.status;
+  } else {
+    // Vue par défaut : les comptes archivés en sont écartés.
+    //
+    // Ils restaient jusqu'ici mêlés aux actifs, si bien que le nombre
+    // d'apprenants affiché comptait des personnes qui ne peuvent plus se
+    // connecter. On ne les cache pas pour autant : le mode « Archivés » les
+    // ramène, et c'est le seul chemin qui les montre — un archivé ne
+    // réapparaît jamais par inadvertance.
+    where.status = { not: "DELETED" };
+  }
   if (filters.country) where.country = filters.country;
   if (filters.banned === true) where.bannedAt = { not: null };
   if (filters.banned === false) where.bannedAt = null;
-  if (filters.inactiveDays && filters.inactiveDays > 0) {
+
+  // Recherche et inactivité sont deux critères DISTINCTS. Empilés dans un
+  // même `OR`, ils s'additionnaient : chercher « Camara » chez les comptes
+  // inactifs renvoyait tous les Camara PLUS tous les inactifs. Chacun garde
+  // donc son propre OR, et les deux se combinent en ET.
+  const searchGroup = (() => {
+    const q = filters.q?.trim();
+    if (!q) return undefined;
+    return [
+      { email: { contains: q, mode: "insensitive" as const } },
+      { name: { contains: q, mode: "insensitive" as const } },
+      { firstName: { contains: q, mode: "insensitive" as const } },
+      { lastName: { contains: q, mode: "insensitive" as const } },
+    ] satisfies Prisma.UserWhereInput[];
+  })();
+
+  const inactivityGroup = (() => {
+    if (!filters.inactiveDays || filters.inactiveDays <= 0) return undefined;
     const threshold = new Date(Date.now() - filters.inactiveDays * 24 * 3600 * 1000);
-    ors.push({ lastLoginAt: null }, { lastLoginAt: { lt: threshold } });
-  }
-  if (ors.length > 0) where.OR = ors;
+    return [
+      { lastLoginAt: null },
+      { lastLoginAt: { lt: threshold } },
+    ] satisfies Prisma.UserWhereInput[];
+  })();
+
+  const combined = allOf<Prisma.UserWhereInput>([searchGroup, inactivityGroup]);
+  if (combined) where.AND = combined.AND;
 
   const direction = filters.direction === "asc" ? "asc" : "desc";
   const orderBy: Prisma.UserOrderByWithRelationInput =
@@ -237,8 +270,12 @@ export interface AdminUsersDashboardStats {
 
 /** Indicateurs de l'espace apprenants, calculés uniquement sur les élèves. */
 export async function getAdminUsersDashboardStats(): Promise<AdminUsersDashboardStats> {
+  // Population vivante : celle que la liste montre par défaut. Compter les
+  // archivés dans le total afficherait « 120 élèves » au-dessus d'un tableau
+  // qui en présente 115 — l'écart n'aurait aucune explication à l'écran.
   const audience: Prisma.UserWhereInput = {
     role: "STUDENT",
+    status: { not: "DELETED" },
   };
   const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
 
@@ -251,7 +288,8 @@ export async function getAdminUsersDashboardStats(): Promise<AdminUsersDashboard
       prisma.user.count({ where: { ...audience, status: "PENDING_VERIFICATION", bannedAt: null } }),
       prisma.user.count({ where: { ...audience, status: "SUSPENDED", bannedAt: null } }),
       prisma.user.count({ where: { ...audience, bannedAt: { not: null } } }),
-      prisma.user.count({ where: { ...audience, status: "DELETED", bannedAt: null } }),
+      // Les archivés se comptent hors de cette population, pas dedans.
+      prisma.user.count({ where: { role: "STUDENT", status: "DELETED" } }),
     ]);
 
   return { total, withCompany, createdLast30Days, active, pending, suspended, banned, deleted };

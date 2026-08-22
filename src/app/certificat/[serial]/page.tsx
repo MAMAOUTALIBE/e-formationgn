@@ -47,6 +47,7 @@ export default async function VerifyCertificatePage({ params }: PageProps) {
   if (!certificate) notFound();
 
   const recipientName =
+    certificate.holderName ??
     certificate.user.name ??
     ([certificate.user.firstName, certificate.user.lastName].filter(Boolean).join(" ") ||
       "Apprenant·e");

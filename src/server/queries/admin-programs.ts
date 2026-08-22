@@ -17,14 +17,20 @@ export interface ProgramListRow {
   upcomingSessionCount: number;
 }
 
+/** Statuts et tranches de durée admis — la page s'en sert pour valider l'URL. */
+export const PROGRAM_STATUSES = ["DRAFT", "ACTIVE", "ARCHIVED"] as const;
+export const PROGRAM_DURATIONS = ["short", "medium", "long"] as const;
+
 export async function listPrograms(params: { search?: string; status?: string; duration?: string } = {}): Promise<
   ProgramListRow[]
 > {
   const search = params.search?.trim();
   const where: Prisma.ProgramWhereInput = {
-    ...(params.status &&
-    ["DRAFT", "ACTIVE", "ARCHIVED"].includes(params.status)
-      ? { status: params.status as "DRAFT" | "ACTIVE" | "ARCHIVED" }
+    // Second contrôle, volontairement redondant avec celui de la page : cette
+    // requête est appelable d'ailleurs, et une valeur non bornée atteindrait
+    // l'énumération Prisma.
+    ...((PROGRAM_STATUSES as readonly string[]).includes(params.status ?? "")
+      ? { status: params.status as (typeof PROGRAM_STATUSES)[number] }
       : {}),
     ...(search
       ? {

@@ -3,10 +3,14 @@
 import { CheckCircle2, XCircle } from "lucide-react";
 import { useState, useTransition } from "react";
 
+import {
+  QuizAttemptHistory,
+  QuizScoreMeter,
+} from "@/components/features/learning/quiz-score-meter";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { submitQuizAttempt } from "@/server/actions/quiz";
+import { submitQuizAttempt, type QuizQuestionReview } from "@/server/actions/quiz";
 
 interface QuizQuestion {
   id: string;
@@ -49,6 +53,9 @@ export function QuizAttempt({
     passed: boolean;
     correctCount: number;
     totalQuestions: number;
+    /** Record ANTÉRIEUR à cette tentative, pour le repère sur la piste. */
+    previousBest: number | null;
+    review: QuizQuestionReview[] | null;
   } | null>(null);
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -92,6 +99,8 @@ export function QuizAttempt({
         passed: response.passed ?? false,
         correctCount: response.correctCount ?? 0,
         totalQuestions: response.totalQuestions ?? questions.length,
+        previousBest: attemptSummary.bestScore,
+        review: response.review ?? null,
       });
       setAttemptSummary({
         attemptsUsed: response.attemptsUsed ?? attemptSummary.attemptsUsed + 1,
@@ -115,64 +124,172 @@ export function QuizAttempt({
   }
 
   const attemptOverview = (
-    <div className="space-y-2 rounded-md border border-border bg-card p-4 text-sm">
+    <div className="space-y-4 rounded-md border border-border bg-card p-4 text-sm">
       <div className="flex flex-wrap gap-x-5 gap-y-1 text-muted-foreground">
-        <span>Tentatives : <strong className="text-foreground">{attemptSummary.attemptsUsed}</strong>{maxAttempts === null ? "" : ` / ${maxAttempts}`}</span>
-        <span>Restantes : <strong className="text-foreground">{attemptSummary.attemptsRemaining === null ? "Illimitées" : attemptSummary.attemptsRemaining}</strong></span>
-        <span>Meilleur score : <strong className="text-foreground">{attemptSummary.bestScore === null ? "—" : `${attemptSummary.bestScore} / 100`}</strong></span>
-        <span>Dernier score : <strong className="text-foreground">{attemptSummary.lastScore === null ? "—" : `${attemptSummary.lastScore} / 100`}</strong></span>
+        <span>
+          Tentatives :{" "}
+          <strong className="text-foreground tabular-nums">
+            {attemptSummary.attemptsUsed}
+          </strong>
+          {maxAttempts === null ? "" : ` / ${maxAttempts}`}
+        </span>
+        <span>
+          Restantes :{" "}
+          <strong className="text-foreground">
+            {attemptSummary.attemptsRemaining === null
+              ? "Illimitées"
+              : attemptSummary.attemptsRemaining}
+          </strong>
+        </span>
+        <span>
+          Score requis :{" "}
+          <strong className="text-foreground tabular-nums">{passingScore} / 100</strong>
+        </span>
       </div>
-      {history.length > 0 ? (
-        <ol className="space-y-1 border-t border-border pt-2 text-xs text-muted-foreground" aria-label="Historique des tentatives">
-          {history.slice(0, 5).map((attempt) => (
-            <li key={attempt.id}>
-              Tentative {attempt.attemptNumber} · {attempt.score} / 100 · {attempt.passed ? "Réussie" : "Échouée"} · {attempt.completedAt.slice(0, 10)}
-            </li>
-          ))}
-        </ol>
-      ) : null}
+      <QuizAttemptHistory attempts={history} passingScore={passingScore} />
     </div>
   );
 
   if (result) {
+    const gap = passingScore - result.score;
     return (
       <div className="space-y-4">
-      {attemptOverview}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-base">
-            {result.passed ? (
-              <CheckCircle2 className="h-5 w-5 text-[color:var(--brand-success)]" />
-            ) : (
-              <XCircle className="h-5 w-5 text-destructive" />
-            )}
-            {result.passed ? "Quiz validé !" : "Pas tout à fait…"}
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-3 text-sm">
-          <p className="text-muted-foreground">
-            Score : <strong className="text-foreground">{result.score} / 100</strong>{" "}
-            ({result.correctCount} bonnes réponses sur {result.totalQuestions})
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center gap-2 text-base">
+              {result.passed ? (
+                <CheckCircle2
+                  className="h-5 w-5 text-[color:var(--brand-success)]"
+                  aria-hidden
+                />
+              ) : (
+                <XCircle className="h-5 w-5 text-destructive" aria-hidden />
+              )}
+              {result.passed ? "Quiz validé" : "Quiz non validé"}
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-5">
+            {/* Chiffre de tête : le nombre que l'écran porte, en encre de
+                texte. La couleur vit sur le compteur et l'icône, jamais sur
+                la valeur — un nombre coloré se lit comme une décoration et
+                perd son contraste. */}
+            <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+              <span className="text-5xl font-semibold leading-none tracking-tight text-foreground">
+                {result.score}
+              </span>
+              <span className="text-lg text-muted-foreground">/ 100</span>
+              <span className="text-sm text-muted-foreground">
+                {result.correctCount} bonne{result.correctCount > 1 ? "s" : ""} réponse
+                {result.correctCount > 1 ? "s" : ""} sur {result.totalQuestions}
+              </span>
+            </div>
+
+            <QuizScoreMeter
+              score={result.score}
+              passingScore={passingScore}
+              passed={result.passed}
+              previousBest={result.previousBest}
+            />
+
+            <p className="text-sm text-muted-foreground">
+              {result.passed
+                ? `Vous dépassez le seuil de ${passingScore} / 100.`
+                : `Il vous manque ${gap} point${gap > 1 ? "s" : ""} pour atteindre le seuil de ${passingScore} / 100.`}
+            </p>
+
+            {!result.passed && !exhausted ? (
+              <Button
+                type="button"
+                onClick={() => {
+                  setResult(null);
+                  setAnswers({});
+                }}
+              >
+                Refaire le quiz
+              </Button>
+            ) : null}
+            {!result.passed && exhausted ? (
+              <Alert variant="destructive">
+                <AlertDescription>
+                  Vous avez utilisé toutes vos tentatives.
+                </AlertDescription>
+              </Alert>
+            ) : null}
+          </CardContent>
+        </Card>
+
+        {result.review ? (
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base">Correction</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ol className="space-y-4">
+                {result.review.map((item, index) => (
+                  <li
+                    key={item.questionId}
+                    className="border-l-2 pl-4"
+                    style={{
+                      borderColor: item.correct
+                        ? "var(--brand-success)"
+                        : "var(--destructive)",
+                    }}
+                  >
+                    <p className="flex items-start gap-2 text-sm font-medium text-foreground">
+                      {item.correct ? (
+                        <CheckCircle2
+                          className="mt-0.5 h-4 w-4 shrink-0 text-[color:var(--brand-success)]"
+                          aria-hidden
+                        />
+                      ) : (
+                        <XCircle
+                          className="mt-0.5 h-4 w-4 shrink-0 text-destructive"
+                          aria-hidden
+                        />
+                      )}
+                      <span>
+                        <span className="sr-only">
+                          {item.correct ? "Réponse juste. " : "Réponse fausse. "}
+                        </span>
+                        {index + 1}. {item.prompt}
+                      </span>
+                    </p>
+                    <dl className="mt-2 space-y-1 pl-6 text-sm">
+                      <div className="flex flex-wrap gap-x-2">
+                        <dt className="text-muted-foreground">Votre réponse :</dt>
+                        <dd className="text-foreground">
+                          {item.chosenLabels.length > 0
+                            ? item.chosenLabels.join(", ")
+                            : "aucune"}
+                        </dd>
+                      </div>
+                      {!item.correct ? (
+                        <div className="flex flex-wrap gap-x-2">
+                          <dt className="text-muted-foreground">Réponse attendue :</dt>
+                          <dd className="text-foreground">
+                            {item.correctLabels.join(", ")}
+                          </dd>
+                        </div>
+                      ) : null}
+                    </dl>
+                    {item.explanation ? (
+                      <p className="mt-2 pl-6 text-sm text-muted-foreground">
+                        {item.explanation}
+                      </p>
+                    ) : null}
+                  </li>
+                ))}
+              </ol>
+            </CardContent>
+          </Card>
+        ) : !result.passed ? (
+          <p className="px-1 text-xs text-muted-foreground">
+            La correction détaillée s&apos;affichera une fois le quiz validé, ou
+            lorsque vous n&apos;aurez plus de tentative.
           </p>
-          <p className="text-xs text-muted-foreground">
-            Score requis pour valider : {passingScore} / 100
-          </p>
-          {!result.passed && !exhausted ? (
-            <Button
-              type="button"
-              onClick={() => {
-                setResult(null);
-                setAnswers({});
-              }}
-            >
-              Réessayer
-            </Button>
-          ) : null}
-          {!result.passed && exhausted ? (
-            <Alert variant="destructive"><AlertDescription>Vous avez utilisé toutes vos tentatives.</AlertDescription></Alert>
-          ) : null}
-        </CardContent>
-      </Card>
+        ) : null}
+
+        {attemptOverview}
       </div>
     );
   }

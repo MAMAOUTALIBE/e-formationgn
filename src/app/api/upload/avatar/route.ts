@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { auth } from "@/auth";
+import { prisma } from "@/lib/prisma";
 import { canUpdateProfileIdentity } from "@/lib/profile-update";
 import { createLocalUpload } from "@/lib/storage/local";
 import { createPresignedUpload, isR2Configured } from "@/lib/storage/r2";
@@ -44,9 +45,15 @@ export async function POST(request: Request) {
   if (!session?.user) {
     return NextResponse.json({ error: "Non authentifié." }, { status: 401 });
   }
-  if (!canUpdateProfileIdentity(session.user.role)) {
+  // Même lecture qu'à l'enregistrement : refuser dès le presign évite
+  // d'écrire dans le stockage un fichier que `updateAvatarUrl` rejettera.
+  const account = await prisma.user.findUnique({
+    where: { id: session.user.id },
+    select: { role: true, identityLockedAt: true },
+  });
+  if (!account || !canUpdateProfileIdentity(account)) {
     return NextResponse.json(
-      { error: "La photo de profil d’un apprenant ne peut pas être modifiée." },
+      { error: "Votre photo fait partie de votre identité et ne peut pas être modifiée ici." },
       { status: 403 },
     );
   }

@@ -1,38 +1,17 @@
 "use server";
 
 import { requireAnyAdminRole } from "@/lib/auth/authorization";
-import type { AdminRole } from "@/lib/constants";
 import { rowsToCsv } from "@/lib/csv";
 import { prisma } from "@/lib/prisma";
-import { ADMIN_NAV } from "@/lib/workspace/admin-nav";
-import { sectionRolesForPath } from "@/lib/workspace/navigation";
+import { adminRolesForScreen } from "@/lib/workspace/admin-screen-roles";
 import { createAuditLog } from "@/server/services/audit-log";
-
-/**
- * Rôles autorisés sur un écran, lus dans le registre de navigation.
- *
- * Une Server Action s'appelle directement : restreindre un écran ne restreint
- * pas ce que l'écran déclenche. Les deux exports appelaient
- * `requireAnyAdminRole()` sans argument, donc ouverts aux cinq rôles
- * administratifs. Pour les formateurs cela correspondait à l'écran, qui les
- * admet tous ; pour les formations non — l'écran est réservé à
- * l'administrateur, au modérateur et au gestionnaire, si bien que le support
- * et la finance pouvaient exporter le catalogue de formations sans y avoir
- * accès.
- *
- * En lisant la même déclaration que la garde de route, les deux ne peuvent
- * plus diverger — ni aujourd'hui, ni quand les rôles d'un écran changeront.
- */
-function rolesForScreen(pathname: string): AdminRole[] {
-  return [...(sectionRolesForPath(ADMIN_NAV, pathname) ?? [])] as AdminRole[];
-}
 
 type ExportResult = Promise<{ csv: string; filename: string } | { error: string }>;
 
 export async function exportInstructorsCsv(): ExportResult {
   let actor;
   try {
-    actor = await requireAnyAdminRole(...rolesForScreen("/admin/formateurs"));
+    actor = await requireAnyAdminRole(...adminRolesForScreen("/admin/formateurs"));
   } catch {
     return { error: "Non autorisé." };
   }
@@ -48,7 +27,7 @@ export async function exportInstructorsCsv(): ExportResult {
 export async function exportProgramsCsv(): ExportResult {
   let actor;
   try {
-    actor = await requireAnyAdminRole(...rolesForScreen("/admin/formations"));
+    actor = await requireAnyAdminRole(...adminRolesForScreen("/admin/formations"));
   } catch {
     return { error: "Non autorisé." };
   }

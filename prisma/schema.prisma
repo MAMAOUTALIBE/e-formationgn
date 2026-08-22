@@ -45,6 +45,15 @@ enum AccountStatus {
   DELETED
 }
 
+/// Sexe de la personne, facultatif. `OTHER` couvre ce que les deux premières
+/// valeurs ne disent pas ; l'absence de valeur reste distincte et signifie
+/// « non renseigné », jamais « autre ».
+enum Gender {
+  FEMALE
+  MALE
+  OTHER
+}
+
 enum Currency {
   EUR
   USD
@@ -74,6 +83,15 @@ model User {
   firstName      String?
   lastName       String?
   image          String?
+  /// Verrou d'identité (prénom, nom, photo). Posé dès que l'administration
+  /// renseigne elle-même l'identité d'un compte : la personne dont le centre
+  /// gère le dossier ne renomme pas seule ce qui figurera sur son certificat.
+  ///
+  /// Un horodatage plutôt qu'un booléen déduit du rôle : le rôle change (un
+  /// apprenant peut être habilité formateur), et un verrou qui se lit dans le
+  /// rôle se lèverait tout seul à ce moment-là. Seule l'administration peut
+  /// corriger une identité verrouillée.
+  identityLockedAt DateTime?
   bio            String?   @db.Text
   headline       String?
   /// Téléphone de la personne. Champ libre et non contraint : les élèves d'une
@@ -81,6 +99,19 @@ model User {
   /// poste interne, et un format imposé bloquerait la saisie plus qu'il ne
   /// fiabiliserait la donnée.
   phone          String?
+
+  // --- État civil ----------------------------------------------------------
+  // Renseigné par l'administration, comme le reste de l'identité, et soumis au
+  // même verrou : ces données servent l'émargement et les attestations.
+  /// `@db.Date` et non un timestamp : une date de naissance n'a pas d'heure,
+  /// et un `TIMESTAMP` la décalerait d'un jour selon le fuseau de lecture.
+  birthDate      DateTime? @db.Date
+  birthPlace     String?
+  gender         Gender?
+  /// Adresse postale complète, saisie en un bloc. Découper en rue / ville /
+  /// code postal supposerait un format d'adressage unique, ce que la Guinée,
+  /// la France et les autres pays desservis ne partagent pas.
+  address        String?   @db.Text
   websiteUrl     String?
   linkedinUrl    String?
   facebookUrl    String?
@@ -990,6 +1021,17 @@ model Certificate {
   orderItem    OrderItem? @relation(fields: [orderItemId], references: [id])
   issuedAt     DateTime   @default(now())
   pdfUrl       String?
+  /// Nom du titulaire, figé au moment de l'émission.
+  ///
+  /// L'attestation lisait `User.name` en direct : corriger une identité —
+  /// une faute de frappe, un nom d'usage — réécrivait alors rétroactivement
+  /// toutes les attestations déjà délivrées, y compris celles qu'un employeur
+  /// avait vérifiées par leur numéro de série. Un document opposable ne change
+  /// pas de titulaire après coup.
+  ///
+  /// Nullable pour les certificats antérieurs à cette colonne : l'affichage
+  /// retombe alors sur le nom du compte, comme avant.
+  holderName   String?
 
   @@unique([userId, courseId])
   @@index([userId])

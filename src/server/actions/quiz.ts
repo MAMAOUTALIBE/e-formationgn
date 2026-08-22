@@ -185,6 +185,18 @@ function revalidateQuizEditor(courseId: string, lessonId: string) {
 
 // ----- Côté élève : tentatives --------------------------------------------
 
+/** Correction d'une question, renvoyée à l'élève sous conditions. */
+export interface QuizQuestionReview {
+  questionId: string;
+  prompt: string;
+  correct: boolean;
+  /** Libellés que l'élève a cochés. */
+  chosenLabels: string[];
+  /** Libellés attendus. */
+  correctLabels: string[];
+  explanation: string | null;
+}
+
 export interface QuizAttemptResult {
   ok: boolean;
   attemptId?: string;
@@ -196,6 +208,15 @@ export interface QuizAttemptResult {
   attemptsRemaining?: number | null;
   bestScore?: number;
   lastScore?: number;
+  /**
+   * Correction détaillée — présente UNIQUEMENT quand le quiz est validé ou
+   * quand il ne reste plus de tentative.
+   *
+   * La livrer après un échec rattrapable reviendrait à donner le corrigé
+   * avant la reprise : l'élève rejouerait les bonnes cases sans avoir rien
+   * appris, et le score cesserait de mesurer quoi que ce soit.
+   */
+  review?: QuizQuestionReview[];
   message?: string;
 }
 
@@ -279,6 +300,30 @@ export async function submitQuizAttempt(
   const score =
     totalPoints === 0 ? 0 : Math.round((earnedPoints / totalPoints) * 100);
   const passed = score >= quiz.passingScore;
+
+  // Correction par question, calculée systématiquement mais divulguée sous
+  // condition (cf. `QuizAttemptResult.review`).
+  const review: QuizQuestionReview[] = quiz.questions.map((question) => {
+    const correctOptionIds = correctByQuestion.get(question.id) ?? new Set<string>();
+    const submitted = new Set(
+      parsed.data.answers.find((a) => a.questionId === question.id)?.optionIds ?? [],
+    );
+    const isCorrect =
+      submitted.size === correctOptionIds.size &&
+      Array.from(correctOptionIds).every((id) => submitted.has(id));
+    return {
+      questionId: question.id,
+      prompt: question.prompt,
+      correct: isCorrect,
+      chosenLabels: question.options
+        .filter((option) => submitted.has(option.id))
+        .map((option) => option.label),
+      correctLabels: question.options
+        .filter((option) => option.isCorrect)
+        .map((option) => option.label),
+      explanation: question.explanation,
+    };
+  });
 
   // Tout dans une seule transaction : QuizAttempt + QuizAnswers + (si passé)
   // marquage LessonProgress.isCompleted=true + recompute progressPercent.
@@ -382,6 +427,11 @@ export async function submitQuizAttempt(
     return { ok: false, message: "La tentative n’a pas pu être enregistrée." };
   }
 
+  const attemptsRemaining =
+    quiz.maxAttempts === null
+      ? null
+      : Math.max(0, quiz.maxAttempts - transactionResult.attemptsUsed);
+
   revalidatePath(`/apprentissage`);
   return {
     ok: true,
@@ -391,11 +441,9 @@ export async function submitQuizAttempt(
     totalQuestions: quiz.questions.length,
     correctCount,
     attemptsUsed: transactionResult.attemptsUsed,
-    attemptsRemaining:
-      quiz.maxAttempts === null
-        ? null
-        : Math.max(0, quiz.maxAttempts - transactionResult.attemptsUsed),
+    attemptsRemaining,
     bestScore: transactionResult.bestScore,
     lastScore: score,
+    review: passed || attemptsRemaining === 0 ? review : undefined,
   };
 }

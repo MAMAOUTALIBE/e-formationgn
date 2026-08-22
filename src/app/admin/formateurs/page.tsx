@@ -6,6 +6,10 @@ import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Input } from "@/components/ui/input";
 import { KpiCard } from "@/components/ui/kpi-card";
+import { Select } from "@/components/ui/select";
+import type { Prisma } from "@/generated/prisma/client";
+import { AccountStatus } from "@/generated/prisma/enums";
+import { parseListFilter } from "@/lib/admin/list-filters";
 import { prisma } from "@/lib/prisma";
 
 export const metadata: Metadata = { title: "Formateurs — Administration" };
@@ -14,16 +18,20 @@ export const dynamic = "force-dynamic";
 export default async function AdminInstructorsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string }>;
+  searchParams: Promise<{ q?: string; status?: string }>;
 }) {
-  const { q } = await searchParams;
-  const where = {
+  const { q, status: rawStatus } = await searchParams;
+  const status = parseListFilter(rawStatus, Object.values(AccountStatus));
+  const search = q?.trim();
+
+  const where: Prisma.UserWhereInput = {
     isInstructor: true,
-    ...(q
+    ...(status ? { status } : {}),
+    ...(search
       ? {
           OR: [
-            { email: { contains: q, mode: "insensitive" as const } },
-            { name: { contains: q, mode: "insensitive" as const } },
+            { email: { contains: search, mode: "insensitive" as const } },
+            { name: { contains: search, mode: "insensitive" as const } },
           ],
         }
       : {}),
@@ -38,8 +46,12 @@ export default async function AdminInstructorsPage({
         coursesAuthored: { select: { totalEnrollments: true, status: true } },
       },
     }),
-    prisma.user.count({ where: { isInstructor: true } }),
+    // Le même `where` que la liste. Il comptait auparavant tous les
+    // formateurs quel que soit le filtre : chercher un nom affichait une
+    // ligne sous un compteur qui en annonçait quarante.
+    prisma.user.count({ where }),
   ]);
+  const hasFilters = Boolean(search || status);
   const published = instructors.reduce(
     (sum, user) =>
       sum +
@@ -74,7 +86,7 @@ export default async function AdminInstructorsPage({
       </header>
       <section className="grid gap-3 sm:grid-cols-3">
         <KpiCard
-          label="Formateurs"
+          label={hasFilters ? "Formateurs filtrés" : "Formateurs"}
           value={total}
           icon={<UsersRound className="h-5 w-5" />}
           tone="blue"
@@ -96,17 +108,37 @@ export default async function AdminInstructorsPage({
         />
       </section>
       <section className="overflow-hidden rounded-xl border border-border bg-card">
-        <form className="border-b border-border p-4">
-          <div className="relative">
+        <form className="flex flex-wrap items-center gap-2 border-b border-border p-4">
+          <div className="relative min-w-56 flex-1">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
               name="q"
               aria-label="Rechercher un formateur"
-              defaultValue={q ?? ""}
+              defaultValue={search ?? ""}
               placeholder="Email ou nom du formateur…"
               className="pl-9"
             />
           </div>
+          <Select
+            name="status"
+            aria-label="Statut"
+            defaultValue={status ?? ""}
+            className="h-10 min-w-40"
+          >
+            <option value="">Statut · Tous</option>
+            <option value="ACTIVE">Actifs</option>
+            <option value="PENDING_VERIFICATION">En attente</option>
+            <option value="SUSPENDED">Suspendus</option>
+            <option value="DELETED">Archivés</option>
+          </Select>
+          <Button type="submit" variant="outline" size="sm" className="h-10">
+            Filtrer
+          </Button>
+          {hasFilters ? (
+            <Button asChild variant="ghost" size="sm" className="h-10">
+              <Link href="/admin/formateurs">Réinitialiser</Link>
+            </Button>
+          ) : null}
         </form>
         {instructors.length ? (
           <ul className="divide-y divide-border">

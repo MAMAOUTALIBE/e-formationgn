@@ -39,8 +39,8 @@ export function ImportStudentsForm({
   const downloadCredentials = () => {
     if (!state.created?.length) return;
     const lines = [
-      "Prénom;Nom;Email;Mot de passe",
-      ...state.created.map((c) => `${c.firstName};${c.lastName};${c.email};${c.password}`),
+      "Nom et prénom;Email;Mot de passe",
+      ...state.created.map((c) => `${c.fullName};${c.email};${c.password}`),
     ].join("\n");
     // BOM : sans lui, Excel affiche les accents en caractères parasites.
     const blob = new Blob([`﻿${lines}`], { type: "text/csv;charset=utf-8" });

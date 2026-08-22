@@ -13,6 +13,7 @@ import {
   isAdminAssistantConfigured,
 } from "@/lib/ai/admin-assistant";
 import { requireAnyAdminRole } from "@/lib/auth/authorization";
+import { adminRolesForScreen } from "@/lib/workspace/admin-screen-roles";
 import { periodToRange, PRESET_LABELS } from "@/lib/admin/period";
 import { readPeriod } from "@/lib/admin/period-server";
 import { logError } from "@/lib/logger";
@@ -47,7 +48,7 @@ export async function askCrmAssistant(
   // agrégats déjà visibles sur le tableau de bord de chacun de ces rôles.
   let session;
   try {
-    session = await requireAnyAdminRole();
+    session = await requireAnyAdminRole(...adminRolesForScreen("/admin"));
   } catch {
     return { ok: false, message: "Accès refusé." };
   }

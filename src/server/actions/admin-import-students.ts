@@ -19,15 +19,16 @@ import {
   parseStudentCsv,
   type ParsedStudentRow,
 } from "@/lib/admin/csv-students";
+import { splitFullName } from "@/lib/identity-name";
 import { prisma } from "@/lib/prisma";
+import { civilStatusSchema } from "@/lib/validators/identity";
 import { createAuditLog } from "@/server/services/audit-log";
 import { generateTemporaryPassword } from "@/server/services/temporary-password";
 
 import type { ActionResult } from "./auth";
 
 export interface CreatedAccount {
-  firstName: string;
-  lastName: string;
+  fullName: string;
   email: string;
   password: string;
 }
@@ -113,18 +114,51 @@ export async function importStudents(
 
   for (const row of toCreate) {
     const password = generateTemporaryPassword();
+    // Les colonnes facultatives passent par le même schéma que les deux
+    // formulaires : une date mal formée ou un sexe inconnu est écarté ici,
+    // pas recopié tel quel en base.
+    const civilParsed = civilStatusSchema.safeParse({
+      fullName: row.fullName,
+      birthDate: row.birthDate,
+      birthPlace: row.birthPlace,
+      gender: row.gender,
+      phone: row.phone,
+      country: row.country,
+      address: row.address,
+    });
+    if (!civilParsed.success) {
+      skipped.push({
+        line: row.line,
+        reason:
+          Object.values(civilParsed.error.flatten().fieldErrors)[0]?.[0] ??
+          "Renseignements invalides.",
+      });
+      continue;
+    }
+    const { fullName, ...civil } = civilParsed.data;
+    const identity = splitFullName(fullName);
     const user = await prisma.user.create({
       data: {
         email: row.email,
-        firstName: row.firstName,
-        lastName: row.lastName,
-        name: `${row.firstName} ${row.lastName}`,
+        // Le nom saisi fait foi ; prénom et nom n'en sont que les dérivés de
+        // tri — même règle qu'à la création manuelle.
+        name: identity.name,
+        firstName: identity.firstName,
+        lastName: identity.lastName,
+        birthDate: civil.birthDate,
+        birthPlace: civil.birthPlace,
+        gender: civil.gender,
+        phone: civil.phone,
+        country: civil.country,
+        address: civil.address,
         hashedPassword: await hashPassword(password),
         role: "STUDENT",
         isInstructor: false,
         status: "ACTIVE",
         emailVerified: new Date(),
         mustChangePassword: false,
+        // Identité issue du fichier fourni par le centre : elle lui appartient.
+        identityLockedAt: new Date(),
       },
       select: { id: true },
     });
@@ -140,12 +174,7 @@ export async function importStudents(
       });
     }
 
-    created.push({
-      firstName: row.firstName,
-      lastName: row.lastName,
-      email: row.email,
-      password,
-    });
+    created.push({ fullName: identity.name, email: row.email, password });
   }
 
   await createAuditLog({

@@ -10,9 +10,13 @@ import "server-only";
 import type { Prisma } from "@/generated/prisma/client";
 import { prisma } from "@/lib/prisma";
 
+/** Statuts admis — la page s'en sert pour valider ce qui arrive de l'URL. */
+export const COMPANY_STATUSES = ["ACTIVE", "INACTIVE", "ARCHIVED"] as const;
+export type CompanyStatus = (typeof COMPANY_STATUSES)[number];
+
 export interface CompanyListParams {
   search?: string;
-  status?: "ACTIVE" | "INACTIVE" | "ARCHIVED";
+  status?: CompanyStatus;
   city?: string;
   page?: number;
   pageSize?: number;

@@ -5,6 +5,7 @@ import { useActionState } from "react";
 
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { FormDraft } from "@/components/ui/form-draft";
+import { CivilStatusFields } from "@/components/features/admin/civil-status-fields";
 import { FormField } from "@/components/ui/form-field";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
@@ -72,14 +73,19 @@ export function CreateAccountForm({ companies }: { companies: CompanyOption[] })
         </Alert>
       ) : null}
 
-      <div className="grid gap-3 sm:grid-cols-2">
-        <FormField id="firstName" label="Prénom" error={errors.firstName?.[0]}>
-          <Input id="firstName" name="firstName" defaultValue={sent?.firstName ?? ""} required maxLength={80} />
-        </FormField>
-        <FormField id="lastName" label="Nom" error={errors.lastName?.[0]}>
-          <Input id="lastName" name="lastName" defaultValue={sent?.lastName ?? ""} required maxLength={80} />
-        </FormField>
-      </div>
+      <CivilStatusFields
+        idPrefix="creation"
+        errors={errors}
+        values={{
+          fullName: sent?.fullName ?? "",
+          birthDate: sent?.birthDate ?? "",
+          birthPlace: sent?.birthPlace ?? "",
+          gender: sent?.gender ?? "",
+          phone: sent?.phone ?? "",
+          country: sent?.country ?? "",
+          address: sent?.address ?? "",
+        }}
+      />
 
       <div>
         <FormField id="email" label="Email" error={errors.email?.[0]}>
@@ -94,16 +100,7 @@ export function CreateAccountForm({ companies }: { companies: CompanyOption[] })
         </FormField>
       </div>
 
-      <div className="grid gap-3 sm:grid-cols-2">
-        <FormField
-          id="phone"
-          label="Téléphone"
-          hint="Facultatif."
-          error={errors.phone?.[0]}
-        >
-          <Input id="phone" name="phone" defaultValue={sent?.phone ?? ""} type="tel" maxLength={40} />
-        </FormField>
-
+      <div>
         <FormField
           id="companyId"
           label="Société de rattachement"

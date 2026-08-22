@@ -16,13 +16,17 @@ export interface AdminCoursesFilters {
   direction?: "asc" | "desc";
 }
 
-export type AdminCoursesSort =
-  | "title"
-  | "status"
-  | "instructor"
-  | "category"
-  | "enrollments"
-  | "updatedAt";
+/** Colonnes de tri admises — valeurs, pour que l'URL puisse être vérifiée. */
+export const ADMIN_COURSES_SORTS = [
+  "title",
+  "status",
+  "instructor",
+  "category",
+  "enrollments",
+  "updatedAt",
+] as const;
+
+export type AdminCoursesSort = (typeof ADMIN_COURSES_SORTS)[number];
 
 export interface AdminCourseRow {
   id: string;

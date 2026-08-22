@@ -38,6 +38,7 @@ export async function GET(_request: Request, context: RouteContext) {
   }
 
   const recipientName =
+    certificate.holderName ??
     certificate.user.name ??
     (`${certificate.user.firstName ?? ""} ${certificate.user.lastName ?? ""}`.trim() ||
       "Apprenant·e");

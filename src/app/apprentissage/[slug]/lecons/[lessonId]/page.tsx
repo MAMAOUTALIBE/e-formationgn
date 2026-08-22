@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { ArrowLeft, ArrowRight, Download } from "lucide-react";
+import { ArrowLeft, ArrowRight, Download, FileText, FileVideo } from "lucide-react";
 
 import { auth } from "@/auth";
 import { CourseAnnouncements } from "@/components/features/learning/course-announcements";
@@ -18,9 +18,18 @@ import { LessonBookmarkButton } from "@/components/features/learning/lesson-book
 import { LessonCompletionToggle } from "@/components/features/learning/lesson-completion-toggle";
 import { LessonNotes } from "@/components/features/learning/lesson-notes";
 import { LessonPlayer } from "@/components/features/learning/lesson-player";
+import { MarkdownContent } from "@/components/features/learning/markdown-content";
+import { LessonReader } from "@/components/features/learning/lesson-reader";
+import { LessonResourceStage } from "@/components/features/learning/lesson-resource-stage";
 import { LearningActivityHeartbeat } from "@/components/features/learning/use-learning-heartbeat";
 import { LessonQuestions } from "@/components/features/learning/lesson-questions";
 import { signMuxPlaybackToken } from "@/lib/mux";
+import { estimateReadingMinutes } from "@/lib/markdown";
+import {
+  formatFileSize,
+  isVideoResource,
+  lessonResourceHref,
+} from "@/lib/resource-file";
 import { LessonTutor } from "@/components/features/learning/lesson-tutor";
 import { QuizAttempt } from "@/components/features/learning/quiz-attempt";
 import { CourseReviewsList } from "@/components/features/courses/course-reviews-list";
@@ -132,15 +141,20 @@ export default async function LessonViewerPage({ params }: PageProps) {
         </Card>
       ) : null}
 
-      {lesson.textContent ? (
-        <div className="prose prose-sm max-w-none whitespace-pre-line text-foreground">
-          {lesson.textContent}
-        </div>
+      {/* Le texte d'une leçon TEXTE occupe désormais la scène : le répéter ici
+          ferait lire deux fois la même chose. Il reste affiché pour les autres
+          types, où il joue le rôle de complément écrit à la vidéo ou au quiz. */}
+      {lesson.textContent && lesson.type !== "TEXT" ? (
+        <MarkdownContent source={lesson.textContent} />
       ) : null}
 
-      {!lesson.description && !lesson.aiSummary && !lesson.textContent ? (
+      {!lesson.description &&
+      !lesson.aiSummary &&
+      (!lesson.textContent || lesson.type === "TEXT") ? (
         <p className="text-sm text-muted-foreground">
-          Pas de description disponible pour cette leçon.
+          {lesson.type === "TEXT"
+            ? "Le contenu de cette leçon se lit ci-dessus."
+            : "Pas de description disponible pour cette leçon."}
         </p>
       ) : null}
     </div>
@@ -176,17 +190,55 @@ export default async function LessonViewerPage({ params }: PageProps) {
     </div>
   );
 
-  const resourcesContent = lesson.resourceUrl ? (
-    <div className="space-y-3">
-      <p className="text-sm text-foreground">
-        Cette leçon contient une ressource téléchargeable.
-      </p>
-      <Button asChild>
-        <Link href={lesson.resourceUrl} target="_blank" rel="noopener noreferrer">
-          <Download className="h-4 w-4" />
-          {lesson.resourceFileName ?? "Télécharger"}
-        </Link>
-      </Button>
+  // Deux sources cohabitent : les pièces jointes téléversées par le formateur
+  // (`lesson.resources`) et l'unique lien historique porté par la leçon
+  // (`resourceUrl`), conservé pour les cours créés avant l'upload de fichiers.
+  const hasResources = lesson.resources.length > 0 || Boolean(lesson.resourceUrl);
+
+  const resourcesContent = hasResources ? (
+    <div className="space-y-4">
+      {lesson.resources.length > 0 ? (
+        <ul className="divide-y divide-border rounded-lg border border-border">
+          {lesson.resources.map((resource) => (
+            <li key={resource.id} className="flex items-center gap-3 px-3 py-3">
+              {isVideoResource(resource.url, "") ? (
+                <FileVideo className="h-4 w-4 shrink-0 text-muted-foreground" />
+              ) : (
+                <FileText className="h-4 w-4 shrink-0 text-muted-foreground" />
+              )}
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm font-medium text-foreground">
+                  {resource.title}
+                </p>
+                {resource.fileSizeBytes ? (
+                  <p className="text-xs text-muted-foreground">
+                    {formatFileSize(resource.fileSizeBytes)}
+                  </p>
+                ) : null}
+              </div>
+              <Button asChild variant="outline" size="sm">
+                <Link
+                  href={lessonResourceHref(lesson.id, resource.id, true)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  <Download className="h-4 w-4" />
+                  Télécharger
+                </Link>
+              </Button>
+            </li>
+          ))}
+        </ul>
+      ) : null}
+
+      {lesson.resourceUrl ? (
+        <Button asChild>
+          <Link href={lesson.resourceUrl} target="_blank" rel="noopener noreferrer">
+            <Download className="h-4 w-4" />
+            {lesson.resourceFileName ?? "Télécharger"}
+          </Link>
+        </Button>
+      ) : null}
     </div>
   ) : (
     <p className="text-sm text-muted-foreground">
@@ -222,7 +274,12 @@ export default async function LessonViewerPage({ params }: PageProps) {
       badge: reviewsBundle.totalRatings > 0 ? reviewsBundle.totalRatings : undefined,
       content: reviewsContent,
     },
-    { key: "resources", label: "Ressources", content: resourcesContent },
+    {
+      key: "resources",
+      label: "Ressources",
+      badge: lesson.resources.length > 0 ? lesson.resources.length : undefined,
+      content: resourcesContent,
+    },
   ];
 
   return (
@@ -247,7 +304,7 @@ export default async function LessonViewerPage({ params }: PageProps) {
                 <CourseCompleteBanner courseId={course.id} />
               </div>
             ) : null}
-            <div className="bg-black">
+            <div className={lesson.type === "VIDEO" ? "bg-black" : "bg-card"}>
               <div className="mx-auto w-full max-w-[1280px]">
                 {lesson.type === "VIDEO" ? (
                   lesson.muxPlaybackId || lesson.externalVideoUrl ? (
@@ -311,10 +368,39 @@ export default async function LessonViewerPage({ params }: PageProps) {
                   </div>
                 ) : null}
 
-                {lesson.type === "TEXT" || lesson.type === "RESOURCE" ? (
-                  <div className="flex min-h-[40vh] items-center justify-center bg-card p-6 text-sm text-muted-foreground">
-                    Contenu disponible dans l&apos;onglet « Présentation » ci-dessous.
-                  </div>
+                {lesson.type === "TEXT" ? (
+                  lesson.textContent ? (
+                    <LessonReader
+                      key={lesson.id}
+                      lessonId={lesson.id}
+                      alreadyCompleted={completedIds.has(lesson.id)}
+                      content={lesson.textContent}
+                      readingMinutes={estimateReadingMinutes(lesson.textContent)}
+                      nextLessonHref={
+                        next ? `/apprentissage/${course.slug}/lecons/${next.id}` : null
+                      }
+                      nextLessonTitle={next?.title ?? null}
+                    />
+                  ) : (
+                    <div className="flex min-h-[40vh] items-center justify-center bg-card p-6 text-sm text-muted-foreground">
+                      Le formateur n&apos;a pas encore rédigé le contenu de cette leçon.
+                    </div>
+                  )
+                ) : null}
+
+                {lesson.type === "RESOURCE" ? (
+                  <LessonResourceStage
+                    key={lesson.id}
+                    lessonId={lesson.id}
+                    resources={lesson.resources.map((resource) => ({
+                      id: resource.id,
+                      title: resource.title,
+                      url: resource.url,
+                      fileSizeBytes: resource.fileSizeBytes,
+                    }))}
+                    legacyUrl={lesson.resourceUrl}
+                    legacyFileName={lesson.resourceFileName}
+                  />
                 ) : null}
               </div>
             </div>

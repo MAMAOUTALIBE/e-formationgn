@@ -3,11 +3,15 @@ import { stat } from "node:fs/promises";
 import { Readable } from "node:stream";
 
 import { parseHttpByteRange } from "@/lib/http-byte-range";
+import { resourceUploadContentType } from "@/lib/resource-file";
 import { resolveLocalStoredFilePath } from "@/lib/storage/local";
-import { videoUploadContentType } from "@/lib/video-file";
+import { isLikelyVideoFile, videoUploadContentType } from "@/lib/video-file";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+
+/** Préfixe de stockage des pièces jointes de leçon — cf. la route de presign. */
+const RESOURCE_PREFIX = "resources";
 
 const OTHER_CONTENT_TYPES: Readonly<Record<string, string>> = {
   avif: "image/avif",
@@ -21,11 +25,14 @@ const OTHER_CONTENT_TYPES: Readonly<Record<string, string>> = {
 
 function contentTypeFor(filename: string): string {
   const extension = filename.toLowerCase().split(".").pop() ?? "";
-  return (
-    OTHER_CONTENT_TYPES[extension] ??
-    videoUploadContentType(filename, "") ??
-    "application/octet-stream"
-  );
+  const known = OTHER_CONTENT_TYPES[extension];
+  if (known) return known;
+  if (isLikelyVideoFile(filename, "")) return videoUploadContentType(filename, "");
+  // Pièces jointes de leçon : sans ce mappage un PDF partait en
+  // `application/octet-stream`, donc en téléchargement forcé plutôt qu'en
+  // aperçu dans le navigateur. La table de `resource-file` ne renvoie jamais
+  // de type exécutable (HTML, SVG), l'élargissement reste sans risque.
+  return resourceUploadContentType(filename, "");
 }
 
 async function serve(
@@ -34,6 +41,16 @@ async function serve(
   headOnly: boolean,
 ): Promise<Response> {
   const segments = (await context.params).path;
+
+  // Cette route est publique par nature : elle sert les avatars et les
+  // vignettes, que tout le monde peut voir. Les supports de cours, eux, ne
+  // s'obtiennent que par `/api/lecons/…`, qui vérifie l'inscription. Les
+  // refuser ICI est ce qui ferme la porte — la route protégée lit le disque
+  // directement et ne repasse pas par ce chemin.
+  if (segments[0] === RESOURCE_PREFIX) {
+    return new Response("Introuvable", { status: 404 });
+  }
+
   const filePath = resolveLocalStoredFilePath(segments);
   if (!filePath) return new Response("Introuvable", { status: 404 });
 

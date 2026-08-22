@@ -8,6 +8,7 @@ import {
   CERTIFICATE_REQUIRES_COMPLETION,
   canIssueCertificate,
 } from "@/lib/domain/training-integrity";
+import { joinFullName } from "@/lib/identity-name";
 import { prisma } from "@/lib/prisma";
 
 import type { ActionResult } from "./auth";
@@ -24,10 +25,16 @@ export async function issueCertificate(courseId: string): Promise<ActionResult &
   const session = await auth();
   if (!session?.user) return { success: false, message: "Connectez-vous." };
 
-  const enrollment = await prisma.enrollment.findUnique({
-    where: { userId_courseId: { userId: session.user.id, courseId } },
-    select: { id: true, completedAt: true, progressPercent: true, orderItemId: true },
-  });
+  const [enrollment, holder] = await Promise.all([
+    prisma.enrollment.findUnique({
+      where: { userId_courseId: { userId: session.user.id, courseId } },
+      select: { id: true, completedAt: true, progressPercent: true, orderItemId: true },
+    }),
+    prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: { name: true, firstName: true, lastName: true },
+    }),
+  ]);
   if (!enrollment) {
     return { success: false, message: "Vous n'êtes pas inscrit à cette formation." };
   }
@@ -66,6 +73,9 @@ export async function issueCertificate(courseId: string): Promise<ActionResult &
         courseId,
         serialNumber: serial,
         orderItemId: enrollment.orderItemId,
+        // Figé ici, jamais relu : c'est ce nom-là qui fait foi sur
+        // l'attestation, même si le compte est renommé ensuite.
+        holderName: joinFullName(holder ?? {}) || null,
       },
       select: { serialNumber: true },
     });

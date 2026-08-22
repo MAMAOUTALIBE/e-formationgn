@@ -23,10 +23,13 @@ import { Input } from "@/components/ui/input";
 import { KpiCard } from "@/components/ui/kpi-card";
 import { Select } from "@/components/ui/select";
 import { StatusBadge } from "@/components/ui/status-badge";
+import { parseListFilter } from "@/lib/admin/list-filters";
 import { exportProgramsCsv } from "@/server/actions/admin-crm-exports";
 import {
   getProgramsDashboardStats,
   listPrograms,
+  PROGRAM_DURATIONS,
+  PROGRAM_STATUSES,
   type ProgramListRow,
 } from "@/server/queries/admin-programs";
 
@@ -48,17 +51,19 @@ export default async function ProgramsPage({
 }) {
   const params = await searchParams;
   const page = Math.max(1, Number(params.page) || 1);
+  // Validé ici plutôt que dans la requête : l'écran doit refléter le filtre
+  // RETENU. Un `?statut=actives` inconnu était ignoré côté requête mais
+  // restait sélectionné dans la liste déroulante, qui annonçait alors un
+  // filtre que le tableau n'appliquait pas.
+  const statut = parseListFilter(params.statut, PROGRAM_STATUSES);
+  const duree = parseListFilter(params.duree, PROGRAM_DURATIONS);
   const [allRows, stats] = await Promise.all([
-    listPrograms({
-      search: params.q,
-      status: params.statut,
-      duration: params.duree,
-    }),
+    listPrograms({ search: params.q, status: statut, duration: duree }),
     getProgramsDashboardStats(),
   ]);
   const rows = allRows.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
   const totalPages = Math.max(1, Math.ceil(allRows.length / PAGE_SIZE));
-  const hasFilters = Boolean(params.q || params.statut || params.duree);
+  const hasFilters = Boolean(params.q?.trim() || statut || duree);
 
   return (
     <div className="space-y-5" data-testid="programs-workspace">
@@ -158,7 +163,7 @@ export default async function ProgramsPage({
             <Select
               name="statut"
               aria-label="Statut"
-              defaultValue={params.statut ?? ""}
+              defaultValue={statut ?? ""}
             >
               <option value="">Tous les statuts</option>
               <option value="ACTIVE">Actives</option>
@@ -168,7 +173,7 @@ export default async function ProgramsPage({
             <Select
               name="duree"
               aria-label="Durée"
-              defaultValue={params.duree ?? ""}
+              defaultValue={duree ?? ""}
             >
               <option value="">Toutes les durées</option>
               <option value="short">Moins de 40 h</option>

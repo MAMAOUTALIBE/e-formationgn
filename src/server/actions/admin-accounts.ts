@@ -20,37 +20,20 @@
 // lui-même depuis son profil.
 
 import { revalidatePath } from "next/cache";
-import { z } from "zod";
 
 import { requireAdmin } from "@/lib/auth/authorization";
 import { hashPassword } from "@/lib/auth/password";
+import { splitFullName } from "@/lib/identity-name";
 import { prisma } from "@/lib/prisma";
+import {
+  createCenterAccountSchema,
+  readCivilStatusFields,
+  updateAccountIdentitySchema,
+} from "@/lib/validators/identity";
 import { createAuditLog } from "@/server/services/audit-log";
 import { generateTemporaryPassword } from "@/server/services/temporary-password";
 
 import type { ActionResult } from "./auth";
-
-/** Cet écran crée exclusivement des apprenants. L'équipe a son propre flux. */
-const CREATABLE_ROLES = ["STUDENT"] as const;
-
-const createAccountSchema = z
-  .object({
-    email: z.string().trim().toLowerCase().email("Email invalide."),
-    firstName: z.string().trim().min(1, "Prénom requis.").max(80),
-    lastName: z.string().trim().min(1, "Nom requis.").max(80),
-    phone: z.string().trim().max(40).optional().default(""),
-    role: z.enum(CREATABLE_ROLES),
-    // Identifiant d'une société EXISTANTE, jamais un nom saisi librement :
-    // deux orthographes du même client fausseraient tout regroupement
-    // (facturation, dossier OPCO, statistiques). Vide pour un formateur, qui
-    // n'appartient à aucune société cliente.
-    companyId: z.string().trim().optional().default(""),
-  })
-  .strict()
-  .refine((v) => v.companyId !== "", {
-    message: "Sélectionnez la société de rattachement.",
-    path: ["companyId"],
-  });
 
 export interface CreateAccountResult extends ActionResult {
   /** Mot de passe provisoire, affiché une seule fois. */
@@ -79,15 +62,13 @@ export async function createCenterAccount(
   }
 
   const raw = {
+    ...readCivilStatusFields(formData),
     email: String(formData.get("email") ?? ""),
-    firstName: String(formData.get("firstName") ?? ""),
-    lastName: String(formData.get("lastName") ?? ""),
-    phone: String(formData.get("phone") ?? ""),
     role: String(formData.get("role") ?? "STUDENT"),
     companyId: String(formData.get("companyId") ?? ""),
   };
 
-  const parsed = createAccountSchema.safeParse(raw);
+  const parsed = createCenterAccountSchema.safeParse(raw);
 
   if (!parsed.success) {
     return {
@@ -98,7 +79,21 @@ export async function createCenterAccount(
     };
   }
 
-  const { email, firstName, lastName, phone, role, companyId } = parsed.data;
+  const {
+    email,
+    fullName,
+    birthDate,
+    birthPlace,
+    gender,
+    phone,
+    country,
+    address,
+    role,
+    companyId,
+  } = parsed.data;
+  // `name` fait foi pour l'affichage ; prénom et nom n'en sont que les
+  // dérivés de tri — cf. `splitFullName`.
+  const identity = splitFullName(fullName);
 
   const existing = await prisma.user.findUnique({
     where: { email },
@@ -136,10 +131,15 @@ export async function createCenterAccount(
   const user = await prisma.user.create({
     data: {
       email,
-      firstName,
-      lastName,
-      name: `${firstName} ${lastName}`,
-      phone: phone || null,
+      name: identity.name,
+      firstName: identity.firstName,
+      lastName: identity.lastName,
+      birthDate,
+      birthPlace,
+      gender,
+      phone,
+      country,
+      address,
       hashedPassword: await hashPassword(temporaryPassword),
       role,
       companyId,
@@ -147,6 +147,9 @@ export async function createCenterAccount(
       // Le compte est immédiatement utilisable : c'est le centre qui a
       // vérifié l'identité de la personne, pas une boucle email.
       status: "ACTIVE",
+      // Et puisque c'est le centre qui l'a saisie, c'est lui qui la corrige :
+      // le titulaire ne renomme pas ce qui figurera sur son certificat.
+      identityLockedAt: new Date(),
       emailVerified: new Date(),
       // Changement du mot de passe NON imposé, sur demande du centre : l'élève
       // se connecte directement avec celui qu'on lui a transmis. Le mécanisme
@@ -232,4 +235,209 @@ export async function resetCenterAccountPassword(
     temporaryPassword,
     createdEmail: target.email,
   };
+}
+
+// ---------------------------------------------------------------------------
+// Correction d'une identité verrouillée
+// ---------------------------------------------------------------------------
+
+/**
+ * Corrige l'état civil d'un compte.
+ *
+ * Contrepartie indispensable du verrou : l'écran de profil dit à l'apprenant
+ * de s'adresser à l'administration, encore faut-il que l'administration
+ * dispose du geste. Sans cette action, une faute de frappe à la création
+ * devenait définitive et se reportait sur tous les certificats émis, puisque
+ * ceux-ci lisent le nom en direct plutôt qu'une copie figée.
+ *
+ * Réservé à l'ADMIN strict, comme la création de compte dans ce même fichier :
+ * c'est l'identité qui figure sur les attestations qu'on modifie ici.
+ */
+export async function updateAccountIdentity(
+  _prev: ActionResult | undefined,
+  formData: FormData,
+): Promise<ActionResult> {
+  let session;
+  try {
+    session = await requireAdmin();
+  } catch {
+    return { success: false, message: "Non autorisé." };
+  }
+
+  const parsed = updateAccountIdentitySchema.safeParse({
+    ...readCivilStatusFields(formData),
+    userId: String(formData.get("userId") ?? ""),
+  });
+  if (!parsed.success) {
+    return {
+      success: false,
+      message: "Veuillez corriger les erreurs ci-dessous.",
+      fieldErrors: parsed.error.flatten().fieldErrors,
+    };
+  }
+
+  const { userId, fullName, ...civil } = parsed.data;
+  // Case à cocher du formulaire : absente du corps quand elle n'est pas
+  // cochée, comme toute case HTML.
+  const propagateToCertificates = formData.get("updateCertificates") === "on";
+
+  const target = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { id: true, email: true, name: true, firstName: true, lastName: true },
+  });
+  if (!target) return { success: false, message: "Compte introuvable." };
+
+  const identity = splitFullName(fullName);
+
+  await prisma.user.update({
+    where: { id: userId },
+    data: {
+      name: identity.name,
+      firstName: identity.firstName,
+      lastName: identity.lastName,
+      birthDate: civil.birthDate,
+      birthPlace: civil.birthPlace,
+      gender: civil.gender,
+      phone: civil.phone,
+      country: civil.country,
+      address: civil.address,
+      // Une identité corrigée par l'administration reste sous sa garde : on
+      // (re)pose le verrou plutôt que de le laisser au hasard de l'état
+      // antérieur du compte.
+      identityLockedAt: new Date(),
+    },
+  });
+
+  // Les attestations portent un nom FIGÉ à l'émission : les réaligner est un
+  // acte distinct de la correction du compte, et il se demande. Rectifier une
+  // faute de frappe doit pouvoir se faire sans toucher aux documents déjà
+  // remis, et corriger un nom d'usage doit pouvoir les rejoindre — seule
+  // l'administration sait de quel cas il s'agit.
+  let certificatesUpdated = 0;
+  if (propagateToCertificates) {
+    const result = await prisma.certificate.updateMany({
+      where: { userId },
+      data: { holderName: identity.name },
+    });
+    certificatesUpdated = result.count;
+  }
+
+  await createAuditLog({
+    actorId: session.userId,
+    action: "user.identity_corrected",
+    targetType: "User",
+    targetId: userId,
+    metadata: {
+      email: target.email,
+      before: target.name ?? `${target.firstName ?? ""} ${target.lastName ?? ""}`.trim(),
+      after: identity.name,
+      certificatesUpdated,
+    },
+  });
+
+  revalidatePath(`/admin/utilisateurs/${userId}`);
+  revalidatePath("/admin/utilisateurs");
+
+  return {
+    success: true,
+    message:
+      certificatesUpdated > 0
+        ? `Identité enregistrée. ${certificatesUpdated} attestation${certificatesUpdated > 1 ? "s" : ""} mise${certificatesUpdated > 1 ? "s" : ""} à jour.`
+        : "Identité enregistrée.",
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Suppression définitive d'un compte apprenant
+// ---------------------------------------------------------------------------
+
+/**
+ * Efface un compte apprenant et tout ce qui en dépend.
+ *
+ * Distincte de la demande RGPD (`deleteUserGdpr`), qui archive : le compte y
+ * passe en statut DELETED et ses données restent en base, ce qui est le bon
+ * comportement quand une trace doit subsister. Ici la ligne disparaît, ainsi
+ * que — par cascade déclarée au schéma — inscriptions, progression,
+ * tentatives de quiz, certificats, notes, favoris, questions et sessions.
+ *
+ * Trois refus délibérés :
+ *
+ *  1. Les comptes non apprenants. Un formateur est propriétaire de formations
+ *     dont la relation n'est pas en cascade : la suppression échouerait à
+ *     mi-chemin, et surtout on ne détruit pas un catalogue par ce geste.
+ *  2. Son propre compte, qui laisserait l'administration sans opérateur.
+ *  3. Un compte porteur de commandes. `Order.user` n'est pas en cascade — une
+ *     pièce comptable ne s'efface pas au gré d'un ménage d'annuaire.
+ *
+ * Le journal d'audit conserve l'identité effacée : la ligne part, la trace de
+ * son départ reste.
+ */
+export async function deleteLearnerAccount(userId: string): Promise<ActionResult> {
+  let session;
+  try {
+    session = await requireAdmin();
+  } catch {
+    return { success: false, message: "Non autorisé." };
+  }
+
+  if (!userId) return { success: false, message: "Compte introuvable." };
+  if (userId === session.userId) {
+    return { success: false, message: "Vous ne pouvez pas supprimer votre propre compte." };
+  }
+
+  const target = await prisma.user.findUnique({
+    where: { id: userId },
+    select: {
+      id: true,
+      email: true,
+      name: true,
+      role: true,
+      _count: { select: { orders: true, coursesAuthored: true, certificates: true } },
+    },
+  });
+  if (!target) return { success: false, message: "Compte introuvable." };
+
+  if (target.role !== "STUDENT" || target._count.coursesAuthored > 0) {
+    return {
+      success: false,
+      message:
+        "Seul un compte apprenant peut être supprimé définitivement. Suspendez plutôt ce compte.",
+    };
+  }
+
+  if (target._count.orders > 0) {
+    return {
+      success: false,
+      message:
+        "Ce compte porte des commandes et ne peut pas être effacé. Utilisez la demande de suppression RGPD.",
+    };
+  }
+
+  // Journalisé AVANT la suppression : `AuditLog.actorId` est en SetNull, mais
+  // les métadonnées, elles, ne dépendent d'aucune ligne survivante.
+  await createAuditLog({
+    actorId: session.userId,
+    action: "user.hard_delete",
+    targetType: "User",
+    targetId: userId,
+    metadata: {
+      email: target.email,
+      name: target.name,
+      certificates: target._count.certificates,
+    },
+  });
+
+  try {
+    await prisma.user.delete({ where: { id: userId } });
+  } catch (error) {
+    console.error("[admin-accounts] suppression définitive", { userId, error });
+    return {
+      success: false,
+      message:
+        "Suppression impossible : ce compte est référencé par des données non effaçables.",
+    };
+  }
+
+  revalidatePath("/admin/utilisateurs");
+  return { success: true, message: "Compte supprimé définitivement." };
 }
