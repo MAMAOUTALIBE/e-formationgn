@@ -89,15 +89,19 @@ const nextConfig: NextConfig = {
 
   // Nombre de processus de génération statique.
   //
-  // Par défaut Next en lance un par cœur — 7 sur cette machine. Chaque worker
-  // porte son propre tas Node, et l'image de production se construit dans une
-  // VM Docker limitée à 3,8 Go sur un Mac qui n'a que 8 Go : le build s'est
-  // fait tuer (SIGKILL, « cannot allocate memory »). Un seul worker évite que
-  // deux tas Node plafonnés à 1,5 Go se cumulent pendant la collecte des pages.
+  // Par défaut Next en lance un par cœur. Chaque worker porte son propre tas
+  // Node, et l'image de production se construisait dans une VM Docker limitée à
+  // 3,8 Go sur un Mac qui n'a que 8 Go : le build se faisait tuer (SIGKILL,
+  // « cannot allocate memory »). Un seul worker évitait que deux tas Node
+  // plafonnés à 1,5 Go se cumulent pendant la collecte des pages — au prix
+  // d'une construction d'une heure.
   //
-  // À relever si le build migre un jour sur une machine plus dotée : c'est un
-  // compromis mémoire/vitesse, pas une correction de bug.
-  experimental: { cpus: 1 },
+  // La valeur est désormais pilotée par l'environnement. Sur un runner
+  // GitHub (x86_64 natif, 16 Go), `NEXT_BUILD_WORKERS=4` lève la contrainte et
+  // la construction retombe à quelques minutes ; en local, l'absence de la
+  // variable conserve le comportement prudent qui a rendu le build possible sur
+  // cette machine.
+  experimental: { cpus: Number(process.env.NEXT_BUILD_WORKERS) || 1 },
 
   // Build standalone : produit /.next/standalone avec un mini server.js
   // autonome, indispensable pour l'image Docker minimale.

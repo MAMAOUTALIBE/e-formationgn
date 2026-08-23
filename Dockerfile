@@ -47,6 +47,13 @@ ENV NEXTAUTH_URL="https://placeholder.local"
 # sans effet — c'est ce qui avait silencieusement désactivé Turnstile et rempli
 # le sitemap de « placeholder.local » en production. Elles doivent donc entrer
 # ici, par --build-arg (scripts/deploy.sh les lit dans .env).
+# Nombre de workers de génération statique. Vaut 1 par défaut — la valeur qui
+# rend la construction possible sur un Mac 8 Go sous émulation. Un runner
+# x86_64 natif passe 4 et divise la durée par dix. Cf. la note dans
+# next.config.ts.
+ARG NEXT_BUILD_WORKERS=1
+ENV NEXT_BUILD_WORKERS=${NEXT_BUILD_WORKERS}
+
 ARG NEXT_PUBLIC_APP_URL="https://placeholder.local"
 ARG NEXT_PUBLIC_APP_NAME="Gandal"
 ARG NEXT_PUBLIC_TURNSTILE_SITE_KEY=""

@@ -180,6 +180,29 @@ if [ -n "${VPS_SSH:-}" ]; then
     < scripts/validate-production-env.sh
 fi
 
+# Mode « image déjà construite ailleurs ».
+#
+# La construction locale dure 45 à 60 minutes : le Mac est en ARM, l'image cible
+# du x86_64, et la VM Docker plafonnée à 3,8 Go impose un seul worker Next. Un
+# runner GitHub x86_64 fait le même travail en 4 à 6 minutes
+# (.github/workflows/build-image.yml).
+#
+# Avec SKIP_BUILD=1, ce script ne construit rien : il vérifie que le tag existe
+# bien sur Docker Hub, puis enchaîne le redéploiement distant. Toutes les
+# barrières de qualité en amont restent exécutées.
+#
+#   SKIP_BUILD=1 VPS_SSH=... npm run deploy
+if [ "${SKIP_BUILD:-0}" = "1" ]; then
+  echo "▶ Construction locale ignorée (SKIP_BUILD=1) — vérification du tag publié…"
+  if ! docker manifest inspect "${REPO}:${TAG}" >/dev/null 2>&1; then
+    echo "❌ ${REPO}:${TAG} est introuvable sur Docker Hub." >&2
+    echo "   Lancez d'abord le workflow « Construire et publier l'image » sur ce commit," >&2
+    echo "   attendez sa fin, puis relancez cette commande." >&2
+    echo "   https://github.com/MAMAOUTALIBE/e-formationgn/actions" >&2
+    exit 1
+  fi
+  echo "✅ Image ${REPO}:${TAG} trouvée sur Docker Hub."
+else
 echo "▶ Build linux/amd64 → ${REPO}:latest + ${REPO}:${TAG}"
 docker buildx build \
   --platform linux/amd64 \
@@ -194,6 +217,7 @@ docker buildx build \
 
 echo
 echo "✅ Image poussée : ${REPO}:latest  (et :${TAG})"
+fi
 echo
 
 if [ -n "${VPS_SSH:-}" ]; then

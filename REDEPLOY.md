@@ -133,6 +133,53 @@ Le [docker-compose.yml](docker-compose.yml) du repo est la **source de vérité*
 
 ---
 
+## Construction rapide (recommandé)
+
+La construction locale dure **45 à 60 minutes**, et ce n'est pas une anomalie :
+le Mac est en ARM, l'image cible du x86_64, et la VM Docker plafonnée à 3,8 Go
+sur une machine de 8 Go impose un seul worker Next (`experimental.cpus`) et
+Webpack à la place de Turbopack. Trois contournements pour une même cause.
+
+Un runner GitHub est nativement x86_64 avec 16 Go : **4 à 6 minutes**.
+
+### Mise en place, une seule fois
+
+Dans le dépôt GitHub, *Settings → Secrets and variables → Actions* :
+
+| Type | Nom | Valeur |
+|---|---|---|
+| Secret | `DOCKERHUB_USERNAME` | votre identifiant Docker Hub |
+| Secret | `DOCKERHUB_TOKEN` | un jeton d'accès Docker Hub (pas le mot de passe) |
+| Variable | `NEXT_PUBLIC_APP_URL` | `https://gandal.org` |
+| Variable | `NEXT_PUBLIC_APP_NAME` | `Aiduca` |
+| Variable | `NEXT_PUBLIC_PLATFORM_MODE` | `centre_formation` |
+| Variable | `NEXT_PUBLIC_TURNSTILE_SITE_KEY` | vide tant que non configuré |
+| Variable | `NEXT_PUBLIC_SENTRY_DSN` | vide tant que non configuré |
+
+Les `NEXT_PUBLIC_*` sont des **variables**, pas des secrets : Next les inscrit
+en clair dans le JavaScript envoyé au navigateur.
+
+### Usage
+
+1. Pousser le commit, puis lancer le workflow **« Construire et publier
+   l'image »** depuis l'onglet *Actions* (ou attendre qu'un push sur `main` le
+   déclenche).
+2. Une fois l'image publiée :
+
+```bash
+export VPS_SSH=root@213.130.144.215
+SKIP_BUILD=1 npm run deploy
+```
+
+Le script saute la construction, vérifie que le tag existe bien sur Docker Hub,
+et enchaîne le redéploiement distant. **Toutes les barrières de qualité restent
+exécutées** — typage, lint, tests, préflight des variables.
+
+La construction locale reste disponible en lançant `npm run deploy` sans
+`SKIP_BUILD` : elle ne dépend d'aucun service tiers, ce qui en fait le recours
+si GitHub Actions est indisponible.
+
+
 ## Dépannage
 
 | Symptôme | Cause | Action |

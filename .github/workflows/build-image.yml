@@ -1,0 +1,132 @@
+# Construction de l'image de production sur un runner x86_64.
+#
+# Pourquoi : la construction locale prend 45 à 60 minutes, et ce n'est pas une
+# anomalie. Le Mac de développement est en ARM avec 8 Go de RAM ; l'image cible
+# du x86_64. Chaque instruction est donc traduite par émulation, et la VM Docker
+# plafonnée à 3,8 Go a imposé deux contournements dans le projet — un seul
+# worker Next (`experimental.cpus`) et Webpack à la place de Turbopack, tous
+# deux pour éviter que le build ne se fasse tuer faute de mémoire.
+#
+# Un runner GitHub est nativement x86_64 avec 16 Go : plus d'émulation, plus de
+# contrainte mémoire, et les deux contournements tombent. Comptez 4 à 6 minutes
+# au lieu d'une heure.
+#
+# À configurer une seule fois dans le dépôt (Settings → Secrets and variables → Actions) :
+#
+#   Secrets       DOCKERHUB_USERNAME   votre identifiant Docker Hub
+#                 DOCKERHUB_TOKEN      un jeton d'accès (Docker Hub → Account Settings
+#                                      → Personal access tokens), PAS votre mot de passe
+#
+#   Variables     NEXT_PUBLIC_APP_URL          https://gandal.org
+#                 NEXT_PUBLIC_APP_NAME         Aiduca
+#                 NEXT_PUBLIC_PLATFORM_MODE    centre_formation
+#                 NEXT_PUBLIC_TURNSTILE_SITE_KEY   (vide tant que non configuré)
+#                 NEXT_PUBLIC_SENTRY_DSN           (vide tant que non configuré)
+#
+# Ce sont des VARIABLES et non des secrets : Next les inscrit en clair dans le
+# JavaScript envoyé au navigateur. Les traiter comme des secrets donnerait une
+# fausse impression de confidentialité.
+
+name: Construire et publier l'image
+
+on:
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: "Branche ou commit à construire"
+        required: false
+        default: ""
+  push:
+    branches:
+      - main
+    paths-ignore:
+      - "**/*.md"
+      - "docs/**"
+
+concurrency:
+  # Une seule construction par branche : un nouveau push annule la précédente,
+  # qui n'a plus d'intérêt.
+  group: image-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Récupérer le code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref || github.ref }}
+
+      - name: Calculer le tag court
+        id: meta
+        run: echo "sha=$(git rev-parse --short HEAD)" >> "$GITHUB_OUTPUT"
+
+      # Les mêmes barrières que le script de déploiement local. Elles tournent
+      # ici en quelques dizaines de secondes au lieu de plusieurs minutes.
+      - name: Installer Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Installer les dépendances
+        run: npm ci --no-audit --no-fund
+
+      - name: Vérifier le typage
+        run: npm run typecheck
+
+      - name: Vérifier le lint
+        run: npm run lint
+
+      - name: Tests unitaires
+        run: npm run test:unit
+
+      - name: Se connecter à Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Préparer Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Construire et publier
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          # Natif : le runner EST x86_64, il n'y a rien à émuler. C'est de là
+          # que vient l'essentiel du gain.
+          platforms: linux/amd64
+          push: true
+          tags: |
+            bahm2062/e-formationgn:latest
+            bahm2062/e-formationgn:${{ steps.meta.outputs.sha }}
+          build-args: |
+            NEXT_PUBLIC_APP_URL=${{ vars.NEXT_PUBLIC_APP_URL }}
+            NEXT_PUBLIC_APP_NAME=${{ vars.NEXT_PUBLIC_APP_NAME }}
+            NEXT_PUBLIC_PLATFORM_MODE=${{ vars.NEXT_PUBLIC_PLATFORM_MODE }}
+            NEXT_PUBLIC_TURNSTILE_SITE_KEY=${{ vars.NEXT_PUBLIC_TURNSTILE_SITE_KEY }}
+            NEXT_PUBLIC_SENTRY_DSN=${{ vars.NEXT_PUBLIC_SENTRY_DSN }}
+            NEXT_BUILD_WORKERS=4
+          # Le cache survit d'une exécution à l'autre : les couches de
+          # dépendances ne sont reconstruites que lorsque package-lock.json
+          # bouge.
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Récapitulatif
+        run: |
+          {
+            echo "### Image publiée"
+            echo ""
+            echo '- `bahm2062/e-formationgn:latest`'
+            echo '- `bahm2062/e-formationgn:${{ steps.meta.outputs.sha }}`'
+            echo ""
+            echo "Pour déployer, sur le VPS :"
+            echo '```'
+            echo "cd /docker/e-formationgn && docker compose pull app && docker compose up -d app"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
