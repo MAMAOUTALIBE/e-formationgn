@@ -93,6 +93,57 @@ test("la politique de confidentialité porte les mentions obligatoires de l'arti
   assert.doesNotMatch(cms, /Les durées précises peuvent varier/);
 });
 
+test("aucune mention légale publiée ne comporte de marqueur à compléter", () => {
+  // Un « [à compléter] » sur une page légale publique coûte plus en crédibilité
+  // qu'il ne rappelle la tâche. Les valeurs manquantes sont donc absentes de la
+  // page, et réclamées par le test suivant.
+  const cms = source("src/lib/cms.ts");
+  const contenus = cms.split("body: `").slice(1).map((bloc) => bloc.split("`,")[0]);
+  for (const contenu of contenus) {
+    assert.doesNotMatch(
+      contenu,
+      /\[[^\]]*(compléter|à définir|TODO|XXX)[^\]]*\]/i,
+      "un contenu CMS publié contient un marqueur de rédaction",
+    );
+  }
+});
+
+test("mentions légales : les valeurs encore attendues du centre sont signalées", () => {
+  // Ce test n'échoue PAS sur l'absence de ces valeurs : elles ne dépendent pas
+  // du code, seul le centre les détient, et bloquer tout déploiement dessus
+  // serait disproportionné. Il les énumère bruyamment, comme le script de
+  // déploiement le fait déjà pour Turnstile et Sentry.
+  //
+  // Ce qu'il vérifie réellement : que la page ne se dégrade pas — soit la
+  // mention est complète, soit elle est absente, jamais un « [à compléter] »
+  // exposé au visiteur.
+  const cms = source("src/lib/cms.ts");
+  const manquantes: string[] = [];
+
+  // Capital social : obligatoire pour une société (LCEN art. 6-III-1).
+  if (!/au capital (social )?de [\d  ]+ euros/i.test(cms)) {
+    manquantes.push("capital social de la SAS");
+  }
+  // Directeur de la publication : obligatoire, sans exception (LCEN art. 6-III-1 e).
+  if (!/Directeur de la publication : [A-ZÉÈÀ]/.test(cms)) {
+    manquantes.push("nom du directeur de la publication");
+  }
+
+  if (manquantes.length > 0) {
+    console.warn(
+      `\n  ⚠️  Mentions légales incomplètes (LCEN art. 6-III-1) — à obtenir du centre :\n` +
+        manquantes.map((m) => `      · ${m}`).join("\n") +
+        `\n      Compléter dans src/lib/cms.ts ou depuis /admin/cms.\n`,
+    );
+  }
+
+  // Ce qui est vérifié, lui, est bloquant : une mention à demi rédigée ne doit
+  // jamais atteindre la page publique.
+  const mentions = cms.split('"mentions-legales"')[1]?.split("body: `")[1]?.split("`,")[0] ?? "";
+  assert.doesNotMatch(mentions, /\[[^\]]+\]/, "mention légale laissée à demi rédigée");
+  assert.match(mentions, /société par actions simplifiée/);
+});
+
 test("les mentions légales portent l'hébergeur et la formule imposée aux organismes de formation", () => {
   const cms = source("src/lib/cms.ts");
 
@@ -104,9 +155,8 @@ test("les mentions légales portent l'hébergeur et la formule imposée aux orga
   // le numéro de déclaration d'activité.
   assert.match(cms, /Cet enregistrement ne vaut pas agrément de l'État/);
 
-  assert.match(cms, /Directeur de la publication/);
   assert.match(cms, /RCS/);
-  assert.match(cms, /TVA intracommunautaire/);
+  assert.match(cms, /TVA : exonérée au titre de l'article 261-4-4°a/);
 });
 
 test("le catalogue et les catégories possèdent leur URL Open Graph propre", () => {

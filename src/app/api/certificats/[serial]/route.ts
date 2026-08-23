@@ -7,6 +7,7 @@ import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { getAiducaTrainingLocation } from "@/lib/certificate-template";
 import { generateCertificatePdf } from "@/lib/pdf-certificate";
+import { formatDuree } from "@/lib/duration";
 import { formatDurationFromSeconds } from "@/lib/format/duration";
 import { prisma } from "@/lib/prisma";
 
@@ -24,6 +25,13 @@ export async function GET(_request: Request, context: RouteContext) {
         select: {
           title: true,
           durationSeconds: true,
+        },
+      },
+      // Session au titre de laquelle l'attestation a été délivrée : ses dates
+      // et son lieu font foi, pas ceux de l'accès au cours.
+      registration: {
+        select: {
+          session: { select: { startDate: true, endDate: true, location: true } },
         },
       },
     },
@@ -53,16 +61,29 @@ export async function GET(_request: Request, context: RouteContext) {
     select: { enrolledAt: true, completedAt: true },
   });
 
-  const endDate = enrollment?.completedAt ?? certificate.issuedAt;
+  // Dates de l'action de formation.
+  //
+  // L'attestation citait les dates d'ouverture et de clôture de l'ACCÈS au
+  // cours. Ce ne sont pas les dates de l'action : celles-ci figurent sur la
+  // convention et sont portées par la session. On les préfère dès que
+  // l'attestation est rattachée à une inscription ; à défaut — accès attribué
+  // hors session, ou attestation antérieure au rattachement — on retombe sur
+  // les dates d'inscription, comme avant.
+  const sessionFormation = certificate.registration?.session ?? null;
+  const startDate = sessionFormation?.startDate ?? enrollment?.enrolledAt ?? certificate.issuedAt;
+  const endDate =
+    sessionFormation?.endDate ?? enrollment?.completedAt ?? certificate.issuedAt;
+  const trainingLocation =
+    sessionFormation?.location?.trim() || getAiducaTrainingLocation();
 
   const pdf = await generateCertificatePdf({
     recipientName,
     courseTitle: certificate.course.title,
     serialNumber: certificate.serialNumber,
     issuedAt: certificate.issuedAt,
-    startDate: enrollment?.enrolledAt ?? certificate.issuedAt,
+    startDate,
     endDate,
-    trainingLocation: getAiducaTrainingLocation(),
+    trainingLocation,
     durationLabel: certificate.course.durationSeconds
       ? formatDurationFromSeconds(certificate.course.durationSeconds)
       : "Non renseignée",
@@ -72,6 +93,12 @@ export async function GET(_request: Request, context: RouteContext) {
     // son employeur.
     objectives: certificate.objectives,
     assessmentSummary: certificate.assessmentSummary,
+    // Temps de connexion effectif figé à l'émission (art. L.6353-1 : la durée
+    // de l'action). `null` sur les attestations antérieures à la colonne, le
+    // gabarit saute alors la mention.
+    realisedLabel: certificate.completedSeconds
+      ? formatDuree(certificate.completedSeconds)
+      : null,
   });
 
   return new NextResponse(pdf as unknown as BodyInit, {

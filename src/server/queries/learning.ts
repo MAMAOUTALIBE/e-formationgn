@@ -258,6 +258,15 @@ export async function getCertificateForUser(userId: string, courseId: string) {
   return prisma.certificate.findFirst({
     where: { userId, courseId },
     orderBy: { issuedAt: "desc" },
+    // La session porte les dates et le lieu de l'action de formation, que
+    // l'attestation doit citer (art. L.6353-1 du Code du travail).
+    include: {
+      registration: {
+        select: {
+          session: { select: { startDate: true, endDate: true, location: true } },
+        },
+      },
+    },
   });
 }
 

@@ -38,7 +38,10 @@ test("le parcours propose la génération, l’aperçu et le téléchargement PD
   assert.match(page, /Télécharger en PDF/);
   assert.match(page, /showModel=\{!certificate\}/);
   assert.match(page, /formatDurationFromSeconds\(course\.durationSeconds\)/);
-  assert.match(page, /startDate: enrollment\.enrolledAt/);
-  assert.match(page, /endDate: enrollment\.completedAt/);
+  assert.match(page, /startDate:\s*certificate\?\.registration\?\.session\.startDate \?\? enrollment\.enrolledAt/);
+  // Les dates de l'action viennent de la session dès que l'attestation y est
+  // rattachée ; l'inscription au cours ne sert plus que de repli.
+  assert.match(page, /certificate\?\.registration\?\.session\.endDate/);
+  assert.match(page, /enrollment\.completedAt/);
 });
 

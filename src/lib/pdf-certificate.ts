@@ -79,7 +79,17 @@ export async function generateCertificatePdf(
     20,
   );
   y -= 4;
-  drawCentered(page, `Durée : ${params.durationLabel}`, sans, 12, y, width, TEXT);
+  drawCentered(
+    page,
+    params.realisedLabel
+      ? `Durée : ${params.durationLabel} — temps de connexion effectif : ${params.realisedLabel}`
+      : `Durée : ${params.durationLabel}`,
+    sans,
+    12,
+    y,
+    width,
+    TEXT,
+  );
   y -= 20;
   drawCentered(
     page,

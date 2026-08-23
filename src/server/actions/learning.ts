@@ -104,7 +104,12 @@ export async function recordLearningHeartbeat(input: {
   if (!lesson) return { success: false, message: "Leçon introuvable." };
   const enrollment = await prisma.enrollment.findUnique({
     where: { userId_courseId: { userId: session.user.id, courseId: lesson.section.courseId } },
-    select: { id: true },
+    // `registrationId` est lu ici pour être FIGÉ sur la session de suivi. La
+    // contrainte d'unicité (utilisateur, cours) fait qu'un même accès sert
+    // successivement à plusieurs inscriptions ; en horodatant le rattachement
+    // au moment où le temps est mesuré, chaque heure reste attribuable à la
+    // session sous laquelle elle a réellement été passée.
+    select: { id: true, registrationId: true },
   });
   if (!enrollment) return { success: false, message: "Inscription requise." };
 
@@ -126,6 +131,7 @@ export async function recordLearningHeartbeat(input: {
       await tx.learningSession.create({ data: {
         sessionKey: input.sessionKey, userId: session.user.id,
         enrollmentId: enrollment.id, lessonId: input.lessonId,
+        registrationId: enrollment.registrationId,
         lastHeartbeatAt: now,
       } });
     }

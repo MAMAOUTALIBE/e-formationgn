@@ -82,11 +82,27 @@ export async function syncRegistrationAccess(
         courseId: r.courseId,
         source: "ADMIN_GRANT" as const,
         progressPercent: r.progressPercent,
+        // Rattachement à l'inscription qui ouvre l'accès : sans lui, la
+        // progression et le temps mesuré ne se rapportaient à aucune session,
+        // et aucune feuille d'émargement n'était calculable.
+        registrationId: registration.id,
       })),
       // Une inscription à deux sessions partageant un cours ne doit pas
       // échouer sur la contrainte d'unicité.
       skipDuplicates: true,
     });
+
+    // Les accès qui existaient DÉJÀ sans rattachement — attribution directe par
+    // un administrateur, ou reprise d'historique restée ambiguë — sont adoptés
+    // par cette inscription, qui les justifie désormais. On ne réécrit jamais
+    // un rattachement existant : il appartient à l'inscription qui l'a posé.
+    const orphelins = existing.map((e) => e.id);
+    if (orphelins.length > 0) {
+      await prisma.enrollment.updateMany({
+        where: { id: { in: orphelins }, registrationId: null },
+        data: { registrationId: registration.id },
+      });
+    }
 
     return { granted: missing.length, revoked: 0, courseIds };
   }

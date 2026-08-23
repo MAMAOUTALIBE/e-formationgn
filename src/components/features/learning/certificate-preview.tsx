@@ -38,7 +38,12 @@ export function CertificatePreview({ data, showModel = true }: CertificatePrevie
             </p>
             <p>a suivi avec assiduité la formation :</p>
             <p className={styles.course}>« {data.courseTitle} »</p>
-            <p>Durée : {data.durationLabel}</p>
+            <p>
+              Durée : {data.durationLabel}
+              {data.realisedLabel ? (
+                <> — temps de connexion effectif : <strong>{data.realisedLabel}</strong></>
+              ) : null}
+            </p>
             {data.objectives && data.objectives.length > 0 ? (
               <div className={styles.legalBlock}>
                 <p className={styles.legalLabel}>Objectifs de la formation</p>

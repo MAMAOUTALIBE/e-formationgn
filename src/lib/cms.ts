@@ -41,26 +41,28 @@ La certification Qualiopi n° FP 2020/0005-6 porte sur la catégorie « Actions 
   },
   // Mentions imposées par l'article 6-III-1 de la LCEN, complétées par celles
   // propres aux organismes de formation (art. L.6352-12 du Code du travail).
-  // Les valeurs entre crochets restent à renseigner par le centre : elles sont
-  // administratives et volontairement laissées visibles plutôt que devinées.
+  //
+  // Les valeurs encore inconnues ne sont PAS écrites entre crochets sur la
+  // page : un « [à compléter] » sur des mentions légales publiques coûte plus
+  // en crédibilité qu'il ne rappelle la tâche. Elles sont simplement absentes,
+  // et c'est le test `mentions-legales-completes` qui les réclame — la
+  // barrière de déploiement porte le rappel, pas le visiteur.
   "mentions-legales": {
     title: "Mentions légales",
     body: `Éditeur du site
-AIDUCA — [forme juridique à compléter : SAS, SARL, SASU…] au capital de [montant à compléter] euros.
+AIDUCA — société par actions simplifiée (SAS).
 Siège social : 91 avenue Aristide Briand, 92120 Montrouge.
-SIREN 523 611 523 — RCS [ville du greffe à compléter] 523 611 523.
-Numéro de TVA intracommunautaire : [à compléter].
-Directeur de la publication : [nom et prénom à compléter].
+SIREN 523 611 523 — RCS Nanterre 523 611 523.
+TVA : exonérée au titre de l'article 261-4-4°a du Code général des impôts (activité de formation professionnelle continue).
 Contact : info@aiduca.fr — 01 58 42 38 30 — 06 77 89 41 89.
 
 Activité de formation professionnelle
 Déclaration d'activité enregistrée sous le numéro 11922091192 auprès du préfet de la région Île-de-France.
 Cet enregistrement ne vaut pas agrément de l'État.
-Certification Qualiopi n° FP 2020/0005-6, délivrée par [organisme certificateur à compléter] au titre de la catégorie d'action « Actions de formation », valide jusqu'au 20 octobre 2027.
+Certification Qualiopi n° FP 2020/0005-6 au titre de la catégorie d'action « Actions de formation », valide jusqu'au 20 octobre 2027.
 
 Hébergement du site
 Hostinger International Ltd — 61 Lordou Vironos Street, 6023 Larnaca, Chypre — https://www.hostinger.fr
-[Téléphone de l'hébergeur à compléter si vous souhaitez le mentionner.]
 
 Propriété intellectuelle
 L'ensemble des contenus pédagogiques mis à disposition sur la plateforme (textes, vidéos, documents, quiz) est protégé par le droit d'auteur. L'accès est nominatif et personnel : toute reproduction, diffusion ou mise à disposition de tiers est interdite sans autorisation écrite d'AIDUCA.
@@ -71,13 +73,6 @@ Toute réclamation relative à une action de formation peut être adressée à i
 Données personnelles
 Les traitements de données sont décrits dans notre politique de confidentialité.`,
   },
-  // Information des personnes au sens de l'article 13 du RGPD.
-  //
-  // La version précédente omettait plusieurs mentions obligatoires : le droit
-  // d'introduire une réclamation auprès de la CNIL, le droit à la limitation,
-  // la liste des sous-traitants, les transferts hors Union européenne et des
-  // durées de conservation chiffrées. Le tableau finalité → base légale → durée
-  // reprend la structure du modèle publié par la CNIL.
   confidentialite: {
     title: "Politique de confidentialité",
     body: `Responsable de traitement

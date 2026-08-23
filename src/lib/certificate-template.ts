@@ -21,6 +21,13 @@ export interface CertificateTemplateData {
    */
   objectives?: string[];
   assessmentSummary?: string | null;
+  /**
+   * Temps de connexion effectif, déjà mis en forme (ex. « 4 h 25 »).
+   *
+   * Distinct de `durationLabel`, qui annonce la durée théorique de l'action.
+   * Un financeur veut les deux : ce qui était prévu, et ce qui a été suivi.
+   */
+  realisedLabel?: string | null;
 }
 
 const longDateFormatter = new Intl.DateTimeFormat("fr-FR", {

@@ -596,7 +596,22 @@ model Enrollment {
   source          EnrollmentSource @default(PURCHASE)
   learningSessions LearningSession[]
 
+  /// Inscription à une session qui ouvre actuellement cet accès.
+  ///
+  /// La couche « organisme » (programme, session, inscription) et la couche
+  /// « e-learning » (cours, leçon, progression) ne se rejoignaient que dans le
+  /// code de `syncRegistrationAccess`, jamais dans le modèle. Sans cette
+  /// colonne, on ne pouvait produire aucune feuille d'émargement par session :
+  /// le temps mesuré pendait à l'accès au cours, qui ignorait la session.
+  ///
+  /// Nullable : un accès peut être attribué directement par un administrateur,
+  /// hors de toute session. Le champ suit le dernier octroi en date — la preuve
+  /// figée, elle, est portée par `LearningSession.registrationId`.
+  registrationId String?
+  registration   Registration? @relation(fields: [registrationId], references: [id], onDelete: SetNull)
+
   @@unique([userId, courseId])
+  @@index([registrationId])
   @@index([userId])
   @@index([courseId])
 }
@@ -617,7 +632,19 @@ model LearningSession {
   lastHeartbeatAt DateTime   @default(now())
   endedAt         DateTime?
 
+  /// Inscription sous laquelle ce temps a été passé, figée à la création.
+  ///
+  /// C'est CETTE colonne qui fait foi pour l'émargement, et non celle de
+  /// l'`Enrollment` : la contrainte d'unicité (utilisateur, cours) fait qu'une
+  /// personne suivant deux sessions d'un même programme n'a qu'un seul accès,
+  /// dont le rattachement suit le dernier octroi. En horodatant ici le
+  /// rattachement au moment où le temps est mesuré, les deux parcours restent
+  /// distincts et attribuables — ce qu'un contrôle exige.
+  registrationId String?
+  registration   Registration? @relation(fields: [registrationId], references: [id], onDelete: SetNull)
+
   @@index([enrollmentId])
+  @@index([registrationId, startedAt])
   @@index([userId, lessonId])
 }
 
@@ -1051,6 +1078,25 @@ model Certificate {
   /// réussite 70/100 »), ou mention explicite d'absence d'évaluation formalisée
   /// — le document doit dire quelque chose sur ce point, pas rester muet.
   assessmentSummary String?
+
+  /// Temps de connexion effectif au moment de l'émission, en secondes.
+  ///
+  /// L'attestation portait jusqu'ici la durée THÉORIQUE de la formation, celle
+  /// annoncée au catalogue. Un financeur veut savoir combien d'heures ont été
+  /// réellement suivies : c'est cette valeur-là qui justifie une prise en
+  /// charge, et elle vient de la même mesure que la feuille d'émargement.
+  ///
+  /// Nullable pour les attestations antérieures à cette colonne.
+  completedSeconds Int?
+
+  /// Session de formation au titre de laquelle l'attestation est délivrée.
+  ///
+  /// Sans elle, le document citait les dates d'ouverture et de clôture de
+  /// l'accès au cours, pas celles de l'action de formation portées par la
+  /// convention. Deux notions distinctes, que la couche organisme rend enfin
+  /// raccordables.
+  registrationId String?
+  registration   Registration? @relation(fields: [registrationId], references: [id], onDelete: SetNull)
 
   @@unique([userId, courseId])
   @@index([userId])
@@ -1742,6 +1788,12 @@ model Registration {
   completedAt  DateTime?
   cancelledAt  DateTime?
   notes        String?   @db.Text
+
+  /// Accès aux cours ouverts par cette inscription, et temps passé sous elle.
+  /// Ces deux relations sont ce qui rend la feuille d'émargement calculable.
+  enrollments      Enrollment[]
+  learningSessions LearningSession[]
+  certificates     Certificate[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

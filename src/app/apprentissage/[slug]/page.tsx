@@ -12,6 +12,7 @@ import { Breadcrumbs } from "@/components/ui/breadcrumbs";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Container } from "@/components/ui/container";
+import { formatDuree } from "@/lib/duration";
 import { getAiducaTrainingLocation } from "@/lib/certificate-template";
 import { formatDurationFromSeconds } from "@/lib/format/duration";
 import {
@@ -66,10 +67,16 @@ export default async function CourseLearningPage({ params }: PageProps) {
     durationLabel: course.durationSeconds
       ? formatDurationFromSeconds(course.durationSeconds)
       : "Non renseignée",
-    startDate: enrollment.enrolledAt,
-    endDate: enrollment.completedAt ?? certificateDate,
+    // Dates de l'action de formation : celles de la session dès que
+    // l'attestation y est rattachée — cf. la note dans la route PDF.
+    startDate: certificate?.registration?.session.startDate ?? enrollment.enrolledAt,
+    endDate:
+      certificate?.registration?.session.endDate ??
+      enrollment.completedAt ??
+      certificateDate,
     issuedAt: certificateDate,
-    trainingLocation: getAiducaTrainingLocation(),
+    trainingLocation:
+      certificate?.registration?.session.location?.trim() || getAiducaTrainingLocation(),
     serialNumber: certificate?.serialNumber,
     // Mentions imposées par l'art. L.6353-1 du Code du travail. On lit celles
     // figées sur l'attestation ; à défaut — modèle affiché avant délivrance,
@@ -80,6 +87,9 @@ export default async function CourseLearningPage({ params }: PageProps) {
       ? certificate.objectives
       : course.whatYouWillLearn,
     assessmentSummary: certificate?.assessmentSummary ?? null,
+    realisedLabel: certificate?.completedSeconds
+      ? formatDuree(certificate.completedSeconds)
+      : null,
   };
 
   // Coquille appliquée ICI et non par un layout : un layout couvrirait

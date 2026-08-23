@@ -58,7 +58,7 @@ export async function issueCertificate(courseId: string): Promise<ActionResult &
   const session = await auth();
   if (!session?.user) return { success: false, message: "Connectez-vous." };
 
-  const [enrollment, holder, course, attempts] = await Promise.all([
+  const [enrollment, holder, course, suivi, attempts] = await Promise.all([
     prisma.enrollment.findUnique({
       where: { userId_courseId: { userId: session.user.id, courseId } },
       select: { id: true, completedAt: true, progressPercent: true, orderItemId: true },
@@ -71,6 +71,15 @@ export async function issueCertificate(courseId: string): Promise<ActionResult &
     prisma.course.findUnique({
       where: { id: courseId },
       select: { whatYouWillLearn: true },
+    }),
+    // Temps de connexion effectif et session au titre de laquelle l'attestation
+    // est délivrée. Les deux sont figés à l'émission, comme le reste.
+    prisma.enrollment.findUnique({
+      where: { userId_courseId: { userId: session.user.id, courseId } },
+      select: {
+        registrationId: true,
+        learningSessions: { select: { activeSeconds: true } },
+      },
     }),
     // Résultats de l'évaluation des acquis : on retient la MEILLEURE tentative
     // de chaque quiz de la formation — c'est le niveau atteint qui est attesté,
@@ -132,6 +141,9 @@ export async function issueCertificate(courseId: string): Promise<ActionResult &
         // au même titre que le nom du titulaire.
         objectives: course?.whatYouWillLearn ?? [],
         assessmentSummary: summarizeAssessment(attempts),
+        completedSeconds:
+          suivi?.learningSessions.reduce((total, s) => total + s.activeSeconds, 0) ?? 0,
+        registrationId: suivi?.registrationId ?? null,
       },
       select: { serialNumber: true },
     });

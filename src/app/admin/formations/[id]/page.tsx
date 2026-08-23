@@ -1,3 +1,4 @@
+import { FileText } from "lucide-react";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
@@ -120,6 +121,16 @@ export default async function ProgramDetailPage({
                         <span className="text-muted-foreground">· {s.capacity} places</span>
                       ) : null}
                       <StatusBadge tone={badge.tone}>{badge.label}</StatusBadge>
+                      {/* Pièce justificative de réalisation : le temps réellement
+                          passé par chaque stagiaire, journée par journée. C'est ce
+                          qu'un financeur ou un auditeur Qualiopi demande. */}
+                      <a
+                        href={`/api/admin/sessions/${s.id}/emargement`}
+                        className="ml-auto inline-flex min-h-8 items-center gap-1.5 rounded-md border border-border px-2.5 text-xs font-medium text-foreground hover:border-[color:var(--brand-secondary)] hover:text-[color:var(--brand-secondary)]"
+                      >
+                        <FileText className="h-3.5 w-3.5" aria-hidden />
+                        Feuille d&apos;émargement
+                      </a>
                     </li>
                   );
                 })}
