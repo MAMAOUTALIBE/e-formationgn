@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 
 import { AccountCredentials } from "@/components/features/admin/account-credentials";
 import { AccountIdentityForm } from "@/components/features/admin/account-identity-form";
-import { toDateInputValue } from "@/components/features/admin/civil-status-fields";
+import { toDateInputValue } from "@/lib/date-input";
 import { DeleteAccountButton } from "@/components/features/admin/delete-account-button";
 import { CourseAccessManager } from "@/components/features/admin/course-access-manager";
 import { StudentRegistrations } from "@/components/features/admin/student-registrations";
@@ -362,7 +362,14 @@ export default async function AdminUserDetailPage({ params }: PageProps) {
             }}
             className="flex flex-col gap-2"
           >
+            {/* Étiquette masquée à l'œil, présente pour les technologies
+                d'assistance : un texte de substitution ne tient pas lieu
+                d'étiquette (RGAA 11.1). */}
+            <label htmlFor="admin-note-body" className="sr-only">
+              Note interne sur cet apprenant
+            </label>
             <textarea
+              id="admin-note-body"
               name="body"
               placeholder="Ajoutez une note (visible uniquement par l'équipe)…"
               rows={3}

@@ -65,6 +65,32 @@ npm run lint
 # commande ne les exécute ; ils gardent maintenant le build, comme le typage.
 npm run test:unit
 npm run test:scripts
+
+# Suite end-to-end — la seule barrière capable de voir une erreur de RENDU.
+#
+# Deux écrans du CRM (Apprenants, Formations) sont partis en production avec un
+# `ReferenceError` au rendu serveur, sur un pipeline entièrement vert : ni le
+# typage, ni le lint, ni les tests unitaires ne chargent une page. La suite e2e
+# a besoin d'un serveur en écoute ; on l'exécute quand il y en a un, et on le
+# dit franchement quand ce n'est pas le cas plutôt que de laisser croire que
+# tout a été vérifié.
+E2E_URL="${PLAYWRIGHT_BASE_URL:-http://localhost:3000}"
+if curl -fsS --max-time 3 "${E2E_URL}/api/health" >/dev/null 2>&1; then
+  echo "▶ Serveur détecté sur ${E2E_URL} — exécution de la suite end-to-end…"
+  PLAYWRIGHT_BASE_URL="${E2E_URL}" npx playwright test --project=chromium --workers=1
+  if [ -n "${E2E_ADMIN_EMAIL:-}" ] && [ -n "${E2E_ADMIN_PASSWORD:-}" ]; then
+    echo "▶ Test de fumée authentifié sur l'espace d'administration…"
+    PLAYWRIGHT_BASE_URL="${E2E_URL}" npx playwright test tests/e2e/admin-smoke.spec.ts --project=chromium --workers=1
+  else
+    echo "⚠️  Test de fumée admin IGNORÉ : E2E_ADMIN_EMAIL / E2E_ADMIN_PASSWORD non définis." >&2
+    echo "    C'est ce test qui détecte les écrans d'administration cassés au rendu." >&2
+  fi
+else
+  echo "⚠️  Aucun serveur sur ${E2E_URL} : suite end-to-end NON exécutée." >&2
+  echo "    Les erreurs de rendu ne sont donc pas couvertes par ce déploiement." >&2
+  echo "    Pour la couverture complète : npm run dev dans un autre terminal, puis relancer." >&2
+fi
+
 echo "✅ Typage, lint et tests OK."
 echo
 
@@ -216,6 +242,23 @@ done
 echo "▶ Smoke tests locaux via nginx upstream…"
 curl -fsS --max-time 10 http://127.0.0.1:3300/api/health >/dev/null || deployment_failed
 curl -fsS --max-time 15 http://127.0.0.1:3300/ >/dev/null || deployment_failed
+
+# Une page qui plante au rendu répond quand même 200 : React sert son
+# `error.tsx`. Le code HTTP ne dit donc rien — seul le contenu trahit la panne.
+# On vérifie ici les écrans publics ; les écrans authentifiés relèvent du test
+# de fumée joué avant le build.
+echo "▶ Contrôle des frontières d'erreur sur les pages publiques…"
+for chemin in "/" "/cours" "/connexion" "/mentions-legales"; do
+  corps="$(curl -fsS --max-time 15 "http://127.0.0.1:3300${chemin}" || echo "")"
+  if [ -z "${corps}" ]; then
+    echo "   ${chemin} : réponse vide" >&2
+    deployment_failed
+  fi
+  if printf '%s' "${corps}" | grep -qE "Impossible de charger|Une erreur est survenue|Application error"; then
+    echo "   ${chemin} : frontière d'erreur détectée dans la page" >&2
+    deployment_failed
+  fi
+done
 
 docker compose ps app
 echo "✅ Healthcheck et smoke tests réussis."

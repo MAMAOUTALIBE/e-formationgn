@@ -32,7 +32,13 @@ export function AnswerForm({ questionId }: AnswerFormProps) {
         </Alert>
       ) : null}
 
+      {/* Étiquette visuellement masquée : le contexte est évident à l'œil,
+          il ne l'est pas pour un lecteur d'écran qui parcourt les champs. */}
+      <label htmlFor="answer-body" className="sr-only">
+        Votre réponse
+      </label>
       <Textarea
+        id="answer-body"
         name="body"
         rows={3}
         required

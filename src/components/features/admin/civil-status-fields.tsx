@@ -35,10 +35,7 @@ export const EMPTY_CIVIL_STATUS: CivilStatusValues = {
 };
 
 /** Met une date issue de Prisma au format du champ natif, en UTC. */
-export function toDateInputValue(date: Date | null | undefined): string {
-  if (!date) return "";
-  return date.toISOString().slice(0, 10);
-}
+export { toDateInputValue } from "@/lib/date-input";
 
 interface CivilStatusFieldsProps {
   values: CivilStatusValues;

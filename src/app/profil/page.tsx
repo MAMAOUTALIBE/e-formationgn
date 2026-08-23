@@ -94,6 +94,11 @@ export default async function ProfilePage() {
   // peut pas proposer un champ que l'action refusera d'enregistrer.
   const identityLocked = !canUpdateProfileIdentity(user);
 
+  // Un apprenant n'a pas de page publique de formateur : lui annoncer que ses
+  // informations y figurent est faux et déroutant. Les textes s'adaptent donc
+  // au rôle réellement porté par le compte.
+  const hasPublicInstructorPage = user.role === "INSTRUCTOR" || user.isInstructor;
+
   const initials =
     `${user.firstName?.[0] ?? ""}${user.lastName?.[0] ?? ""}`.trim() ||
     user.email[0].toUpperCase();
@@ -174,8 +179,9 @@ export default async function ProfilePage() {
             <CardHeader>
               <CardTitle className="text-base">Photo de profil</CardTitle>
               <CardDescription>
-                Visible sur votre page publique de formateur, dans les avis que
-                vous laissez et sur vos certificats.
+                {hasPublicInstructorPage
+                  ? "Visible sur votre page publique de formateur, dans les avis que vous laissez et sur vos certificats."
+                  : "Visible dans les avis que vous laissez et sur vos attestations de formation."}
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -201,8 +207,9 @@ export default async function ProfilePage() {
                 <CardTitle className="text-base">Informations personnelles</CardTitle>
               </div>
               <CardDescription>
-                Ces informations apparaissent sur votre page publique de formateur
-                (le cas échéant) et dans les certificats que vous obtenez.
+                {hasPublicInstructorPage
+                  ? "Ces informations apparaissent sur votre page publique de formateur et sur les attestations que vous obtenez."
+                  : "Ces informations figurent sur les attestations de fin de formation qui vous sont délivrées."}
               </CardDescription>
             </CardHeader>
             <CardContent>

@@ -1033,6 +1033,25 @@ model Certificate {
   /// retombe alors sur le nom du compte, comme avant.
   holderName   String?
 
+  /// Objectifs de la formation, figés à l'émission.
+  ///
+  /// L'article L.6353-1 du Code du travail impose que l'attestation mentionne
+  /// « les objectifs, la nature et la durée de l'action et les résultats de
+  /// l'évaluation des acquis ». Les objectifs ne figuraient pas sur le
+  /// document, qui n'était donc pas conforme.
+  ///
+  /// Recopiés depuis `Course.whatYouWillLearn` plutôt que lus en direct, pour
+  /// la même raison que `holderName` : remanier le programme d'une formation ne
+  /// doit pas réécrire les attestations déjà remises aux stagiaires.
+  objectives   String[]
+
+  /// Résultats de l'évaluation des acquis, figés à l'émission.
+  ///
+  /// Formulation prête à imprimer (ex. « Quiz de validation : 80/100, seuil de
+  /// réussite 70/100 »), ou mention explicite d'absence d'évaluation formalisée
+  /// — le document doit dire quelque chose sur ce point, pas rester muet.
+  assessmentSummary String?
+
   @@unique([userId, courseId])
   @@index([userId])
   @@index([courseId])

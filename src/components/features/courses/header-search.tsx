@@ -130,6 +130,12 @@ export function HeaderSearch({ className }: { className?: string }) {
             onKeyDown={handleKeyDown}
             placeholder="Rechercher une formation…"
             aria-label="Rechercher une formation"
+            // `role="combobox"` est indispensable, pas décoratif : un
+            // `input type="search"` expose nativement le rôle `searchbox`, qui
+            // n'admet PAS `aria-expanded`. Sans ce rôle, l'attribut était
+            // ignoré et les lecteurs d'écran n'annonçaient jamais l'ouverture
+            // de la liste de suggestions — le champ paraissait sans effet.
+            role="combobox"
             aria-autocomplete="list"
             aria-controls={listboxId}
             aria-expanded={showPopover}

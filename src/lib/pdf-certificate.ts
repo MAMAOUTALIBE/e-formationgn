@@ -92,6 +92,28 @@ export async function generateCertificatePdf(
   );
   y -= 19;
   drawCentered(page, `Lieu : ${params.trainingLocation}`, sans, 12, y, width, TEXT);
+
+  // Mentions imposées par l'article L.6353-1 du Code du travail : objectifs de
+  // l'action et résultats de l'évaluation des acquis. Corps réduit, texte
+  // replié — ce sont des mentions de conformité, pas le cœur visuel du
+  // document. Absentes sur les attestations émises avant leur ajout : le
+  // gabarit les saute alors sans laisser de blanc.
+  if (params.objectives && params.objectives.length > 0) {
+    y -= 22;
+    drawCentered(page, "Objectifs de la formation", sans, 10, y, width, TEXT);
+    y -= 15;
+    for (const objectif of params.objectives.slice(0, 6)) {
+      y = drawWrappedCentered(page, `• ${objectif}`, sans, 10, y, width, 620, TEXT, 13);
+      y -= 2;
+    }
+  }
+  if (params.assessmentSummary) {
+    y -= 18;
+    drawCentered(page, "Résultats de l'évaluation des acquis", sans, 10, y, width, TEXT);
+    y -= 15;
+    y = drawWrappedCentered(page, params.assessmentSummary, sans, 10, y, width, 620, TEXT, 13);
+  }
+
   y -= 28;
   drawCentered(
     page,

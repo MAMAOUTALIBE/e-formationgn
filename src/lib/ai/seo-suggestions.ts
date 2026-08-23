@@ -7,6 +7,7 @@ import "server-only";
 // court rédactionnel). Pas de cache car les requêtes sont uniques par cours.
 
 import Anthropic from "@anthropic-ai/sdk";
+import { MODEL_SONNET } from "@/lib/ai/models";
 
 let cachedClient: Anthropic | null = null;
 
@@ -74,7 +75,7 @@ export async function generateSeoSuggestions(
     .join("\n");
 
   const response = await client.messages.create({
-    model: "claude-sonnet-4-6",
+    model: MODEL_SONNET,
     max_tokens: 800,
     system: SYSTEM_PROMPT,
     tools: [

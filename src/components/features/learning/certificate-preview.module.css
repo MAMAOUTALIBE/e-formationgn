@@ -180,3 +180,41 @@
   color: #4b5563;
   font-size: 0.62cqw;
 }
+
+/* Mentions imposées par l'article L.6353-1 du Code du travail : objectifs de
+   l'action et résultats de l'évaluation des acquis. Corps réduit et cadrage
+   serré — ce sont des mentions de conformité, elles doivent figurer sans
+   déséquilibrer la composition du document. */
+.legalBlock {
+  margin-top: 0.55rem;
+  text-align: left;
+  max-width: 44ch;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.legalLabel {
+  font-size: 0.62rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  opacity: 0.72;
+  margin-bottom: 0.15rem;
+}
+
+.objectives {
+  margin: 0;
+  padding-left: 1.05rem;
+  font-size: 0.72rem;
+  line-height: 1.4;
+}
+
+.objectives li {
+  margin-bottom: 0.08rem;
+}
+
+.assessment {
+  font-size: 0.72rem;
+  line-height: 1.4;
+  margin: 0;
+}

@@ -108,10 +108,21 @@ export async function getEmailLockoutState(
   return { locked: true, failures, unlockAt };
 }
 
+/**
+ * Message affiché quand le verrou d'un compte est actif.
+ *
+ * Il ne dit PAS que le compte est verrouillé, et ne dit pas non plus « compte ».
+ * Un verrou ne se déclenche que sur une adresse réellement inscrite : annoncer
+ * le verrouillage revenait donc à confirmer l'existence du compte, et suffisait
+ * à énumérer les inscrits en soumettant six mauvais mots de passe par adresse.
+ * On reprend mot pour mot le message d'échec ordinaire, en y ajoutant seulement
+ * le délai d'attente — sans quoi la personne réessaierait indéfiniment.
+ */
 export function lockoutMessage(unlockAt?: Date): string {
-  if (!unlockAt) return "Compte temporairement verrouillé. Réessayez plus tard.";
+  const base = "Email ou mot de passe incorrect.";
+  if (!unlockAt) return `${base} Réessayez plus tard.`;
   const seconds = Math.max(1, Math.ceil((unlockAt.getTime() - Date.now()) / 1000));
-  if (seconds < 60) return `Compte verrouillé. Réessayez dans ${seconds} s.`;
+  if (seconds < 60) return `${base} Réessayez dans ${seconds} s.`;
   const minutes = Math.ceil(seconds / 60);
-  return `Compte temporairement verrouillé après plusieurs échecs. Réessayez dans ${minutes} min.`;
+  return `${base} Réessayez dans ${minutes} min.`;
 }

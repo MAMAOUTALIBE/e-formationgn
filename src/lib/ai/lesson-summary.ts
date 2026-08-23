@@ -6,6 +6,7 @@ import "server-only";
 // Modèle Claude Sonnet — bon compromis qualité/coût pour rédactionnel court.
 
 import Anthropic from "@anthropic-ai/sdk";
+import { MODEL_SONNET } from "@/lib/ai/models";
 
 let cachedClient: Anthropic | null = null;
 
@@ -54,7 +55,7 @@ export async function generateLessonSummary(
 
   const client = getClient();
   const response = await client.messages.create({
-    model: "claude-sonnet-4-6",
+    model: MODEL_SONNET,
     max_tokens: 600,
     system: SYSTEM_PROMPT,
     messages: [

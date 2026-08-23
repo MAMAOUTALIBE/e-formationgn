@@ -14,6 +14,31 @@ const connectionString =
   process.env.DATABASE_URL ??
   "postgresql://placeholder@localhost:5432/placeholder";
 
+// Garde-fou : ce script est un jeu de DÉMONSTRATION.
+//
+// `npm run db:seed` est documenté comme une commande courante. Lancée par
+// mégarde sur la base de production, elle y injecterait des formations et des
+// comptes de démonstration. Le refus est délibérément bruyant.
+function refuseProduction(): void {
+  const url = process.env.DATABASE_URL ?? "";
+  const local = /@(localhost|127\.0\.0\.1|host\.docker\.internal|db)[:/]/.test(url);
+  const force = process.env.SEED_ALLOW_REMOTE === "1";
+  if (process.env.NODE_ENV === "production" && !force) {
+    throw new Error(
+      "Seed refusé : NODE_ENV=production. Ce script ne pose que des données de démonstration.",
+    );
+  }
+  if (!local && !force) {
+    throw new Error(
+      `Seed refusé : DATABASE_URL ne pointe pas vers une base locale.\n` +
+        `  Hôte visé : ${url.replace(/\/\/[^@]*@/, "//***@") || "(non défini)"}\n` +
+        `  Si c'est volontaire : SEED_ALLOW_REMOTE=1 npm run db:seed`,
+    );
+  }
+}
+
+refuseProduction();
+
 const prisma = new PrismaClient({
   adapter: new PrismaPg(connectionString),
 });
@@ -202,9 +227,9 @@ const COURSES: CourseSeed[] = [
     priceEUR: 49.9,
     priceUSD: 54.9,
     durationSeconds: 5 * 3600 + 30 * 60,
-    averageRating: 4.7,
-    totalRatings: 312,
-    totalEnrollments: 2480,
+    averageRating: 0,
+    totalRatings: 0,
+    totalEnrollments: 0,
     whatYouWillLearn: [
       "Maîtriser l'App Router et les Server Components",
       "Mettre en place une authentification sécurisée",
@@ -260,9 +285,9 @@ const COURSES: CourseSeed[] = [
     priceEUR: 29.9,
     priceUSD: 32.9,
     durationSeconds: 3 * 3600,
-    averageRating: 4.5,
-    totalRatings: 184,
-    totalEnrollments: 1250,
+    averageRating: 0,
+    totalRatings: 0,
+    totalEnrollments: 0,
     whatYouWillLearn: [
       "Comprendre les principes de hiérarchie visuelle",
       "Choisir une typographie cohérente",
@@ -301,9 +326,9 @@ const COURSES: CourseSeed[] = [
     priceEUR: 39.9,
     priceUSD: 43.9,
     durationSeconds: 4 * 3600,
-    averageRating: 4.4,
-    totalRatings: 96,
-    totalEnrollments: 730,
+    averageRating: 0,
+    totalRatings: 0,
+    totalEnrollments: 0,
     whatYouWillLearn: [
       "Bâtir une stratégie SEO simple et efficace",
       "Lancer une campagne Google Ads",
@@ -341,9 +366,9 @@ const COURSES: CourseSeed[] = [
     priceEUR: 0,
     priceUSD: 0,
     durationSeconds: 6 * 3600,
-    averageRating: 4.6,
-    totalRatings: 211,
-    totalEnrollments: 4120,
+    averageRating: 0,
+    totalRatings: 0,
+    totalEnrollments: 0,
     whatYouWillLearn: [
       "Rédiger des emails professionnels efficaces",
       "Animer une réunion en anglais",
@@ -385,9 +410,9 @@ const COURSES: CourseSeed[] = [
     priceEUR: 0,
     priceUSD: 0,
     durationSeconds: 596 + 888 + 734 + 15 + 653,
-    averageRating: 4.8,
-    totalRatings: 42,
-    totalEnrollments: 380,
+    averageRating: 0,
+    totalRatings: 0,
+    totalEnrollments: 0,
     whatYouWillLearn: [
       "Apprécier les capacités narratives d'un studio 3D open source.",
       "Reconnaître les styles visuels d'Elephant's Dream à Tears of Steel.",
@@ -464,9 +489,9 @@ const COURSES: CourseSeed[] = [
     priceEUR: 0,
     priceUSD: 0,
     durationSeconds: 35 + 10 + 20 + 10 + 11,
-    averageRating: 4.4,
-    totalRatings: 18,
-    totalEnrollments: 120,
+    averageRating: 0,
+    totalRatings: 0,
+    totalEnrollments: 0,
     whatYouWillLearn: [
       "Reconnaître les codes d'une réunion d'équipe productive.",
       "Identifier les bonnes pratiques de visioconférence.",
@@ -541,9 +566,9 @@ const COURSES: CourseSeed[] = [
     priceEUR: 0,
     priceUSD: 0,
     durationSeconds: 17 + 15 + 10 + 10,
-    averageRating: 4.5,
-    totalRatings: 22,
-    totalEnrollments: 180,
+    averageRating: 0,
+    totalRatings: 0,
+    totalEnrollments: 0,
     whatYouWillLearn: [
       "Reconnaître l'environnement quotidien du développeur.",
       "Identifier les codes visuels de la cybersécurité.",
@@ -607,9 +632,9 @@ const COURSES: CourseSeed[] = [
     priceEUR: 0,
     priceUSD: 0,
     durationSeconds: 10 + 5 + 10,
-    averageRating: 4.6,
-    totalRatings: 12,
-    totalEnrollments: 95,
+    averageRating: 0,
+    totalRatings: 0,
+    totalEnrollments: 0,
     whatYouWillLearn: [
       "Saisir les outils du designer numérique.",
       "Repérer les codes visuels de la photo studio.",
@@ -661,9 +686,9 @@ const COURSES: CourseSeed[] = [
     priceEUR: 0,
     priceUSD: 0,
     durationSeconds: 17 + 16 + 18,
-    averageRating: 4.3,
-    totalRatings: 9,
-    totalEnrollments: 60,
+    averageRating: 0,
+    totalRatings: 0,
+    totalEnrollments: 0,
     whatYouWillLearn: [
       "Comprendre les codes des réseaux sociaux mobiles.",
       "Identifier les rituels d'une session de brainstorming.",

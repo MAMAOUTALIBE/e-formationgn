@@ -17,8 +17,13 @@ const buttonVariants = cva(
           "border border-border bg-card text-foreground hover:bg-muted",
         ghost:
           "text-foreground hover:bg-muted",
+        // Souligné DÈS l'état par défaut, pas seulement au survol : le
+        // contraste entre le bleu du lien et le gris du texte environnant est
+        // de 1,46:1, très en dessous du minimum de 3:1. La couleur seule ne
+        // distingue donc pas le lien, ce qui le rend invisible aux personnes
+        // daltoniennes ou en contraste réduit (RGAA 10.6, WCAG 1.4.1).
         link:
-          "text-[color:var(--brand-secondary)] underline-offset-4 hover:underline",
+          "text-[color:var(--brand-secondary)] underline underline-offset-4 hover:no-underline",
         destructive:
           "bg-destructive text-destructive-foreground hover:opacity-90",
       },

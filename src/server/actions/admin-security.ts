@@ -334,17 +334,51 @@ export async function unbanIp(ipHash: string): Promise<ActionResult> {
   return { success: true };
 }
 
-export async function markGdprRequestComplete(id: string): Promise<ActionResult> {
+/**
+ * Clôture manuelle d'une demande RGPD restée en attente.
+ *
+ * Ce bouton basculait le statut à « traité » sans qu'aucune donnée n'ait été
+ * exportée ni supprimée : un administrateur de bonne foi clôturait une demande
+ * d'effacement en croyant l'avoir honorée. Les deux circuits exécutent
+ * désormais l'opération immédiatement (cf. `admin-users.ts`), si bien qu'une
+ * demande encore en attente est nécessairement une demande dont le traitement a
+ * échoué ou qui a été créée hors application.
+ *
+ * La clôture reste donc possible — un traitement peut avoir été mené hors
+ * ligne — mais elle est explicitement marquée comme telle, pour que la trace ne
+ * laisse pas croire que la plateforme a fait le travail.
+ */
+export async function markGdprRequestComplete(
+  id: string,
+  justification?: string,
+): Promise<ActionResult> {
   const admin = await requireAdmin();
+  const motif = justification?.trim();
+  if (!motif || motif.length < 10) {
+    return {
+      success: false,
+      message:
+        "Indiquez comment la demande a été traitée (au moins 10 caractères). La plateforme n'a exécuté aucune opération sur cette demande.",
+    };
+  }
   await prisma.gdprRequest.update({
     where: { id },
-    data: { status: "COMPLETED", completedAt: new Date() },
+    data: {
+      status: "COMPLETED",
+      completedAt: new Date(),
+      metadata: {
+        cloture: "manuelle",
+        traitementHorsPlateforme: motif,
+        clotureePar: admin.userId,
+      },
+    },
   });
   await createAuditLog({
     actorId: admin.userId,
-    action: "gdpr.complete",
+    action: "gdpr.complete-manual",
     targetType: "GdprRequest",
     targetId: id,
+    metadata: { justification: motif },
   });
   revalidatePath("/admin/securite/rgpd");
   return { success: true };

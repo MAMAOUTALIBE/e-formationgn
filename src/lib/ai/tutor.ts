@@ -6,6 +6,7 @@ import "server-only";
 // leçon est mis en cache 5 minutes).
 
 import Anthropic from "@anthropic-ai/sdk";
+import { MODEL_OPUS } from "@/lib/ai/models";
 
 let cachedClient: Anthropic | null = null;
 
@@ -79,7 +80,7 @@ export async function askTutor(
   // en cache (5 min). Les questions successives sur la même leçon ne
   // re-paient que la question + la réponse.
   const response = await client.messages.create({
-    model: "claude-opus-4-7",
+    model: MODEL_OPUS,
     max_tokens: 1024,
     thinking: { type: "adaptive" },
     system: [

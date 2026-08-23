@@ -109,11 +109,11 @@ export function RegisterForm() {
         />
         <span>
           J&apos;accepte les{" "}
-          <Link href="/cgv" className="text-[color:var(--brand-secondary)] hover:underline">
+          <Link href="/cgv" className="text-[color:var(--brand-secondary)] underline underline-offset-4 hover:no-underline">
             conditions générales d&apos;utilisation
           </Link>{" "}
           et la{" "}
-          <Link href="/confidentialite" className="text-[color:var(--brand-secondary)] hover:underline">
+          <Link href="/confidentialite" className="text-[color:var(--brand-secondary)] underline underline-offset-4 hover:no-underline">
             politique de confidentialité
           </Link>
           .

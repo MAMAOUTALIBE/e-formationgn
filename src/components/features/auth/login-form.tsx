@@ -14,9 +14,14 @@ const initialState: ActionResult = { success: false };
 
 interface LoginFormProps {
   callbackUrl?: string;
+  /**
+   * Vrai lorsqu'un fournisseur d'e-mails transactionnels est configuré.
+   * Calculé côté serveur : le formulaire n'a pas accès à l'environnement.
+   */
+  passwordResetAvailable?: boolean;
 }
 
-export function LoginForm({ callbackUrl }: LoginFormProps) {
+export function LoginForm({ callbackUrl, passwordResetAvailable = false }: LoginFormProps) {
   const [state, formAction, pending] = useActionState(loginWithCredentials, initialState);
   const errors = state.fieldErrors ?? {};
 
@@ -52,13 +57,32 @@ export function LoginForm({ callbackUrl }: LoginFormProps) {
         />
       </FormField>
 
+      {/* Le lien de réinitialisation n'est proposé que si l'envoi d'e-mails
+          est réellement configuré. Sans fournisseur, la page d'après affiche
+          « service temporairement indisponible » — un cul-de-sac, doublé d'un
+          message faux puisque rien n'est temporaire. On oriente alors vers le
+          seul chemin qui fonctionne : le centre régénère un mot de passe depuis
+          la fiche de l'apprenant. */}
       <div className="flex items-center justify-end">
-        <Link
-          href="/mot-de-passe-oublie"
-          className="text-sm text-[color:var(--brand-secondary)] hover:underline"
-        >
-          Mot de passe oublié ?
-        </Link>
+        {passwordResetAvailable ? (
+          <Link
+            href="/mot-de-passe-oublie"
+            className="text-sm text-[color:var(--brand-secondary)] underline underline-offset-4 hover:no-underline"
+          >
+            Mot de passe oublié ?
+          </Link>
+        ) : (
+          <p className="text-sm text-muted-foreground">
+            Mot de passe oublié&nbsp;?{" "}
+            <Link
+              href="/contact"
+              className="text-[color:var(--brand-secondary)] underline underline-offset-4 hover:no-underline"
+            >
+              Contactez le centre
+            </Link>
+            , il vous en délivrera un nouveau.
+          </p>
+        )}
       </div>
 
       <TurnstileWidget formId="login" />

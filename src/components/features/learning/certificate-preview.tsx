@@ -39,6 +39,22 @@ export function CertificatePreview({ data, showModel = true }: CertificatePrevie
             <p>a suivi avec assiduité la formation :</p>
             <p className={styles.course}>« {data.courseTitle} »</p>
             <p>Durée : {data.durationLabel}</p>
+            {data.objectives && data.objectives.length > 0 ? (
+              <div className={styles.legalBlock}>
+                <p className={styles.legalLabel}>Objectifs de la formation</p>
+                <ul className={styles.objectives}>
+                  {data.objectives.map((objectif) => (
+                    <li key={objectif}>{objectif}</li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
+            {data.assessmentSummary ? (
+              <div className={styles.legalBlock}>
+                <p className={styles.legalLabel}>Résultats de l’évaluation des acquis</p>
+                <p className={styles.assessment}>{data.assessmentSummary}</p>
+              </div>
+            ) : null}
             <p>
               Du : <strong>{formatCertificateDate(data.startDate)}</strong> au :{" "}
               <strong>{formatCertificateDate(data.endDate)}</strong>

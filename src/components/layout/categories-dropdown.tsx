@@ -121,7 +121,7 @@ export function CategoriesDropdown({ categories, label }: CategoriesDropdownProp
           <div className="border-t border-border bg-muted/30 px-4 py-2">
             <Link
               href="/categories"
-              className="text-xs font-semibold text-[color:var(--brand-secondary)] hover:underline"
+              className="inline-flex min-h-6 items-center text-xs font-semibold text-[color:var(--brand-secondary)] hover:underline"
               onClick={() => setOpen(false)}
             >
               Voir toutes les catégories →

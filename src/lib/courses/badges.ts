@@ -19,7 +19,7 @@ const TOP_RATED_MIN_AVERAGE = 4.5;
 const TOP_RATED_MIN_REVIEWS = 10;
 const NEW_DAYS = 60;
 
-export type CourseBadgeKind = "bestseller" | "top-rated" | "new";
+export type CourseBadgeKind = "bestseller" | "featured" | "top-rated" | "new";
 
 export interface CourseBadge {
   kind: CourseBadgeKind;
@@ -46,14 +46,25 @@ interface BadgeSourceCourse {
 export function getCourseBadges(course: BadgeSourceCourse): CourseBadge[] {
   const badges: CourseBadge[] = [];
 
-  if (
-    course.isFeatured ||
-    course.totalEnrollments >= BESTSELLER_MIN_ENROLLMENTS
-  ) {
+  // « Bestseller » affirme un volume : il ne s'obtient donc QUE par le volume.
+  //
+  // Auparavant, `isFeatured` suffisait — épingler une formation en vitrine lui
+  // collait le badge, même avec zéro inscrit. C'était une allégation
+  // commerciale sans fondement, interdite y compris entre professionnels
+  // (Code de la consommation, art. L.121-2 et L.121-5). La mise en avant
+  // éditoriale a maintenant son propre badge, qui ne prétend rien sur les
+  // ventes.
+  if (course.totalEnrollments >= BESTSELLER_MIN_ENROLLMENTS) {
     badges.push({
       kind: "bestseller",
       label: "Bestseller",
       variant: "warning", // accent jaune-orangé type Udemy
+    });
+  } else if (course.isFeatured) {
+    badges.push({
+      kind: "featured",
+      label: "Sélection du centre",
+      variant: "info",
     });
   }
 

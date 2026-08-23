@@ -67,14 +67,34 @@ export default async function GdprPage() {
                     </td>
                     <td className="px-4 py-3 text-right">
                       {r.status !== "COMPLETED" && r.status !== "REJECTED" ? (
+                        // Une demande encore en attente est une demande dont
+                        // le traitement automatique a échoué : la clôturer
+                        // exige donc de dire comment elle a été honorée hors
+                        // plateforme, faute de quoi la trace attesterait d'une
+                        // réponse qui n'a pas eu lieu.
                         <form
-                          action={async () => {
+                          action={async (formData: FormData) => {
                             "use server";
-                            await markGdprRequestComplete(r.id);
+                            await markGdprRequestComplete(
+                              r.id,
+                              String(formData.get("justification") ?? ""),
+                            );
                           }}
+                          className="flex flex-col items-end gap-1.5"
                         >
+                          <label htmlFor={`justification-${r.id}`} className="sr-only">
+                            Comment cette demande a-t-elle été traitée ?
+                          </label>
+                          <input
+                            id={`justification-${r.id}`}
+                            name="justification"
+                            required
+                            minLength={10}
+                            placeholder="Traitement effectué hors plateforme…"
+                            className="w-56 rounded-md border border-border bg-background px-2 py-1 text-xs"
+                          />
                           <Button type="submit" size="sm" variant="outline">
-                            Marquer traité
+                            Clôturer manuellement
                           </Button>
                         </form>
                       ) : (

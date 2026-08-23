@@ -21,7 +21,23 @@ export default defineConfig({
     trace: "on-first-retry",
     locale: "fr-FR",
   },
+  // Chromium par défaut : c'est le seul navigateur installé par
+  // `npm run test:e2e:install`, et la barrière de déploiement doit rester
+  // exécutable sans préparation supplémentaire.
+  //
+  // Safari représente l'essentiel du trafic mobile en France. Sa couverture est
+  // donc déclarée ici, mais derrière un interrupteur explicite pour ne pas
+  // casser un poste où WebKit n'est pas téléchargé :
+  //
+  //   npx playwright install webkit
+  //   PLAYWRIGHT_ALL_BROWSERS=1 npm run test:e2e
   projects: [
     { name: "chromium", use: { ...devices["Desktop Chrome"] } },
+    ...(process.env.PLAYWRIGHT_ALL_BROWSERS
+      ? [
+          { name: "webkit", use: { ...devices["Desktop Safari"] } },
+          { name: "mobile-safari", use: { ...devices["iPhone 13"] } },
+        ]
+      : []),
   ],
 });

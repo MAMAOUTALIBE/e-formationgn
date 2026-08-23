@@ -66,7 +66,14 @@ export function LessonNotes({ lessonId, initialNotes }: LessonNotesProps) {
         action={handleSubmit}
         className="space-y-2"
       >
+        {/* Étiquette réelle et non simple texte de substitution : un
+            placeholder disparaît dès la première frappe et n'est pas restitué
+            de façon fiable par les lecteurs d'écran (RGAA 11.1). */}
+        <label htmlFor="lesson-note-content" className="text-sm font-medium text-foreground">
+          Votre note sur cette leçon
+        </label>
         <Textarea
+          id="lesson-note-content"
           name="content"
           required
           rows={3}

@@ -3,6 +3,7 @@ import Link from "next/link";
 
 import { GoogleButton } from "@/components/features/auth/google-button";
 import { LoginForm } from "@/components/features/auth/login-form";
+import { isTransactionalEmailConfigured } from "@/lib/email/client";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
@@ -58,11 +59,11 @@ export default async function ConnexionPage({ searchParams }: PageProps) {
           </>
         ) : null}
 
-        <LoginForm callbackUrl={callbackUrl} />
+        <LoginForm callbackUrl={callbackUrl} passwordResetAvailable={isTransactionalEmailConfigured()} />
 
         <p className="text-center text-sm text-muted-foreground">
           Vous n&apos;avez pas reçu vos accès ?{" "}
-          <Link href="/contact" className="text-[color:var(--brand-secondary)] hover:underline">
+          <Link href="/contact" className="text-[color:var(--brand-secondary)] underline underline-offset-4 hover:no-underline">
             Contacter le centre
           </Link>
         </p>

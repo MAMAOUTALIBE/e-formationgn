@@ -53,13 +53,20 @@ export interface AdminUserRow {
   enrollmentsCount: number;
 }
 
-export async function listAdminUsers(
+/**
+ * Traduit les filtres de l'écran Apprenants en clause Prisma.
+ *
+ * Extrait de `listAdminUsers` pour que l'export CSV s'appuie sur EXACTEMENT le
+ * même périmètre que la liste affichée. Auparavant l'export reconstruisait sa
+ * propre clause — réduite à `role: "STUDENT"` — et sortait donc les apprenants
+ * de toutes les sociétés clientes quel que soit le filtre à l'écran. Dans un
+ * centre qui forme les salariés de plusieurs entreprises, le fichier destiné à
+ * l'une contenait l'état civil et l'adresse des salariés des autres.
+ * Toute évolution des filtres doit passer par ici, et par ici seulement.
+ */
+export function buildAdminUsersWhere(
   filters: AdminUsersFilters,
-): Promise<{ rows: AdminUserRow[]; total: number; page: number; pageSize: number }> {
-  const page = Math.max(1, filters.page ?? 1);
-  const pageSize = Math.min(100, Math.max(10, filters.pageSize ?? 50));
-  const skip = (page - 1) * pageSize;
-
+): Prisma.UserWhereInput {
   // Cette requête alimente exclusivement l'espace Apprenants. La frontière
   // est imposée ici, côté serveur, et ne dépend donc pas d'un filtre d'URL.
   const where: Prisma.UserWhereInput = { role: "STUDENT" };
@@ -107,6 +114,18 @@ export async function listAdminUsers(
 
   const combined = allOf<Prisma.UserWhereInput>([searchGroup, inactivityGroup]);
   if (combined) where.AND = combined.AND;
+
+  return where;
+}
+
+export async function listAdminUsers(
+  filters: AdminUsersFilters,
+): Promise<{ rows: AdminUserRow[]; total: number; page: number; pageSize: number }> {
+  const page = Math.max(1, filters.page ?? 1);
+  const pageSize = Math.min(100, Math.max(10, filters.pageSize ?? 50));
+  const skip = (page - 1) * pageSize;
+
+  const where = buildAdminUsersWhere(filters);
 
   const direction = filters.direction === "asc" ? "asc" : "desc";
   const orderBy: Prisma.UserOrderByWithRelationInput =

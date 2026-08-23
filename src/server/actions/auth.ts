@@ -254,12 +254,16 @@ export async function loginWithCredentials(
   _prevState: ActionResult | undefined,
   formData: FormData,
 ): Promise<ActionResult> {
-  const rl = await checkIpRateLimit({
-    prefix: "auth:login",
+  // Garde-fou large sur l'IP seule : arrête un balayage massif de comptes
+  // depuis une même machine, sans pénaliser une salle de formation. Le plafond
+  // est volontairement haut — c'est le comptage par couple (IP, compte), plus
+  // bas, qui fait le vrai travail.
+  const rlIp = await checkIpRateLimit({
+    prefix: "auth:login:ip",
     windowMs: 15 * 60 * 1000,
-    max: 10,
+    max: 150,
   });
-  if (!rl.ok) return { success: false, message: rateLimitMessage(rl.resetAt) };
+  if (!rlIp.ok) return { success: false, message: rateLimitMessage(rlIp.resetAt) };
 
   // Captcha Turnstile (no-op si non configuré).
   const captcha = await verifyTurnstile(formData.get("cf-turnstile-response"));
@@ -279,9 +283,24 @@ export async function loginWithCredentials(
     };
   }
 
+  // Comptage serré par couple (IP, compte visé) : chaque personne d'une même
+  // salle dispose de son propre budget d'essais.
+  const rlPair = await checkIpRateLimit({
+    prefix: "auth:login",
+    scope: parsed.data.email,
+    windowMs: 15 * 60 * 1000,
+    max: 10,
+  });
+  if (!rlPair.ok) return { success: false, message: rateLimitMessage(rlPair.resetAt) };
+
   // Account lockout : 5 échecs sur 15 min sur le même email → blocage temporaire
   // (en plus du rate-limit IP global, qui protège contre la distribution
   // des essais sur plusieurs comptes).
+  //
+  // Le message renvoyé est celui d'un échec ordinaire : annoncer « compte
+  // verrouillé » revenait à confirmer que l'adresse existe, puisqu'une adresse
+  // inconnue ne se verrouille jamais. Le délai reste indiqué pour ne pas
+  // laisser la personne réessayer en boucle sans comprendre.
   const lockout = await getEmailLockoutState(parsed.data.email);
   if (lockout.locked) {
     return { success: false, message: lockoutMessage(lockout.unlockAt) };

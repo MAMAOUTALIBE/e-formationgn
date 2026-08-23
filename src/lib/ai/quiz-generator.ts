@@ -8,6 +8,7 @@ import "server-only";
 // contenu peu pertinent.
 
 import Anthropic from "@anthropic-ai/sdk";
+import { MODEL_SONNET } from "@/lib/ai/models";
 
 let cachedClient: Anthropic | null = null;
 
@@ -80,7 +81,7 @@ export async function generateQuizFromLesson(
 
   const client = getClient();
   const response = await client.messages.create({
-    model: "claude-sonnet-4-6",
+    model: MODEL_SONNET,
     max_tokens: 2000,
     system: SYSTEM_PROMPT,
     tools: [

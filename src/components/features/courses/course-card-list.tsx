@@ -78,19 +78,24 @@ export function CourseCardList({ course }: CourseCardListProps) {
         </p>
 
         <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
-          <span className="inline-flex items-center gap-1.5">
-            <Stars
-              rating={course.averageRating}
-              size="sm"
-              totalRatings={course.totalRatings}
-            />
-            <span className="font-semibold text-foreground">
-              {course.averageRating.toFixed(1)}
+          {/* Cf. course-card.tsx : « 0.0 » se lit comme une mauvaise note. */}
+          {course.totalRatings > 0 ? (
+            <span className="inline-flex items-center gap-1.5">
+              <Stars
+                rating={course.averageRating}
+                size="sm"
+                totalRatings={course.totalRatings}
+              />
+              <span className="font-semibold text-foreground">
+                {course.averageRating.toFixed(1)}
+              </span>
+              <span className="text-xs text-muted-foreground">
+                ({course.totalRatings})
+              </span>
             </span>
-            <span className="text-xs text-muted-foreground">
-              ({course.totalRatings})
-            </span>
-          </span>
+          ) : (
+            <span className="text-xs text-muted-foreground">Pas encore d&apos;avis</span>
+          )}
           <span className="text-xs text-muted-foreground">
             {formatDurationFromSeconds(course.durationSeconds)} ·{" "}
             {course.totalEnrollments.toLocaleString("fr-FR")}{" "}

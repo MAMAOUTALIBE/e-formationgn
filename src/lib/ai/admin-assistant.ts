@@ -16,6 +16,7 @@ import "server-only";
 import Anthropic from "@anthropic-ai/sdk";
 
 import { ADMIN_NAV } from "@/lib/workspace/admin-nav";
+import { MODEL_OPUS } from "@/lib/ai/models";
 
 let cachedClient: Anthropic | null = null;
 
@@ -124,7 +125,7 @@ export async function askAdminAssistant(
   // posé sur le registre, et l'instantané vient après — sinon chaque question
   // réécrirait le cache au lieu de le lire.
   const response = await client.messages.create({
-    model: "claude-opus-5",
+    model: MODEL_OPUS,
     max_tokens: 8000,
     thinking: { type: "adaptive" },
     // Orienter le CRM, ce n'est pas un problème de raisonnement profond :

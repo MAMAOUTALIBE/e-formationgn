@@ -270,7 +270,11 @@ export default async function LessonViewerPage({ params }: PageProps) {
     },
     {
       key: "reviews",
-      label: "Évaluations",
+      // « Avis » et non « Évaluations » : dans un contexte de formation, une
+      // évaluation désigne une épreuve ou un quiz — qui se trouvent ailleurs
+      // dans cet écran. Cet onglet liste les appréciations laissées sur la
+      // formation.
+      label: "Avis",
       badge: reviewsBundle.totalRatings > 0 ? reviewsBundle.totalRatings : undefined,
       content: reviewsContent,
     },
@@ -333,8 +337,25 @@ export default async function LessonViewerPage({ params }: PageProps) {
                       nextLessonTitle={next?.title ?? null}
                     />
                   ) : (
-                    <div className="flex aspect-video items-center justify-center bg-black/90 px-6 text-center text-sm text-muted-foreground">
-                      Cette leçon vidéo n&apos;a pas encore été uploadée par le formateur.
+                    // Deux corrections ici.
+                    //
+                    // Contraste : `text-muted-foreground` sur `bg-black/90`
+                    // passait sous le seuil AA. Le fond étant sombre dans les
+                    // deux thèmes, la couleur du texte est fixée explicitement
+                    // plutôt que dérivée d'un jeton qui s'inverse.
+                    //
+                    // Formulation : l'ancien message exposait au stagiaire une
+                    // lacune de production, dans un vocabulaire technique
+                    // (« uploadée »). Ce n'est ni son problème ni son
+                    // vocabulaire — l'alerte doit remonter au formateur, pas
+                    // à l'apprenant.
+                    <div
+                      className="flex aspect-video items-center justify-center bg-black/90 px-6 text-center text-sm text-slate-100"
+                      role="status"
+                    >
+                      Cette leçon n&apos;est pas encore disponible. Elle le sera
+                      prochainement&nbsp;; vous pouvez poursuivre avec la leçon
+                      suivante.
                     </div>
                   )
                 ) : null}

@@ -71,6 +71,15 @@ export default async function CourseLearningPage({ params }: PageProps) {
     issuedAt: certificateDate,
     trainingLocation: getAiducaTrainingLocation(),
     serialNumber: certificate?.serialNumber,
+    // Mentions imposées par l'art. L.6353-1 du Code du travail. On lit celles
+    // figées sur l'attestation ; à défaut — modèle affiché avant délivrance,
+    // ou attestation antérieure à ces colonnes — on retombe sur le programme
+    // courant de la formation, qui donne un aperçu fidèle de ce que portera le
+    // document.
+    objectives: certificate?.objectives?.length
+      ? certificate.objectives
+      : course.whatYouWillLearn,
+    assessmentSummary: certificate?.assessmentSummary ?? null,
   };
 
   // Coquille appliquée ICI et non par un layout : un layout couvrirait

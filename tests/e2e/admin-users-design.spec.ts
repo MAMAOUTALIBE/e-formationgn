@@ -30,7 +30,11 @@ test.describe("Espace apprenants CRM", () => {
     expect(pageSource).toContain("listUserCountries()");
     expect(headerActionsSource).toContain("CreateAccountForm companies={companies}");
     expect(headerActionsSource).toContain("ImportStudentsForm courses={courses}");
-    expect(headerActionsSource).toContain("action={exportUsersCsv}");
+    // L'export reçoit désormais les filtres actifs de l'écran : sans eux il
+    // sortait les apprenants de toutes les sociétés clientes, quel que soit le
+    // périmètre affiché.
+    expect(headerActionsSource).toContain("exportUsersCsv(exportFilters)");
+    expect(pageSource).toContain("exportFilters={filters}");
     expect(pageSource).toContain('data-testid="learners-workspace"');
     expect(querySource).toContain("prisma.user.count");
     expect(querySource).toContain('const where: Prisma.UserWhereInput = { role: "STUDENT" }');

@@ -99,7 +99,7 @@ export function NewsletterForm({
           désinscription en un clic). Voir notre{" "}
           <a
             href="/confidentialite"
-            className="text-[color:var(--brand-secondary)] underline-offset-4 hover:underline"
+            className="text-[color:var(--brand-secondary)] underline underline-offset-4 hover:no-underline"
           >
             politique de confidentialité
           </a>

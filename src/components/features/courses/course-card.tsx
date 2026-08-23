@@ -126,21 +126,32 @@ export function CourseCard({
           <span className="inline-flex items-center rounded-md border border-border px-1.5 py-0.5 text-[10px] text-muted-foreground">
             Formation
           </span>
-          <Link
-            href={`/cours/${course.slug}#reviews`}
-            aria-label={`Voir les avis — note ${course.averageRating.toFixed(1)} sur 5`}
-            className="inline-flex items-center gap-0.5 rounded-md border border-border px-1.5 py-0.5 text-[10px] font-semibold text-foreground hover:border-[color:var(--brand-warning)]"
-          >
-            <Star className="h-3 w-3 fill-[color:var(--brand-warning)] text-[color:var(--brand-warning)]" />
-            {course.averageRating.toFixed(1)}
-          </Link>
-          <Link
-            href={`/cours/${course.slug}#reviews`}
-            className="inline-flex items-center rounded-md border border-border px-1.5 py-0.5 text-[10px] text-muted-foreground hover:text-foreground"
-          >
-            {course.totalRatings.toLocaleString("fr-FR")}{" "}
-            {pluralize(course.totalRatings, "avis", "avis")}
-          </Link>
+          {/* Sans aucun avis, on ne montre ni étoile ni note : afficher
+              « 0.0 » se lit comme une évaluation catastrophique alors que la
+              formation n'a simplement pas encore été notée. */}
+          {course.totalRatings > 0 ? (
+            <>
+              <Link
+                href={`/cours/${course.slug}#reviews`}
+                aria-label={`Voir les avis — note ${course.averageRating.toFixed(1)} sur 5`}
+                className="inline-flex min-h-6 items-center gap-0.5 rounded-md border border-border px-2 py-0.5 text-[10px] font-semibold text-foreground hover:border-[color:var(--brand-warning)]"
+              >
+                <Star className="h-3 w-3 fill-[color:var(--brand-warning)] text-[color:var(--brand-warning)]" />
+                {course.averageRating.toFixed(1)}
+              </Link>
+              <Link
+                href={`/cours/${course.slug}#reviews`}
+                className="inline-flex min-h-6 items-center rounded-md border border-border px-2 py-0.5 text-[10px] text-muted-foreground hover:text-foreground"
+              >
+                {course.totalRatings.toLocaleString("fr-FR")}{" "}
+                {pluralize(course.totalRatings, "avis", "avis")}
+              </Link>
+            </>
+          ) : (
+            <span className="inline-flex items-center rounded-md border border-border px-1.5 py-0.5 text-[10px] text-muted-foreground">
+              Pas encore d&apos;avis
+            </span>
+          )}
         </div>
 
         {/* Centre de formation : le bloc prix n'est pas rendu du tout. Le

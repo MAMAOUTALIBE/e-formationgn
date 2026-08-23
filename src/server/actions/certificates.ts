@@ -21,11 +21,44 @@ function buildSerial(): string {
   return `EFGN-${year}-${random}`;
 }
 
+/**
+ * Formule les résultats de l'évaluation des acquis pour l'attestation.
+ *
+ * Une seule ligne par quiz, avec la meilleure tentative et le seuil de réussite
+ * — de quoi permettre à un employeur ou à un financeur de juger le niveau
+ * atteint. En l'absence de quiz, on l'écrit noir sur blanc plutôt que de laisser
+ * la mention vide : une attestation muette sur ce point n'est pas conforme.
+ */
+function summarizeAssessment(
+  attempts: Array<{
+    score: number;
+    quiz: { id: string; title: string; passingScore: number };
+  }>,
+): string {
+  if (attempts.length === 0) {
+    return "Évaluation des acquis réalisée en continu au fil des leçons ; aucune épreuve notée n'est associée à cette formation.";
+  }
+  const meilleures = new Map<string, (typeof attempts)[number]>();
+  for (const tentative of attempts) {
+    // La requête est triée par score décroissant : la première rencontrée est
+    // donc déjà la meilleure.
+    if (!meilleures.has(tentative.quiz.id)) meilleures.set(tentative.quiz.id, tentative);
+  }
+  return [...meilleures.values()]
+    .map(
+      (t) =>
+        `${t.quiz.title} : ${Math.round(t.score)}/100 (seuil de réussite ${t.quiz.passingScore}/100 — ${
+          t.score >= t.quiz.passingScore ? "acquis" : "non acquis"
+        })`,
+    )
+    .join(" ; ");
+}
+
 export async function issueCertificate(courseId: string): Promise<ActionResult & { serialNumber?: string }> {
   const session = await auth();
   if (!session?.user) return { success: false, message: "Connectez-vous." };
 
-  const [enrollment, holder] = await Promise.all([
+  const [enrollment, holder, course, attempts] = await Promise.all([
     prisma.enrollment.findUnique({
       where: { userId_courseId: { userId: session.user.id, courseId } },
       select: { id: true, completedAt: true, progressPercent: true, orderItemId: true },
@@ -33,6 +66,25 @@ export async function issueCertificate(courseId: string): Promise<ActionResult &
     prisma.user.findUnique({
       where: { id: session.user.id },
       select: { name: true, firstName: true, lastName: true },
+    }),
+    // Objectifs figés à l'émission (cf. `Certificate.objectives`).
+    prisma.course.findUnique({
+      where: { id: courseId },
+      select: { whatYouWillLearn: true },
+    }),
+    // Résultats de l'évaluation des acquis : on retient la MEILLEURE tentative
+    // de chaque quiz de la formation — c'est le niveau atteint qui est attesté,
+    // pas le nombre d'essais.
+    prisma.quizAttempt.findMany({
+      where: {
+        userId: session.user.id,
+        quiz: { lesson: { section: { courseId } } },
+      },
+      select: {
+        score: true,
+        quiz: { select: { id: true, title: true, passingScore: true } },
+      },
+      orderBy: { score: "desc" },
     }),
   ]);
   if (!enrollment) {
@@ -76,6 +128,10 @@ export async function issueCertificate(courseId: string): Promise<ActionResult &
         // Figé ici, jamais relu : c'est ce nom-là qui fait foi sur
         // l'attestation, même si le compte est renommé ensuite.
         holderName: joinFullName(holder ?? {}) || null,
+        // Mentions imposées par l'article L.6353-1 du Code du travail, figées
+        // au même titre que le nom du titulaire.
+        objectives: course?.whatYouWillLearn ?? [],
+        assessmentSummary: summarizeAssessment(attempts),
       },
       select: { serialNumber: true },
     });

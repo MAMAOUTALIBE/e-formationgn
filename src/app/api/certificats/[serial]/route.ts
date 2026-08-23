@@ -66,6 +66,12 @@ export async function GET(_request: Request, context: RouteContext) {
     durationLabel: certificate.course.durationSeconds
       ? formatDurationFromSeconds(certificate.course.durationSeconds)
       : "Non renseignée",
+    // Mentions figées à l'émission (art. L.6353-1 du Code du travail). On les
+    // lit sur l'attestation et NON sur la formation : remanier un programme ne
+    // doit pas modifier un document déjà remis à un stagiaire et vérifiable par
+    // son employeur.
+    objectives: certificate.objectives,
+    assessmentSummary: certificate.assessmentSummary,
   });
 
   return new NextResponse(pdf as unknown as BodyInit, {

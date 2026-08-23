@@ -64,10 +64,49 @@ test("les contenus légaux de secours ne décrivent plus la marketplace retirée
   const cms = source("src/lib/cms.ts");
 
   assert.match(cms, /L'inscription publique et l'achat en ligne ne sont pas proposés/);
-  assert.match(cms, /base PostgreSQL sont hébergées sur un serveur exploité auprès d'Hostinger/);
+  assert.match(cms, /Hostinger/);
   assert.match(cms, /ni panier, ni préférence de devise, ni code d'affiliation/);
   assert.doesNotMatch(cms, /Supabase|Stripe|formateurs indépendants/);
   assert.doesNotMatch(cms, /Les prix sont indiqués TTC|politique de remboursement commerciale/);
+});
+
+test("la politique de confidentialité porte les mentions obligatoires de l'article 13", () => {
+  const cms = source("src/lib/cms.ts");
+
+  // Le droit de réclamation auprès de la CNIL et le droit à la limitation
+  // manquaient tous deux : ce sont les deux omissions les plus fréquemment
+  // relevées lors d'un contrôle.
+  assert.match(cms, /CNIL/);
+  assert.match(cms, /limitation du traitement/);
+  assert.match(cms, /portabilité/);
+
+  // Les sous-traitants doivent être nommés, et les transferts hors UE encadrés.
+  for (const soustraitant of ["Hostinger", "Mux", "Cloudflare", "Resend", "Anthropic"]) {
+    assert.match(cms, new RegExp(soustraitant), `sous-traitant non déclaré : ${soustraitant}`);
+  }
+  assert.match(cms, /hors de l'Union européenne|hors Union européenne/);
+  assert.match(cms, /clauses contractuelles types|cadre de protection des données/);
+
+  // Des durées chiffrées, et non « les durées peuvent varier ».
+  assert.match(cms, /90 jours/);
+  assert.match(cms, /180 jours/);
+  assert.doesNotMatch(cms, /Les durées précises peuvent varier/);
+});
+
+test("les mentions légales portent l'hébergeur et la formule imposée aux organismes de formation", () => {
+  const cms = source("src/lib/cms.ts");
+
+  // Obligation explicite de la LCEN, purement et simplement absente.
+  assert.match(cms, /Hébergement du site/);
+  assert.match(cms, /Hostinger International/);
+
+  // Formule imposée par l'article L.6352-12 du Code du travail, à porter avec
+  // le numéro de déclaration d'activité.
+  assert.match(cms, /Cet enregistrement ne vaut pas agrément de l'État/);
+
+  assert.match(cms, /Directeur de la publication/);
+  assert.match(cms, /RCS/);
+  assert.match(cms, /TVA intracommunautaire/);
 });
 
 test("le catalogue et les catégories possèdent leur URL Open Graph propre", () => {

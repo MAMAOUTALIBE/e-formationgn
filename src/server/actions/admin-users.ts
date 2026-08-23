@@ -9,11 +9,16 @@ import { revalidatePath } from "next/cache";
 import { isStaffRole } from "@/lib/account-audience";
 import { requireAdmin } from "@/lib/auth/authorization";
 import { checkUserRateLimit, rateLimitMessage } from "@/lib/auth/rate-limit-ip";
-import { csvResponseHeaders, rowsToCsv } from "@/lib/csv";
+import { csvResponseHeaders, rowsToCsv, slugifyForFilename } from "@/lib/csv";
 import { joinFullName } from "@/lib/identity-name";
 import { prisma } from "@/lib/prisma";
-import { listAdminUsers } from "@/server/queries/admin-users";
+import {
+  buildAdminUsersWhere,
+  listAdminUsers,
+  type AdminUsersFilters,
+} from "@/server/queries/admin-users";
 import { createAuditLog } from "@/server/services/audit-log";
+import { buildUserDataExport, eraseUserData } from "@/server/services/gdpr";
 
 import type { ActionResult } from "./auth";
 
@@ -208,7 +213,22 @@ const GENDER_LABELS: Record<string, string> = {
   OTHER: "Autre",
 };
 
-export async function exportUsersCsv(): Promise<{ csv: string; filename: string } | { error: string }> {
+/**
+ * Export CSV des apprenants — RESTREINT AU PÉRIMÈTRE AFFICHÉ.
+ *
+ * L'export prend les filtres de l'écran et les passe à la même fonction que la
+ * liste (`buildAdminUsersWhere`). Sans cela il sortait tous les apprenants de
+ * toutes les sociétés clientes : filtrer sur une entreprise puis exporter
+ * produisait un fichier contenant l'état civil, le téléphone et l'adresse du
+ * domicile des salariés des autres clients — une violation de données au sens
+ * de l'article 33 du RGPD dès que le fichier était transmis au client.
+ *
+ * La colonne « societe » et le suffixe du nom de fichier rendent le périmètre
+ * lisible : celui qui ouvre le fichier voit à qui il appartient.
+ */
+export async function exportUsersCsv(
+  filters: AdminUsersFilters = {},
+): Promise<{ csv: string; filename: string } | { error: string }> {
   let session;
   try {
     session = await requireAdmin();
@@ -225,8 +245,10 @@ export async function exportUsersCsv(): Promise<{ csv: string; filename: string 
   });
   if (!rl.ok) return { error: rateLimitMessage(rl.resetAt) };
 
+  const where = buildAdminUsersWhere(filters);
+
   const users = await prisma.user.findMany({
-    where: { role: "STUDENT" },
+    where,
     orderBy: { createdAt: "desc" },
     take: 5000,
     select: {
@@ -246,6 +268,7 @@ export async function exportUsersCsv(): Promise<{ csv: string; filename: string 
       isInstructor: true,
       createdAt: true,
       lastLoginAt: true,
+      company: { select: { name: true } },
     },
   });
   // Les intitulés sont ceux que l'import sait relire : un export réimporté
@@ -254,6 +277,9 @@ export async function exportUsersCsv(): Promise<{ csv: string; filename: string 
     id: u.id,
     "nom et prenom": joinFullName(u),
     email: u.email,
+    // Le rattachement figure sur chaque ligne : un fichier transmis à une
+    // entreprise cliente doit pouvoir être vérifié d'un coup d'œil.
+    societe: u.company?.name ?? "",
     "date de naissance": u.birthDate ? u.birthDate.toISOString().slice(0, 10) : "",
     "lieu de naissance": u.birthPlace ?? "",
     sexe: GENDER_LABELS[u.gender ?? ""] ?? "",
@@ -266,6 +292,17 @@ export async function exportUsersCsv(): Promise<{ csv: string; filename: string 
     createdAt: u.createdAt.toISOString(),
     lastLoginAt: u.lastLoginAt?.toISOString() ?? "",
   }));
+
+  // Le nom du fichier porte le périmètre : un export d'une seule société le
+  // dit, un export global le dit aussi. C'est la dernière barrière avant
+  // l'envoi du mauvais fichier au mauvais client.
+  const societes = new Set(rows.map((r) => r.societe).filter(Boolean));
+  const perimetre =
+    societes.size === 1
+      ? slugifyForFilename([...societes][0])
+      : societes.size === 0
+        ? "sans-societe"
+        : "toutes-societes";
   // Export de masse de données personnelles : tracé au même titre qu'une
   // mutation. Sans cette entrée, une exfiltration du fichier utilisateurs ne
   // laisserait aucune trace dans AuditLog.
@@ -274,10 +311,25 @@ export async function exportUsersCsv(): Promise<{ csv: string; filename: string 
     action: "user.export_csv",
     targetType: "User",
     targetId: null,
-    metadata: { rowCount: rows.length },
+    // Le périmètre est journalisé au même titre que le volume : en cas de
+    // fichier transmis au mauvais destinataire, l'audit doit dire ce qui est
+    // sorti, pas seulement combien de lignes.
+    metadata: {
+      rowCount: rows.length,
+      perimetre,
+      filtres: {
+        companyId: filters.companyId ?? null,
+        status: filters.status ?? null,
+        country: filters.country ?? null,
+        q: filters.q ? "(recherche)" : null,
+      },
+    },
   });
 
-  return { csv: rowsToCsv(rows), filename: `apprenants-${new Date().toISOString().slice(0, 10)}.csv` };
+  return {
+    csv: rowsToCsv(rows),
+    filename: `apprenants-${perimetre}-${new Date().toISOString().slice(0, 10)}.csv`,
+  };
 }
 
 // Garde csvResponseHeaders pour les éventuelles routes /api d'export.
@@ -288,28 +340,107 @@ export { listAdminUsers };
 
 // --- RGPD : export & suppression définitive --------------------------------
 
-export async function exportUserGdprData(userId: string): Promise<ActionResult> {
+/**
+ * Droit d'accès et de portabilité : produit l'archive, séance tenante.
+ *
+ * L'action ne se contente plus d'enregistrer une intention : elle rassemble les
+ * données et renvoie le fichier à remettre à la personne. La demande est créée
+ * puis close dans la foulée, avec la trace de ce qui a été produit.
+ */
+export async function exportUserGdprData(
+  userId: string,
+): Promise<ActionResult & { json?: string; filename?: string }> {
   const admin = await requireAdmin();
-  await prisma.gdprRequest.create({
+
+  const demande = await prisma.gdprRequest.create({
     data: { userId, kind: "EXPORT", status: "PENDING" },
+    select: { id: true },
   });
-  await audit(admin.userId, "user.gdpr-export-request", userId);
+
+  let archive: Awaited<ReturnType<typeof buildUserDataExport>>;
+  try {
+    archive = await buildUserDataExport(userId);
+  } catch (error) {
+    console.error("[rgpd] export impossible", { userId, error });
+    await prisma.gdprRequest.update({
+      where: { id: demande.id },
+      data: { status: "REJECTED", metadata: { erreur: "Génération de l'archive impossible." } },
+    });
+    return { success: false, message: "Export impossible. La demande est enregistrée comme non traitée." };
+  }
+
+  await prisma.gdprRequest.update({
+    where: { id: demande.id },
+    data: {
+      status: "COMPLETED",
+      completedAt: new Date(),
+      metadata: {
+        inscriptions: archive.inscriptions.length,
+        attestations: archive.attestations.length,
+        notes: archive.notesPersonnelles.length,
+      },
+    },
+  });
+  await audit(admin.userId, "user.gdpr-export", userId);
   revalidatePath(`/admin/utilisateurs/${userId}`);
-  return { success: true, message: "Demande d'export RGPD enregistrée." };
+  revalidatePath("/admin/securite/rgpd");
+
+  return {
+    success: true,
+    message: "Archive générée. Remettez-la à la personne concernée.",
+    json: JSON.stringify(archive, null, 2),
+    filename: `donnees-personnelles-${userId}-${new Date().toISOString().slice(0, 10)}.json`,
+  };
 }
 
+/**
+ * Droit à l'effacement : efface pour de bon.
+ *
+ * L'ancienne version créait une demande « à exécuter par un job » qui n'a jamais
+ * existé, et se bornait à basculer le compte en statut supprimé — les données
+ * restaient en base indéfiniment. L'effacement est désormais exécuté ici, et son
+ * résultat détaillé est consigné sur la demande : ce qui a disparu, ce qui est
+ * conservé, et au titre de quelle obligation.
+ */
 export async function deleteUserGdpr(userId: string): Promise<ActionResult> {
   const admin = await requireAdmin();
-  // On ne supprime PAS immédiatement : on enregistre une demande à
-  // exécuter par un job (préserve l'historique et permet l'annulation).
-  await prisma.gdprRequest.create({
+
+  const demande = await prisma.gdprRequest.create({
     data: { userId, kind: "DELETE", status: "PENDING" },
+    select: { id: true },
   });
-  await prisma.user.update({
-    where: { id: userId },
-    data: { status: "DELETED" },
+
+  let bilan: Awaited<ReturnType<typeof eraseUserData>>;
+  try {
+    bilan = await eraseUserData(userId);
+  } catch (error) {
+    console.error("[rgpd] effacement impossible", { userId, error });
+    await prisma.gdprRequest.update({
+      where: { id: demande.id },
+      data: { status: "REJECTED", metadata: { erreur: "Effacement interrompu." } },
+    });
+    return {
+      success: false,
+      message: "Effacement interrompu. La demande reste ouverte — aucune clôture n'a été enregistrée.",
+    };
+  }
+
+  await prisma.gdprRequest.update({
+    where: { id: demande.id },
+    data: {
+      status: "COMPLETED",
+      completedAt: new Date(),
+      metadata: { supprime: bilan.supprime, conserve: bilan.conserve },
+    },
   });
-  await audit(admin.userId, "user.gdpr-delete-request", userId);
+  await audit(admin.userId, "user.gdpr-delete", userId, {
+    supprime: bilan.supprime,
+    conserve: bilan.conserve,
+  });
   revalidatePath("/admin/utilisateurs");
-  return { success: true, message: "Demande de suppression RGPD enregistrée." };
+  revalidatePath("/admin/securite/rgpd");
+  return {
+    success: true,
+    message: `Données effacées. Conservé : ${bilan.conserve.length} catégorie(s) sous obligation légale.`,
+  };
 }

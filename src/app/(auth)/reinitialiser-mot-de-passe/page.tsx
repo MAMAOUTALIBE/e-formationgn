@@ -31,7 +31,7 @@ export default async function ResetPasswordPage({ searchParams }: PageProps) {
           <p className="text-center text-sm">
             <Link
               href="/mot-de-passe-oublie"
-              className="text-[color:var(--brand-secondary)] hover:underline"
+              className="text-[color:var(--brand-secondary)] underline underline-offset-4 hover:no-underline"
             >
               Demander un nouveau lien
             </Link>

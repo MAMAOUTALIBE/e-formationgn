@@ -32,14 +32,28 @@ export interface IpRateLimitOptions {
   windowMs: number;
   /** Nombre max d'occurrences dans la fenêtre. */
   max: number;
+  /**
+   * Second axe de comptage, combiné à l'IP — typiquement l'e-mail visé.
+   *
+   * Un centre de formation, c'est une salle entière derrière une seule IP
+   * publique. Compter sur l'IP seule y revient à mutualiser le quota : quelques
+   * fautes de frappe en début de session bloquaient tout le groupe. En comptant
+   * par couple (IP, compte visé), chaque personne dispose de son propre budget
+   * d'essais, et un attaquant qui s'acharne sur un compte reste freiné.
+   *
+   * La valeur est hachée comme l'IP : elle ne transite jamais en clair vers le
+   * compteur.
+   */
+  scope?: string;
 }
 
 export async function checkIpRateLimit(
   opts: IpRateLimitOptions,
 ): Promise<RateLimitResult> {
   const ip = await clientIpHash();
+  const scope = opts.scope ? `:${hashIp(opts.scope.trim().toLowerCase())}` : "";
   return checkRateLimit({
-    key: `${opts.prefix}:${ip}`,
+    key: `${opts.prefix}:${ip}${scope}`,
     windowMs: opts.windowMs,
     max: opts.max,
   });

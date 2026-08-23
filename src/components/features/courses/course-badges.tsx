@@ -2,7 +2,7 @@
 // noté, Nouveau). Couleurs inspirées Udemy : jaune-orangé pour Bestseller,
 // vert pour Top noté, bleu accent pour Nouveau.
 
-import { Award, Sparkles, TrendingUp } from "lucide-react";
+import { Award, Sparkles, Pin, TrendingUp } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import type { CourseBadge } from "@/lib/courses/badges";
@@ -23,6 +23,9 @@ const VARIANT_CLASS: Record<CourseBadge["variant"], string> = {
 
 const ICON: Record<CourseBadge["kind"], React.ComponentType<{ className?: string }>> = {
   bestseller: TrendingUp,
+  // Mise en avant éditoriale : une épingle, pas une courbe ascendante — le
+  // badge ne prétend rien sur le volume d'inscriptions.
+  featured: Pin,
   "top-rated": Award,
   new: Sparkles,
 };

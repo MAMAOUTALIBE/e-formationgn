@@ -9,6 +9,18 @@ export interface CertificateTemplateData {
   issuedAt: Date;
   trainingLocation: string;
   serialNumber?: string;
+  /**
+   * Objectifs de la formation et résultats de l'évaluation des acquis.
+   *
+   * L'article L.6353-1 du Code du travail impose que l'attestation mentionne
+   * « les objectifs, la nature et la durée de l'action et les résultats de
+   * l'évaluation des acquis ». Les deux manquaient au document.
+   *
+   * Optionnels : les attestations émises avant l'ajout de ces colonnes n'en
+   * portent pas, et le gabarit ne doit pas casser à leur affichage.
+   */
+  objectives?: string[];
+  assessmentSummary?: string | null;
 }
 
 const longDateFormatter = new Intl.DateTimeFormat("fr-FR", {

@@ -10,9 +10,9 @@ test.describe("CRM admin — dashboard", () => {
       "Pilotage pédagogique",
       "Sociétés actives",
       "Apprenants actifs",
-      "Cours publiés",
+      "Formations publiées",
       "Inscriptions actives",
-      "Gérer les formations",
+      "Gérer les programmes",
       "Suivre les apprenants",
       "Analyser l'apprentissage",
     ]) {
