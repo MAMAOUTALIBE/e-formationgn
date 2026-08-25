@@ -22,6 +22,7 @@ import { Input } from "@/components/ui/input";
 import { formatDurationFromSeconds } from "@/lib/format/duration";
 import { cn } from "@/lib/utils";
 import { isLikelyVideoFile, videoUploadContentType } from "@/lib/video-file";
+import { parseYouTubeUrl } from "@/lib/youtube";
 import {
   clearLessonVideo,
   setLessonExternalVideoUrl,
@@ -143,11 +144,21 @@ function ExternalVideoPreview({
   onRemoved: () => void;
 }) {
   const reportedRef = useRef(false);
+  const youtube = parseYouTubeUrl(src);
 
   return (
     <div className="space-y-3">
       <div className="aspect-video overflow-hidden rounded-md bg-black">
-        <video
+        {youtube ? (
+          <iframe
+            src={`${youtube.embedUrl}?rel=0`}
+            title="Aperçu de la vidéo YouTube"
+            className="h-full w-full border-0"
+            allow="accelerometer; autoplay; encrypted-media; picture-in-picture"
+            allowFullScreen
+            referrerPolicy="strict-origin-when-cross-origin"
+          />
+        ) : <video
           src={src}
           controls
           playsInline
@@ -161,7 +172,7 @@ function ExternalVideoPreview({
               void setLessonVideoDuration(lessonId, Math.round(d));
             }
           }}
-        />
+        />}
       </div>
       <p className="flex items-center gap-2 text-sm text-muted-foreground">
         <Video className="h-4 w-4" aria-hidden />
@@ -238,7 +249,8 @@ function ExternalUrlForm({
           type="url"
           value={url}
           onChange={(e) => setUrl(e.target.value)}
-          placeholder="https://exemple.com/cours/lecon-1.mp4"
+          placeholder="https://youtu.be/… ou https://exemple.com/video.mp4"
+          aria-label="URL YouTube ou lien direct vers une vidéo"
           disabled={pending}
         />
         <Button
@@ -256,8 +268,8 @@ function ExternalUrlForm({
         </Button>
       </div>
       <p className="text-xs text-muted-foreground">
-        Lien direct vers un fichier vidéo (MP4, WebM, MOV). Le lien doit être
-        accessible publiquement pour être lu par les élèves.
+        Lien YouTube (watch, youtu.be, Shorts, embed) ou fichier direct MP4/WebM/MOV.
+        Une vidéo YouTube privée ou dont l’intégration est désactivée ne pourra pas être lue.
       </p>
       {error ? (
         <Alert variant="destructive">

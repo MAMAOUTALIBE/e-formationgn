@@ -105,8 +105,8 @@ export default async function CourseLearningPage({ params }: PageProps) {
             ]}
           />
 
-          <header className="grid gap-4 lg:grid-cols-[1fr_360px]">
-            <div className="space-y-3">
+          <header className="grid gap-4 rounded-2xl border border-[color:var(--brand-secondary)]/20 bg-gradient-to-br from-[color:var(--brand-primary)]/8 via-card to-[color:var(--brand-accent)]/10 p-5 shadow-sm sm:p-6 lg:grid-cols-[1fr_360px]">
+            <div className="space-y-3 self-center">
               <h1 className="text-2xl font-semibold tracking-tight text-foreground">
                 {course.title}
               </h1>
@@ -140,7 +140,7 @@ export default async function CourseLearningPage({ params }: PageProps) {
               </div>
             </div>
 
-            <Card>
+            <Card className="border-[color:var(--brand-warning)]/25 bg-background/90 shadow-sm">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-base">
                   <Award className="h-5 w-5 text-[color:var(--brand-warning)]" />
@@ -213,7 +213,7 @@ export default async function CourseLearningPage({ params }: PageProps) {
           ) : null}
 
           <div className="grid gap-6 lg:grid-cols-[280px_1fr]">
-            <aside className="rounded-lg border border-border bg-card p-4">
+            <aside className="rounded-xl border border-[color:var(--brand-secondary)]/20 bg-card p-4 shadow-sm">
               <h2 className="mb-3 text-sm font-semibold text-foreground">Programme</h2>
               <LessonSidebar
                 courseSlug={course.slug}

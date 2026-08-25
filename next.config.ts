@@ -29,13 +29,13 @@ const cspPolicy = [
   // entière — voir SECURITY.md. La politique ci-dessous bloque déjà le
   // chargement de scripts hébergés ailleurs, l'exfiltration par formulaire
   // (`form-action`), la réécriture de base (`base-uri`) et les objets.
-  `script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ""} https://*.stripe.com https://*.mux.com https://*.sentry.io`,
+  `script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ""} https://*.stripe.com https://*.mux.com https://*.sentry.io https://www.youtube.com`,
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data: blob: https:",
   "font-src 'self' data:",
   // Mux + Stripe + Sentry + R2/S3 : sources externes attendues
-  "connect-src 'self' https://*.stripe.com https://*.mux.com https://*.sentry.io https://*.r2.cloudflarestorage.com",
-  "frame-src 'self' https://*.stripe.com https://*.mux.com",
+  "connect-src 'self' https://*.stripe.com https://*.mux.com https://*.sentry.io https://*.r2.cloudflarestorage.com https://www.youtube.com https://www.youtube-nocookie.com",
+  "frame-src 'self' https://*.stripe.com https://*.mux.com https://www.youtube-nocookie.com",
   "media-src 'self' https://*.mux.com blob:",
   "object-src 'none'",
   "base-uri 'self'",

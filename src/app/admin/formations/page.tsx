@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { ProgramDeleteButton } from "@/components/features/admin/program-delete-button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { ExportButton } from "@/components/ui/export-button";
 import { Input } from "@/components/ui/input";
@@ -296,9 +297,17 @@ function ProgramsTable({ rows }: { rows: ProgramListRow[] }) {
               {program.registrationCount}
             </td>
             <td className="px-4 py-3 text-right">
-              <Button variant="ghost" size="sm" asChild>
-                <Link href={`/admin/formations/${program.id}`}>Voir</Link>
-              </Button>
+              <div className="flex justify-end gap-1">
+                <Button variant="ghost" size="sm" asChild>
+                  <Link href={`/admin/formations/${program.id}`}>Voir</Link>
+                </Button>
+                <ProgramDeleteButton
+                  programId={program.id}
+                  programTitle={program.title}
+                  deletable={program.sessionCount === 0}
+                  presentation="compact"
+                />
+              </div>
             </td>
           </tr>
         ))}
@@ -308,15 +317,12 @@ function ProgramsTable({ rows }: { rows: ProgramListRow[] }) {
 }
 function ProgramMobileCard({ program }: { program: ProgramListRow }) {
   return (
-    <Link
-      href={`/admin/formations/${program.id}`}
-      className="block p-4 hover:bg-muted/35"
-    >
+    <article className="p-4 hover:bg-muted/35">
       <div className="flex gap-3">
         <ProgramIcon title={program.title} />
         <div className="min-w-0 flex-1">
           <div className="flex justify-between gap-2">
-            <h2 className="truncate font-semibold">{program.title}</h2>
+            <Link href={`/admin/formations/${program.id}`} className="truncate font-semibold hover:underline">{program.title}</Link>
             <ProgramStatus status={program.status} />
           </div>
           <p className="mt-1 text-xs text-muted-foreground">
@@ -328,9 +334,17 @@ function ProgramMobileCard({ program }: { program: ProgramListRow }) {
           <p className="mt-2 text-xs text-muted-foreground">
             {program.sessionCount} sessions · {program.registrationCount} élèves
           </p>
+          <div className="mt-2 flex justify-end">
+            <ProgramDeleteButton
+              programId={program.id}
+              programTitle={program.title}
+              deletable={program.sessionCount === 0}
+              presentation="compact"
+            />
+          </div>
         </div>
       </div>
-    </Link>
+    </article>
   );
 }
 function ProgramsSidebar({

@@ -5,14 +5,13 @@
 import { revalidatePath, updateTag } from "next/cache";
 
 import { requireAnyAdminRole } from "@/lib/auth/authorization";
+import { executeCourseDeletion } from "@/lib/domain/course-deletion";
 import { failedCriteriaLabels } from "@/lib/validators/course-publish";
 import { prisma } from "@/lib/prisma";
 import { nanoid } from "nanoid";
-import {
-  COURSE_NOT_DELETABLE_MESSAGE,
-  getCourseDeletionStatus,
-} from "@/server/queries/course-deletion";
 import { createAuditLog } from "@/server/services/audit-log";
+import { cleanupDeletedCourseMedia } from "@/server/services/course-media-cleanup";
+import { deleteCourseRecordIfUnused } from "@/server/services/course-deletion";
 import type { CourseStatus } from "@/generated/prisma/enums";
 
 import type { ActionResult } from "./auth";
@@ -380,25 +379,17 @@ export async function bulkChangeCategory(
 }
 
 export async function adminDeleteCourse(courseId: string): Promise<ActionResult> {
-  // Suppression définitive réservée à l'ADMIN (pas MODERATOR).
-  const admin = await requireAnyAdminRole("ADMIN");
-
-  const status = await getCourseDeletionStatus(courseId);
-  if (!status.deletable) {
-    return { success: false, message: COURSE_NOT_DELETABLE_MESSAGE };
-  }
-
-  const course = await prisma.course.findUnique({
-    where: { id: courseId },
-    select: { title: true },
+  return executeCourseDeletion({
+    authorize: () => requireAnyAdminRole("ADMIN"),
+    deleteRecord: () => deleteCourseRecordIfUnused(courseId),
+    cleanup: cleanupDeletedCourseMedia,
+    audit: (actorId, title) => audit(actorId, "course.delete", courseId, { title }),
+    onDeleted: () => {
+      revalidatePath("/admin/cours");
+      revalidatePath(`/admin/cours/${courseId}`);
+      invalidateCatalogCaches();
+    },
   });
-  if (!course) return { success: false, message: "Formation introuvable." };
-
-  await prisma.course.delete({ where: { id: courseId } });
-  await audit(admin.userId, "course.delete", courseId, { title: course.title });
-  revalidatePath("/admin/cours");
-  invalidateCatalogCaches();
-  return { success: true, message: "Formation supprimée définitivement." };
 }
 
 export async function setInternalNotesOnCourse(

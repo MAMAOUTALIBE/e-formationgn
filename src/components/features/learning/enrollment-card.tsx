@@ -5,7 +5,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { CheckCircle2, PlayCircle } from "lucide-react";
+import { Award, CheckCircle2, CircleDashed, PlayCircle } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -57,7 +57,10 @@ export function EnrollmentCard({ enrollment, resumeHref }: EnrollmentCardProps) 
       : "Commencer";
 
   return (
-    <Card className="overflow-hidden">
+    <Card className={cn(
+      "group overflow-hidden border-border/80 shadow-sm transition-[border-color,box-shadow,transform] hover:-translate-y-0.5 hover:shadow-md",
+      isCompleted ? "border-[color:var(--brand-success)]/30" : hasStarted ? "border-[color:var(--brand-secondary)]/30" : "",
+    )}>
       <Link
         href={`/apprentissage/${course.slug}`}
         className="relative block aspect-video overflow-hidden bg-muted"
@@ -76,9 +79,18 @@ export function EnrollmentCard({ enrollment, resumeHref }: EnrollmentCardProps) 
           </div>
         )}
         {isCompleted ? (
-          <div className="absolute right-2 top-2 inline-flex items-center gap-1 rounded-full bg-[color:var(--brand-success)] px-2 py-1 text-[10px] font-semibold text-white shadow">
+          <div className="absolute right-2 top-2 inline-flex items-center gap-1 rounded-full bg-emerald-700 px-2 py-1 text-[10px] font-semibold text-white shadow dark:bg-emerald-900 dark:text-emerald-200">
             <CheckCircle2 className="h-3 w-3" aria-hidden />
             Terminé
+          </div>
+        ) : null}
+        {!isCompleted ? (
+          <div className={cn("absolute left-2 top-2 inline-flex items-center gap-1 rounded-full border px-2 py-1 text-[10px] font-semibold shadow-sm backdrop-blur-sm",
+            hasStarted
+              ? "border-[color:var(--brand-secondary)]/25 bg-background/95 text-[color:var(--brand-secondary)] dark:text-blue-300"
+              : "border-border bg-background/95 text-muted-foreground") }>
+            {hasStarted ? <PlayCircle className="h-3 w-3" aria-hidden /> : <CircleDashed className="h-3 w-3" aria-hidden />}
+            {hasStarted ? "En cours" : "À commencer"}
           </div>
         ) : null}
       </Link>
@@ -132,6 +144,12 @@ export function EnrollmentCard({ enrollment, resumeHref }: EnrollmentCardProps) 
             {ctaLabel}
           </Link>
         </Button>
+        {isCompleted ? (
+          <p className="flex items-center justify-center gap-1 text-[11px] font-medium text-emerald-700 dark:text-emerald-300">
+            <Award className="h-3.5 w-3.5" aria-hidden />
+            Attestation disponible depuis la formation
+          </p>
+        ) : null}
       </CardContent>
     </Card>
   );

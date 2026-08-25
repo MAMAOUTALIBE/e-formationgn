@@ -47,6 +47,17 @@ export async function recordLessonProgress(
     return { success: false, message: "Données invalides." };
   }
   const userId = session.user.id;
+
+  if (parsed.data.isCompleted === undefined) {
+    await recordLessonProgressFields({
+      userId,
+      lessonId: parsed.data.lessonId,
+      watchedSeconds: parsed.data.watchedSeconds,
+      lastPositionSeconds: parsed.data.lastPositionSeconds,
+    });
+    return { success: true };
+  }
+
   const { courseId } = await requireLessonAccess(userId, parsed.data.lessonId);
 
   // Trois cas :
@@ -75,12 +86,6 @@ export async function recordLessonProgress(
     return { success: true, progressPercent: result.progressPercent };
   }
 
-  await recordLessonProgressFields({
-    userId,
-    lessonId: parsed.data.lessonId,
-    watchedSeconds: parsed.data.watchedSeconds,
-    lastPositionSeconds: parsed.data.lastPositionSeconds,
-  });
   return { success: true };
 }
 

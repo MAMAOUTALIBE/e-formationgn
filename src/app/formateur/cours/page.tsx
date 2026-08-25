@@ -6,6 +6,7 @@ import { Plus } from "lucide-react";
 import { Archive, ArchiveRestore, Copy } from "lucide-react";
 
 import { auth } from "@/auth";
+import { CourseDeleteButton } from "@/components/features/courses/course-delete-button";
 import { ConfirmAction } from "@/components/features/instructor/confirm-action";
 import { CourseListFilters } from "@/components/features/instructor/course-list-filters";
 import { CourseStatusBadge } from "@/components/features/instructor/course-status-badge";
@@ -230,6 +231,19 @@ export default async function InstructorCoursesPage({ searchParams }: PageProps)
                           <span className="sr-only">Archiver</span>
                         </ConfirmAction>
                       )}
+                      <CourseDeleteButton
+                        courseId={course.id}
+                        courseTitle={course.title}
+                        mode="instructor"
+                        deletable={
+                          course._count.enrollments === 0 &&
+                          course._count.orderItems === 0 &&
+                          course._count.certificates === 0 &&
+                          course._count.programs === 0
+                        }
+                        enrollments={course._count.enrollments}
+                        presentation="menu-item"
+                      />
                     </div>
                   </td>
                 </tr>

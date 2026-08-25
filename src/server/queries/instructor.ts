@@ -13,6 +13,9 @@ const INSTRUCTOR_COURSE_INCLUDE = {
   _count: {
     select: {
       enrollments: true,
+      orderItems: true,
+      certificates: true,
+      programs: true,
       reviews: true,
       sections: true,
     },

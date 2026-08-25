@@ -2,9 +2,9 @@
 
 // Server Actions des formations (programmes) et de leurs sessions.
 //
-// Comme pour les sociétés, aucune suppression n'est exposée : une formation
-// archivée ou une session annulée ont pu porter des inscriptions et des
-// engagements de financement. On change leur statut, on ne les efface pas.
+// Une suppression physique est réservée aux programmes qui n'ont jamais eu de
+// session. Dès qu'une session existe (même annulée), l'archivage préserve
+// l'historique des inscriptions et des attestations.
 
 import { revalidatePath } from "next/cache";
 
@@ -15,6 +15,7 @@ import {
   ACTIVE_PROGRAM_REQUIRES_COURSE,
   canActivateProgram,
 } from "@/lib/domain/training-integrity";
+import { executeProgramDeletion } from "@/lib/domain/program-deletion";
 import { prisma } from "@/lib/prisma";
 import { programSchema, sessionSchema } from "@/lib/validators/program";
 import { createAuditLog } from "@/server/services/audit-log";
@@ -201,6 +202,35 @@ export async function updateProgram(
   revalidatePath("/admin/formations");
   revalidatePath(`/admin/formations/${programId}`);
   return { success: true, programId, message: "Programme de formation mis à jour." };
+}
+
+/** Supprime uniquement un programme qui n'a jamais porté de session. */
+export async function deleteProgram(programId: string): Promise<ProgramActionResult> {
+  return executeProgramDeletion(
+    {
+      authorize: () => requireAnyAdminRole(...adminRolesForScreen("/admin/formations")),
+      deleteIfUnused: (id) =>
+        prisma.$transaction(
+          async (tx) => {
+            const program = await tx.program.findUnique({
+              where: { id },
+              select: { id: true, title: true, code: true, _count: { select: { sessions: true } } },
+            });
+            if (!program) return null;
+            if (program._count.sessions > 0) return "blocked" as const;
+
+            // ProgramCourse est en cascade : seule la composition sans historique
+            // est nettoyée avec le programme. Les cours eux-mêmes sont conservés.
+            await tx.program.delete({ where: { id: program.id } });
+            return { id: program.id, title: program.title, code: program.code };
+          },
+          { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+        ),
+      audit: createAuditLog,
+      revalidate: revalidatePath,
+    },
+    programId,
+  );
 }
 
 /** Ajoute un cours à la composition d'une formation. */

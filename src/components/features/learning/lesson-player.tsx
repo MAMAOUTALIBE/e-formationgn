@@ -9,6 +9,8 @@ import { useRouter } from "next/navigation";
 import { Play, X } from "lucide-react";
 
 import { recordLessonProgress } from "@/server/actions/learning";
+import { installYouTubeReadyCallback } from "@/lib/youtube-api-ready";
+import { canCompleteYouTube, isYouTubeEndedState, observeYouTubePlayback, parseYouTubeUrl, youtubePlayerErrorMessage } from "@/lib/youtube";
 import { useLearningHeartbeat } from "./use-learning-heartbeat";
 
 interface LessonPlayerProps {
@@ -20,6 +22,8 @@ interface LessonPlayerProps {
   externalVideoUrl?: string | null;
   lessonId: string;
   initialPositionSeconds?: number;
+  /** Temps réellement observé comme joué, distinct de la position. */
+  initialWatchedSeconds?: number;
   durationSeconds?: number;
   thumbnail?: string | null;
   title?: string;
@@ -38,6 +42,7 @@ export function LessonPlayer({
   externalVideoUrl,
   lessonId,
   initialPositionSeconds = 0,
+  initialWatchedSeconds = 0,
   durationSeconds = 0,
   thumbnail,
   title,
@@ -60,6 +65,15 @@ export function LessonPlayer({
     );
   }
   if (externalVideoUrl) {
+    const youtube = parseYouTubeUrl(externalVideoUrl);
+    if (youtube) {
+      return (
+        <YouTubeLessonPlayer videoId={youtube.id} lessonId={lessonId}
+          initialPositionSeconds={initialPositionSeconds} title={title}
+          initialWatchedSeconds={initialWatchedSeconds}
+          nextLessonHref={nextLessonHref} nextLessonTitle={nextLessonTitle} />
+      );
+    }
     return (
       <NativeLessonPlayer
         src={externalVideoUrl}
@@ -74,6 +88,164 @@ export function LessonPlayer({
     );
   }
   return null;
+}
+
+type YouTubePlayer = { getCurrentTime(): number; getDuration(): number; seekTo(seconds: number, allowSeekAhead: boolean): void; destroy(): void };
+type YouTubeNamespace = { Player: new (element: HTMLElement, options: Record<string, unknown>) => YouTubePlayer; PlayerState: { PLAYING: number; PAUSED: number; ENDED: number } };
+let youtubeApiPromise: Promise<YouTubeNamespace> | null = null;
+
+function loadYouTubeApi(): Promise<YouTubeNamespace> {
+  if (window.YT?.Player) return Promise.resolve(window.YT);
+  if (youtubeApiPromise) return youtubeApiPromise;
+  const promise = new Promise<YouTubeNamespace>((resolve, reject) => {
+    let settled = false;
+    const scriptSelector = 'script[src="https://www.youtube.com/iframe_api"]';
+    let script = document.querySelector<HTMLScriptElement>(scriptSelector);
+    let created = false;
+    const cleanup = () => {
+      window.clearTimeout(timeout);
+      script?.removeEventListener("error", failFromEvent);
+      script?.removeEventListener("load", checkReady);
+      restoreReadyCallback();
+    };
+    const succeed = () => {
+      if (settled || !window.YT?.Player) return;
+      settled = true;
+      cleanup();
+      resolve(window.YT);
+    };
+    const fail = (error: Error) => {
+      if (settled) return;
+      settled = true;
+      cleanup();
+      script?.remove();
+      youtubeApiPromise = null;
+      reject(error);
+    };
+    const failFromEvent = () => fail(new Error("Chargement YouTube impossible"));
+    const checkReady = () => succeed();
+    const restoreReadyCallback = installYouTubeReadyCallback(window, succeed);
+    if (!script) {
+      script = document.createElement("script");
+      script.src = "https://www.youtube.com/iframe_api";
+      script.async = true;
+      created = true;
+    }
+    script.addEventListener("error", failFromEvent, { once: true });
+    script.addEventListener("load", checkReady, { once: true });
+    const timeout = window.setTimeout(() => fail(new Error("Délai de chargement YouTube dépassé")), 10_000);
+    if (created) document.head.appendChild(script);
+  });
+  youtubeApiPromise = promise;
+  return promise;
+}
+
+function YouTubeLessonPlayer({ videoId, lessonId, initialPositionSeconds, initialWatchedSeconds, title, nextLessonHref, nextLessonTitle }: {
+  videoId: string; lessonId: string; initialPositionSeconds: number; initialWatchedSeconds: number; title?: string;
+  nextLessonHref?: string | null; nextLessonTitle?: string | null;
+}) {
+  const router = useRouter();
+  const mountRef = useRef<HTMLDivElement>(null);
+  const playerRef = useRef<YouTubePlayer | null>(null);
+  const playedSecondsRef = useRef(Math.max(0, initialWatchedSeconds));
+  const lastObservedPositionRef = useRef<number | null>(null);
+  const reportTicksRef = useRef(0);
+  const completedRef = useRef(false);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const autoAdvance = useAutoAdvance(nextLessonHref);
+  const advanceTrigger = autoAdvance.trigger;
+  useLearningHeartbeat(lessonId, { mode: "VIDEO", isPlaying });
+
+  useEffect(() => {
+    let disposed = false;
+    void loadYouTubeApi().then((YT) => {
+      if (disposed || !mountRef.current) return;
+      playerRef.current = new YT.Player(mountRef.current, {
+        host: "https://www.youtube-nocookie.com", videoId, width: "100%", height: "100%",
+        playerVars: { enablejsapi: 1, rel: 0, playsinline: 1, origin: window.location.origin },
+        events: {
+          onReady: ({ target }: { target: YouTubePlayer }) => { if (initialPositionSeconds > 0) target.seekTo(initialPositionSeconds, true); },
+          onStateChange: ({ data, target }: { data: number; target: YouTubePlayer }) => {
+            setIsPlaying(data === YT.PlayerState.PLAYING);
+            if (isYouTubeEndedState(data)) {
+              const finalObservation = observeYouTubePlayback(
+                { watchedSeconds: playedSecondsRef.current, lastPosition: lastObservedPositionRef.current },
+                target.getCurrentTime(),
+                document.visibilityState === "visible",
+              );
+              playedSecondsRef.current = finalObservation.watchedSeconds;
+              lastObservedPositionRef.current = null;
+            } else if (data === YT.PlayerState.PLAYING && document.visibilityState === "visible") lastObservedPositionRef.current = target.getCurrentTime();
+            else lastObservedPositionRef.current = null;
+            if (!isYouTubeEndedState(data)) return;
+            const duration = target.getDuration();
+            const sufficientlyWatched = canCompleteYouTube({ ended: true, watchedSeconds: playedSecondsRef.current, durationSeconds: duration, alreadyCompleted: completedRef.current });
+            if (completedRef.current) return;
+            // ENDED évite une complétion pendant un seek, et le cumul réellement
+            // observé doit tout de même couvrir au moins 95 % de la durée.
+            if (sufficientlyWatched) {
+              completedRef.current = true;
+              void recordLessonProgress({ lessonId, isCompleted: true, watchedSeconds: Math.round(playedSecondsRef.current), lastPositionSeconds: 0 }).then(() => router.refresh());
+              advanceTrigger();
+            } else {
+              void recordLessonProgress({ lessonId, watchedSeconds: Math.round(playedSecondsRef.current), lastPositionSeconds: 0 });
+            }
+          },
+          onError: ({ data }: { data: number }) => {
+            setIsPlaying(false);
+            setError(youtubePlayerErrorMessage(data));
+          },
+        },
+      });
+    }).catch(() => setError("Le lecteur YouTube n’a pas pu être chargé. Vérifiez votre connexion ou les réglages de confidentialité."));
+    return () => { disposed = true; playerRef.current?.destroy(); playerRef.current = null; };
+  }, [advanceTrigger, initialPositionSeconds, lessonId, router, videoId]);
+
+  useEffect(() => {
+    if (!isPlaying) return;
+    const resetObservation = () => {
+      lastObservedPositionRef.current = null;
+      if (document.visibilityState === "visible" && playerRef.current) {
+        // Nouvelle baseline : le déplacement produit pendant que l'onglet était
+        // masqué ne sera jamais crédité au retour.
+        lastObservedPositionRef.current = playerRef.current.getCurrentTime();
+      }
+    };
+    document.addEventListener("visibilitychange", resetObservation);
+    const timer = window.setInterval(() => {
+      const player = playerRef.current;
+      if (!player) return;
+      if (document.visibilityState !== "visible") {
+        lastObservedPositionRef.current = null;
+        return;
+      }
+      const current = player.getCurrentTime();
+      const observed = observeYouTubePlayback(
+        { watchedSeconds: playedSecondsRef.current, lastPosition: lastObservedPositionRef.current },
+        current,
+        true,
+      );
+      playedSecondsRef.current = observed.watchedSeconds;
+      lastObservedPositionRef.current = observed.lastPosition;
+      reportTicksRef.current += 1;
+      if (reportTicksRef.current % 5 === 0) {
+        void recordLessonProgress({ lessonId, watchedSeconds: Math.round(playedSecondsRef.current), lastPositionSeconds: Math.round(current) });
+      }
+    }, 1000);
+    return () => {
+      window.clearInterval(timer);
+      document.removeEventListener("visibilitychange", resetObservation);
+    };
+  }, [isPlaying, lessonId]);
+
+  return (
+    <div className="relative aspect-video overflow-hidden rounded-lg bg-black">
+      <div ref={mountRef} className="h-full w-full" title={title ?? "Vidéo YouTube"} />
+      {error ? <div role="alert" className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-black/90 p-6 text-center text-sm text-white"><p>{error}</p><a className="underline" href={`https://www.youtube.com/watch?v=${videoId}`} target="_blank" rel="noopener noreferrer">Ouvrir la vidéo sur YouTube</a></div> : null}
+      {autoAdvance.countdown !== null ? <AutoAdvanceOverlay countdown={autoAdvance.countdown} nextLessonTitle={nextLessonTitle} onNow={autoAdvance.goNow} onCancel={autoAdvance.cancel} /> : null}
+    </div>
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -445,5 +617,12 @@ declare module "react" {
         HTMLElement
       >;
     }
+  }
+}
+
+declare global {
+  interface Window {
+    YT?: YouTubeNamespace;
+    onYouTubeIframeAPIReady?: () => void;
   }
 }

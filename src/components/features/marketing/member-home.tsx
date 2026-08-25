@@ -2,7 +2,7 @@
 // reprendre l'apprentissage, recommandations, puis découverte. Pas de héro
 // marketing (l'utilisateur est déjà membre).
 
-import { BookOpen, Heart, Search } from "lucide-react";
+import { BookOpen, Heart, Search, Sparkles } from "lucide-react";
 import Link from "next/link";
 
 import { CategoryCard } from "@/components/features/courses/category-card";
@@ -41,10 +41,13 @@ export async function MemberHome({ userId, userName }: MemberHomeProps) {
 
       <main className="flex-1">
         {/* HERO compact personnalisé */}
-        <section className="border-b border-border bg-muted/30 py-8">
+        <section className="relative overflow-hidden border-b border-[color:var(--brand-secondary)]/15 bg-gradient-to-br from-[color:var(--brand-primary)]/8 via-background to-[color:var(--brand-accent)]/10 py-8 sm:py-10">
           <Container>
-            <div className="flex flex-col gap-5">
+            <div className="flex max-w-3xl flex-col gap-5">
               <div>
+                <p className="mb-2 inline-flex items-center gap-1.5 rounded-full border border-[color:var(--brand-secondary)]/20 bg-background/80 px-3 py-1 text-xs font-semibold text-[color:var(--brand-secondary)] dark:text-blue-300">
+                  <Sparkles className="h-3.5 w-3.5" aria-hidden /> Votre espace personnel
+                </p>
                 <h1 className="text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
                   Bonjour{firstName ? ` ${firstName}` : ""} 👋
                 </h1>
@@ -110,10 +113,10 @@ export async function MemberHome({ userId, userName }: MemberHomeProps) {
                 ))}
               </div>
             ) : (
-              <div className="mt-5 rounded-xl border border-dashed border-border bg-muted/30 p-8 text-center">
-                <p className="text-sm text-muted-foreground">
-                  Vous n&apos;avez pas encore commencé de formation.
-                </p>
+              <div className="mt-5 rounded-2xl border border-dashed border-[color:var(--brand-secondary)]/30 bg-[color:var(--brand-secondary)]/5 p-7 text-center sm:p-9">
+                <span className="mx-auto flex h-11 w-11 items-center justify-center rounded-full bg-[color:var(--brand-secondary)]/10 text-[color:var(--brand-secondary)]"><BookOpen className="h-5 w-5" aria-hidden /></span>
+                <p className="mt-3 text-sm font-medium text-foreground">Votre prochaine compétence commence ici.</p>
+                <p className="mt-1 text-sm text-muted-foreground">Choisissez une formation à votre rythme, puis retrouvez-la facilement dans cet espace.</p>
                 <Button asChild className="mt-3">
                   <Link href="/cours">Découvrir une première formation</Link>
                 </Button>

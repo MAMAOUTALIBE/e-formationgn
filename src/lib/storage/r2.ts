@@ -4,7 +4,7 @@ import "server-only";
 // Si les variables d'env R2 ne sont pas configurées, les fonctions lèvent
 // une erreur claire pour aider le formateur à comprendre.
 
-import { PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
+import { DeleteObjectCommand, PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 
 let cachedClient: S3Client | null = null;
@@ -58,6 +58,12 @@ export function isR2Configured(): boolean {
 // L'upload d'images peut s'en passer (servies via proxy/route), pas les vidéos.
 export function isR2PublicUrlConfigured(): boolean {
   return Boolean(process.env.R2_PUBLIC_URL);
+}
+
+/** Supprime uniquement une clé déjà validée comme appartenant à notre bucket. */
+export async function deleteR2Object(key: string): Promise<void> {
+  const cfg = getConfig();
+  await getClient().send(new DeleteObjectCommand({ Bucket: cfg.bucket, Key: key }));
 }
 
 export interface PresignedUploadResult {

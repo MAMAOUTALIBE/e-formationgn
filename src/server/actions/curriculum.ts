@@ -19,6 +19,7 @@ import {
 } from "@/lib/mux";
 import { prisma } from "@/lib/prisma";
 import { safeDeleteMuxAsset } from "@/server/services/mux-service";
+import { normalizeLessonVideoUrl } from "@/lib/youtube";
 import {
   lessonResourceSchema,
   lessonSchema,
@@ -696,6 +697,8 @@ export async function setLessonExternalVideoUrl(
       message: parsed.error.flatten().fieldErrors.url?.[0] ?? "URL invalide.",
     };
   }
+  const normalized = normalizeLessonVideoUrl(parsed.data.url);
+  if (!normalized.success) return { success: false, message: normalized.message };
 
   // Si une vidéo Mux existait, on la libère côté Mux (best-effort).
   if (lesson.muxAssetId) {
@@ -707,7 +710,7 @@ export async function setLessonExternalVideoUrl(
   await prisma.lesson.update({
     where: { id: lessonId },
     data: {
-      externalVideoUrl: parsed.data.url,
+      externalVideoUrl: normalized.url,
       muxAssetId: null,
       muxPlaybackId: null,
       muxUploadId: null,

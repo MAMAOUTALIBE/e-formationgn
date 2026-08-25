@@ -14,6 +14,7 @@ import { nanoid } from "nanoid";
 
 import { auth } from "@/auth";
 import { requireInstructorOrAdmin } from "@/lib/auth/authorization";
+import { executeCourseDeletion } from "@/lib/domain/course-deletion";
 import { isTrainingCenterMode } from "@/lib/platform-mode";
 import { prisma } from "@/lib/prisma";
 import { appendSlugSuffix, slugify } from "@/lib/slug";
@@ -23,11 +24,10 @@ import {
   updateCoursePricingSchema,
   updateCourseSeoSchema,
 } from "@/lib/validators/courses-instructor";
-import {
-  COURSE_NOT_DELETABLE_MESSAGE,
-  getCourseDeletionStatus,
-} from "@/server/queries/course-deletion";
 import { computeCourseReadiness } from "@/server/queries/instructor";
+import { createAuditLog } from "@/server/services/audit-log";
+import { cleanupDeletedCourseMedia } from "@/server/services/course-media-cleanup";
+import { deleteCourseRecordIfUnused } from "@/server/services/course-deletion";
 import type { ActionResult } from "./auth";
 
 // ---------------------------------------------------------------------------
@@ -519,16 +519,19 @@ export async function unpublishCourse(courseId: string): Promise<ActionResult> {
 // ---------------------------------------------------------------------------
 
 export async function deleteCourse(courseId: string): Promise<ActionResult> {
-  const ctx = await requireInstructor();
-  await ensureCourseOwnership(courseId, ctx);
-
-  // Garde financière : pas de suppression définitive si ventes/certificats.
-  const status = await getCourseDeletionStatus(courseId);
-  if (!status.deletable) {
-    return { success: false, message: COURSE_NOT_DELETABLE_MESSAGE };
-  }
-
-  await prisma.course.delete({ where: { id: courseId } });
-  revalidatePath("/formateur/cours");
-  redirect("/formateur/cours");
+  return executeCourseDeletion({
+    authorize: async () => {
+      const ctx = await requireInstructor();
+      await ensureCourseOwnership(courseId, ctx);
+      return ctx;
+    },
+    deleteRecord: () => deleteCourseRecordIfUnused(courseId),
+    cleanup: cleanupDeletedCourseMedia,
+    audit: (actorId, title) => createAuditLog({ actorId, action: "course.delete", targetType: "Course", targetId: courseId, metadata: { title } }),
+    onDeleted: () => {
+      revalidatePath("/formateur/cours");
+      revalidatePath(`/formateur/cours/${courseId}`);
+      updateTag("courses");
+    },
+  });
 }

@@ -1,20 +1,20 @@
 "use client";
 
-import { Trash2 } from "lucide-react";
+import { Archive, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
-import { adminDeleteCourse } from "@/server/actions/admin-courses";
-import { deleteCourse } from "@/server/actions/instructor";
+import { adminDeleteCourse, unpublishCourse } from "@/server/actions/admin-courses";
+import { archiveCourse, deleteCourse } from "@/server/actions/instructor";
 
 interface CourseDeleteButtonProps {
   courseId: string;
   courseTitle: string;
   /** "instructor" appelle deleteCourse (propriétaire), "admin" appelle adminDeleteCourse. */
   mode: "instructor" | "admin";
-  /** Faux si le cours a des ventes/certificats → suppression définitive impossible. */
+  /** Faux si le cours possède un historique sensible ou appartient à un programme. */
   deletable: boolean;
   enrollments: number;
   /** Affichage compact dans un menu d’actions, sans changer la confirmation. */
@@ -26,7 +26,6 @@ export function CourseDeleteButton({
   courseTitle,
   mode,
   deletable,
-  enrollments,
   presentation = "button",
 }: CourseDeleteButtonProps) {
   const router = useRouter();
@@ -37,8 +36,6 @@ export function CourseDeleteButton({
   function confirm() {
     startTransition(async () => {
       setError(null);
-      // deleteCourse (formateur) redirige côté serveur en cas de succès ;
-      // adminDeleteCourse renvoie un ActionResult et on navigue ici.
       const res =
         mode === "admin"
           ? await adminDeleteCourse(courseId)
@@ -48,7 +45,16 @@ export function CourseDeleteButton({
         return;
       }
       setOpen(false);
-      if (mode === "admin") router.push("/admin/cours");
+      router.push(mode === "admin" ? "/admin/cours" : "/formateur/cours");
+    });
+  }
+
+  function archive() {
+    startTransition(async () => {
+      setError(null);
+      const result = mode === "admin" ? await unpublishCourse(courseId) : await archiveCourse(courseId);
+      if (!result.success) setError(result.message ?? "Échec de l’archivage.");
+      else router.refresh();
     });
   }
 
@@ -56,9 +62,9 @@ export function CourseDeleteButton({
     <div className="space-y-2">
       {!deletable ? (
         <p className="text-xs text-muted-foreground">
-          Suppression définitive impossible : cette formation a des ventes ou des
-          certificats. Archivez-le pour le retirer du catalogue tout en
-          préservant la comptabilité.
+          Suppression définitive impossible : cette formation possède un historique
+          sensible ou appartient à un programme. Archivez-la pour la retirer du
+          catalogue sans perdre cet historique.
         </p>
       ) : null}
 
@@ -79,6 +85,13 @@ export function CourseDeleteButton({
         Supprimer la formation
       </Button>
 
+      {!deletable ? (
+        <Button type="button" variant="outline" disabled={pending} onClick={archive} className="w-full">
+          <Archive className="h-4 w-4" />
+          Archiver la formation
+        </Button>
+      ) : null}
+
       {error ? (
         <p className="text-xs text-[color:var(--brand-danger)]">{error}</p>
       ) : null}
@@ -87,11 +100,7 @@ export function CourseDeleteButton({
         open={open}
         onClose={() => setOpen(false)}
         title={`Supprimer « ${courseTitle} » ?`}
-        description={`Action irréversible.${
-          enrollments > 0
-            ? ` ${enrollments.toLocaleString("fr-FR")} inscription(s) seront aussi supprimées.`
-            : ""
-        } La formation, ses sections, leçons, quiz et avis seront définitivement effacés.`}
+        description="Action irréversible. La formation, ses sections, leçons, quiz, ressources et données sans historique seront définitivement effacés."
         confirmLabel="Supprimer définitivement"
         destructive
         pending={pending}

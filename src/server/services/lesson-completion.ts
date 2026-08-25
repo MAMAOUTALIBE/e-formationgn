@@ -9,9 +9,10 @@ import "server-only";
 // particulier, quiz.ts ne recalculait PAS `Enrollment.progressPercent`
 // après un quiz passé, ce qui laissait la barre de progression à jour.
 
-import type { Prisma } from "@/generated/prisma/client";
+import { Prisma } from "@/generated/prisma/client";
 
 import { prisma } from "@/lib/prisma";
+import { mergeLessonVideoMetrics } from "@/lib/lesson-video-progress";
 
 type Tx = Prisma.TransactionClient;
 
@@ -33,6 +34,18 @@ export interface LessonCompletionResult {
   enrollmentCompletedAt: Date | null;
 }
 
+async function serializableWithRetry<T>(work: (tx: Tx) => Promise<T>): Promise<T> {
+  for (let attempt = 0; ; attempt += 1) {
+    try {
+      return await prisma.$transaction(work, {
+        isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
+      });
+    } catch (error) {
+      if (!(error instanceof Prisma.PrismaClientKnownRequestError) || error.code !== "P2034" || attempt >= 2) throw error;
+    }
+  }
+}
+
 /**
  * Upsert LessonProgress(isCompleted=true) + recompute Enrollment progress.
  *
@@ -50,6 +63,11 @@ export async function markLessonCompleted(
       throw new Error("Leçon introuvable (courseId non résolu).");
     }
 
+    const existing = await client.lessonProgress.findUnique({
+      where: { userId_lessonId: { userId: input.userId, lessonId: input.lessonId } },
+      select: { watchedSeconds: true, lastPositionSeconds: true },
+    });
+    const metrics = mergeLessonVideoMetrics(existing, input);
     await client.lessonProgress.upsert({
       where: {
         userId_lessonId: { userId: input.userId, lessonId: input.lessonId },
@@ -57,25 +75,23 @@ export async function markLessonCompleted(
       update: {
         isCompleted: true,
         completedAt: new Date(),
-        ...(input.watchedSeconds !== undefined ? { watchedSeconds: input.watchedSeconds } : {}),
-        ...(input.lastPositionSeconds !== undefined
-          ? { lastPositionSeconds: input.lastPositionSeconds }
-          : {}),
+        watchedSeconds: metrics.watchedSeconds,
+        lastPositionSeconds: metrics.lastPositionSeconds,
       },
       create: {
         userId: input.userId,
         lessonId: input.lessonId,
         isCompleted: true,
         completedAt: new Date(),
-        watchedSeconds: input.watchedSeconds ?? 0,
-        lastPositionSeconds: input.lastPositionSeconds ?? 0,
+        watchedSeconds: metrics.watchedSeconds,
+        lastPositionSeconds: metrics.lastPositionSeconds,
       },
     });
 
     return recomputeEnrollmentProgress(client, input.userId, courseId);
   };
 
-  return tx ? run(tx) : prisma.$transaction((t) => run(t));
+  return tx ? run(tx) : serializableWithRetry(run);
 }
 
 /**
@@ -119,21 +135,37 @@ export async function recordLessonProgressFields(
     lastPositionSeconds?: number;
   },
 ): Promise<void> {
-  await prisma.lessonProgress.upsert({
-    where: { userId_lessonId: { userId: input.userId, lessonId: input.lessonId } },
-    update: {
-      ...(input.watchedSeconds !== undefined ? { watchedSeconds: input.watchedSeconds } : {}),
-      ...(input.lastPositionSeconds !== undefined
-        ? { lastPositionSeconds: input.lastPositionSeconds }
-        : {}),
-    },
-    create: {
-      userId: input.userId,
-      lessonId: input.lessonId,
-      watchedSeconds: input.watchedSeconds ?? 0,
-      lastPositionSeconds: input.lastPositionSeconds ?? 0,
-      isCompleted: false,
-    },
+  await serializableWithRetry(async (tx) => {
+    // Le contrôle est répété dans la même transaction que l'écriture : une
+    // révocation concurrente d'accès ne laisse pas passer un rapport partiel.
+    const lesson = await tx.lesson.findUnique({
+      where: { id: input.lessonId },
+      select: { isFreePreview: true, section: { select: { courseId: true } } },
+    });
+    if (!lesson) throw new Error("Leçon introuvable.");
+    if (!lesson.isFreePreview) {
+      const enrollment = await tx.enrollment.findUnique({
+        where: { userId_courseId: { userId: input.userId, courseId: lesson.section.courseId } },
+        select: { id: true },
+      });
+      if (!enrollment) throw new Error("Inscrivez-vous à la formation pour accéder à cette leçon.");
+    }
+    const where = { userId_lessonId: { userId: input.userId, lessonId: input.lessonId } };
+    const existing = await tx.lessonProgress.findUnique({
+      where,
+      select: { watchedSeconds: true, lastPositionSeconds: true },
+    });
+    const metrics = mergeLessonVideoMetrics(existing, input);
+    await tx.lessonProgress.upsert({
+      where,
+      update: metrics,
+      create: {
+        userId: input.userId,
+        lessonId: input.lessonId,
+        ...metrics,
+        isCompleted: false,
+      },
+    });
   });
 }
 

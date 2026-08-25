@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
 import { ProgramComposition } from "@/components/features/admin/program-composition";
+import { ProgramDeleteButton } from "@/components/features/admin/program-delete-button";
 import {
   ProgramForm,
   type ProgramFormValues,
@@ -58,13 +59,21 @@ export default async function ProgramDetailPage({
         items={[{ label: "Programmes", href: "/admin/formations" }, { label: program.title }]}
       />
 
-      <header>
-        <h1 className="text-2xl font-semibold tracking-tight text-foreground">{program.title}</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          {program.courses.length} formation{program.courses.length !== 1 ? "s" : ""} · {program.sessions.length} session
-          {program.sessions.length > 1 ? "s" : ""}
-          {program.code ? ` · code ${program.code}` : ""}
-        </p>
+      <header className="flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight text-foreground">{program.title}</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            {program.courses.length} formation{program.courses.length !== 1 ? "s" : ""} · {program.sessions.length} session
+            {program.sessions.length > 1 ? "s" : ""}
+            {program.code ? ` · code ${program.code}` : ""}
+          </p>
+        </div>
+        <ProgramDeleteButton
+          programId={program.id}
+          programTitle={program.title}
+          deletable={program.sessions.length === 0}
+          returnToList
+        />
       </header>
 
       <div className="grid gap-6 lg:grid-cols-2">
@@ -142,7 +151,7 @@ export default async function ProgramDetailPage({
         </Card>
       </div>
 
-      <section className="max-w-3xl space-y-4">
+      <section id="program-information" className="max-w-3xl scroll-mt-6 space-y-4">
         <h2 className="text-lg font-semibold text-foreground">Informations</h2>
         <ProgramForm
           programId={program.id}

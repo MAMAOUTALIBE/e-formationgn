@@ -38,6 +38,7 @@ export interface AdminCourseRow {
   averageRating: number;
   totalRatings: number;
   totalEnrollments: number;
+  deletion: { enrollments: number; orderItems: number; certificates: number; programs: number };
   priceEUR: number;
   category: { id: string; name: string };
   instructor: { id: string; name: string | null; email: string };
@@ -91,6 +92,7 @@ export async function listAdminCourses(
         averageRating: true,
         totalRatings: true,
         totalEnrollments: true,
+        _count: { select: { enrollments: true, orderItems: true, certificates: true, programs: true } },
         priceEUR: true,
         createdAt: true,
         updatedAt: true,
@@ -102,7 +104,7 @@ export async function listAdminCourses(
   ]);
 
   return {
-    rows: rows.map((r) => ({ ...r, priceEUR: Number(r.priceEUR) })),
+    rows: rows.map(({ _count, ...r }) => ({ ...r, priceEUR: Number(r.priceEUR), deletion: _count })),
     total,
     page,
     pageSize,
@@ -123,6 +125,7 @@ export async function listFeaturedCoursesAdmin(): Promise<AdminCourseRow[]> {
       averageRating: true,
       totalRatings: true,
       totalEnrollments: true,
+      _count: { select: { enrollments: true, orderItems: true, certificates: true, programs: true } },
       priceEUR: true,
       createdAt: true,
       updatedAt: true,
@@ -130,7 +133,7 @@ export async function listFeaturedCoursesAdmin(): Promise<AdminCourseRow[]> {
       instructor: { select: { id: true, name: true, email: true } },
     },
   });
-  return rows.map((r) => ({ ...r, priceEUR: Number(r.priceEUR) }));
+  return rows.map(({ _count, ...r }) => ({ ...r, priceEUR: Number(r.priceEUR), deletion: _count }));
 }
 
 export async function getAdminCoursesDashboardData() {

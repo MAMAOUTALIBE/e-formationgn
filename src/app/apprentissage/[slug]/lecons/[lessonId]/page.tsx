@@ -327,6 +327,7 @@ export default async function LessonViewerPage({ params }: PageProps) {
                       externalVideoUrl={lesson.externalVideoUrl}
                       lessonId={lesson.id}
                       initialPositionSeconds={lessonProgress?.lastPositionSeconds ?? 0}
+                      initialWatchedSeconds={lessonProgress?.watchedSeconds ?? 0}
                       durationSeconds={lesson.videoDurationSeconds}
                       title={lesson.title}
                       nextLessonHref={

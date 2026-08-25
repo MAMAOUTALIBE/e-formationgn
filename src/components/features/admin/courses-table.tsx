@@ -5,10 +5,11 @@ import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import {
   Archive, ArrowDown, ArrowUp, ArrowUpDown, BookOpen, Check,
-  ChevronLeft, ChevronRight, Copy, EllipsisVertical, Pencil, Trash2,
+  ChevronLeft, ChevronRight, Copy, Pencil, Trash2,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { AdminActionMenu } from "@/components/ui/admin-action-menu";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Select } from "@/components/ui/select";
@@ -144,7 +145,7 @@ export function AdminCoursesTable({ rows, params, page, pageSize, total, totalPa
         </div>
       </footer>
 
-      <ConfirmDialog open={Boolean(toDelete)} onClose={() => setToDelete(null)} title={`Supprimer « ${toDelete?.title ?? "cette formation"} » ?`} description="Cette action est définitive. Une formation liée à des ventes ou certificats ne pourra pas être supprimée." confirmLabel="Supprimer définitivement" destructive pending={pending} onConfirm={() => { if (toDelete) run(() => adminDeleteCourse(toDelete.id)); }} />
+      <ConfirmDialog open={Boolean(toDelete)} onClose={() => setToDelete(null)} title={`Supprimer « ${toDelete?.title ?? "cette formation"} » ?`} description="Cette action est définitive. Une formation liée à des commandes, inscriptions, certificats ou à un programme ne pourra pas être supprimée ; elle devra être archivée." confirmLabel="Supprimer définitivement" destructive pending={pending} onConfirm={() => { if (toDelete) run(() => adminDeleteCourse(toDelete.id)); }} />
     </section>
   );
 }
@@ -161,34 +162,24 @@ function SortableHeader({ label, field, params, align }: { label: string; field:
 
 function CourseMenu({ course, pending, onAction, onDelete }: { course: AdminCourseRow; pending: boolean; onAction: (action: () => Promise<{ success: boolean; message?: string }>) => void; onDelete: () => void }) {
   return (
-    <details className="group relative inline-block text-left">
-      <summary
-        className="flex h-8 w-8 cursor-pointer list-none items-center justify-center rounded-md hover:bg-muted [&::-webkit-details-marker]:hidden"
-        aria-label={`Actions pour ${course.title}`}
-      >
-        <EllipsisVertical className="h-4 w-4" />
-      </summary>
-      <div
-        data-testid="course-actions-menu"
-        aria-label={`Menu d’actions pour ${course.title}`}
-        className="fixed inset-x-4 bottom-4 z-50 w-auto overflow-hidden rounded-xl border-2 border-blue-300/70 bg-gradient-to-b from-brand-primary to-blue-950 p-1.5 text-left text-sm text-white shadow-[0_20px_50px_rgba(15,23,42,0.45)] ring-1 ring-white/20 group-open:block sm:inset-x-auto sm:bottom-auto sm:right-8 sm:mt-1 sm:w-48"
-      >
-        <p className="border-b border-white/20 px-2.5 pb-1.5 pt-1 text-[10px] font-bold uppercase tracking-[0.12em] text-blue-100">
+    <AdminActionMenu triggerLabel={`Actions pour ${course.title}`} menuLabel={`Menu d’actions pour ${course.title}`} widthClass="sm:w-52">
+      {(close) => <div data-testid="course-actions-menu">
+        <p className="border-b border-border px-2.5 pb-1.5 pt-1 text-[10px] font-bold uppercase tracking-[0.12em] text-muted-foreground">
           Actions de la formation
         </p>
         <div className="space-y-0.5 pt-1">
-          <MenuLink href={`/admin/cours/${course.id}`} icon={<Pencil className="h-4 w-4" />}>Modifier</MenuLink>
-          {course.status !== "PUBLISHED" ? <MenuButton disabled={pending} icon={<Check className="h-4 w-4" />} onClick={() => onAction(() => approveCourse(course.id))}>Publier</MenuButton> : null}
-          <MenuButton disabled={pending} icon={<Copy className="h-4 w-4" />} onClick={() => onAction(() => duplicateCourse(course.id))}>Dupliquer</MenuButton>
-          <MenuButton disabled={pending || course.status === "ARCHIVED"} icon={<Archive className="h-4 w-4" />} onClick={() => onAction(() => unpublishCourse(course.id))}>Archiver</MenuButton>
-          <MenuButton disabled={pending} danger icon={<Trash2 className="h-4 w-4" />} onClick={onDelete}>Supprimer</MenuButton>
+          <MenuLink href={`/admin/cours/${course.id}`} icon={<Pencil className="h-4 w-4" />} onSelect={close}>Modifier</MenuLink>
+          {course.status !== "PUBLISHED" ? <MenuButton disabled={pending} icon={<Check className="h-4 w-4" />} onClick={() => { close(); onAction(() => approveCourse(course.id)); }}>Publier</MenuButton> : null}
+          <MenuButton disabled={pending} icon={<Copy className="h-4 w-4" />} onClick={() => { close(); onAction(() => duplicateCourse(course.id)); }}>Dupliquer</MenuButton>
+          <MenuButton disabled={pending || course.status === "ARCHIVED"} icon={<Archive className="h-4 w-4" />} onClick={() => { close(); onAction(() => unpublishCourse(course.id)); }}>Archiver</MenuButton>
+          <MenuButton disabled={pending} danger icon={<Trash2 className="h-4 w-4" />} onClick={() => { close(); onDelete(); }}>Supprimer</MenuButton>
         </div>
-      </div>
-    </details>
+      </div>}
+    </AdminActionMenu>
   );
 }
-function MenuLink({ href, icon, children }: { href: string; icon: React.ReactNode; children: React.ReactNode }) { return <Link href={href} className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 font-medium transition-colors hover:bg-white/15 focus-visible:bg-white/15 focus-visible:outline-white">{icon}{children}</Link>; }
-function MenuButton({ icon, children, danger, ...props }: React.ButtonHTMLAttributes<HTMLButtonElement> & { icon: React.ReactNode; danger?: boolean }) { return <button type="button" className={`flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left font-medium transition-colors disabled:opacity-40 ${danger ? "bg-red-500/15 text-red-100 hover:bg-red-500 hover:text-white focus-visible:bg-red-500 focus-visible:text-white" : "text-white hover:bg-white/15 focus-visible:bg-white/15"}`} {...props}>{icon}{children}</button>; }
+function MenuLink({ href, icon, children, onSelect }: { href: string; icon: React.ReactNode; children: React.ReactNode; onSelect: () => void }) { return <Link role="menuitem" href={href} onClick={onSelect} className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 font-medium hover:bg-muted focus-visible:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">{icon}{children}</Link>; }
+function MenuButton({ icon, children, danger, ...props }: React.ButtonHTMLAttributes<HTMLButtonElement> & { icon: React.ReactNode; danger?: boolean }) { return <button role="menuitem" type="button" className={`flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left font-medium hover:bg-muted focus-visible:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-40 ${danger ? "text-destructive" : ""}`} {...props}>{icon}{children}</button>; }
 function PageLink({ href, disabled, label, children }: { href: string; disabled: boolean; label: string; children: React.ReactNode }) { return disabled ? <span aria-disabled className="flex h-8 w-8 items-center justify-center rounded-md opacity-35">{children}</span> : <Link href={href} aria-label={label} className="flex h-8 w-8 items-center justify-center rounded-md text-foreground hover:bg-muted">{children}</Link>; }
 function CourseStatusBadge({ status }: { status: CourseStatus }) { if (status === "PUBLISHED") return <StatusBadge tone="success">Publié</StatusBadge>; if (status === "PENDING_REVIEW") return <StatusBadge tone="warning">À modérer</StatusBadge>; if (status === "REJECTED") return <StatusBadge tone="danger">Rejeté</StatusBadge>; if (status === "ARCHIVED") return <StatusBadge tone="neutral">Archivé</StatusBadge>; return <StatusBadge tone="neutral">Brouillon</StatusBadge>; }
 function paginationNumbers(page: number, total: number): Array<number | "…"> { if (total <= 7) return Array.from({ length: total }, (_, index) => index + 1); const values: Array<number | "…"> = [1]; if (page > 3) values.push("…"); for (let value = Math.max(2, page - 1); value <= Math.min(total - 1, page + 1); value++) values.push(value); if (page < total - 2) values.push("…"); values.push(total); return values; }
