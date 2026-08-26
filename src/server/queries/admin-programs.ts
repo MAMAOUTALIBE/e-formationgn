@@ -119,6 +119,9 @@ export async function getProgramDetail(programId: string) {
           location: true,
           capacity: true,
           status: true,
+          // La fiche décide de l'offre « Supprimer » sur ce compteur : la règle
+          // serveur porte sur les inscriptions, pas sur le nombre de sessions.
+          _count: { select: { registrations: true } },
         },
       },
     },

@@ -36,6 +36,12 @@
   --muted-foreground: var(--neutral-600);
   --card: #ffffff;
   --card-foreground: var(--neutral-900);
+  /* Surfaces flottantes (menus d'actions, listes de recherche, infobulles).
+     Distinctes de --card : un calque flottant doit être TOTALEMENT opaque et
+     se détacher du fond qu'il recouvre, sinon le texte se superpose au
+     contenu situé dessous. */
+  --popover: #ffffff;
+  --popover-foreground: var(--neutral-900);
   --border: var(--neutral-200);
   --input: var(--neutral-200);
   --ring: var(--brand-secondary);
@@ -74,6 +80,10 @@
   --muted-foreground: #94a3b8;
   --card: #0f172a;
   --card-foreground: #e2e8f0;
+  /* Plus clair que --card : en sombre, un menu de même teinte que la carte
+     qu'il recouvre paraît « fondu ». */
+  --popover: #16213a;
+  --popover-foreground: #f1f5f9;
   --border: #1e293b;
   --input: #1e293b;
   --ring: var(--brand-accent);
@@ -95,6 +105,8 @@
   --color-muted-foreground: var(--muted-foreground);
   --color-card: var(--card);
   --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);

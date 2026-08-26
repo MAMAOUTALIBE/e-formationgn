@@ -36,10 +36,13 @@ export function LearningFilterTabs({ active, counts }: LearningFilterTabsProps) 
             href={tab.key === "all" ? "/apprentissage" : `/apprentissage?filter=${tab.key}`}
             aria-current={isActive ? "page" : undefined}
             className={cn(
-              "relative inline-flex items-center gap-2 px-4 py-3 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+              // Le repère actif était un filet de 2 px sur fond blanc : peu
+              // visible, et la barre entière se lisait comme un simple trait.
+              // Un fond teinté sur l'onglet actif donne son volume au groupe.
+              "relative inline-flex items-center gap-2 rounded-t-lg px-4 py-3 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1",
               isActive
-                ? "text-foreground"
-                : "text-muted-foreground hover:text-foreground",
+                ? "bg-[color:var(--brand-secondary)]/8 text-[color:var(--brand-secondary)] dark:text-blue-300"
+                : "text-muted-foreground hover:bg-muted/60 hover:text-foreground",
             )}
           >
             {tab.label}
@@ -47,7 +50,7 @@ export function LearningFilterTabs({ active, counts }: LearningFilterTabsProps) 
               className={cn(
                 "inline-flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 text-[10px] font-semibold tabular-nums",
                 isActive
-                  ? "bg-[color:var(--brand-primary)] text-primary-foreground"
+                  ? "bg-[color:var(--brand-secondary)] text-primary-foreground"
                   : "bg-muted text-muted-foreground",
               )}
             >
@@ -56,7 +59,7 @@ export function LearningFilterTabs({ active, counts }: LearningFilterTabsProps) 
             {isActive ? (
               <span
                 aria-hidden
-                className="absolute inset-x-0 bottom-0 h-0.5 bg-[color:var(--brand-primary)]"
+                className="absolute inset-x-0 bottom-0 h-0.5 bg-[color:var(--brand-secondary)]"
               />
             ) : null}
           </Link>

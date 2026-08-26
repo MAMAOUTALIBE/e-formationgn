@@ -1,5 +1,5 @@
 export const PROGRAM_NOT_DELETABLE_MESSAGE =
-  "Ce programme possède au moins une session ou un historique associé. Il ne peut pas être supprimé définitivement. Archivez-le à la place pour préserver les inscriptions et les attestations.";
+  "Ce programme porte au moins une inscription. Il ne peut pas être supprimé définitivement : les conventions, feuilles d’émargement et attestations qui en découlent doivent rester consultables. Archivez-le à la place. Un programme dont les sessions sont restées vides, lui, reste supprimable.";
 
 export interface DeletedProgram {
   id: string;

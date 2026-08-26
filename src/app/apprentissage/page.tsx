@@ -192,6 +192,7 @@ export default async function LearningPage({ searchParams }: PageProps) {
           {activeFilter !== "wishlist" ? (
             visibleEnrollments.length === 0 ? (
               <EmptyState
+                tone="brand"
                 icon={activeFilter === "completed" ? <Award className="h-6 w-6" /> : <BookOpen className="h-6 w-6" />}
                 title={
                   activeFilter === "in-progress"
@@ -247,6 +248,7 @@ export default async function LearningPage({ searchParams }: PageProps) {
           {activeFilter === "wishlist" ? (
             wishlistItems.length === 0 ? (
               <EmptyState
+                tone="brand"
                 icon={<Sparkles className="h-6 w-6" />}
                 title="Votre liste d'envies est vide."
                 description="Ajoutez des formations via le bouton ♥ sur leur page pour les retrouver ici."

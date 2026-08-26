@@ -2,13 +2,18 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 
-import { canCompleteYouTube, isYouTubeEndedState, normalizeLessonVideoUrl, observeYouTubePlayback, parseYouTubeUrl, youtubePlayerErrorMessage } from "../../src/lib/youtube";
+import { canCompleteYouTube, isYouTubeEndedState, normalizeLessonVideoUrl, observeYouTubePlayback, parseYouTubeUrl, youtubePlayerErrorMessage, youtubeWatchUrl } from "../../src/lib/youtube";
 
 const id = "dQw4w9WgXcQ";
 for (const url of [
   `https://www.youtube.com/watch?v=${id}&t=10`, `https://youtu.be/${id}`,
   `https://youtube.com/shorts/${id}`, `https://www.youtube.com/embed/${id}`,
   `https://www.youtube-nocookie.com/embed/${id}`,
+  // Formes rencontrées dans les liens collés par les formateurs : slash final,
+  // ancien `/v/`, page « en direct », et espaces autour du collage.
+  `https://www.youtube.com/watch/?v=${id}`, `https://www.youtube.com/v/${id}`,
+  `https://www.youtube.com/live/${id}`, `  https://youtu.be/${id}  `,
+  `https://m.youtube.com/watch?v=${id}`,
 ]) {
   test(`reconnaît et normalise ${url}`, () => {
     assert.deepEqual(parseYouTubeUrl(url), { id, embedUrl: `https://www.youtube-nocookie.com/embed/${id}` });
@@ -89,4 +94,47 @@ test("intégration lecteur, heartbeat, reprise, preview et CSP sont raccordés",
   assert.match(preview, /Aperçu de la vidéo YouTube/);
   assert.match(csp, /frame-src[^\n]+youtube-nocookie\.com/);
   assert.match(csp, /script-src[^\n]+www\.youtube\.com/);
+});
+
+test("le lien de repli pointe la vidéo sur youtube.com", () => {
+  assert.equal(youtubeWatchUrl(id), `https://www.youtube.com/watch?v=${id}`);
+});
+
+test("l'élargissement des formats ne relâche pas la validation", () => {
+  for (const url of [
+    // `/live` et `/v` n'échappent pas au contrôle d'identifiant ni d'hôte.
+    "https://www.youtube.com/live/tropcourt", `https://evil.com/embed/${id}`,
+    `https://www.youtube.com/watch/${id}`, // /watch porte l'id en query, pas en chemin
+    `http://www.youtube.com/watch?v=${id}`, // http refusé, l'embed est servi en https
+    `https://www.youtube.com/embed/${id}/extra`,
+  ]) assert.equal(parseYouTubeUrl(url), null, url);
+});
+
+test("le lecteur retombe sur une <iframe> quand l'API JS est indisponible", () => {
+  // CSP, extension de blocage ou réseau coupé : la vidéo doit rester
+  // regardable, seul le suivi automatique de progression est perdu.
+  const player = readFileSync("src/components/features/learning/lesson-player.tsx", "utf8");
+  assert.match(player, /setApiUnavailable\(true\)/);
+  assert.match(player, /apiUnavailable \? \(/);
+  assert.match(player, /<iframe/);
+  assert.match(player, /allowFullScreen/);
+  assert.match(player, /Lecture simplifiée/);
+  // L'API REMPLACE le nœud qu'on lui confie : il ne doit jamais s'agir d'un
+  // nœud rendu par React, sinon React pilote un élément détaché.
+  assert.match(player, /document\.createElement\("div"\)/);
+  assert.match(player, /container\.appendChild\(host\)/);
+  assert.match(player, /container\?\.replaceChildren\(\)/);
+});
+
+test("la CSP autorise les deux origines dont dépend l'API IFrame", () => {
+  // `iframe_api` n'est qu'un chargeur : il injecte `www-widgetapi.js`, servi
+  // selon les régions depuis www.youtube.com OU s.ytimg.com. La politique
+  // étant désormais APPLIQUÉE, une origine manquante laisse le lecteur noir.
+  const csp = readFileSync("next.config.ts", "utf8");
+  const script = csp.match(/`script-src[^`]+`/)?.[0] ?? "";
+  const frame = csp.match(/"frame-src[^"]+"/)?.[0] ?? "";
+  assert.match(script, /https:\/\/www\.youtube\.com/);
+  assert.match(script, /https:\/\/s\.ytimg\.com/);
+  assert.match(frame, /https:\/\/www\.youtube-nocookie\.com/);
+  assert.match(frame, /https:\/\/www\.youtube\.com/);
 });

@@ -10,7 +10,7 @@ import { Play, X } from "lucide-react";
 
 import { recordLessonProgress } from "@/server/actions/learning";
 import { installYouTubeReadyCallback } from "@/lib/youtube-api-ready";
-import { canCompleteYouTube, isYouTubeEndedState, observeYouTubePlayback, parseYouTubeUrl, youtubePlayerErrorMessage } from "@/lib/youtube";
+import { canCompleteYouTube, isYouTubeEndedState, observeYouTubePlayback, parseYouTubeUrl, youtubePlayerErrorMessage, youtubeWatchUrl } from "@/lib/youtube";
 import { useLearningHeartbeat } from "./use-learning-heartbeat";
 
 interface LessonPlayerProps {
@@ -153,15 +153,29 @@ function YouTubeLessonPlayer({ videoId, lessonId, initialPositionSeconds, initia
   const completedRef = useRef(false);
   const [isPlaying, setIsPlaying] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  /** L'API JS n'a pas pu se charger (CSP, extension, réseau) — on retombe
+   *  sur une intégration <iframe> nue : la vidéo reste regardable, seul le
+   *  suivi automatique de progression est perdu. */
+  const [apiUnavailable, setApiUnavailable] = useState(false);
   const autoAdvance = useAutoAdvance(nextLessonHref);
   const advanceTrigger = autoAdvance.trigger;
   useLearningHeartbeat(lessonId, { mode: "VIDEO", isPlaying });
 
   useEffect(() => {
     let disposed = false;
+    const container = mountRef.current;
     void loadYouTubeApi().then((YT) => {
-      if (disposed || !mountRef.current) return;
-      playerRef.current = new YT.Player(mountRef.current, {
+      if (disposed || !container) return;
+      // L'API YouTube REMPLACE l'élément qu'on lui confie par une <iframe>.
+      // Lui passer le nœud rendu par React reviendrait à laisser React piloter
+      // un nœud détaché (et à faire échouer son retrait au démontage). On lui
+      // donne donc un enfant créé à la main, hors de l'arbre React, que l'on
+      // jette soi-même au nettoyage.
+      const host = document.createElement("div");
+      host.style.width = "100%";
+      host.style.height = "100%";
+      container.appendChild(host);
+      playerRef.current = new YT.Player(host, {
         host: "https://www.youtube-nocookie.com", videoId, width: "100%", height: "100%",
         playerVars: { enablejsapi: 1, rel: 0, playsinline: 1, origin: window.location.origin },
         events: {
@@ -198,8 +212,13 @@ function YouTubeLessonPlayer({ videoId, lessonId, initialPositionSeconds, initia
           },
         },
       });
-    }).catch(() => setError("Le lecteur YouTube n’a pas pu être chargé. Vérifiez votre connexion ou les réglages de confidentialité."));
-    return () => { disposed = true; playerRef.current?.destroy(); playerRef.current = null; };
+    }).catch(() => setApiUnavailable(true));
+    return () => {
+      disposed = true;
+      playerRef.current?.destroy();
+      playerRef.current = null;
+      container?.replaceChildren();
+    };
   }, [advanceTrigger, initialPositionSeconds, lessonId, router, videoId]);
 
   useEffect(() => {
@@ -241,8 +260,24 @@ function YouTubeLessonPlayer({ videoId, lessonId, initialPositionSeconds, initia
 
   return (
     <div className="relative aspect-video overflow-hidden rounded-lg bg-black">
-      <div ref={mountRef} className="h-full w-full" title={title ?? "Vidéo YouTube"} />
-      {error ? <div role="alert" className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-black/90 p-6 text-center text-sm text-white"><p>{error}</p><a className="underline" href={`https://www.youtube.com/watch?v=${videoId}`} target="_blank" rel="noopener noreferrer">Ouvrir la vidéo sur YouTube</a></div> : null}
+      {apiUnavailable ? (
+        <>
+          <iframe
+            src={`https://www.youtube-nocookie.com/embed/${videoId}?rel=0&playsinline=1`}
+            title={title ?? "Vidéo YouTube"}
+            className="absolute inset-0 h-full w-full border-0"
+            allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture; fullscreen"
+            allowFullScreen
+            referrerPolicy="strict-origin-when-cross-origin"
+          />
+          <p role="status" className="absolute inset-x-0 bottom-0 bg-black/75 px-3 py-1.5 text-center text-[11px] text-slate-100">
+            Lecture simplifiée : marquez la leçon comme terminée manuellement, sa progression n’est pas suivie automatiquement.
+          </p>
+        </>
+      ) : (
+        <div ref={mountRef} className="h-full w-full" />
+      )}
+      {error ? <div role="alert" className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-black/90 p-6 text-center text-sm text-white"><p>{error}</p><a className="underline" href={youtubeWatchUrl(videoId)} target="_blank" rel="noopener noreferrer">Ouvrir la vidéo sur YouTube</a></div> : null}
       {autoAdvance.countdown !== null ? <AutoAdvanceOverlay countdown={autoAdvance.countdown} nextLessonTitle={nextLessonTitle} onNow={autoAdvance.goNow} onCancel={autoAdvance.cancel} /> : null}
     </div>
   );

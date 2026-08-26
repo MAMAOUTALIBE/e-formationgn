@@ -47,11 +47,15 @@ test("retourne introuvable sans audit ni revalidation", async () => {
   assert.deepEqual(paths, []);
 });
 
-test("bloque un programme ayant une session et propose l'archivage", async () => {
+test("bloque un programme ayant une inscription et propose l'archivage", async () => {
   const { dependencies, audits, paths } = harness({ deleteIfUnused: async () => "blocked" });
   assert.deepEqual(await executeProgramDeletion(dependencies, "program-1"), { success: false, programId: "program-1", message: PROGRAM_NOT_DELETABLE_MESSAGE });
   assert.deepEqual(audits, []);
   assert.deepEqual(paths, []);
+  // Le message doit désigner ce qui bloque VRAIMENT — sinon l'administrateur
+  // croit qu'une session vide condamne son programme d'essai.
+  assert.match(PROGRAM_NOT_DELETABLE_MESSAGE, /inscription/i);
+  assert.match(PROGRAM_NOT_DELETABLE_MESSAGE, /sessions sont restées vides/i);
 });
 
 for (const code of ["P2003", "P2034"] as const) {
@@ -68,10 +72,25 @@ for (const code of ["P2003", "P2034"] as const) {
 test("la couche Prisma garde le contrôle et la suppression en transaction sérialisable", () => {
   const actions = readFileSync("src/server/actions/admin-programs.ts", "utf8");
   const schema = readFileSync("prisma/schema.prisma", "utf8");
-  assert.match(actions, /program\._count\.sessions > 0/);
+  // Ce qui bloque est l'INSCRIPTION, pas l'existence d'une session.
+  assert.match(actions, /_count\.registrations > 0/);
+  assert.match(actions, /tx\.trainingSession\.deleteMany\(\{ where: \{ programId: program\.id \} \}\)/);
   assert.match(actions, /tx\.program\.delete/);
   assert.match(actions, /TransactionIsolationLevel\.Serializable/);
   assert.match(schema, /program\s+Program @relation\(fields: \[programId\], references: \[id\], onDelete: Cascade\)/);
+  // Filet en base : même si une inscription se glissait entre la lecture et la
+  // suppression, `Restrict` refuserait d'effacer la session qui la porte.
+  assert.match(schema, /session\s+TrainingSession\s+@relation\(fields: \[sessionId\], references: \[id\], onDelete: Restrict\)/);
+});
+
+test("l'écran n'offre la suppression que sur le critère retenu par le serveur", () => {
+  const list = readFileSync("src/app/admin/formations/page.tsx", "utf8");
+  const detail = readFileSync("src/app/admin/formations/[id]/page.tsx", "utf8");
+  // Une divergence ici rouvrirait l'écart classique : un bouton proposé que
+  // l'action refuse ensuite, ou l'inverse — un programme d'essai indéboulonnable.
+  assert.equal((list.match(/deletable=\{program\.registrationCount === 0\}/g) ?? []).length, 2);
+  assert.match(detail, /deletable=\{program\.sessions\.every\(\(session\) => session\._count\.registrations === 0\)\}/);
+  assert.doesNotMatch(list, /deletable=\{program\.sessionCount === 0\}/);
 });
 
 test("l'état bloqué de la liste est une action tactile et accessible vers l'archivage", () => {

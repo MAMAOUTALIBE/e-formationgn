@@ -29,13 +29,20 @@ const cspPolicy = [
   // entière — voir SECURITY.md. La politique ci-dessous bloque déjà le
   // chargement de scripts hébergés ailleurs, l'exfiltration par formulaire
   // (`form-action`), la réécriture de base (`base-uri`) et les objets.
-  `script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ""} https://*.stripe.com https://*.mux.com https://*.sentry.io https://www.youtube.com`,
+  // `s.ytimg.com` : le script `youtube.com/iframe_api` n'est qu'un chargeur, il
+  // injecte ensuite `www-widgetapi.js`, servi selon les régions depuis
+  // `www.youtube.com` OU `s.ytimg.com`. Sans les deux origines, l'API n'est
+  // jamais prête et le lecteur reste noir — la CSP étant désormais APPLIQUÉE.
+  `script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ""} https://*.stripe.com https://*.mux.com https://*.sentry.io https://www.youtube.com https://s.ytimg.com`,
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data: blob: https:",
   "font-src 'self' data:",
   // Mux + Stripe + Sentry + R2/S3 : sources externes attendues
   "connect-src 'self' https://*.stripe.com https://*.mux.com https://*.sentry.io https://*.r2.cloudflarestorage.com https://www.youtube.com https://www.youtube-nocookie.com",
-  "frame-src 'self' https://*.stripe.com https://*.mux.com https://www.youtube-nocookie.com",
+  // `www.youtube.com` en plus du domaine sans cookie : l'API IFrame retombe
+  // sur l'origine standard dans certains cas, et d'anciennes leçons peuvent
+  // encore porter une URL `youtube.com/embed`.
+  "frame-src 'self' https://*.stripe.com https://*.mux.com https://www.youtube-nocookie.com https://www.youtube.com",
   "media-src 'self' https://*.mux.com blob:",
   "object-src 'none'",
   "base-uri 'self'",

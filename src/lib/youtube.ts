@@ -28,18 +28,28 @@ export function canCompleteYouTube(input: { ended: boolean; watchedSeconds: numb
     && input.watchedSeconds / input.durationSeconds >= 0.95;
 }
 
+/** Segments `/<mot>/<id>` porteurs d'un identifiant de vidéo. */
+const YOUTUBE_ID_PREFIXES = new Set(["shorts", "embed", "v", "live"]);
+
 export function parseYouTubeUrl(value: string): YouTubeVideo | null {
   let url: URL;
-  try { url = new URL(value); } catch { return null; }
+  try { url = new URL(value.trim()); } catch { return null; }
   if (url.protocol !== "https:" || url.username || url.password || url.port || !YOUTUBE_HOSTS.has(url.hostname.toLowerCase())) return null;
   const host = url.hostname.toLowerCase();
   const parts = url.pathname.split("/").filter(Boolean);
   let id: string | null = null;
+  // `parts` ignore déjà les slashs superflus : `/watch/?v=…` et `/watch?v=…`
+  // désignent la même vidéo, une comparaison sur `pathname` les séparait.
   if (host === "youtu.be") id = parts.length === 1 ? parts[0] : null;
-  else if (url.pathname === "/watch") id = url.searchParams.get("v");
-  else if ((parts[0] === "shorts" || parts[0] === "embed") && parts.length === 2) id = parts[1];
+  else if (parts.length === 1 && parts[0] === "watch") id = url.searchParams.get("v");
+  else if (parts.length === 2 && YOUTUBE_ID_PREFIXES.has(parts[0])) id = parts[1];
   if (!id || !YOUTUBE_ID.test(id)) return null;
   return { id, embedUrl: `https://www.youtube-nocookie.com/embed/${id}` };
+}
+
+/** Lien de repli « ouvrir sur YouTube », affiché quand l'intégration échoue. */
+export function youtubeWatchUrl(id: string): string {
+  return `https://www.youtube.com/watch?v=${id}`;
 }
 
 export function isYouTubeHost(value: string): boolean {

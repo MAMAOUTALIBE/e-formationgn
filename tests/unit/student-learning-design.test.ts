@@ -57,3 +57,21 @@ test("les nouveaux petits textes informatifs respectent WCAG AA en clair et somb
   assert.ok(contrast("#2563eb", "#ffffff") >= 4.5, "bleu marque sur fond clair");
   assert.ok(contrast("#93c5fd", "#0b1220") >= 4.5, "blue-300 sur fond sombre");
 });
+
+test("les états vides de l'apprenant invitent au lieu de constater", () => {
+  const empty = readFileSync("src/components/ui/empty-state.tsx", "utf8");
+  const page = readFileSync("src/app/apprentissage/page.tsx", "utf8");
+  // Le registre chaleureux est OPTIONNEL : les 30+ états vides d'administration
+  // gardent le rendu discret d'origine, seul l'espace apprenant y souscrit.
+  assert.match(empty, /tone\?: EmptyStateTone/);
+  assert.match(empty, /tone = "neutral"/);
+  assert.match(empty, /rounded-lg border-dashed border-border bg-muted\/20 p-10/); // neutre inchangé
+  assert.equal((page.match(/tone="brand"/g) ?? []).length, 2);
+});
+
+test("les onglets de filtre portent un état actif visible, pas un simple filet", () => {
+  const tabs = readFileSync("src/components/features/learning/learning-filter-tabs.tsx", "utf8");
+  assert.match(tabs, /bg-\[color:var\(--brand-secondary\)\]\/8/);
+  assert.match(tabs, /hover:bg-muted\/60/);
+  assert.match(tabs, /aria-current=\{isActive \? "page" : undefined\}/);
+});

@@ -39,17 +39,17 @@ export function RevenueChart({ data }: RevenueChartProps) {
             <stop offset="100%" stopColor="#0EA5E9" stopOpacity={0} />
           </linearGradient>
         </defs>
-        <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.5} />
+        <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" opacity={0.5} />
         <XAxis
           dataKey="date"
           tickFormatter={(v: string) => dateFormatter.format(new Date(v))}
-          tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }}
+          tick={{ fontSize: 11, fill: "var(--muted-foreground)" }}
           tickLine={false}
           axisLine={false}
         />
         <YAxis
           tickFormatter={(v: number) => `${(v / 100).toFixed(0)}`}
-          tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }}
+          tick={{ fontSize: 11, fill: "var(--muted-foreground)" }}
           tickLine={false}
           axisLine={false}
           width={40}
@@ -61,8 +61,9 @@ export function RevenueChart({ data }: RevenueChartProps) {
           ]) as never}
           labelFormatter={(label) => dateFormatter.format(new Date(String(label)))}
           contentStyle={{
-            background: "hsl(var(--popover))",
-            border: "1px solid hsl(var(--border))",
+            background: "var(--popover)",
+            color: "var(--popover-foreground)",
+            border: "1px solid var(--border)",
             borderRadius: 6,
             fontSize: 12,
           }}

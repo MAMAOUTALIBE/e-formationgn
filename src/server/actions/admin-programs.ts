@@ -214,10 +214,31 @@ export async function deleteProgram(programId: string): Promise<ProgramActionRes
           async (tx) => {
             const program = await tx.program.findUnique({
               where: { id },
-              select: { id: true, title: true, code: true, _count: { select: { sessions: true } } },
+              select: {
+                id: true,
+                title: true,
+                code: true,
+                sessions: { select: { id: true, _count: { select: { registrations: true } } } },
+              },
             });
             if (!program) return null;
-            if (program._count.sessions > 0) return "blocked" as const;
+
+            // Ce qui protège l'historique, c'est l'INSCRIPTION, pas la session.
+            // Une session ayant porté ne serait-ce qu'une inscription engage une
+            // convention, une feuille d'émargement et parfois une attestation :
+            // elle n'est jamais détruite. Une session restée vide n'est qu'un
+            // brouillon de planification — bloquer dessus rendait tout programme
+            // d'essai définitivement indéboulonnable.
+            if (program.sessions.some((session) => session._count.registrations > 0)) {
+              return "blocked" as const;
+            }
+            if (program.sessions.length > 0) {
+              // `TrainingSession.program` est en `Restrict` : les sessions vides
+              // doivent partir explicitement avant le programme. Le `Restrict`
+              // de `Registration.session` reste le garde-fou en base si une
+              // inscription se glissait entre la lecture et la suppression.
+              await tx.trainingSession.deleteMany({ where: { programId: program.id } });
+            }
 
             // ProgramCourse est en cascade : seule la composition sans historique
             // est nettoyée avec le programme. Les cours eux-mêmes sont conservés.

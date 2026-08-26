@@ -95,7 +95,7 @@ export function ProgramDeleteButton({
         open={open}
         onClose={() => setOpen(false)}
         title={`Supprimer « ${programTitle} » ?`}
-        description="Cette action est irréversible. Le programme et sa composition seront supprimés. Les cours qui le composent seront conservés."
+        description="Cette action est irréversible. Le programme, sa composition et ses sessions restées sans inscription seront supprimés. Les cours qui le composent sont conservés au catalogue."
         confirmLabel="Supprimer définitivement"
         destructive
         pending={pending}

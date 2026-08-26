@@ -71,7 +71,7 @@ export default async function ProgramDetailPage({
         <ProgramDeleteButton
           programId={program.id}
           programTitle={program.title}
-          deletable={program.sessions.length === 0}
+          deletable={program.sessions.every((session) => session._count.registrations === 0)}
           returnToList
         />
       </header>

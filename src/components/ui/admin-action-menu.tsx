@@ -92,11 +92,17 @@ export function AdminActionMenu({
         <EllipsisVertical className="h-4 w-4" aria-hidden />
       </button>
       {mounted && open ? createPortal(
-        <div ref={menuRef} role="menu" aria-label={menuLabel} style={layout.style}
-          data-layout={layout.mode}
-          className={`fixed inset-x-3 bottom-3 z-[100] max-h-[calc(100dvh-1.5rem)] overflow-y-auto rounded-xl border border-border bg-popover p-1.5 text-left text-sm text-popover-foreground shadow-2xl ring-1 ring-black/10 sm:inset-x-auto sm:bottom-auto ${widthClass}`}>
-          {children(close)}
-        </div>,
+        <>
+          {/* Voile mobile : la feuille occupe toute la largeur, le contenu qui
+              défile derrière la rendait difficile à lire. Masqué au-delà de
+              `sm`, où le menu est un petit calque ancré sur son déclencheur. */}
+          <div aria-hidden data-testid="admin-action-menu-scrim" className="fixed inset-0 z-[99] bg-slate-950/40 sm:hidden" />
+          <div ref={menuRef} role="menu" aria-label={menuLabel} style={layout.style}
+            data-layout={layout.mode}
+            className={`fixed inset-x-3 bottom-3 z-[100] max-h-[calc(100dvh-1.5rem)] overflow-y-auto rounded-xl border border-border bg-popover p-1.5 text-left text-sm text-popover-foreground shadow-2xl ring-1 ring-black/5 dark:ring-white/10 sm:inset-x-auto sm:bottom-auto ${widthClass}`}>
+            {children(close)}
+          </div>
+        </>,
         document.body,
       ) : null}
     </>

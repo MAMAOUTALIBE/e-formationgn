@@ -304,7 +304,7 @@ function ProgramsTable({ rows }: { rows: ProgramListRow[] }) {
                 <ProgramDeleteButton
                   programId={program.id}
                   programTitle={program.title}
-                  deletable={program.sessionCount === 0}
+                  deletable={program.registrationCount === 0}
                   presentation="compact"
                 />
               </div>
@@ -338,7 +338,7 @@ function ProgramMobileCard({ program }: { program: ProgramListRow }) {
             <ProgramDeleteButton
               programId={program.id}
               programTitle={program.title}
-              deletable={program.sessionCount === 0}
+              deletable={program.registrationCount === 0}
               presentation="compact"
             />
           </div>

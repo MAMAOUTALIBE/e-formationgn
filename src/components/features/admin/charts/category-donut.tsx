@@ -47,8 +47,9 @@ export function CategoryDonut({ data }: { data: Slice[] }) {
           formatter={((value: unknown) =>
             `${(Number(value) / 100).toLocaleString("fr-FR", { minimumFractionDigits: 2 })} (toutes devises confondues)`) as never}
           contentStyle={{
-            background: "hsl(var(--popover))",
-            border: "1px solid hsl(var(--border))",
+            background: "var(--popover)",
+            color: "var(--popover-foreground)",
+            border: "1px solid var(--border)",
             borderRadius: 6,
             fontSize: 12,
           }}
