@@ -49,3 +49,10 @@ test("la création instantanée prépare LiveKit puis ouvre la salle côté serv
   assert.match(actions, /openedAt: openNow \? requestedAt/);
   assert.match(adminActions, /Rejoindre la salle/);
 });
+
+test("l’ouverture très anticipée reste réservée à l’action modérateur autorisée", () => {
+  const actions = read("src/server/actions/virtual-classes.ts");
+  assert.match(actions, /requireVirtualClassModerator\(virtualClassId\)/);
+  assert.match(actions, /allowBeforeOpeningWindow: true/);
+  assert.match(actions, /status: "OPEN", openedAt: new Date\(\)/);
+});

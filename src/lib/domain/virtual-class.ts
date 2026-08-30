@@ -66,13 +66,14 @@ export function virtualClassCanBeOpened(input: {
   startsAt: Date;
   scheduledEndAt: Date;
   earlyJoinMinutes: number;
+  allowBeforeOpeningWindow?: boolean;
   now?: Date;
 }): boolean {
   const now = input.now ?? new Date();
   const opensAt = input.startsAt.getTime() - input.earlyJoinMinutes * 60_000;
   return (
     input.status === "SCHEDULED" &&
-    now.getTime() >= opensAt &&
+    (input.allowBeforeOpeningWindow || now.getTime() >= opensAt) &&
     now.getTime() < input.scheduledEndAt.getTime()
   );
 }

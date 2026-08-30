@@ -418,8 +418,8 @@ export async function openVirtualClass(virtualClassId: string): Promise<VirtualC
     const { session, virtualClass } = await requireVirtualClassModerator(virtualClassId);
     const full = await prisma.virtualClassSession.findUnique({ where: { id: virtualClass.id } });
     if (!full) return { success: false, message: "Classe virtuelle introuvable." };
-    if (!virtualClassCanBeOpened(full)) {
-      return { success: false, message: "La salle ne peut pas encore être ouverte ou son horaire est dépassé." };
+    if (!virtualClassCanBeOpened({ ...full, allowBeforeOpeningWindow: true })) {
+      return { success: false, message: "Seule une séance programmée et non terminée peut être ouverte." };
     }
     if (!isLiveKitConfigured()) {
       return { success: false, message: "LiveKit n’est pas configuré. La salle ne peut pas être ouverte." };

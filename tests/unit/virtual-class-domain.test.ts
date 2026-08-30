@@ -53,6 +53,31 @@ test("l’ouverture anticipée respecte la fenêtre configurée", () => {
   assert.equal(virtualClassCanBeOpened({ status: "SCHEDULED", startsAt, scheduledEndAt, earlyJoinMinutes: 15, now: new Date("2026-09-01T09:45:00.000Z") }), true);
 });
 
+test("un modérateur peut ouvrir une salle plusieurs jours avant le début", () => {
+  const startsAt = new Date("2026-09-10T10:00:00.000Z");
+  const scheduledEndAt = new Date("2026-09-10T11:00:00.000Z");
+  assert.equal(virtualClassCanBeOpened({
+    status: "SCHEDULED",
+    startsAt,
+    scheduledEndAt,
+    earlyJoinMinutes: 15,
+    allowBeforeOpeningWindow: true,
+    now: new Date("2026-09-01T08:00:00.000Z"),
+  }), true);
+});
+
+test("la dérogation anticipée ne rouvre jamais une séance terminée ou annulée", () => {
+  const input = {
+    startsAt: new Date("2026-09-01T10:00:00.000Z"),
+    scheduledEndAt: new Date("2026-09-01T11:00:00.000Z"),
+    earlyJoinMinutes: 15,
+    allowBeforeOpeningWindow: true,
+    now: new Date("2026-09-01T12:00:00.000Z"),
+  } as const;
+  assert.equal(virtualClassCanBeOpened({ ...input, status: "SCHEDULED" }), false);
+  assert.equal(virtualClassCanBeOpened({ ...input, status: "CANCELLED" }), false);
+});
+
 test("une classe programmée à l’instant présent est immédiatement ouvrable", () => {
   const now = new Date("2026-09-01T10:00:00.000Z");
   assert.equal(virtualClassCanBeOpened({
