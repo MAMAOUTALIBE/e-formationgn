@@ -1,25 +1,17 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Copy, FileText, HelpCircle, Paperclip, PenLine, PlayCircle, Trash2 } from "lucide-react";
+import { Copy, FolderOpen, Trash2 } from "lucide-react";
 
 import { auth } from "@/auth";
 import { ConfirmAction } from "@/components/features/instructor/confirm-action";
 import { LessonCreateForm } from "@/components/features/instructor/lesson-create-form";
+import { ProgramLessonsList } from "@/components/features/instructor/program-lessons-list";
 import { SectionCreateForm } from "@/components/features/instructor/section-create-form";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  formatDurationFromSeconds,
-  formatLessonDuration,
-} from "@/lib/format/duration";
+import { formatDurationFromSeconds } from "@/lib/format/duration";
 import { pluralize } from "@/lib/format/labels";
-import {
-  deleteSection,
-  duplicateLesson,
-  duplicateSection,
-} from "@/server/actions/curriculum";
+import { deleteSection, duplicateSection } from "@/server/actions/curriculum";
 import { getInstructorCourse } from "@/server/queries/instructor";
-import type { LessonType } from "@/generated/prisma/enums";
 
 import { assertStepUnlocked } from "../_components/wizard-state";
 
@@ -74,118 +66,94 @@ export default async function CourseProgramPage({ params }: PageProps) {
             </p>
           ) : (
             <ul className="space-y-6">
-              {course.sections.map((section, sectionIndex) => (
-                <li
-                  key={section.id}
-                  className="space-y-3 rounded-lg border border-border bg-card p-4"
-                >
-                  <header className="flex flex-wrap items-start justify-between gap-2">
-                    <div>
-                      <p className="text-xs uppercase tracking-wide text-muted-foreground">
-                        Section {sectionIndex + 1}
-                      </p>
-                      <h3 className="text-base font-semibold text-foreground">
-                        {section.title}
-                      </h3>
-                    </div>
+              {course.sections.map((section, sectionIndex) => {
+                const sectionResourceCount = section.lessons.reduce(
+                  (count, lesson) => count + lesson.resources.length,
+                  0,
+                );
 
-                    <div className="flex items-center gap-1">
-                      <form action={duplicateSection.bind(null, section.id)}>
-                        <Button
-                          type="submit"
+                return (
+                  <li
+                    key={section.id}
+                    className="overflow-hidden rounded-[14px] border border-[#CBD5E1] bg-slate-50 shadow-[0_4px_14px_rgba(15,23,42,0.08)] dark:border-slate-700 dark:bg-slate-900/50"
+                  >
+                    <header className="flex flex-wrap items-center justify-between gap-3 border-b border-[#CBD5E1] bg-emerald-50 px-4 py-3 dark:border-slate-700 dark:bg-emerald-950/30 sm:px-5">
+                      <div className="min-w-0">
+                        <div className="mb-1 flex flex-wrap items-center gap-2">
+                          <p className="inline-flex rounded-full border border-emerald-200 bg-white px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-emerald-800 shadow-sm dark:border-emerald-800 dark:bg-slate-950 dark:text-emerald-300">
+                            Section {sectionIndex + 1}
+                          </p>
+                          {sectionResourceCount > 0 ? (
+                            <span className="inline-flex items-center gap-1 text-[11px] font-medium text-emerald-800 dark:text-emerald-300">
+                              <FolderOpen className="h-3.5 w-3.5" aria-hidden />
+                              {sectionResourceCount} ressource
+                              {sectionResourceCount > 1 ? "s" : ""}
+                            </span>
+                          ) : null}
+                        </div>
+                        <h3 className="truncate text-base font-bold text-foreground sm:text-lg">
+                          {section.title}
+                        </h3>
+                      </div>
+
+                      <div className="ml-auto flex w-full items-center justify-end gap-1 sm:w-auto">
+                        <form action={duplicateSection.bind(null, section.id)}>
+                          <Button
+                            type="submit"
+                            variant="ghost"
+                            size="sm"
+                            title="Dupliquer la section et ses leçons"
+                          >
+                            <Copy className="h-4 w-4" />
+                            Dupliquer
+                          </Button>
+                        </form>
+                        <ConfirmAction
                           variant="ghost"
                           size="sm"
-                          title="Dupliquer la section et ses leçons"
+                          message={`Supprimer la section « ${section.title} » et toutes ses leçons ?`}
+                          onConfirm={async () => {
+                            "use server";
+                            await deleteSection(section.id);
+                          }}
                         >
-                          <Copy className="h-4 w-4" />
-                          Dupliquer
-                        </Button>
-                      </form>
-                      <ConfirmAction
-                        variant="ghost"
-                        size="sm"
-                        message={`Supprimer la section « ${section.title} » et toutes ses leçons ?`}
-                        onConfirm={async () => {
-                          "use server";
-                          await deleteSection(section.id);
-                        }}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                        Supprimer la section
-                      </ConfirmAction>
+                          <Trash2 className="h-4 w-4" />
+                          Supprimer la section
+                        </ConfirmAction>
+                      </div>
+                    </header>
+
+                    <div className="space-y-3 p-3 sm:p-4">
+                      {section.lessons.length === 0 ? (
+                        <p className="rounded-[10px] border border-dashed border-[#D8E0EA] bg-white p-3 text-center text-sm text-muted-foreground dark:border-slate-700 dark:bg-slate-950">
+                          Aucune leçon pour le moment.
+                        </p>
+                      ) : (
+                        <ProgramLessonsList
+                          courseId={course.id}
+                          lessons={section.lessons.map((lesson) => ({
+                            id: lesson.id,
+                            title: lesson.title,
+                            type: lesson.type,
+                            isFreePreview: lesson.isFreePreview,
+                            muxPlaybackId: lesson.muxPlaybackId,
+                            externalVideoUrl: lesson.externalVideoUrl,
+                            videoDurationSeconds: lesson.videoDurationSeconds,
+                            resources: lesson.resources.map((resource) => ({
+                              id: resource.id,
+                              title: resource.title,
+                              url: resource.url,
+                              fileSizeBytes: resource.fileSizeBytes,
+                            })),
+                          }))}
+                        />
+                      )}
+
+                      <LessonCreateForm courseId={course.id} sectionId={section.id} />
                     </div>
-                  </header>
-
-                  {section.lessons.length === 0 ? (
-                    <p className="rounded-md border border-dashed border-border bg-muted/40 p-3 text-center text-sm text-muted-foreground">
-                      Aucune leçon pour le moment.
-                    </p>
-                  ) : (
-                    <ul className="divide-y divide-border rounded-md border border-border">
-                      {section.lessons.map((lesson, lessonIndex) => (
-                        <li
-                          key={lesson.id}
-                          className="flex items-center justify-between gap-4 px-3 py-2.5"
-                        >
-                          <span className="flex min-w-0 items-center gap-2">
-                            <span className="text-xs font-medium text-muted-foreground">
-                              {lessonIndex + 1}.
-                            </span>
-                            <LessonIcon type={lesson.type} />
-                            <span className="truncate text-sm text-foreground">
-                              {lesson.title}
-                            </span>
-                            {lesson.isFreePreview ? (
-                              <span className="ml-1 inline-flex items-center rounded bg-[color:var(--brand-success)]/10 px-1.5 py-0.5 text-[10px] font-medium text-[color:var(--brand-success)]">
-                                Aperçu
-                              </span>
-                            ) : null}
-                            {lesson.type === "VIDEO" ? (
-                              lesson.muxPlaybackId || lesson.externalVideoUrl ? (
-                                <span className="ml-1 inline-flex items-center rounded bg-[color:var(--brand-accent)]/10 px-1.5 py-0.5 text-[10px] font-medium text-[color:var(--brand-accent)]">
-                                  Vidéo prête
-                                </span>
-                              ) : (
-                                <span className="ml-1 inline-flex items-center rounded bg-[color:var(--brand-warning)]/10 px-1.5 py-0.5 text-[10px] font-medium text-[color:var(--brand-warning)]">
-                                  Vidéo manquante
-                                </span>
-                              )
-                            ) : null}
-                          </span>
-                          <span className="flex items-center gap-3 text-xs text-muted-foreground">
-                            {lesson.type === "VIDEO" &&
-                            lesson.videoDurationSeconds > 0
-                              ? formatLessonDuration(lesson.videoDurationSeconds)
-                              : null}
-                            <Button asChild variant="link" size="sm" className="h-auto px-0">
-                              <Link
-                                href={`/formateur/cours/${course.id}/lecons/${lesson.id}`}
-                              >
-                                <PenLine className="h-3.5 w-3.5" />
-                                {lesson.type === "QUIZ" ? "Configurer le quiz" : "Modifier"}
-                              </Link>
-                            </Button>
-                            <form action={duplicateLesson.bind(null, lesson.id)}>
-                              <Button
-                                type="submit"
-                                variant="ghost"
-                                size="sm"
-                                className="h-auto px-1"
-                                title="Dupliquer la leçon"
-                              >
-                                <Copy className="h-3.5 w-3.5" />
-                                <span className="sr-only">Dupliquer</span>
-                              </Button>
-                            </form>
-                          </span>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-
-                  <LessonCreateForm courseId={course.id} sectionId={section.id} />
-                </li>
-              ))}
+                  </li>
+                );
+              })}
             </ul>
           )}
 
@@ -194,19 +162,4 @@ export default async function CourseProgramPage({ params }: PageProps) {
       </Card>
     </div>
   );
-}
-
-function LessonIcon({ type }: { type: LessonType }) {
-  const className = "h-4 w-4 text-muted-foreground";
-  switch (type) {
-    case "VIDEO":
-      return <PlayCircle className={className} aria-hidden />;
-    case "QUIZ":
-      return <HelpCircle className={className} aria-hidden />;
-    case "RESOURCE":
-      return <Paperclip className={className} aria-hidden />;
-    case "TEXT":
-    default:
-      return <FileText className={className} aria-hidden />;
-  }
 }

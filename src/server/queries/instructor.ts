@@ -44,6 +44,7 @@ const INSTRUCTOR_COURSE_DETAIL_INCLUDE = {
     include: {
       lessons: {
         orderBy: { displayOrder: "asc" },
+        include: { resources: { orderBy: { createdAt: "asc" } } },
       },
     },
   },

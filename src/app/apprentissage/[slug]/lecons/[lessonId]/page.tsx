@@ -194,6 +194,7 @@ export default async function LessonViewerPage({ params }: PageProps) {
   // (`lesson.resources`) et l'unique lien historique porté par la leçon
   // (`resourceUrl`), conservé pour les cours créés avant l'upload de fichiers.
   const hasResources = lesson.resources.length > 0 || Boolean(lesson.resourceUrl);
+  const resourceCount = lesson.resources.length + (lesson.resourceUrl ? 1 : 0);
 
   const resourcesContent = hasResources ? (
     <div className="space-y-4">
@@ -281,7 +282,7 @@ export default async function LessonViewerPage({ params }: PageProps) {
     {
       key: "resources",
       label: "Ressources",
-      badge: lesson.resources.length > 0 ? lesson.resources.length : undefined,
+      badge: resourceCount > 0 ? resourceCount : undefined,
       content: resourcesContent,
     },
   ];
@@ -493,7 +494,17 @@ export default async function LessonViewerPage({ params }: PageProps) {
                       title: l.title,
                       type: l.type,
                       videoDurationSeconds: l.videoDurationSeconds,
-                      hasResource: Boolean(l.resourceUrl),
+                      resources: l.resources.map((resource) => ({
+                        id: resource.id,
+                        title: resource.title,
+                        fileSizeBytes: resource.fileSizeBytes,
+                      })),
+                      legacyResource: l.resourceUrl
+                        ? {
+                            title: l.resourceFileName ?? "Ressource",
+                            url: l.resourceUrl,
+                          }
+                        : undefined,
                     })),
                   }))}
                   completedLessonIds={completedIds}

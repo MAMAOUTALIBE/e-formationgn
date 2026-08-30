@@ -39,7 +39,7 @@ export function LessonCreateForm({ courseId, sectionId }: LessonCreateFormProps)
   return (
     <form
       action={formAction}
-      className="grid gap-3 rounded-md border border-dashed border-border p-3 sm:grid-cols-[1fr_180px_auto] sm:items-end"
+      className="grid gap-3 rounded-[10px] border border-dashed border-blue-300 bg-blue-50 p-3 sm:grid-cols-[minmax(0,1fr)_180px_auto] sm:items-end dark:border-blue-800 dark:bg-blue-950/30"
     >
       <FormField id={`lesson-title-${sectionId}`} label="Nouvelle leçon" error={errors.title?.[0]}>
         <Input

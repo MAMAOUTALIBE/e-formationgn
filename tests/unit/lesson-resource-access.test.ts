@@ -66,3 +66,43 @@ test("le proxy laisse la route répondre en JSON plutôt qu'en redirection", asy
   const source = await read("src/auth.config.ts");
   assert.match(source, /pathname\.startsWith\("\/api\/lecons\/"\) *\) *return true/);
 });
+
+test("le programme permet de gérer les ressources sur chaque carte de leçon", async () => {
+  const [programme, cards, query] = await Promise.all([
+    read("src/app/formateur/cours/[id]/programme/page.tsx"),
+    read("src/components/features/instructor/program-lessons-list.tsx"),
+    read("src/server/queries/instructor.ts"),
+  ]);
+
+  // Le programme doit recevoir les ressources réelles, pas un compteur
+  // reconstruit côté client qui deviendrait faux après un téléversement.
+  assert.match(query, /include: \{ resources: \{ orderBy: \{ createdAt: "asc" \} \} \}/);
+  assert.match(programme, /<ProgramLessonsList/);
+  assert.match(programme, /lesson\.resources\.map/);
+  assert.match(programme, /sectionResourceCount/);
+
+  assert.match(cards, /Ajouter des ressources/);
+  assert.match(cards, /Ressources \(\$\{resourceCount\}\)/);
+  assert.match(cards, /<LessonResourcesManager/);
+  assert.match(cards, /openLessonId/);
+  assert.match(cards, /aria-expanded=\{resourcesOpen\}/);
+});
+
+test("le lecteur montre les ressources modernes et historiques sans imbriquer les actions", async () => {
+  const [page, sidebar] = await Promise.all([
+    read("src/app/apprentissage/[slug]/lecons/[lessonId]/page.tsx"),
+    read("src/components/features/learning/learning-sidebar.tsx"),
+  ]);
+
+  // L'ancien code ne regardait que `resourceUrl` et rendait invisibles dans
+  // la barre latérale les pièces jointes stockées dans `lesson.resources`.
+  assert.match(page, /resources: l\.resources\.map/);
+  assert.match(page, /legacyResource: l\.resourceUrl/);
+  assert.match(page, /lesson\.resources\.length \+ \(lesson\.resourceUrl \? 1 : 0\)/);
+  assert.doesNotMatch(page, /hasResource: Boolean\(l\.resourceUrl\)/);
+
+  assert.match(sidebar, /resourceCount > 0/);
+  assert.match(sidebar, /aria-controls=\{resourcesPanelId\}/);
+  assert.match(sidebar, /lessonResourceHref\(lesson\.id, resource\.id, true\)/);
+  assert.match(sidebar, /openResourcesLessonId/);
+});

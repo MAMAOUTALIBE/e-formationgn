@@ -46,6 +46,8 @@ interface LessonResourcesManagerProps {
   resources: LessonResourceRow[];
   /** Plafond côté serveur, répété ici pour désactiver la zone quand il est atteint. */
   maxResources?: number;
+  /** Réduit la zone de dépôt lorsqu'elle est affichée directement dans le programme. */
+  compact?: boolean;
 }
 
 /** Fichier en cours de traitement, affiché sous la liste enregistrée. */
@@ -60,6 +62,7 @@ export function LessonResourcesManager({
   lessonId,
   resources,
   maxResources = 20,
+  compact = false,
 }: LessonResourcesManagerProps) {
   const router = useRouter();
   const inputRef = React.useRef<HTMLInputElement>(null);
@@ -302,7 +305,8 @@ export function LessonResourcesManager({
         }}
         aria-disabled={isFull}
         className={cn(
-          "flex cursor-pointer flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed px-6 py-8 text-center transition-colors",
+          "flex cursor-pointer flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed text-center transition-colors",
+          compact ? "px-4 py-4" : "px-6 py-8",
           dragOver
             ? "border-[color:var(--brand-secondary)] bg-[color:var(--brand-secondary)]/5"
             : "border-border bg-muted/20 hover:bg-muted/40",
