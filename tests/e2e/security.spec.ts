@@ -151,7 +151,8 @@ test.describe("Sécurité — en-têtes HTTP globaux", () => {
     expect(headers["x-content-type-options"]).toBe("nosniff");
     expect(headers["strict-transport-security"]).toContain("max-age");
     expect(headers["referrer-policy"]).toBe("strict-origin-when-cross-origin");
-    expect(headers["permissions-policy"]).toContain("camera=()");
+    expect(headers["permissions-policy"]).toContain("camera=(self)");
+    expect(headers["permissions-policy"]).toContain("microphone=(self)");
     // La CSP est bloquante par défaut en production, avec un mode report-only
     // disponible pour les périodes de validation de politique.
     expect(

@@ -46,6 +46,7 @@ export async function GET(request: NextRequest) {
     where: {
       status: "FAILED",
       attempts: { lt: MAX_ATTEMPTS },
+      source: "STRIPE",
     },
     take: MAX_PER_RUN,
     orderBy: { receivedAt: "asc" },

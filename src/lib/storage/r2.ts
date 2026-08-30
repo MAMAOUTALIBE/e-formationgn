@@ -4,7 +4,7 @@ import "server-only";
 // Si les variables d'env R2 ne sont pas configurées, les fonctions lèvent
 // une erreur claire pour aider le formateur à comprendre.
 
-import { DeleteObjectCommand, PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
+import { DeleteObjectCommand, GetObjectCommand, PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 
 let cachedClient: S3Client | null = null;
@@ -64,6 +64,11 @@ export function isR2PublicUrlConfigured(): boolean {
 export async function deleteR2Object(key: string): Promise<void> {
   const cfg = getConfig();
   await getClient().send(new DeleteObjectCommand({ Bucket: cfg.bucket, Key: key }));
+}
+
+export async function getR2Object(key: string, range?: string | null) {
+  const cfg = getConfig();
+  return getClient().send(new GetObjectCommand({ Bucket: cfg.bucket, Key: key, ...(range ? { Range: range } : {}) }));
 }
 
 export interface PresignedUploadResult {

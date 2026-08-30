@@ -81,6 +81,7 @@ services:
             echo '*/15 * * * * curl -fsS -H \"Authorization: Bearer $$CRON_SECRET\" http://app:3000/api/cron/reconcile-orders >/proc/1/fd/1 2>/proc/1/fd/2';
           fi;
           echo '0 3 * * * curl -fsS -H \"Authorization: Bearer $$CRON_SECRET\" http://app:3000/api/cron/cleanup >/proc/1/fd/1 2>/proc/1/fd/2';
+          echo '*/5 * * * * curl -fsS -H \"Authorization: Bearer $$CRON_SECRET\" http://app:3000/api/cron/virtual-class-reminders >/proc/1/fd/1 2>/proc/1/fd/2';
         } > /etc/crontabs/root;
         exec /sbin/tini -- crond -f -d 8
       "

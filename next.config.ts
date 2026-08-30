@@ -38,7 +38,7 @@ const cspPolicy = [
   "img-src 'self' data: blob: https:",
   "font-src 'self' data:",
   // Mux + Stripe + Sentry + R2/S3 : sources externes attendues
-  "connect-src 'self' https://*.stripe.com https://*.mux.com https://*.sentry.io https://*.r2.cloudflarestorage.com https://www.youtube.com https://www.youtube-nocookie.com",
+  "connect-src 'self' wss: https://*.stripe.com https://*.mux.com https://*.sentry.io https://*.r2.cloudflarestorage.com https://www.youtube.com https://www.youtube-nocookie.com",
   // `www.youtube.com` en plus du domaine sans cookie : l'API IFrame retombe
   // sur l'origine standard dans certains cas, et d'anciennes leçons peuvent
   // encore porter une URL `youtube.com/embed`.
@@ -63,7 +63,7 @@ const securityHeaders = [
   {
     key: "Permissions-Policy",
     value:
-      "camera=(), microphone=(), geolocation=(), payment=(self), interest-cohort=()",
+      "camera=(self), microphone=(self), geolocation=(), payment=(self), interest-cohort=()",
   },
   // HSTS — n'a d'effet qu'en HTTPS. Inoffensif en dev (HTTP) mais essentiel en prod.
   {
@@ -112,7 +112,10 @@ const nextConfig: NextConfig = {
 
   // Build standalone : produit /.next/standalone avec un mini server.js
   // autonome, indispensable pour l'image Docker minimale.
-  output: "standalone",
+  // Le drapeau local ne change jamais l'image de production (deploy.sh ne le
+  // pose pas). Il permet uniquement d'exécuter la validation Next complète
+  // sur un poste presque plein sans dupliquer tout le runtime dans .next.
+  output: process.env.NEXT_DISABLE_STANDALONE === "1" ? undefined : "standalone",
 
   // Les vignettes peuvent venir de n'importe quelle URL fournie par les
   // formateurs (Mux, Cloudinary, R2, Supabase, etc.). On désactive

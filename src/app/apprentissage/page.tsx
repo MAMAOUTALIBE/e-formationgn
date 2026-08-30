@@ -12,6 +12,7 @@ import {
   LearningFilterTabs,
   type LearningFilter,
 } from "@/components/features/learning/learning-filter-tabs";
+import { VirtualClassCard } from "@/components/features/virtual-classes/virtual-class-card";
 import { AccountShell } from "@/components/features/workspace/account-shell";
 import { Breadcrumbs } from "@/components/ui/breadcrumbs";
 import { Button } from "@/components/ui/button";
@@ -20,6 +21,7 @@ import { Container } from "@/components/ui/container";
 import { EmptyState } from "@/components/ui/empty-state";
 import { pluralize } from "@/lib/format/labels";
 import { prisma } from "@/lib/prisma";
+import { listStudentVirtualClasses } from "@/server/queries/virtual-classes";
 
 export const metadata: Metadata = {
   title: "Mon apprentissage",
@@ -57,7 +59,7 @@ export default async function LearningPage({ searchParams }: PageProps) {
 
   // Toutes les données en parallèle. Les enrollments servent aussi à
   // calculer les compteurs des tabs (Tous / En cours / Terminés).
-  const [enrollments, wishlistItems] = await Promise.all([
+  const [enrollments, wishlistItems, virtualClasses] = await Promise.all([
     prisma.enrollment.findMany({
       where: { userId },
       include: {
@@ -100,6 +102,7 @@ export default async function LearningPage({ searchParams }: PageProps) {
       },
       orderBy: { addedAt: "desc" },
     }),
+    listStudentVirtualClasses(userId),
   ]);
 
   // Pour le bouton « Reprendre », on charge la dernière LessonProgress
@@ -145,6 +148,11 @@ export default async function LearningPage({ searchParams }: PageProps) {
   };
   const notStartedCount = Math.max(0, counts.all - counts["in-progress"] - counts.completed);
   const firstName = (session.user.name ?? "").trim().split(" ")[0] || null;
+  const nextVirtualClass = virtualClasses.find(
+    (item) =>
+      item.registrationStatus === "ACTIVE" &&
+      ["SCHEDULED", "OPEN", "LIVE"].includes(item.status),
+  );
 
   const visibleEnrollments =
     activeFilter === "all"
@@ -185,6 +193,23 @@ export default async function LearningPage({ searchParams }: PageProps) {
               <LearningStat icon={<CheckCircle2 />} label="Terminées" value={counts.completed} tone="success" />
             </div>
           </header>
+
+          {nextVirtualClass ? (
+            <section aria-labelledby="next-live-class-title">
+              <h2 id="next-live-class-title" className="mb-3 text-lg font-semibold">
+                Prochain cours en direct
+              </h2>
+              <VirtualClassCard
+                item={nextVirtualClass}
+                detailHref={`/classes-virtuelles/${nextVirtualClass.id}`}
+                joinHref={
+                  ["OPEN", "LIVE"].includes(nextVirtualClass.status)
+                    ? `/classes-virtuelles/${nextVirtualClass.id}/verification`
+                    : undefined
+                }
+              />
+            </section>
+          ) : null}
 
           <LearningFilterTabs active={activeFilter} counts={counts} />
 

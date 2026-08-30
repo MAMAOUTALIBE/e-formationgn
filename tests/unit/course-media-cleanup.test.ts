@@ -14,6 +14,8 @@ test("reconnaît strictement les objets locaux et R2 custom/native générés po
   assert.deepEqual(managedCourseObjectFromUrl(`/uploads/${resourceKey}`, owner, config), { backend: "local", key: resourceKey });
   assert.deepEqual(managedCourseObjectFromUrl(`https://media.example.com/assets/${thumbnailKey}`, owner, config), { backend: "r2", key: thumbnailKey });
   assert.deepEqual(managedCourseObjectFromUrl(`https://account.r2.cloudflarestorage.com/bucket/${resourceKey}`, owner, { r2AccountId: "account", r2Bucket: "bucket" }), { backend: "r2", key: resourceKey });
+  const virtualClassKey = `resources/virtual-classes/${owner}/${filename}`;
+  assert.deepEqual(managedCourseObjectFromUrl(`/uploads/${virtualClassKey}`, owner, config), { backend: "local", key: virtualClassKey });
 });
 
 test("refuse URL externe, type inconnu, autre propriétaire et traversals", () => {
@@ -24,6 +26,7 @@ test("refuse URL externe, type inconnu, autre propriétaire et traversals", () =
     `/uploads/resources/lessons/${owner}/../${filename}`,
     `/uploads/resources/lessons/${owner}/%2e%2e%2f${filename}`,
     `/uploads/resources/lessons/${owner}/%252e%252e%252f${filename}`,
+    `https://evil.example/resources/virtual-classes/${owner}/${filename}`,
   ];
   for (const url of rejected) assert.equal(managedCourseObjectFromUrl(url, owner, config), null, url);
 });

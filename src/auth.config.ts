@@ -185,6 +185,10 @@ export const authConfig = {
       // sait pas interpréter — le média échouerait sans message.
       if (pathname.startsWith("/api/lecons/")) return true;
 
+      // Jetons et ressources de classes virtuelles : chaque route applique
+      // elle-même auth, inscription, rôle et état, afin de répondre en JSON.
+      if (pathname.startsWith("/api/classes-virtuelles/")) return true;
+
       // API admin : la route handler fait sa propre vérification d'auth + rôle.
       // On laisse passer pour qu'elle puisse répondre 401/403/429 plutôt que 302.
       if (pathname.startsWith("/api/admin/")) return true;

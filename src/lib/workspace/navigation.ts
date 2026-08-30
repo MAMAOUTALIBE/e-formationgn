@@ -38,6 +38,7 @@ export type WorkspaceIconName =
   | "heart"
   | "bell"
   | "play"
+  | "video"
   | "building";
 
 export interface WorkspaceNavItem {

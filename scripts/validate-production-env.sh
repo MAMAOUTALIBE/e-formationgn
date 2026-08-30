@@ -166,4 +166,27 @@ case "${mux_signed:-0}" in
   *) echo "❌ MUX_SIGNED_PLAYBACK doit valoir 0 ou 1." >&2; exit 1 ;;
 esac
 
+livekit_url="$(env_value LIVEKIT_URL)"
+livekit_api_key="$(env_value LIVEKIT_API_KEY)"
+livekit_api_secret="$(env_value LIVEKIT_API_SECRET)"
+livekit_webhook_secret="$(env_value LIVEKIT_WEBHOOK_SECRET)"
+livekit_count=0
+for livekit_value in "${livekit_url}" "${livekit_api_key}" "${livekit_api_secret}" "${livekit_webhook_secret}"; do
+  [ -n "${livekit_value}" ] && livekit_count=$((livekit_count + 1))
+done
+if [ "${livekit_count}" -ne 0 ] && [ "${livekit_count}" -ne 4 ]; then
+  echo "❌ LiveKit doit être configuré avec URL, clé API, secret API et secret webhook ensemble." >&2
+  exit 1
+fi
+if [ "${strict_production}" = "1" ] && [ "${livekit_count}" -ne 4 ]; then
+  echo "❌ LiveKit est obligatoire pour activer les classes virtuelles en production stricte." >&2
+  exit 1
+fi
+if [ -n "${livekit_url}" ]; then
+  case "${livekit_url}" in
+    wss://*/*|wss://*) ;;
+    *) echo "❌ LIVEKIT_URL doit être une URL websocket sécurisée (wss://)." >&2; exit 1 ;;
+  esac
+fi
+
 echo "✅ Variables runtime de production cohérentes (valeurs masquées)."

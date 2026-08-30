@@ -25,6 +25,12 @@ export const STUDENT_NAV: WorkspaceNavigation = {
       children: [],
     },
     {
+      href: "/classes-virtuelles",
+      label: "Classes virtuelles",
+      icon: "video",
+      children: [],
+    },
+    {
       href: "/wishlist",
       label: "Liste d'envies",
       icon: "heart",

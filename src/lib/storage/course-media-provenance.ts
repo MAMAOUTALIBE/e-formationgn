@@ -18,6 +18,8 @@ function validOwnedKey(key: string, ownerId: string): boolean {
     ? ["thumbnails", "courses", ownerId]
     : parts[0] === "resources" && parts[1] === "lessons"
       ? ["resources", "lessons", ownerId]
+      : parts[0] === "resources" && parts[1] === "virtual-classes"
+        ? ["resources", "virtual-classes", ownerId]
       : null;
   if (!expected || parts.length !== 4 || parts.slice(0, 3).join("/") !== expected.join("/")) return false;
   return /^\d+-[a-z0-9]{8}-.+$/i.test(parts[3]);
@@ -38,7 +40,7 @@ function r2Key(url: URL, config: CourseStorageConfig): string | null {
     : null;
 }
 
-/** Ne reconnaît que les deux préfixes générés par l'app et appartenant au propriétaire du cours. */
+/** Ne reconnaît que les préfixes générés par l'app et appartenant au propriétaire. */
 export function managedCourseObjectFromUrl(
   value: string,
   ownerId: string,

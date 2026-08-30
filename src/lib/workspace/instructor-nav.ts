@@ -31,6 +31,13 @@ export const INSTRUCTOR_NAV: WorkspaceNavigation = {
       children: [{ href: "/formateur/cours/nouveau", label: "Créer une formation" }],
     },
     {
+      href: "/formateur/classes-virtuelles",
+      label: "Mes classes virtuelles",
+      icon: "video",
+      group: "enseignement",
+      children: [],
+    },
+    {
       href: "/formateur/questions",
       label: "Questions & réponses",
       icon: "help",

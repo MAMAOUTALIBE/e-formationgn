@@ -52,6 +52,16 @@ export const ADMIN_NAV: WorkspaceNavigation = {
       ],
     },
     {
+      href: "/admin/classes-virtuelles",
+      label: "Classes virtuelles",
+      icon: "video",
+      group: "pilotage",
+      roles: ["ADMIN", "MANAGER"],
+      children: [
+        { href: "/admin/classes-virtuelles/nouvelle", label: "Nouvelle classe virtuelle" },
+      ],
+    },
+    {
       href: "/admin/marketing",
       label: "Marketing",
       icon: "megaphone",

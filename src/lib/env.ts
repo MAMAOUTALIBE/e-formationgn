@@ -49,6 +49,13 @@ const serverSchema = z.object({
   MUX_TOKEN_SECRET: z.string().optional(),
   MUX_WEBHOOK_SECRET: z.string().optional(),
 
+  // LiveKit Cloud — exclusivement serveur. L'URL websocket est renvoyée au
+  // client avec son jeton temporaire, jamais les clés ni secrets.
+  LIVEKIT_URL: z.string().url().optional(),
+  LIVEKIT_API_KEY: z.string().optional(),
+  LIVEKIT_API_SECRET: z.string().optional(),
+  LIVEKIT_WEBHOOK_SECRET: z.string().optional(),
+
   // Resend
   RESEND_API_KEY: z.string().optional(),
   RESEND_FROM_EMAIL: z.string().email().optional(),

@@ -12,6 +12,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { BRAND } from "@/lib/brand";
 
 import "./globals.css";
+import "@livekit/components-styles";
 
 const inter = Inter({
   variable: "--font-inter",

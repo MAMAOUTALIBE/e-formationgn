@@ -28,6 +28,7 @@ import {
   Star,
   Tag,
   Users,
+  Video,
   Wallet,
   type LucideIcon,
 } from "lucide-react";
@@ -69,6 +70,7 @@ const ICONS: Record<WorkspaceIconName, LucideIcon> = {
   heart: Heart,
   bell: Bell,
   play: PlayCircle,
+  video: Video,
   building: Building2,
 };
 

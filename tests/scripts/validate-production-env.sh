@@ -29,7 +29,11 @@ write_valid_fixture() {
     'NEXT_PUBLIC_TURNSTILE_SITE_KEY=1x00000000000000000000AA' \
     'TURNSTILE_SECRET_KEY=1x0000000000000000000000000000000AA' \
     'UPSTASH_REDIS_REST_URL=https://example.invalid' \
-    'UPSTASH_REDIS_REST_TOKEN=not-a-real-secret' > "${fixture}"
+    'UPSTASH_REDIS_REST_TOKEN=not-a-real-secret' \
+    'LIVEKIT_URL=wss://aiduca-test.livekit.cloud' \
+    'LIVEKIT_API_KEY=APItestkey' \
+    'LIVEKIT_API_SECRET=secret-livekit-test' \
+    'LIVEKIT_WEBHOOK_SECRET=secret-webhook-test' > "${fixture}"
 }
 
 write_valid_fixture
@@ -84,6 +88,22 @@ sed -i.bak '/UPSTASH_REDIS_REST_TOKEN/d' "${fixture}"
 if PRODUCTION_ENV_FILE="${fixture}" EXPECTED_PLATFORM_MODE=centre_formation \
   "${validator}" >/dev/null 2>&1; then
   echo "La configuration Upstash partielle aurait dû échouer." >&2
+  exit 1
+fi
+
+write_valid_fixture
+sed -i.bak '/LIVEKIT_WEBHOOK_SECRET/d' "${fixture}"
+if PRODUCTION_ENV_FILE="${fixture}" EXPECTED_PLATFORM_MODE=centre_formation \
+  "${validator}" >/dev/null 2>&1; then
+  echo "Une configuration LiveKit partielle aurait dû échouer." >&2
+  exit 1
+fi
+
+write_valid_fixture
+sed -i.bak '/^LIVEKIT_/d' "${fixture}"
+if PRODUCTION_ENV_FILE="${fixture}" EXPECTED_PLATFORM_MODE=centre_formation \
+  STRICT_PRODUCTION=1 "${validator}" >/dev/null 2>&1; then
+  echo "Une production stricte sans LiveKit aurait dû échouer." >&2
   exit 1
 fi
 
