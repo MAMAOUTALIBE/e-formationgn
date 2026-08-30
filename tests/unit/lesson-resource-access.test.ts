@@ -106,3 +106,22 @@ test("le lecteur montre les ressources modernes et historiques sans imbriquer le
   assert.match(sidebar, /lessonResourceHref\(lesson\.id, resource\.id, true\)/);
   assert.match(sidebar, /openResourcesLessonId/);
 });
+
+test("le bouton de ressources ne partage jamais la ligne du titre", async () => {
+  const sidebar = await read(
+    "src/components/features/learning/learning-sidebar.tsx",
+  );
+
+  const lessonLinkEnd = sidebar.indexOf("</Link>", sidebar.indexOf("aria-current="));
+  const resourceButton = sidebar.indexOf("<button", lessonLinkEnd);
+
+  assert.ok(lessonLinkEnd > -1);
+  assert.ok(resourceButton > lessonLinkEnd);
+  assert.match(sidebar, /mt-2\.5 flex justify-end pl-7/);
+  assert.match(sidebar, /whitespace-normal break-words leading-5 \[overflow-wrap:anywhere\]/);
+  assert.doesNotMatch(sidebar, /cn\("truncate", isActive/);
+  assert.match(sidebar, /border-violet-500/);
+  assert.match(sidebar, /<FolderOpen[^>]+aria-hidden \/>/);
+  assert.match(sidebar, /<span>Ressources<\/span>/);
+  assert.match(sidebar, /max-\[379px\]:w-full/);
+});

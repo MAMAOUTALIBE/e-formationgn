@@ -162,7 +162,7 @@ export function LearningSidebar({
                         : "border-transparent text-muted-foreground hover:bg-muted/60 hover:text-foreground",
                     )}
                   >
-                    <div className="flex min-w-0 items-center gap-2 px-3 py-2.5 pl-4">
+                    <div className="min-w-0 px-3 py-2.5 pl-4">
                       <Link
                         href={`/apprentissage/${courseSlug}/lecons/${lesson.id}`}
                         aria-current={isActive ? "page" : undefined}
@@ -180,7 +180,12 @@ export function LearningSidebar({
                           />
                         )}
                         <div className="min-w-0 flex-1">
-                          <p className={cn("truncate", isActive && "font-semibold")}>
+                          <p
+                            className={cn(
+                              "whitespace-normal break-words leading-5 [overflow-wrap:anywhere]",
+                              isActive && "font-semibold",
+                            )}
+                          >
                             {lessonIdx + 1}. {lesson.title}
                           </p>
                           <p className="mt-0.5 flex items-center gap-1.5 text-[11px] text-muted-foreground">
@@ -201,29 +206,30 @@ export function LearningSidebar({
                       </Link>
 
                       {resourceCount > 0 ? (
-                        <button
-                          type="button"
-                          onClick={() =>
-                            setOpenResourcesLessonId((current) =>
-                              current === lesson.id ? null : lesson.id,
-                            )
-                          }
-                          aria-expanded={resourcesOpen}
-                          aria-controls={resourcesPanelId}
-                          aria-label={`Ressources de la leçon (${resourceCount})`}
-                          className="inline-flex shrink-0 items-center gap-1 rounded-md border border-blue-300 bg-card px-2 py-1.5 text-xs font-medium text-[color:var(--brand-secondary)] transition-colors hover:border-[#2563EB] hover:bg-blue-50 dark:border-blue-800 dark:hover:bg-blue-950/40"
-                        >
-                          <FolderOpen className="h-3.5 w-3.5" aria-hidden />
-                          <span className="hidden min-[380px]:inline">Ressources</span>
-                          <span className="tabular-nums">({resourceCount})</span>
-                          <ChevronDown
-                            className={cn(
-                              "h-3.5 w-3.5 transition-transform",
-                              resourcesOpen && "rotate-180",
-                            )}
-                            aria-hidden
-                          />
-                        </button>
+                        <div className="mt-2.5 flex justify-end pl-7 max-[379px]:pl-0">
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setOpenResourcesLessonId((current) =>
+                                current === lesson.id ? null : lesson.id,
+                              )
+                            }
+                            aria-expanded={resourcesOpen}
+                            aria-controls={resourcesPanelId}
+                            aria-label={`Ressources de la leçon (${resourceCount})`}
+                            className="inline-flex shrink-0 items-center justify-center gap-1.5 rounded-md border border-violet-500 bg-card px-3 py-1.5 text-xs font-medium text-violet-600 transition-colors hover:border-violet-600 hover:bg-violet-50 dark:border-violet-500 dark:text-violet-300 dark:hover:bg-violet-950/40 max-[379px]:w-full"
+                          >
+                            <FolderOpen className="h-3.5 w-3.5" aria-hidden />
+                            <span>Ressources</span>
+                            <ChevronDown
+                              className={cn(
+                                "h-3.5 w-3.5 transition-transform",
+                                resourcesOpen && "rotate-180",
+                              )}
+                              aria-hidden
+                            />
+                          </button>
+                        </div>
                       ) : null}
                     </div>
 
