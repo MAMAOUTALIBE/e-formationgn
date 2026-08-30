@@ -56,3 +56,24 @@ test("l’ouverture très anticipée reste réservée à l’action modérateur 
   assert.match(actions, /allowBeforeOpeningWindow: true/);
   assert.match(actions, /status: "OPEN", openedAt: new Date\(\)/);
 });
+
+test("le lien de classe est envoyé uniquement aux apprenants actifs par un modérateur", () => {
+  const actions = read("src/server/actions/virtual-classes.ts");
+  const notifications = read("src/server/services/virtual-class-notifications.ts");
+  const adminActions = read("src/components/features/virtual-classes/virtual-class-admin-actions.tsx");
+  const instructorActions = read("src/components/features/virtual-classes/virtual-class-instructor-actions.tsx");
+
+  const sendAction = actions.slice(
+    actions.indexOf("export async function sendVirtualClassLinkToLearners"),
+    actions.indexOf("export async function cancelVirtualClass"),
+  );
+  assert.match(sendAction, /requireVirtualClassModerator\(virtualClassId\)/);
+  assert.match(sendAction, /audience: "LEARNERS"/);
+  assert.match(sendAction, /checkRateLimit\(/);
+  assert.match(notifications, /where: \{ status: "ACTIVE" \}/);
+  assert.match(notifications, /`\/classes-virtuelles\/\$\{virtualClass\.id\}`/);
+  assert.match(adminActions, /Envoyer le lien aux apprenants/);
+  assert.match(instructorActions, /Envoyer le lien aux apprenants/);
+  assert.match(adminActions, /className="w-full sm:w-auto"/);
+  assert.match(instructorActions, /className="w-full sm:w-auto"/);
+});

@@ -20,6 +20,7 @@ import {
 } from "@/lib/livekit/server";
 import { prisma } from "@/lib/prisma";
 import { managedCourseObjectFromUrl } from "@/lib/storage/course-media-provenance";
+import { checkRateLimit } from "@/lib/rate-limit";
 import {
   cancelVirtualClassSchema,
   virtualClassFormSchema,
@@ -436,6 +437,65 @@ export async function openVirtualClass(virtualClassId: string): Promise<VirtualC
     await createAuditLog({ actorId: session.userId, action: "virtual_class.open", targetType: "VirtualClassSession", targetId: full.id });
     revalidateVirtualClass(full.id);
     return { success: true, virtualClassId: full.id, message: "Salle ouverte." };
+  } catch (error) {
+    return actionError(error);
+  }
+}
+
+export async function sendVirtualClassLinkToLearners(
+  virtualClassId: string,
+): Promise<VirtualClassActionResult> {
+  try {
+    const { session, virtualClass } = await requireVirtualClassModerator(virtualClassId);
+    if (!["SCHEDULED", "OPEN", "LIVE"].includes(virtualClass.status)) {
+      return {
+        success: false,
+        message: virtualClass.status === "DRAFT"
+          ? "Programmez la classe avant d’envoyer le lien aux apprenants."
+          : "Le lien ne peut plus être envoyé pour cette séance.",
+      };
+    }
+
+    const rateLimit = await checkRateLimit({
+      key: `virtual-class-link:${session.userId}:${virtualClass.id}`,
+      windowMs: 15 * 60 * 1000,
+      max: 3,
+    });
+    if (!rateLimit.ok) {
+      return {
+        success: false,
+        message: "Le lien a déjà été envoyé plusieurs fois. Réessayez dans quelques minutes.",
+      };
+    }
+
+    const delivery = await notifyVirtualClass({
+      virtualClassId: virtualClass.id,
+      kind: "CONFIRMATION",
+      keySuffix: `manual:${nanoid(12)}`,
+      audience: "LEARNERS",
+    });
+    if (!delivery.sent) {
+      return {
+        success: false,
+        message: "Aucun apprenant actif n’est inscrit à cette session.",
+      };
+    }
+
+    await createAuditLog({
+      actorId: session.userId,
+      action: "virtual_class.link.send",
+      targetType: "VirtualClassSession",
+      targetId: virtualClass.id,
+      metadata: { notified: delivery.sent, emailed: delivery.emailed },
+    });
+
+    const learnersLabel = `${delivery.sent} apprenant${delivery.sent > 1 ? "s" : ""}`;
+    const message = delivery.emailed === delivery.sent
+      ? `Lien envoyé à ${learnersLabel} par e-mail et dans Aiduca.`
+      : delivery.emailed > 0
+        ? `Lien envoyé dans Aiduca à ${learnersLabel}, dont ${delivery.emailed} également par e-mail.`
+        : `Lien envoyé dans Aiduca à ${learnersLabel}. L’envoi par e-mail n’est pas configuré.`;
+    return { success: true, virtualClassId: virtualClass.id, message };
   } catch (error) {
     return actionError(error);
   }

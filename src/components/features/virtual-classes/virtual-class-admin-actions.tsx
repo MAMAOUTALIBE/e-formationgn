@@ -1,12 +1,12 @@
 "use client";
 
-import { Copy, DoorOpen, Pencil, Square, Trash2, XCircle } from "lucide-react";
+import { Copy, DoorOpen, Pencil, Send, Square, Trash2, XCircle } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useTransition } from "react";
 
 import { Button } from "@/components/ui/button";
-import { cancelVirtualClass, deleteVirtualClass, duplicateVirtualClass, endVirtualClass, openVirtualClass } from "@/server/actions/virtual-classes";
+import { cancelVirtualClass, deleteVirtualClass, duplicateVirtualClass, endVirtualClass, openVirtualClass, sendVirtualClassLinkToLearners } from "@/server/actions/virtual-classes";
 
 export function VirtualClassAdminActions({ id, status, canDelete }: { id: string; status: string; canDelete: boolean }) {
   const router = useRouter();
@@ -46,11 +46,21 @@ export function VirtualClassAdminActions({ id, status, canDelete }: { id: string
     run(() => cancelVirtualClass(id, data));
   }
 
+  function sendLink() {
+    if (!window.confirm("Envoyer le lien d’accès à tous les apprenants actifs de cette session ?")) return;
+    startTransition(async () => {
+      const result = await sendVirtualClassLinkToLearners(id);
+      window.alert(result.message ?? (result.success ? "Lien envoyé." : "L’envoi a échoué."));
+      if (result.success) router.refresh();
+    });
+  }
+
   return (
     <div className="flex flex-wrap gap-2">
       {status === "DRAFT" || status === "SCHEDULED" ? <Button asChild variant="outline"><Link href={`/admin/classes-virtuelles/${id}/modifier`}><Pencil className="h-4 w-4" />Modifier</Link></Button> : null}
       {status === "SCHEDULED" ? <Button type="button" onClick={() => run(() => openVirtualClass(id))} disabled={pending}><DoorOpen className="h-4 w-4" />Ouvrir la salle</Button> : null}
       {status === "OPEN" || status === "LIVE" ? <Button asChild><Link href={`/classes-virtuelles/${id}/verification`}><DoorOpen className="h-4 w-4" />Rejoindre la salle</Link></Button> : null}
+      <Button type="button" variant="outline" className="w-full sm:w-auto" onClick={sendLink} disabled={pending || !["SCHEDULED", "OPEN", "LIVE"].includes(status)} title={status === "DRAFT" ? "Programmez la classe avant l’envoi" : undefined}><Send className="h-4 w-4" />Envoyer le lien aux apprenants</Button>
       {status === "OPEN" || status === "LIVE" ? <Button type="button" variant="destructive" onClick={() => window.confirm("Terminer la séance pour tous les participants ?") && run(() => endVirtualClass(id))} disabled={pending}><Square className="h-4 w-4" />Terminer</Button> : null}
       {["DRAFT", "SCHEDULED", "OPEN"].includes(status) ? <Button type="button" variant="outline" onClick={cancel} disabled={pending}><XCircle className="h-4 w-4" />Annuler</Button> : null}
       <Button type="button" variant="outline" onClick={duplicate} disabled={pending}><Copy className="h-4 w-4" />Dupliquer</Button>
