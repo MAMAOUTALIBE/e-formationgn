@@ -100,14 +100,24 @@ export async function createVirtualClass(
   } catch {
     return { success: false, message: "Accès refusé." };
   }
-  const raw = readVirtualClassForm(formData);
+  const submitted = readVirtualClassForm(formData);
+  const openNow = formData.get("intent") === "OPEN_NOW";
+  const requestedAt = new Date();
+  const raw = openNow
+    ? {
+        ...submitted,
+        startsAt: requestedAt.toISOString(),
+        earlyJoinMinutes: "0",
+        status: "SCHEDULED",
+      }
+    : submitted;
   const parsed = virtualClassFormSchema.safeParse(raw);
   if (!parsed.success) {
     return {
       success: false,
       message: "Corrigez les champs signalés.",
       fieldErrors: fields(parsed.error.issues),
-      values: raw,
+      values: submitted,
     };
   }
   const relations = await validateRelations(
@@ -115,7 +125,7 @@ export async function createVirtualClass(
     parsed.data.instructorId,
   );
   if ("error" in relations) {
-    return { success: false, message: relations.error, values: raw };
+    return { success: false, message: relations.error, values: submitted };
   }
   if (
     parsed.data.startsAt < relations.trainingSession.startDate ||
@@ -125,51 +135,98 @@ export async function createVirtualClass(
       success: false,
       message: "La classe doit se dérouler pendant les dates de la session.",
       fieldErrors: { startsAt: "Date hors de la session de formation." },
-      values: raw,
+      values: submitted,
     };
   }
 
-  const virtualClass = await prisma.$transaction(async (tx) => {
-    const created = await tx.virtualClassSession.create({
-      data: {
-        ...parsed.data,
-        livekitRoomName: `aiduca-${nanoid(22)}`,
-        createdById: actor.userId,
-      },
+  if (openNow && !isLiveKitConfigured()) {
+    return {
+      success: false,
+      message: "LiveKit n’est pas configuré. La classe instantanée ne peut pas être ouverte.",
+      values: submitted,
+    };
+  }
+
+  const virtualClassId = nanoid(24);
+  const livekitRoomName = `aiduca-${nanoid(22)}`;
+  if (openNow) {
+    try {
+      await ensureLiveKitRoom({
+        name: livekitRoomName,
+        maxParticipants: parsed.data.maxParticipants,
+        metadata: { virtualClassId },
+      });
+    } catch {
+      return {
+        success: false,
+        message: "La salle instantanée n’a pas pu être préparée. Réessayez dans quelques instants.",
+        values: submitted,
+      };
+    }
+  }
+
+  let virtualClass;
+  try {
+    virtualClass = await prisma.$transaction(async (tx) => {
+      const created = await tx.virtualClassSession.create({
+        data: {
+          ...parsed.data,
+          id: virtualClassId,
+          livekitRoomName,
+          status: openNow ? "OPEN" : parsed.data.status,
+          openedAt: openNow ? requestedAt : null,
+          createdById: actor.userId,
+        },
+      });
+      const registrations = await tx.registration.findMany({
+        where: { sessionId: created.trainingSessionId, status: { not: "CANCELLED" } },
+        select: { studentId: true },
+      });
+      await tx.virtualClassAttendance.createMany({
+        data: [
+          ...registrations.map((registration) => ({
+            virtualClassId: created.id,
+            userId: registration.studentId,
+            role: "STUDENT" as const,
+          })),
+          { virtualClassId: created.id, userId: created.instructorId, role: "INSTRUCTOR" as const },
+        ],
+        skipDuplicates: true,
+      });
+      return created;
     });
-    const registrations = await tx.registration.findMany({
-      where: { sessionId: created.trainingSessionId, status: { not: "CANCELLED" } },
-      select: { studentId: true },
-    });
-    await tx.virtualClassAttendance.createMany({
-      data: [
-        ...registrations.map((registration) => ({
-          virtualClassId: created.id,
-          userId: registration.studentId,
-          role: "STUDENT" as const,
-        })),
-        { virtualClassId: created.id, userId: created.instructorId, role: "INSTRUCTOR" as const },
-      ],
-      skipDuplicates: true,
-    });
-    return created;
-  });
+  } catch {
+    if (openNow) await closeLiveKitRoom(livekitRoomName).catch(() => undefined);
+    return {
+      success: false,
+      message: "La classe virtuelle n’a pas pu être créée.",
+      values: submitted,
+    };
+  }
 
   await createAuditLog({
     actorId: actor.userId,
     action: "virtual_class.create",
     targetType: "VirtualClassSession",
     targetId: virtualClass.id,
-    metadata: { status: virtualClass.status, startsAt: virtualClass.startsAt.toISOString() },
+    metadata: {
+      status: virtualClass.status,
+      startsAt: virtualClass.startsAt.toISOString(),
+      instant: openNow,
+    },
   });
   revalidateVirtualClass(virtualClass.id);
-  if (virtualClass.status === "SCHEDULED") {
+  if (virtualClass.status === "SCHEDULED" || openNow) {
     await notifyVirtualClass({ virtualClassId: virtualClass.id, kind: "CONFIRMATION", keySuffix: "scheduled" }).catch(() => undefined);
   }
   return {
     success: true,
     virtualClassId: virtualClass.id,
-    message: virtualClass.status === "SCHEDULED" ? "Classe virtuelle programmée." : "Brouillon créé.",
+    message: openNow
+      ? "Classe virtuelle créée et salle ouverte."
+      : virtualClass.status === "SCHEDULED"
+        ? "Classe virtuelle programmée."
+        : "Brouillon créé.",
   };
 }
 

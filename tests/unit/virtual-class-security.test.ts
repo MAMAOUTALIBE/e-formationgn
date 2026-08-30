@@ -34,3 +34,18 @@ test("les titres longs peuvent revenir à la ligne dans les vues de détail", ()
   assert.match(admin, /break-words/);
   assert.match(student, /break-words/);
 });
+
+test("la création instantanée prépare LiveKit puis ouvre la salle côté serveur", () => {
+  const form = read("src/components/features/virtual-classes/virtual-class-form.tsx");
+  const actions = read("src/server/actions/virtual-classes.ts");
+  const adminActions = read("src/components/features/virtual-classes/virtual-class-admin-actions.tsx");
+
+  assert.match(form, /value="OPEN_NOW"/);
+  assert.match(form, /Créer et ouvrir maintenant/);
+  assert.match(actions, /formData\.get\("intent"\) === "OPEN_NOW"/);
+  assert.match(actions, /openNow && !isLiveKitConfigured\(\)/);
+  assert.match(actions, /await ensureLiveKitRoom\(/);
+  assert.match(actions, /status: openNow \? "OPEN"/);
+  assert.match(actions, /openedAt: openNow \? requestedAt/);
+  assert.match(adminActions, /Rejoindre la salle/);
+});

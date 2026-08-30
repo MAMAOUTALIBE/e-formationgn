@@ -50,6 +50,7 @@ export function VirtualClassAdminActions({ id, status, canDelete }: { id: string
     <div className="flex flex-wrap gap-2">
       {status === "DRAFT" || status === "SCHEDULED" ? <Button asChild variant="outline"><Link href={`/admin/classes-virtuelles/${id}/modifier`}><Pencil className="h-4 w-4" />Modifier</Link></Button> : null}
       {status === "SCHEDULED" ? <Button type="button" onClick={() => run(() => openVirtualClass(id))} disabled={pending}><DoorOpen className="h-4 w-4" />Ouvrir la salle</Button> : null}
+      {status === "OPEN" || status === "LIVE" ? <Button asChild><Link href={`/classes-virtuelles/${id}/verification`}><DoorOpen className="h-4 w-4" />Rejoindre la salle</Link></Button> : null}
       {status === "OPEN" || status === "LIVE" ? <Button type="button" variant="destructive" onClick={() => window.confirm("Terminer la séance pour tous les participants ?") && run(() => endVirtualClass(id))} disabled={pending}><Square className="h-4 w-4" />Terminer</Button> : null}
       {["DRAFT", "SCHEDULED", "OPEN"].includes(status) ? <Button type="button" variant="outline" onClick={cancel} disabled={pending}><XCircle className="h-4 w-4" />Annuler</Button> : null}
       <Button type="button" variant="outline" onClick={duplicate} disabled={pending}><Copy className="h-4 w-4" />Dupliquer</Button>

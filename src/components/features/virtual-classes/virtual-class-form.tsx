@@ -1,5 +1,6 @@
 "use client";
 
+import { Radio } from "lucide-react";
 import { useActionState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 
@@ -120,7 +121,26 @@ export function VirtualClassForm({
           Autoriser l’enregistrement après confirmation visible
         </label>
       </div>
-      <SubmitButton>{virtualClassId ? "Enregistrer les modifications" : "Créer la classe virtuelle"}</SubmitButton>
+      <div className="flex flex-col gap-3 sm:flex-row">
+        <SubmitButton>{virtualClassId ? "Enregistrer les modifications" : "Créer la classe virtuelle"}</SubmitButton>
+        {!virtualClassId ? (
+          <SubmitButton
+            name="intent"
+            value="OPEN_NOW"
+            variant="secondary"
+            formNoValidate
+            pendingLabel="Ouverture en cours…"
+          >
+            <Radio className="h-4 w-4" />
+            Créer et ouvrir maintenant
+          </SubmitButton>
+        ) : null}
+      </div>
+      {!virtualClassId ? (
+        <p className="text-xs text-muted-foreground">
+          L’ouverture immédiate utilise la durée indiquée et remplace la date de début par l’heure actuelle.
+        </p>
+      ) : null}
     </form>
   );
 }
