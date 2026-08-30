@@ -36,6 +36,8 @@ const requireOwnership = requireCourseOwnership;
 
 /** Plafond de pièces jointes par leçon. */
 const MAX_RESOURCES_PER_LESSON = 20;
+const RETIRED_RESOURCE_TYPE_MESSAGE =
+  "Ajoutez les fichiers avec la carte Ressources téléchargeables.";
 
 // Helpers locaux qui chargent davantage que la version centrale (la relation
 // `course` complète + tous les champs lesson/section), pour éviter un second
@@ -95,7 +97,6 @@ export async function createSection(
       fieldErrors: parsed.error.flatten().fieldErrors,
     };
   }
-
   const lastOrder = await prisma.section.aggregate({
     where: { courseId },
     _max: { displayOrder: true },
@@ -131,7 +132,6 @@ export async function updateSection(
       fieldErrors: parsed.error.flatten().fieldErrors,
     };
   }
-
   await prisma.section.update({
     where: { id: sectionId },
     data: {
@@ -198,6 +198,13 @@ export async function createLesson(
       fieldErrors: parsed.error.flatten().fieldErrors,
     };
   }
+  if (parsed.data.type === "RESOURCE") {
+    return {
+      success: false,
+      message: RETIRED_RESOURCE_TYPE_MESSAGE,
+      fieldErrors: { type: [RETIRED_RESOURCE_TYPE_MESSAGE] },
+    };
+  }
 
   const lastOrder = await prisma.lesson.aggregate({
     where: { sectionId },
@@ -248,6 +255,15 @@ export async function updateLesson(
     return {
       success: false,
       fieldErrors: parsed.error.flatten().fieldErrors,
+    };
+  }
+  // Les anciennes leçons RESOURCE restent sauvegardables afin de préserver
+  // leurs liens. En revanche, aucune leçon moderne ne peut adopter ce type.
+  if (parsed.data.type === "RESOURCE" && lesson.type !== "RESOURCE") {
+    return {
+      success: false,
+      message: RETIRED_RESOURCE_TYPE_MESSAGE,
+      fieldErrors: { type: [RETIRED_RESOURCE_TYPE_MESSAGE] },
     };
   }
 

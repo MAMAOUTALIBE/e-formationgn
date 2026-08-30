@@ -84,7 +84,9 @@ export function LessonEditForm({ lessonId, returnHref, defaults }: LessonEditFor
           <option value="VIDEO">Vidéo</option>
           <option value="TEXT">Texte</option>
           <option value="QUIZ">Quiz</option>
-          <option value="RESOURCE">Ressource</option>
+          {defaults.type === "RESOURCE" ? (
+            <option value="RESOURCE">Ressource (ancien format)</option>
+          ) : null}
         </Select>
       </FormField>
 
@@ -121,41 +123,14 @@ export function LessonEditForm({ lessonId, returnHref, defaults }: LessonEditFor
         <input type="hidden" name="textContent" value={defaults.textContent} />
       )}
 
-      {type === "RESOURCE" ? (
-        <div className="grid gap-4 sm:grid-cols-2">
-          <FormField id="resourceUrl" label="URL de la ressource" error={errors.resourceUrl?.[0]}>
-            <Input
-              id="resourceUrl"
-              name="resourceUrl"
-              type="url"
-              defaultValue={defaults.resourceUrl}
-              placeholder="https://"
-            />
-          </FormField>
-          <FormField
-            id="resourceFileName"
-            label="Nom de fichier (optionnel)"
-            error={errors.resourceFileName?.[0]}
-          >
-            <Input
-              id="resourceFileName"
-              name="resourceFileName"
-              defaultValue={defaults.resourceFileName}
-              maxLength={160}
-              placeholder="cheatsheet.pdf"
-            />
-          </FormField>
-        </div>
-      ) : (
-        <>
-          <input type="hidden" name="resourceUrl" value={defaults.resourceUrl} />
-          <input
-            type="hidden"
-            name="resourceFileName"
-            value={defaults.resourceFileName}
-          />
-        </>
-      )}
+      {/* L'ancien lien reste soumis pour ne pas effacer les cours historiques.
+          Toute nouvelle pièce jointe passe par l'unique carte Ressources. */}
+      <input type="hidden" name="resourceUrl" value={defaults.resourceUrl} />
+      <input
+        type="hidden"
+        name="resourceFileName"
+        value={defaults.resourceFileName}
+      />
 
       <label className="flex items-center gap-2 text-sm text-foreground">
         <Checkbox name="isFreePreview" defaultChecked={defaults.isFreePreview} />

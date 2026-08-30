@@ -56,7 +56,6 @@ export function LessonCreateForm({ courseId, sectionId }: LessonCreateFormProps)
           <option value="VIDEO">Vidéo</option>
           <option value="TEXT">Texte</option>
           <option value="QUIZ">Quiz</option>
-          <option value="RESOURCE">Ressource</option>
         </Select>
       </FormField>
       <SubmitButton pendingLabel="Création…">Ajouter</SubmitButton>

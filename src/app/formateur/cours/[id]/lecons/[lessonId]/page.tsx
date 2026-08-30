@@ -67,7 +67,7 @@ export default async function LessonEditPage({ params }: PageProps) {
           <CardHeader>
             <CardTitle>Détails de la leçon</CardTitle>
             <CardDescription>
-              Modifiez le titre, le type et le contenu textuel ou la ressource.
+              Modifiez le titre, le type et le contenu de la leçon.
             </CardDescription>
           </CardHeader>
           <CardContent>

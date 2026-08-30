@@ -88,6 +88,25 @@ test("le programme permet de gérer les ressources sur chaque carte de leçon", 
   assert.match(cards, /aria-expanded=\{resourcesOpen\}/);
 });
 
+test("la carte de ressources est l'unique interface d'ajout d'une leçon", async () => {
+  const [createForm, editForm, editPage, actions] = await Promise.all([
+    read("src/components/features/instructor/lesson-create-form.tsx"),
+    read("src/components/features/instructor/lesson-edit-form.tsx"),
+    read("src/app/formateur/cours/[id]/lecons/[lessonId]/page.tsx"),
+    read("src/server/actions/curriculum.ts"),
+  ]);
+
+  assert.doesNotMatch(createForm, /<option value="RESOURCE">/);
+  assert.doesNotMatch(editForm, /label="URL de la ressource"/);
+  assert.doesNotMatch(editForm, /label="Nom de fichier \(optionnel\)"/);
+  assert.match(editForm, /Ressource \(ancien format\)/);
+  assert.match(editForm, /type="hidden" name="resourceUrl"/);
+  assert.match(editPage, /<LessonResourcesManager/);
+  assert.match(actions, /parsed\.data\.type === "RESOURCE"/);
+  assert.match(actions, /lesson\.type !== "RESOURCE"/);
+  assert.match(actions, /RETIRED_RESOURCE_TYPE_MESSAGE/);
+});
+
 test("le lecteur montre les ressources modernes et historiques sans imbriquer les actions", async () => {
   const [page, sidebar] = await Promise.all([
     read("src/app/apprentissage/[slug]/lecons/[lessonId]/page.tsx"),
