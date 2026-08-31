@@ -55,7 +55,16 @@ export async function requireVirtualClassAccess(virtualClassId: string) {
     );
   }
 
-  const joinError = virtualClassJoinError(virtualClass);
+  // Champs listés explicitement : la fenêtre d'ouverture anticipée ne
+  // s'applique que si `startsAt` et `earlyJoinMinutes` sont transmis, et un
+  // passage de `include` à `select` sur la requête ci-dessus la désactiverait
+  // en silence.
+  const joinError = virtualClassJoinError({
+    status: virtualClass.status,
+    startsAt: virtualClass.startsAt,
+    scheduledEndAt: virtualClass.scheduledEndAt,
+    earlyJoinMinutes: virtualClass.earlyJoinMinutes,
+  });
   if (joinError) throw new VirtualClassAccessError("NOT_OPEN", joinError);
 
   const displayName =

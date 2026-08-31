@@ -8,17 +8,21 @@ import { requireAnyAdminRole } from "@/lib/auth/authorization";
 import {
   canTransitionVirtualClass,
   virtualClassCanBeOpened,
+  virtualClassReplayExpiry,
 } from "@/lib/domain/virtual-class";
 import {
   closeLiveKitRoom,
   ensureLiveKitRoom,
   isLiveKitConfigured,
+  LiveKitConfigurationError,
   removeLiveKitParticipant,
+  ReplayStorageConfigurationError,
   startRoomRecording,
   stopRoomRecording,
   updateStudentPublishing,
 } from "@/lib/livekit/server";
 import { prisma } from "@/lib/prisma";
+import { isAllowedResourceFile, resourceUploadContentType } from "@/lib/resource-file";
 import { managedCourseObjectFromUrl } from "@/lib/storage/course-media-provenance";
 import { checkRateLimit } from "@/lib/rate-limit";
 import {
@@ -28,6 +32,7 @@ import {
   virtualClassResourceSchema,
 } from "@/lib/validators/virtual-class";
 import { createAuditLog } from "@/server/services/audit-log";
+import { closeOpenAttendancePeriods } from "@/server/services/virtual-class-attendance";
 import { notifyVirtualClass } from "@/server/services/virtual-class-notifications";
 import {
   requireVirtualClassAccess,
@@ -515,9 +520,21 @@ export async function cancelVirtualClass(virtualClassId: string, formData: FormD
   if (!canTransitionVirtualClass(current.status, "CANCELLED")) {
     return { success: false, message: "Cette séance ne peut plus être annulée." };
   }
-  await prisma.virtualClassSession.update({
-    where: { id: virtualClassId },
-    data: { status: "CANCELLED", cancellationReason: parsed.data.reason },
+  const cancelledAt = new Date();
+  await prisma.$transaction(async (tx) => {
+    // Une séance annulée en cours laisse des participants connectés : leurs
+    // périodes doivent être arrêtées ici aussi, la salle étant fermée juste
+    // après sans garantie de recevoir `room_finished`.
+    await closeOpenAttendancePeriods(tx, {
+      virtualClassId,
+      durationMinutes: current.durationMinutes,
+      at: cancelledAt,
+      reason: "session_cancelled",
+    });
+    await tx.virtualClassSession.update({
+      where: { id: virtualClassId },
+      data: { status: "CANCELLED", cancellationReason: parsed.data.reason },
+    });
   });
   if (isLiveKitConfigured() && ["OPEN", "LIVE"].includes(current.status)) {
     await closeLiveKitRoom(current.livekitRoomName).catch(() => undefined);
@@ -534,11 +551,52 @@ export async function endVirtualClass(virtualClassId: string): Promise<VirtualCl
     if (!canTransitionVirtualClass(virtualClass.status, "ENDED")) {
       return { success: false, message: "Cette séance ne peut pas être terminée dans son état actuel." };
     }
-    if (isLiveKitConfigured()) await closeLiveKitRoom(virtualClass.livekitRoomName);
-    await prisma.virtualClassSession.update({ where: { id: virtualClassId }, data: { status: "ENDED", endedAt: new Date() } });
+    // Fermeture au mieux, comme pour l'annulation : une panne LiveKit ne doit
+    // pas empêcher de clore la séance côté Aiduca. Sans ce `catch`, l'exception
+    // remontait, la séance restait indéfiniment `LIVE`, les périodes de
+    // présence ouvertes — et le formateur n'avait plus aucun moyen de terminer.
+    // La salle finit de toute façon par expirer (`emptyTimeout`).
+    let roomClosed = true;
+    if (isLiveKitConfigured()) {
+      roomClosed = await closeLiveKitRoom(virtualClass.livekitRoomName).then(
+        () => true,
+        (error) => {
+          console.error(`[classe virtuelle ${virtualClassId}] fermeture de salle LiveKit en échec`, error);
+          return false;
+        },
+      );
+    }
+    const endedAt = new Date();
+    await prisma.$transaction(async (tx) => {
+      const full = await tx.virtualClassSession.findUnique({
+        where: { id: virtualClassId },
+        select: { durationMinutes: true },
+      });
+      // Clôture ici et pas seulement sur `room_finished` : le webhook peut ne
+      // jamais arriver (destination non déclarée côté LiveKit, coupure), et la
+      // présence resterait alors figée sur des périodes ouvertes.
+      if (full) {
+        await closeOpenAttendancePeriods(tx, {
+          virtualClassId,
+          durationMinutes: full.durationMinutes,
+          at: endedAt,
+          reason: "session_ended",
+        });
+      }
+      await tx.virtualClassSession.update({ where: { id: virtualClassId }, data: { status: "ENDED", endedAt } });
+    });
     await createAuditLog({ actorId: session.userId, action: "virtual_class.end", targetType: "VirtualClassSession", targetId: virtualClassId });
     revalidateVirtualClass(virtualClassId);
-    return { success: true, virtualClassId, message: "Séance terminée pour tous." };
+    // On ne prétend pas que tout s'est bien passé si la salle n'a pas répondu :
+    // la séance est close et la présence figée, mais des participants peuvent
+    // rester connectés quelques minutes.
+    return {
+      success: true,
+      virtualClassId,
+      message: roomClosed
+        ? "Séance terminée pour tous."
+        : "Séance terminée et présence figée. La salle n’a pas répondu : les participants encore connectés en seront sortis d’ici quelques minutes.",
+    };
   } catch (error) {
     return actionError(error);
   }
@@ -585,6 +643,43 @@ export async function createVirtualClassMessage(input: { virtualClassId: string;
   } catch (error) { return actionError(error); }
 }
 
+/**
+ * Retire un message de la discussion.
+ *
+ * Suppression logique : `deletedAt` masque le message, `moderatedAt` garde la
+ * trace de l'intervention. Les deux colonnes existaient sans aucun chemin pour
+ * les écrire — un formateur ne disposait d'aucun moyen de retirer un contenu
+ * déplacé pendant sa séance.
+ */
+export async function deleteVirtualClassMessage(messageId: string): Promise<VirtualClassActionResult> {
+  const message = await prisma.virtualClassMessage.findUnique({
+    where: { id: messageId },
+    select: { id: true, virtualClassId: true, deletedAt: true },
+  });
+  if (!message) return { success: false, message: "Message introuvable." };
+  try {
+    const { session } = await requireVirtualClassModerator(message.virtualClassId);
+    if (message.deletedAt) {
+      return { success: true, virtualClassId: message.virtualClassId, message: "Message déjà retiré." };
+    }
+    const now = new Date();
+    await prisma.virtualClassMessage.update({
+      where: { id: message.id },
+      data: { deletedAt: now, moderatedAt: now },
+    });
+    await createAuditLog({
+      actorId: session.userId,
+      action: "virtual_class.message.delete",
+      targetType: "VirtualClassMessage",
+      targetId: message.id,
+      metadata: { virtualClassId: message.virtualClassId },
+    });
+    return { success: true, virtualClassId: message.virtualClassId, message: "Message retiré." };
+  } catch (error) {
+    return actionError(error);
+  }
+}
+
 export async function addVirtualClassResource(input: {
   virtualClassId: string;
   title: string;
@@ -610,9 +705,16 @@ export async function addVirtualClassResource(input: {
     if (!managedObject || !managedObject.key.startsWith(`resources/virtual-classes/${session.userId}/`)) {
       return { success: false, message: "Le fichier ne provient pas d’un dépôt autorisé." };
     }
+    // Le format est revérifié ici, et pas seulement à la présignature : rien
+    // n'oblige un client à enchaîner les deux appels. Le type effectivement
+    // stocké est ensuite dérivé du fichier, jamais recopié depuis la requête.
+    if (!isAllowedResourceFile(managedObject.key, parsed.data.contentType)) {
+      return { success: false, message: "Format de fichier non supporté." };
+    }
+    const contentType = resourceUploadContentType(managedObject.key, "");
     const count = await prisma.virtualClassResource.count({ where: { virtualClassId: input.virtualClassId } });
     if (count >= 40) return { success: false, message: "Maximum 40 documents par séance." };
-    const resource = await prisma.virtualClassResource.create({ data: { virtualClassId: input.virtualClassId, authorId: session.userId, ...parsed.data } });
+    const resource = await prisma.virtualClassResource.create({ data: { virtualClassId: input.virtualClassId, authorId: session.userId, ...parsed.data, contentType } });
     await createAuditLog({ actorId: session.userId, action: "virtual_class.resource.add", targetType: "VirtualClassResource", targetId: resource.id, metadata: { virtualClassId: input.virtualClassId } });
     revalidateVirtualClass(input.virtualClassId);
     return { success: true, virtualClassId: input.virtualClassId, message: "Document ajouté." };
@@ -667,12 +769,24 @@ export async function stopVirtualClassRecording(virtualClassId: string): Promise
 }
 
 export async function publishVirtualClassReplay(recordingId: string, visible: boolean): Promise<VirtualClassActionResult> {
-  const recording = await prisma.virtualClassRecording.findUnique({ where: { id: recordingId }, select: { id: true, virtualClassId: true, status: true } });
+  const recording = await prisma.virtualClassRecording.findUnique({ where: { id: recordingId }, select: { id: true, virtualClassId: true, status: true, expiresAt: true } });
   if (!recording) return { success: false, message: "Replay introuvable." };
   try {
     const { session } = await requireVirtualClassModerator(recording.virtualClassId);
     if (recording.status !== "READY") return { success: false, message: "Le replay n’est pas encore prêt." };
-    await prisma.virtualClassRecording.update({ where: { id: recording.id }, data: { visible, publishedAt: visible ? new Date() : null, publishedById: visible ? session.userId : null } });
+    const publishedAt = new Date();
+    await prisma.virtualClassRecording.update({
+      where: { id: recording.id },
+      data: {
+        visible,
+        publishedAt: visible ? publishedAt : null,
+        publishedById: visible ? session.userId : null,
+        // L'échéance est posée à la publication et n'est jamais repoussée par
+        // un dépublier/republier : la durée de conservation court à partir de
+        // la première mise à disposition.
+        expiresAt: visible ? (recording.expiresAt ?? virtualClassReplayExpiry(publishedAt)) : recording.expiresAt,
+      },
+    });
     await createAuditLog({ actorId: session.userId, action: visible ? "virtual_class.replay.publish" : "virtual_class.replay.unpublish", targetType: "VirtualClassRecording", targetId: recording.id });
     if (visible) await notifyVirtualClass({ virtualClassId: recording.virtualClassId, kind: "REPLAY_AVAILABLE", keySuffix: recording.id }).catch(() => undefined);
     revalidateVirtualClass(recording.virtualClassId);
@@ -689,8 +803,24 @@ function revalidateVirtualClass(id: string) {
 
 function actionError(error: unknown): VirtualClassActionResult {
   if (error instanceof VirtualClassAccessError) return { success: false, message: error.message };
+  // Configuration absente : le message générique laissait le formateur sans
+  // piste, alors que la cause est connue et n'appelle pas un nouvel essai mais
+  // une intervention d'administration.
+  if (error instanceof LiveKitConfigurationError || error instanceof ReplayStorageConfigurationError) {
+    return { success: false, message: error.message };
+  }
   if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2025") {
     return { success: false, message: "Donnée introuvable ou modifiée entre-temps." };
   }
+  // Le service de visioconférence a répondu en erreur : distinguer ce cas d'une
+  // panne interne évite de faire chercher au mauvais endroit.
+  if (error instanceof Error && /livekit|egress|room/i.test(error.message)) {
+    console.error("[classe virtuelle] appel LiveKit en échec", error);
+    return {
+      success: false,
+      message: "Le service de visioconférence n’a pas répondu. Réessayez dans quelques instants.",
+    };
+  }
+  console.error("[classe virtuelle] action en échec", error);
   return { success: false, message: "L’opération n’a pas pu aboutir." };
 }

@@ -10,11 +10,20 @@ import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { SubmitButton } from "@/components/ui/submit-button";
 import { Textarea } from "@/components/ui/textarea";
+import { COMMON_TIME_ZONES, supportedTimeZones } from "@/lib/time-zone";
 import {
   createVirtualClass,
   updateVirtualClass,
   type VirtualClassActionResult,
 } from "@/server/actions/virtual-classes";
+
+// Calculé une fois au chargement du module : la liste ICU ne change pas d'un
+// rendu à l'autre. Le champ était auparavant une saisie libre, ce qui laissait
+// enregistrer « Paris » ou « GMT+1 » — des valeurs que `Intl` refuse ensuite au
+// rendu des listes de séances.
+const otherTimeZones = supportedTimeZones().filter(
+  (zone) => !(COMMON_TIME_ZONES as readonly string[]).includes(zone),
+);
 
 interface Option {
   id: string;
@@ -61,6 +70,14 @@ export function VirtualClassForm({
   const sent = state.values;
   const value = (key: keyof Values) => sent?.[key] ?? values[key] ?? "";
   const error = (key: string) => state.fieldErrors?.[key];
+  // Une séance enregistrée avant la validation du fuseau peut porter une
+  // valeur absente des deux listes. On la conserve en tête plutôt que de la
+  // remplacer en silence : l'administrateur voit ce qui est réellement stocké
+  // et choisit lui-même le remplacement.
+  const currentTimeZone = String(value("timezone"));
+  const knownTimeZone =
+    (COMMON_TIME_ZONES as readonly string[]).includes(currentTimeZone) ||
+    otherTimeZones.includes(currentTimeZone);
 
   return (
     <form action={formAction} className="space-y-5 rounded-2xl border bg-card p-4 shadow-sm sm:p-6">
@@ -105,15 +122,25 @@ export function VirtualClassForm({
         <FormField id="durationMinutes" label="Durée (minutes)" required error={error("durationMinutes")}>
           <Input id="durationMinutes" name="durationMinutes" type="number" min={15} max={480} defaultValue={String(value("durationMinutes"))} required />
         </FormField>
-        <FormField id="timezone" label="Fuseau horaire" required error={error("timezone")}>
-          <Input id="timezone" name="timezone" defaultValue={String(value("timezone"))} required />
+        <FormField id="timezone" label="Fuseau horaire" hint="L’heure saisie est celle de ce fuseau." required error={error("timezone")}>
+          <Select id="timezone" name="timezone" defaultValue={currentTimeZone} required>
+            {!knownTimeZone && currentTimeZone ? (
+              <option value={currentTimeZone}>{currentTimeZone} (à corriger)</option>
+            ) : null}
+            <optgroup label="Fuseaux courants">
+              {COMMON_TIME_ZONES.map((zone) => <option key={zone} value={zone}>{zone}</option>)}
+            </optgroup>
+            <optgroup label="Tous les fuseaux">
+              {otherTimeZones.map((zone) => <option key={zone} value={zone}>{zone}</option>)}
+            </optgroup>
+          </Select>
         </FormField>
         <FormField id="maxParticipants" label="Participants maximum" hint="Vide = limite de la session." error={error("maxParticipants")}>
           <Input id="maxParticipants" name="maxParticipants" type="number" min={2} max={500} defaultValue={String(value("maxParticipants"))} />
         </FormField>
       </div>
       <div className="grid gap-4 sm:grid-cols-2">
-        <FormField id="earlyJoinMinutes" label="Ouverture anticipée (minutes)" error={error("earlyJoinMinutes")}>
+        <FormField id="earlyJoinMinutes" label="Ouverture anticipée (minutes)" hint="Les apprenants peuvent entrer ce nombre de minutes avant l’heure de début, sans attendre le formateur." error={error("earlyJoinMinutes")}>
           <Input id="earlyJoinMinutes" name="earlyJoinMinutes" type="number" min={0} max={120} defaultValue={String(value("earlyJoinMinutes"))} />
         </FormField>
         <label className="flex min-h-11 items-center gap-3 rounded-lg border px-3 text-sm">

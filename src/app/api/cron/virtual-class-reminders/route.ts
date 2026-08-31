@@ -18,18 +18,39 @@ export async function GET(request: NextRequest) {
   }
   const now = new Date();
   let sent = 0;
+  let failed = 0;
   for (const window of WINDOWS) {
     const target = new Date(now.getTime() + window.offsetMinutes * 60_000);
     const tolerance = window.toleranceMinutes * 60_000;
-    const classes = await prisma.virtualClassSession.findMany({
-      where: { status: "SCHEDULED", startsAt: { gte: new Date(target.getTime() - tolerance), lt: new Date(target.getTime() + tolerance) } },
-      select: { id: true, startsAt: true },
-      take: 200,
-    });
+    // La requête elle-même est isolée : une coupure de base sur une fenêtre
+    // faisait échouer tout le passage, y compris les fenêtres déjà traitées,
+    // dont les rappels étaient alors comptés comme non envoyés.
+    let classes;
+    try {
+      classes = await prisma.virtualClassSession.findMany({
+        where: { status: "SCHEDULED", startsAt: { gte: new Date(target.getTime() - tolerance), lt: new Date(target.getTime() + tolerance) } },
+        select: { id: true, startsAt: true },
+        take: 200,
+      });
+    } catch (error) {
+      failed++;
+      console.error(`[cron] fenêtre de rappel ${window.kind} illisible`, error);
+      continue;
+    }
     for (const item of classes) {
-      const result = await notifyVirtualClass({ virtualClassId: item.id, kind: window.kind, keySuffix: item.startsAt.toISOString(), scheduledFor: item.startsAt });
-      sent += result.sent;
+      // Isolé séance par séance : une seule ligne en défaut (fuseau illisible,
+      // e-mail refusé…) faisait auparavant échouer tout le passage, et les
+      // rappels des autres séances de la fenêtre étaient perdus sans reprise.
+      try {
+        const result = await notifyVirtualClass({ virtualClassId: item.id, kind: window.kind, keySuffix: item.startsAt.toISOString(), scheduledFor: item.startsAt });
+        sent += result.sent;
+      } catch (error) {
+        failed++;
+        console.error(`[cron] rappel de classe virtuelle ${item.id} en échec`, error);
+      }
     }
   }
-  return NextResponse.json({ ok: true, sent });
+  // `ok` reflète la réalité : un passage partiellement en échec ne doit pas
+  // être vu comme réussi par la supervision.
+  return NextResponse.json({ ok: failed === 0, sent, failed }, { status: failed ? 207 : 200 });
 }

@@ -36,10 +36,13 @@ export function VirtualClassCard({ item, detailHref, joinHref, prepareHref, atte
               <VirtualClassStatus status={item.status} />
               {item.trainingSession.reference ? <span className="text-xs font-medium text-muted-foreground">{item.trainingSession.reference}</span> : null}
             </div>
-            <Link href={detailHref} className="text-lg font-semibold leading-snug text-foreground hover:underline">
+            {/* `break-words` : un titre d'un seul long mot (référence interne,
+                URL collée) débordait de la carte, le conteneur `min-w-0` ne
+                suffisant pas à couper un mot insécable. */}
+            <Link href={detailHref} className="block break-words text-lg font-semibold leading-snug text-foreground hover:underline">
               {item.title}
             </Link>
-            <p className="mt-1 text-sm text-muted-foreground">{item.trainingSession.program.title}</p>
+            <p className="mt-1 break-words text-sm text-muted-foreground">{item.trainingSession.program.title}</p>
           </div>
           {item.status === "LIVE" ? (
             <span className="inline-flex shrink-0 items-center gap-2 rounded-full bg-red-50 px-3 py-1.5 text-xs font-bold text-red-700">
@@ -48,15 +51,15 @@ export function VirtualClassCard({ item, detailHref, joinHref, prepareHref, atte
           ) : null}
         </div>
         <div className="grid gap-2 text-sm text-muted-foreground sm:grid-cols-2 xl:grid-cols-4">
-          <span className="flex items-center gap-2"><CalendarDays className="h-4 w-4" />{formatVirtualClassShortDate(item.startsAt, item.timezone)}</span>
+          <span className="flex min-w-0 items-center gap-2"><CalendarDays className="h-4 w-4 shrink-0" /><span className="truncate">{formatVirtualClassShortDate(item.startsAt, item.timezone)}</span></span>
           <span className="flex items-center gap-2"><Clock3 className="h-4 w-4" />{item.durationMinutes} min</span>
-          <span className="flex items-center gap-2"><UserRound className="h-4 w-4" />{virtualClassPersonName(item.instructor)}</span>
+          <span className="flex min-w-0 items-center gap-2"><UserRound className="h-4 w-4 shrink-0" /><span className="truncate">{virtualClassPersonName(item.instructor)}</span></span>
           {item.maxParticipants ? <span className="flex items-center gap-2"><UsersRound className="h-4 w-4" />{item.maxParticipants} places</span> : null}
           {attendanceLabel ? <span className="flex items-center gap-2"><UsersRound className="h-4 w-4" />{attendanceLabel}</span> : null}
         </div>
         <div className="flex flex-col gap-2 border-t pt-4 sm:flex-row sm:justify-end">
-          {prepareHref ? <Button asChild variant="outline"><Link href={prepareHref}>Préparer la séance</Link></Button> : null}
-          <Button asChild variant={canJoin ? "default" : "outline"}>
+          {prepareHref ? <Button asChild variant="outline" className="w-full sm:w-auto"><Link href={prepareHref}>Préparer la séance</Link></Button> : null}
+          <Button asChild variant={canJoin ? "default" : "outline"} className="w-full sm:w-auto">
             <Link href={canJoin ? joinHref : detailHref}>{canJoin ? (item.status === "LIVE" ? "Classe en cours" : "Rejoindre la classe") : "Voir les détails"}</Link>
           </Button>
         </div>

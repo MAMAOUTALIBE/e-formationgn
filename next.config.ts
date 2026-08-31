@@ -19,6 +19,54 @@ const cspMode = (process.env.CSP_MODE ?? "enforce").toLowerCase();
 // reconstruire les piles d'appels serveur dans le navigateur. Ni React ni
 // Next.js n'y recourent en production (doc Next.js, guide CSP).
 const isDev = process.env.NODE_ENV !== "production";
+/**
+ * Origines LiveKit autorisées par `connect-src`.
+ *
+ * `livekit-client` n'ouvre pas seulement un websocket : il interroge d'abord
+ * `https://<projet>.livekit.cloud/settings/regions` pour choisir la région la
+ * plus proche (`getCloudConfigUrl` remplace `ws` par `http` dans l'URL du
+ * serveur). Avec la seule autorisation `wss:`, cet appel était bloqué — sans
+ * message ailleurs que dans la console, et uniquement en production puisque la
+ * politique n'y est pas en report-only.
+ *
+ * ATTENTION : les en-têtes de ce fichier sont figés dans
+ * `.next/routes-manifest.json` AU BUILD, pas relus au démarrage. Comme l'image
+ * est construite sur un poste où `LIVEKIT_URL` n'est pas posée (elle n'arrive
+ * qu'au runtime sur le VPS), les domaines publics de LiveKit Cloud sont
+ * toujours inclus. La variable n'est lue qu'en complément, pour une
+ * construction auto-hébergée où elle serait présente à ce moment-là.
+ */
+function livekitCspOrigins(): string {
+  // Domaines publics de LiveKit Cloud, dans les deux protocoles. On ne met
+  // PLUS un `wss:` générique : ce schéma nu autorisait un websocket vers
+  // n'importe quel hôte, soit un canal d'exfiltration grand ouvert pour un
+  // script injecté, alors que LiveKit est le seul consommateur de websocket de
+  // l'application.
+  const origins = new Set([
+    "wss://*.livekit.cloud",
+    "https://*.livekit.cloud",
+    "wss://*.livekit.run",
+    "https://*.livekit.run",
+  ]);
+  // Installation auto-hébergée : poser `LIVEKIT_URL` AU MOMENT DU BUILD ajoute
+  // son origine. Sans elle, seul LiveKit Cloud est joignable et la salle
+  // refusera de se connecter — avec une violation CSP explicite en console,
+  // pas un échec muet.
+  const configured = process.env.LIVEKIT_URL?.trim();
+  if (configured) {
+    try {
+      const url = new URL(configured);
+      origins.add(`${url.protocol}//${url.host}`);
+      origins.add(`${url.protocol.replace("ws", "http")}//${url.host}`);
+    } catch {
+      // URL invalide : la liste par défaut suffit, on ne casse pas le build.
+    }
+  }
+  return [...origins].join(" ");
+}
+
+const livekitOrigins = livekitCspOrigins();
+
 const cspPolicy = [
   "default-src 'self'",
   // 'unsafe-inline' nécessaire pour Next.js (hydration scripts) — à durcir avec
@@ -37,8 +85,10 @@ const cspPolicy = [
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data: blob: https:",
   "font-src 'self' data:",
-  // Mux + Stripe + Sentry + R2/S3 : sources externes attendues
-  "connect-src 'self' wss: https://*.stripe.com https://*.mux.com https://*.sentry.io https://*.r2.cloudflarestorage.com https://www.youtube.com https://www.youtube-nocookie.com",
+  // Mux + Stripe + Sentry + R2/S3 : sources externes attendues.
+  // `livekitOrigins` ouvre en plus le websocket ET l'origine HTTP de LiveKit
+  // (découverte de région) — cf. la fonction du même nom plus haut.
+  `connect-src 'self' ${livekitOrigins} https://*.stripe.com https://*.mux.com https://*.sentry.io https://*.r2.cloudflarestorage.com https://www.youtube.com https://www.youtube-nocookie.com`,
   // `www.youtube.com` en plus du domaine sans cookie : l'API IFrame retombe
   // sur l'origine standard dans certains cas, et d'anciennes leçons peuvent
   // encore porter une URL `youtube.com/embed`.

@@ -1,3 +1,5 @@
+import { safeTimeZone, utcToZonedDateTimeLocal } from "@/lib/time-zone";
+
 export function virtualClassPersonName(person: {
   name?: string | null;
   firstName?: string | null;
@@ -13,10 +15,14 @@ export function virtualClassPersonName(person: {
 }
 
 export function formatVirtualClassDate(value: Date | string, timezone = "Europe/Paris") {
+  // `safeTimeZone` et non la valeur brute : les séances créées avant la
+  // validation stricte peuvent porter un fuseau que `Intl` refuse, et ces
+  // formateurs sont appelés depuis des listes. On dégrade l'affichage d'une
+  // ligne plutôt que de renvoyer une 500 sur toute la page.
   return new Intl.DateTimeFormat("fr-FR", {
     dateStyle: "full",
     timeStyle: "short",
-    timeZone: timezone,
+    timeZone: safeTimeZone(timezone),
   }).format(new Date(value));
 }
 
@@ -27,14 +33,19 @@ export function formatVirtualClassShortDate(value: Date | string, timezone = "Eu
     year: "numeric",
     hour: "2-digit",
     minute: "2-digit",
-    timeZone: timezone,
+    timeZone: safeTimeZone(timezone),
   }).format(new Date(value));
 }
 
-export function dateTimeLocalValue(value: Date | string) {
-  const date = new Date(value);
-  const local = new Date(date.getTime() - date.getTimezoneOffset() * 60_000);
-  return local.toISOString().slice(0, 16);
+/**
+ * Valeur d'un `<input type="datetime-local">` pour une séance.
+ *
+ * Exprimée dans le fuseau de la séance, pas dans celui du serveur qui rend la
+ * page : sans ça, le formulaire de modification réaffichait une heure décalée
+ * et la réenregistrer déplaçait la séance.
+ */
+export function dateTimeLocalValue(value: Date | string, timezone = "Europe/Paris") {
+  return utcToZonedDateTimeLocal(value, timezone);
 }
 
 export function formatDurationSeconds(totalSeconds: number) {

@@ -22,6 +22,13 @@ export interface LiveKitServerConfig {
   webhookSecret: string;
 }
 
+export class ReplayStorageConfigurationError extends Error {
+  constructor() {
+    super("Le stockage privé des replays n’est pas configuré (variables R2 absentes).");
+    this.name = "ReplayStorageConfigurationError";
+  }
+}
+
 export class LiveKitConfigurationError extends Error {
   constructor() {
     super("Le service de classe virtuelle n’est pas encore configuré.");
@@ -113,6 +120,9 @@ export function getLiveKitRoomClient(): RoomServiceClient {
   return roomClient;
 }
 
+/** Places à réserver dans LiveKit en plus des apprenants (formateur + admin). */
+export const LIVEKIT_MODERATOR_HEADROOM = 2;
+
 export async function ensureLiveKitRoom(input: {
   name: string;
   maxParticipants: number | null;
@@ -120,18 +130,60 @@ export async function ensureLiveKitRoom(input: {
 }): Promise<void> {
   const client = getLiveKitRoomClient();
   const existing = await client.listRooms([input.name]);
-  if (existing.length) return;
+  const current = existing[0];
+  if (current) {
+    // LiveKit n'expose aucune mise à jour de `maxParticipants` : la seule
+    // façon de refléter une capacité modifiée après coup est de recréer la
+    // salle. On ne le fait QUE si elle est vide — jamais au milieu d'un cours,
+    // ce qui déconnecterait tout le monde. Une salle occupée garde son ancienne
+    // limite jusqu'à son expiration ; le contrôle applicatif, lui, lit la base
+    // à jour et reste donc exact dans l'intervalle.
+    const desired = input.maxParticipants
+      ? input.maxParticipants + LIVEKIT_MODERATOR_HEADROOM
+      : 0;
+    if (current.numParticipants === 0 && current.maxParticipants !== desired) {
+      await client.deleteRoom(input.name);
+    } else {
+      return;
+    }
+  }
   await client.createRoom({
     name: input.name,
     emptyTimeout: 10 * 60,
     departureTimeout: 30,
-    maxParticipants: input.maxParticipants ?? 0,
+    // Marge pour les modérateurs : la limite saisie compte des apprenants, or
+    // celle de LiveKit compte tout le monde. Sans cette réserve, le formateur
+    // arrivé après les apprenants se faisait refuser par sa propre salle.
+    maxParticipants: input.maxParticipants
+      ? input.maxParticipants + LIVEKIT_MODERATOR_HEADROOM
+      : 0,
     metadata: JSON.stringify(input.metadata),
   });
 }
 
-export async function countLiveKitParticipants(roomName: string): Promise<number> {
-  return (await getLiveKitRoomClient().listParticipants(roomName)).length;
+/**
+ * Nombre d'APPRENANTS connectés à la salle.
+ *
+ * Les modérateurs sont exclus : « Participants maximum » est un nombre de
+ * places pour la formation. Compter le formateur revenait à en retirer une
+ * silencieusement — sur une salle à 2 places, le second apprenant se voyait
+ * refuser l'entrée alors que l'écran annonçait « 2 places ».
+ *
+ * Le rôle est relu dans les métadonnées que NOUS avons signées dans le jeton :
+ * un participant ne peut pas se déclarer modérateur pour échapper au décompte.
+ * Une métadonnée absente ou illisible compte comme un apprenant — c'est le
+ * sens le plus strict.
+ */
+export async function countLiveKitLearners(roomName: string): Promise<number> {
+  const participants = await getLiveKitRoomClient().listParticipants(roomName);
+  return participants.filter((participant) => {
+    try {
+      const metadata = JSON.parse(participant.metadata || "{}") as { role?: string };
+      return metadata.role !== "ADMIN" && metadata.role !== "INSTRUCTOR";
+    } catch {
+      return true;
+    }
+  }).length;
 }
 
 export async function updateStudentPublishing(input: {
@@ -179,7 +231,7 @@ function getEgressStorage() {
   const accessKey = process.env.R2_ACCESS_KEY_ID;
   const secret = process.env.R2_SECRET_ACCESS_KEY;
   const bucket = process.env.R2_BUCKET ?? "e-formationgn";
-  if (!accountId || !accessKey || !secret) throw new Error("Le stockage privé des replays n’est pas configuré.");
+  if (!accountId || !accessKey || !secret) throw new ReplayStorageConfigurationError();
   return { accountId, accessKey, secret, bucket };
 }
 

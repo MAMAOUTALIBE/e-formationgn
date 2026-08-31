@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { auth } from "@/auth";
+import { isReplayWithinRetention } from "@/lib/domain/virtual-class";
 import { prisma } from "@/lib/prisma";
 import { getR2Object } from "@/lib/storage/r2";
 import { getVirtualClassViewer } from "@/server/queries/virtual-classes";
@@ -16,6 +17,14 @@ async function serve(request: Request, context: { params: Promise<{ id: string; 
   if (!viewer) return NextResponse.json({ error: "Replay introuvable." }, { status: 404 });
   const recording = await prisma.virtualClassRecording.findFirst({ where: { id: recordingId, virtualClassId: id, status: "READY", ...(viewer.viewerRole === "STUDENT" ? { visible: true } : {}) } });
   if (!recording?.storageKey) return NextResponse.json({ error: "Replay indisponible." }, { status: 404 });
+  // Rétention appliquée à la lecture, sans attendre la purge nocturne : entre
+  // l'échéance et le passage du cron, le fichier existe encore côté stockage.
+  if (!isReplayWithinRetention(recording.expiresAt)) {
+    return NextResponse.json(
+      { error: "Ce replay a atteint sa durée de conservation et n’est plus disponible." },
+      { status: 410 },
+    );
+  }
   try {
     const object = await getR2Object(recording.storageKey, request.headers.get("range"));
     const headers = new Headers({ "content-type": object.ContentType ?? "video/mp4", "cache-control": "private, no-store", "accept-ranges": object.AcceptRanges ?? "bytes", "x-content-type-options": "nosniff" });

@@ -43,7 +43,7 @@ export default async function AdminVirtualClassDetailPage({ params }: { params: 
       </div>
 
       <div className="grid gap-6 xl:grid-cols-[1.35fr_.65fr]">
-        <Card className="min-w-0 overflow-hidden"><CardHeader className="flex-row items-center justify-between"><CardTitle>Feuille de présence</CardTitle><Button asChild variant="outline" size="sm"><Link href={`/api/classes-virtuelles/${id}/presence`}><Download className="h-4 w-4" />Exporter</Link></Button></CardHeader><CardContent className="overflow-x-auto p-0"><table className="w-full min-w-[680px] text-sm"><thead className="border-y bg-muted/40 text-left text-xs uppercase text-muted-foreground"><tr><th className="px-5 py-3">Participant</th><th className="px-5 py-3">Statut</th><th className="px-5 py-3">Connexions</th><th className="px-5 py-3">Durée réelle</th><th className="px-5 py-3">Première entrée</th></tr></thead><tbody className="divide-y">{learners.map((attendance) => <tr key={attendance.id}><td className="px-5 py-3"><strong className="block">{virtualClassPersonName(attendance.user)}</strong><span className="text-xs text-muted-foreground">{attendance.user.email}</span></td><td className="px-5 py-3">{attendanceLabels[attendance.status] ?? attendance.status}</td><td className="px-5 py-3">{attendance.connectionCount}</td><td className="px-5 py-3">{formatDurationSeconds(attendance.totalSeconds)}</td><td className="px-5 py-3">{attendance.firstJoinedAt ? formatVirtualClassDate(attendance.firstJoinedAt, item.timezone) : "—"}</td></tr>)}</tbody></table>{!learners.length ? <p className="p-5 text-sm text-muted-foreground">Aucun apprenant attendu pour cette session.</p> : null}</CardContent></Card>
+        <Card className="min-w-0 overflow-hidden"><CardHeader className="flex-row items-center justify-between"><CardTitle>Feuille de présence</CardTitle><Button asChild variant="outline" size="sm"><Link href={`/api/classes-virtuelles/${id}/presence`}><Download className="h-4 w-4" />Exporter</Link></Button></CardHeader><CardContent className="overflow-x-auto p-0"><table className="w-full min-w-[680px] text-sm"><thead className="border-y bg-muted/40 text-left text-xs uppercase text-muted-foreground"><tr><th className="px-5 py-3">Participant</th><th className="px-5 py-3">Statut</th><th className="px-5 py-3">Connexions</th><th className="px-5 py-3">Durée réelle</th><th className="px-5 py-3">Première entrée</th></tr></thead><tbody className="divide-y">{learners.map((attendance) => <tr key={attendance.id}><td className="px-5 py-3"><strong className="block">{virtualClassPersonName(attendance.user)}</strong><span className="text-xs text-muted-foreground">{attendance.user.email}</span></td><td className="px-5 py-3">{attendanceLabels[attendance.status] ?? attendance.status}</td><td className="px-5 py-3">{attendance.connectionCount}{deviceLabel(attendance.deviceInfo) ? <span className="block text-xs text-muted-foreground">{deviceLabel(attendance.deviceInfo)}</span> : null}</td><td className="px-5 py-3">{formatDurationSeconds(attendance.totalSeconds)}</td><td className="px-5 py-3">{attendance.firstJoinedAt ? formatVirtualClassDate(attendance.firstJoinedAt, item.timezone) : "—"}</td></tr>)}</tbody></table>{!learners.length ? <p className="p-5 text-sm text-muted-foreground">Aucun apprenant attendu pour cette session.</p> : null}</CardContent></Card>
 
         <div className="space-y-6">
           <Card><CardHeader><CardTitle>Contenu de la séance</CardTitle></CardHeader><CardContent className="space-y-4 text-sm">{item.description ? <div><h3 className="font-semibold">Description</h3><p className="mt-1 whitespace-pre-wrap text-muted-foreground">{item.description}</p></div> : null}{item.agenda ? <div><h3 className="font-semibold">Programme</h3><p className="mt-1 whitespace-pre-wrap text-muted-foreground">{item.agenda}</p></div> : null}{!item.description && !item.agenda ? <p className="text-muted-foreground">Aucune description ni programme.</p> : null}</CardContent></Card>
@@ -53,6 +53,18 @@ export default async function AdminVirtualClassDetailPage({ params }: { params: 
       </div>
     </div>
   );
+}
+
+/**
+ * Environnement du participant, relevé au moment où son jeton a été délivré.
+ * Sert au support : « pas de son » n'a pas la même cause sur Safari iOS que
+ * sur Chrome Windows.
+ */
+function deviceLabel(deviceInfo: unknown): string | null {
+  if (!deviceInfo || typeof deviceInfo !== "object") return null;
+  const info = deviceInfo as { browser?: unknown; os?: unknown; mobile?: unknown };
+  if (typeof info.browser !== "string" || typeof info.os !== "string") return null;
+  return `${info.browser} · ${info.os}${info.mobile ? " · mobile" : ""}`;
 }
 
 function Metric({ icon, label, value }: { icon: React.ReactNode; label: string; value: number }) {

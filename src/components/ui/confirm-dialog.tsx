@@ -16,6 +16,13 @@ interface ConfirmDialogProps {
   destructive?: boolean;
   onConfirm: () => void | Promise<void>;
   pending?: boolean;
+  /**
+   * Champ complémentaire rendu entre la description et les boutons — un motif
+   * obligatoire, une case à cocher d'accusé de réception. Optionnel : les
+   * confirmations simples n'en passent pas. Le piège à focus couvre déjà les
+   * `input`/`textarea` injectés ici.
+   */
+  children?: React.ReactNode;
 }
 
 export function ConfirmDialog({
@@ -28,6 +35,7 @@ export function ConfirmDialog({
   destructive,
   onConfirm,
   pending,
+  children,
 }: ConfirmDialogProps) {
   const dialogRef = useRef<HTMLDivElement>(null);
   const cancelRef = useRef<HTMLButtonElement>(null);
@@ -113,7 +121,8 @@ export function ConfirmDialog({
         {description ? (
           <p id={descriptionId} className="mt-2 text-sm text-muted-foreground">{description}</p>
         ) : null}
-        <div className="mt-5 flex justify-end gap-2">
+        {children ? <div className="mt-4">{children}</div> : null}
+        <div className="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
           <Button ref={cancelRef} variant="outline" onClick={onClose} disabled={pending}>
             {cancelLabel}
           </Button>

@@ -5,6 +5,7 @@ import { Prisma } from "@/generated/prisma/client";
 import { attendanceStatusForDuration } from "@/lib/domain/virtual-class";
 import { getLiveKitWebhookReceiver, LiveKitConfigurationError, userIdFromLiveKitIdentity } from "@/lib/livekit/server";
 import { prisma } from "@/lib/prisma";
+import { closeOpenAttendancePeriods } from "@/server/services/virtual-class-attendance";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -148,17 +149,14 @@ async function participantLeft(
 
 async function roomFinished(virtualClass: { id: string; durationMinutes: number; status: string }, at: Date) {
   await prisma.$transaction(async (tx) => {
-    const attendances = await tx.virtualClassAttendance.findMany({ where: { virtualClassId: virtualClass.id }, include: { connectionPeriods: { where: { leftAt: null } } } });
-    for (const attendance of attendances) {
-      let added = 0;
-      for (const period of attendance.connectionPeriods) {
-        const durationSeconds = Math.max(0, Math.floor((at.getTime() - period.joinedAt.getTime()) / 1000));
-        added += durationSeconds;
-        await tx.virtualClassConnectionPeriod.update({ where: { id: period.id }, data: { leftAt: at, durationSeconds, closeReason: "room_finished" } });
-      }
-      const totalSeconds = attendance.totalSeconds + added;
-      await tx.virtualClassAttendance.update({ where: { id: attendance.id }, data: { totalSeconds, lastLeftAt: added ? at : attendance.lastLeftAt, status: attendanceStatusForDuration(totalSeconds, virtualClass.durationMinutes * 60) } });
-    }
+    // Même service que la fin de séance déclenchée depuis l'interface : les
+    // deux chemins doivent produire exactement la même feuille de présence.
+    await closeOpenAttendancePeriods(tx, {
+      virtualClassId: virtualClass.id,
+      durationMinutes: virtualClass.durationMinutes,
+      at,
+      reason: "room_finished",
+    });
     if (virtualClass.status === "OPEN" || virtualClass.status === "LIVE") {
       await tx.virtualClassSession.update({ where: { id: virtualClass.id }, data: { status: "ENDED", endedAt: at } });
     }

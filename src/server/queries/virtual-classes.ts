@@ -1,6 +1,7 @@
 import "server-only";
 
 import type { Prisma } from "@/generated/prisma/client";
+import { isReplayWithinRetention } from "@/lib/domain/virtual-class";
 import { prisma } from "@/lib/prisma";
 
 export const VIRTUAL_CLASS_LIST_STATUSES = [
@@ -102,7 +103,13 @@ export async function listStudentVirtualClasses(userId: string) {
         take: 1,
       },
       recordings: {
-        where: { status: "READY", visible: true },
+        // `expiresAt` filtré ici aussi : sans ça la carte proposait encore un
+        // bouton « replay » menant à une réponse 410.
+        where: {
+          status: "READY",
+          visible: true,
+          OR: [{ expiresAt: null }, { expiresAt: { gt: new Date() } }],
+        },
         select: { id: true },
         take: 1,
       },
@@ -170,6 +177,10 @@ export async function getVirtualClassViewer(id: string, userId: string, role: st
       scheduledEndAt: true,
       timezone: true,
       status: true,
+      // Instants d'ouverture : le chronomètre de la salle s'y ancre, au lieu
+      // de repartir de zéro à chaque montage du composant.
+      openedAt: true,
+      liveStartedAt: true,
       recordingEnabled: true,
       instructorId: true,
       instructor: { select: { name: true, firstName: true, lastName: true, email: true } },
@@ -181,7 +192,7 @@ export async function getVirtualClassViewer(id: string, userId: string, role: st
         },
       },
       resources: { select: { id: true, title: true, visibility: true, downloadable: true }, orderBy: { publishedAt: "desc" } },
-      recordings: { select: { id: true, status: true, visible: true }, orderBy: { createdAt: "desc" } },
+      recordings: { select: { id: true, status: true, visible: true, expiresAt: true }, orderBy: { createdAt: "desc" } },
     },
   });
   if (!virtualClass) return null;
@@ -193,7 +204,13 @@ export async function getVirtualClassViewer(id: string, userId: string, role: st
     ...virtualClass,
     viewerRole: isAdmin ? "ADMIN" as const : isInstructor ? "INSTRUCTOR" as const : "STUDENT" as const,
     registrationStatus: registration?.status ?? null,
-    replayId: virtualClass.recordings.find((recording) => recording.status === "READY" && recording.visible)?.id ?? null,
+    replayId:
+      virtualClass.recordings.find(
+        (recording) =>
+          recording.status === "READY" &&
+          recording.visible &&
+          isReplayWithinRetention(recording.expiresAt),
+      )?.id ?? null,
     recordingActive: virtualClass.recordings.some((recording) => recording.status === "STARTING" || recording.status === "ACTIVE"),
   };
 }
