@@ -18,8 +18,18 @@ export async function SiteFooter() {
   const { t } = await getDictionary();
 
   return (
-    <footer className="border-t border-border bg-muted/40">
-      <Container className="grid gap-10 py-12 lg:grid-cols-6">
+    <footer className="relative isolate overflow-hidden border-t border-white/20 bg-[#031735] [&_.text-foreground]:text-white [&_.text-muted-foreground]:text-slate-200 [&_a:hover]:text-white">
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute -inset-1 z-0 scale-[1.02] bg-cover bg-center blur-[2px]"
+        style={{ backgroundImage: "url('/images/footer-modern-building-construction.webp')" }}
+      />
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-0 z-0 bg-[#031735]/85"
+      />
+
+      <Container className="relative z-10 grid gap-10 py-12 lg:grid-cols-6">
         {/* Col 1 — Brand + Newsletter (double largeur) */}
         <div className="lg:col-span-2">
           <Logo width={170} />
@@ -178,7 +188,7 @@ export async function SiteFooter() {
       </Container>
 
       {/* Bottom bar — copyright + information RGPD */}
-      <div className="border-t border-border">
+      <div className="relative z-10 border-t border-white/20">
         <Container className="flex flex-col items-center justify-between gap-3 py-6 text-xs text-muted-foreground sm:flex-row">
           <p>
             © {new Date().getFullYear()} AIDUCA · SIREN {BRAND.siren}. {t.footer.rights}
