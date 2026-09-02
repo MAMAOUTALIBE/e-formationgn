@@ -12,6 +12,8 @@ import {
 } from "@/server/actions/admin-courses";
 import type { ActionResult } from "@/server/actions/auth";
 
+import { CourseHeroBackgroundForm } from "./course-hero-background-form";
+
 const initialState: ActionResult = { success: false };
 
 async function setFeatured(_previous: ActionResult, formData: FormData) {
@@ -32,10 +34,12 @@ export function CourseManagementPanel({
   courseId,
   isFeatured,
   notes,
+  heroBackgroundUrl,
 }: {
   courseId: string;
   isFeatured: boolean;
   notes: string;
+  heroBackgroundUrl: string | null;
 }) {
   const [featuredState, featuredAction] = useActionState(setFeatured, initialState);
   const [notesState, notesAction] = useActionState(saveNotes, initialState);
@@ -45,7 +49,7 @@ export function CourseManagementPanel({
       <CardHeader className="shrink-0 px-4 pb-2 pt-3">
         <CardTitle className="text-base">Gestion</CardTitle>
       </CardHeader>
-      <CardContent className="flex min-h-0 flex-1 flex-col gap-2 overflow-hidden px-4 pb-2.5">
+      <CardContent className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto px-4 pb-2.5">
         <form action={featuredAction} className="shrink-0 space-y-2">
           <input type="hidden" name="courseId" value={courseId} />
           <input type="hidden" name="featured" value={String(!isFeatured)} />
@@ -69,6 +73,11 @@ export function CourseManagementPanel({
             </p>
           ) : null}
         </form>
+
+        <CourseHeroBackgroundForm
+          courseId={courseId}
+          currentUrl={heroBackgroundUrl}
+        />
 
         <div className="flex min-h-0 flex-1 flex-col border-t border-border pt-2">
           <form action={notesAction} className="flex h-full min-h-0 flex-col gap-2">

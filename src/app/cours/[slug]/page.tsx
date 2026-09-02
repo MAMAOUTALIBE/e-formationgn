@@ -244,7 +244,21 @@ export default async function CourseDetailPage({
         {/* Hero — fond plein largeur ; la sticky card de droite (desktop)
             est positionnée par-dessus via le grid du bloc suivant avec
             marge négative `lg:-mt-72`. */}
-        <section className="border-b border-[#d8e4df] bg-[linear-gradient(125deg,#f1faf6_0%,#f8fcfa_72%,#edf8f2_100%)] py-6 text-foreground sm:py-8">
+        <section
+          className={`relative isolate border-b border-[#d8e4df] py-6 text-foreground sm:py-8 ${
+            course.heroBackgroundUrl
+              ? "bg-cover bg-center"
+              : "bg-[linear-gradient(125deg,#f1faf6_0%,#f8fcfa_72%,#edf8f2_100%)]"
+          }`}
+          style={
+            course.heroBackgroundUrl
+              ? { backgroundImage: `url(${JSON.stringify(course.heroBackgroundUrl)})` }
+              : undefined
+          }
+        >
+          {course.heroBackgroundUrl ? (
+            <div className="absolute inset-0 -z-10 bg-black/55" aria-hidden />
+          ) : null}
           <Container className="grid gap-8 lg:grid-cols-[1fr_360px]">
             <div>
               <Breadcrumbs

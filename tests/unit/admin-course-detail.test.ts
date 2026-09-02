@@ -25,7 +25,7 @@ test("la porte de publication reste bloquée pour le contenu par défaut", () =>
 });
 
 test("la fiche admin garde la grille compacte, les onglets et la suppression confirmée", async () => {
-  const [pageSource, workspaceSource, stylesSource, grantSource, dialogSource, bulkGrantSource, managementSource] = await Promise.all([
+  const [pageSource, workspaceSource, stylesSource, grantSource, dialogSource, bulkGrantSource, managementSource, heroBackgroundSource] = await Promise.all([
     readFile(path.join(root, "src/app/admin/cours/[id]/page.tsx"), "utf8"),
     readFile(path.join(root, "src/components/features/admin/course-detail-workspace.tsx"), "utf8"),
     readFile(path.join(root, "src/app/globals.css"), "utf8"),
@@ -33,6 +33,7 @@ test("la fiche admin garde la grille compacte, les onglets et la suppression con
     readFile(path.join(root, "src/components/ui/confirm-dialog.tsx"), "utf8"),
     readFile(path.join(root, "src/components/features/admin/bulk-course-grant.tsx"), "utf8"),
     readFile(path.join(root, "src/components/features/admin/course-management-panel.tsx"), "utf8"),
+    readFile(path.join(root, "src/components/features/admin/course-hero-background-form.tsx"), "utf8"),
   ]);
 
   assert.match(pageSource, /data-testid="admin-course-detail"/);
@@ -66,6 +67,12 @@ test("la fiche admin garde la grille compacte, les onglets et la suppression con
   assert.match(managementSource, /truncate text-sm font-medium text-foreground xl:whitespace-nowrap/);
   assert.match(managementSource, /xl:shrink-0 xl:whitespace-nowrap/);
   assert.match(managementSource, /min-w-0 flex-1 truncate text-xs text-muted-foreground xl:text-right/);
+  assert.match(managementSource, /CourseHeroBackgroundForm/);
+  assert.match(heroBackgroundSource, /Image d’arrière-plan du hero/);
+  assert.match(heroBackgroundSource, /Conserver l’image actuelle/);
+  assert.match(heroBackgroundSource, /Restaurer l’image par défaut/);
+  assert.match(heroBackgroundSource, /Supprimer l’image actuelle/);
+  assert.match(heroBackgroundSource, /object-cover object-center/);
 
   assert.match(dialogSource, /aria-labelledby=\{titleId\}/);
   assert.match(dialogSource, /aria-describedby=\{description \? descriptionId : undefined\}/);

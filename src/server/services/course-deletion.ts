@@ -13,6 +13,7 @@ export async function deleteCourseRecordIfUnused(courseId: string): Promise<Cour
           title: true,
           instructorId: true,
           thumbnailUrl: true,
+          heroBackgroundUrl: true,
           promoVideoMuxId: true,
           _count: { select: { orderItems: true, enrollments: true, certificates: true, programs: true } },
           sections: { select: { lessons: { select: {
@@ -35,6 +36,7 @@ export async function deleteCourseRecordIfUnused(courseId: string): Promise<Cour
         muxAssetIds: [course.promoVideoMuxId, ...lessons.map((lesson) => lesson.muxAssetId)].filter((id): id is string => Boolean(id)),
         storedUrls: [
           course.thumbnailUrl,
+          course.heroBackgroundUrl,
           ...lessons.flatMap((lesson) => [
             lesson.externalVideoUrl,
             lesson.resourceUrl,

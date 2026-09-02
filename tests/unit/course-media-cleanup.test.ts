@@ -8,11 +8,13 @@ const owner = "user-123";
 const filename = "1720000000000-ab12cd34-support.pdf";
 const resourceKey = `resources/lessons/${owner}/${filename}`;
 const thumbnailKey = `thumbnails/courses/${owner}/1720000000000-ab12cd34-image.png`;
+const heroBackgroundKey = `hero-backgrounds/courses/${owner}/1720000000000-ab12cd34-hero.webp`;
 const config = { r2AccountId: "account", r2Bucket: "bucket", r2PublicUrl: "https://media.example.com/assets" };
 
 test("reconnaît strictement les objets locaux et R2 custom/native générés pour le propriétaire", () => {
   assert.deepEqual(managedCourseObjectFromUrl(`/uploads/${resourceKey}`, owner, config), { backend: "local", key: resourceKey });
   assert.deepEqual(managedCourseObjectFromUrl(`https://media.example.com/assets/${thumbnailKey}`, owner, config), { backend: "r2", key: thumbnailKey });
+  assert.deepEqual(managedCourseObjectFromUrl(`/uploads/${heroBackgroundKey}`, owner, config), { backend: "local", key: heroBackgroundKey });
   assert.deepEqual(managedCourseObjectFromUrl(`https://account.r2.cloudflarestorage.com/bucket/${resourceKey}`, owner, { r2AccountId: "account", r2Bucket: "bucket" }), { backend: "r2", key: resourceKey });
   const virtualClassKey = `resources/virtual-classes/${owner}/${filename}`;
   assert.deepEqual(managedCourseObjectFromUrl(`/uploads/${virtualClassKey}`, owner, config), { backend: "local", key: virtualClassKey });

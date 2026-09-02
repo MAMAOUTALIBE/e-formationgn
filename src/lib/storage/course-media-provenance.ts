@@ -16,6 +16,8 @@ function validOwnedKey(key: string, ownerId: string): boolean {
   const parts = decoded.split("/");
   const expected = parts[0] === "thumbnails" && parts[1] === "courses"
     ? ["thumbnails", "courses", ownerId]
+    : parts[0] === "hero-backgrounds" && parts[1] === "courses"
+      ? ["hero-backgrounds", "courses", ownerId]
     : parts[0] === "resources" && parts[1] === "lessons"
       ? ["resources", "lessons", ownerId]
       : parts[0] === "resources" && parts[1] === "virtual-classes"

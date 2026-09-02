@@ -179,6 +179,7 @@ export default async function AdminCourseReviewPage({ params }: PageProps) {
             courseId={course.id}
             isFeatured={course.isFeatured ?? false}
             notes={course.internalNotes ?? ""}
+            heroBackgroundUrl={course.heroBackgroundUrl}
           />
         }
       />

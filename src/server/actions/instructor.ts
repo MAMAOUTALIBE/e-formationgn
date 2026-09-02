@@ -192,6 +192,7 @@ export async function duplicateCourse(courseId: string): Promise<void> {
       subtitle: source.subtitle,
       description: source.description,
       thumbnailUrl: source.thumbnailUrl,
+      heroBackgroundUrl: source.heroBackgroundUrl,
       level: source.level,
       language: source.language,
       durationSeconds: source.durationSeconds,

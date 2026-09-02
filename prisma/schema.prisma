@@ -318,6 +318,7 @@ model Course {
   subtitle             String?
   description          String  @db.Text
   thumbnailUrl         String?
+  heroBackgroundUrl    String?
   promoVideoMuxId      String?
   promoVideoPlaybackId String?
   promoVideoUrl        String?

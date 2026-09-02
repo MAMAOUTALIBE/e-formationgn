@@ -15,7 +15,11 @@ const prismaMediaReader: PersistentMediaBatchReader = {
         { image: { in: candidates } }, { websiteUrl: { in: candidates } }, { linkedinUrl: { in: candidates } },
         { facebookUrl: { in: candidates } }, { twitterUrl: { in: candidates } }, { youtubeUrl: { in: candidates } },
       ] }, select: { image: true, websiteUrl: true, linkedinUrl: true, facebookUrl: true, twitterUrl: true, youtubeUrl: true } }),
-      prisma.course.findMany({ where: { OR: [{ thumbnailUrl: { in: candidates } }, { promoVideoUrl: { in: candidates } }] }, select: { thumbnailUrl: true, promoVideoUrl: true } }),
+      prisma.course.findMany({ where: { OR: [
+        { thumbnailUrl: { in: candidates } },
+        { heroBackgroundUrl: { in: candidates } },
+        { promoVideoUrl: { in: candidates } },
+      ] }, select: { thumbnailUrl: true, heroBackgroundUrl: true, promoVideoUrl: true } }),
       prisma.lesson.findMany({ where: { OR: [{ externalVideoUrl: { in: candidates } }, { resourceUrl: { in: candidates } }] }, select: { externalVideoUrl: true, resourceUrl: true } }),
       prisma.lessonResource.findMany({ where: { url: { in: candidates } }, select: { url: true } }),
       prisma.order.findMany({ where: { stripeReceiptUrl: { in: candidates } }, select: { stripeReceiptUrl: true } }),

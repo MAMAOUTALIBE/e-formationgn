@@ -22,6 +22,13 @@ test("la fiche formation reprend la navigation et la carte sticky de la maquette
   assert.match(page, /Attestation de fin de formation/);
 });
 
+test("le hero utilise uniquement l’image propre à la formation et conserve son fond actuel par défaut", () => {
+  assert.match(page, /course\.heroBackgroundUrl/);
+  assert.match(page, /bg-cover bg-center/);
+  assert.match(page, /bg-black\/55/);
+  assert.match(page, /bg-\[linear-gradient\(125deg,#f1faf6_0%,#f8fcfa_72%,#edf8f2_100%\)\]/);
+});
+
 test("les libellés publics utilisent apprenant et Quiz de validation", () => {
   const publicPresentation = `${page}\n${accessNotice}\n${curriculum}`;
 

@@ -8,6 +8,7 @@ import { requireAnyAdminRole } from "@/lib/auth/authorization";
 import { executeCourseDeletion } from "@/lib/domain/course-deletion";
 import { failedCriteriaLabels } from "@/lib/validators/course-publish";
 import { prisma } from "@/lib/prisma";
+import { managedCourseObjectFromUrl } from "@/lib/storage/course-media-provenance";
 import { nanoid } from "nanoid";
 import { createAuditLog } from "@/server/services/audit-log";
 import { cleanupDeletedCourseMedia } from "@/server/services/course-media-cleanup";
@@ -305,6 +306,7 @@ export async function duplicateCourse(courseId: string): Promise<ActionResult> {
       subtitle: source.subtitle,
       description: source.description,
       thumbnailUrl: source.thumbnailUrl,
+      heroBackgroundUrl: source.heroBackgroundUrl,
       level: source.level,
       language: source.language,
       durationSeconds: source.durationSeconds,
@@ -404,4 +406,115 @@ export async function setInternalNotesOnCourse(
   await audit(admin.userId, "course.internal-notes", courseId);
   revalidatePath(`/admin/cours/${courseId}`);
   return { success: true, message: "Notes internes enregistrées." };
+}
+
+const HERO_BACKGROUND_MODES = ["keep", "replace", "default"] as const;
+type HeroBackgroundMode = (typeof HERO_BACKGROUND_MODES)[number];
+
+export interface CourseHeroBackgroundActionResult extends ActionResult {
+  appliedMode?: HeroBackgroundMode;
+  heroBackgroundUrl?: string | null;
+}
+
+function isHeroBackgroundMode(value: unknown): value is HeroBackgroundMode {
+  return (
+    typeof value === "string" &&
+    HERO_BACKGROUND_MODES.some((mode) => mode === value)
+  );
+}
+
+export async function updateCourseHeroBackground(
+  courseId: string,
+  _previousState: CourseHeroBackgroundActionResult,
+  formData: FormData,
+): Promise<CourseHeroBackgroundActionResult> {
+  const admin = await requireAnyAdminRole("ADMIN", "MODERATOR", "MANAGER");
+  const mode = formData.get("heroBackgroundMode");
+  if (!isHeroBackgroundMode(mode)) {
+    return { success: false, message: "Choix d’image invalide." };
+  }
+
+  const course = await prisma.course.findUnique({
+    where: { id: courseId },
+    select: {
+      id: true,
+      slug: true,
+      status: true,
+      instructorId: true,
+      heroBackgroundUrl: true,
+    },
+  });
+  if (!course) return { success: false, message: "Formation introuvable." };
+
+  if (mode === "keep") {
+    return {
+      success: true,
+      message: "Image actuelle conservée.",
+      appliedMode: mode,
+      heroBackgroundUrl: course.heroBackgroundUrl,
+    };
+  }
+
+  const nextUrl =
+    mode === "default"
+      ? null
+      : String(formData.get("heroBackgroundUrl") ?? "").trim();
+
+  if (
+    mode === "replace" &&
+    (!nextUrl ||
+      !managedCourseObjectFromUrl(nextUrl, course.instructorId, {
+        r2AccountId: process.env.R2_ACCOUNT_ID,
+        r2Bucket: process.env.R2_BUCKET ?? "e-formationgn",
+        r2PublicUrl: process.env.R2_PUBLIC_URL,
+      }))
+  ) {
+    return {
+      success: false,
+      message: "Importez une image valide avant d’enregistrer.",
+      fieldErrors: {
+        heroBackgroundUrl: ["L’image doit provenir de l’espace de stockage de cette formation."],
+      },
+    };
+  }
+
+  if (nextUrl === course.heroBackgroundUrl) {
+    return {
+      success: true,
+      message: nextUrl ? "Image d’arrière-plan inchangée." : "L’image par défaut est déjà utilisée.",
+      appliedMode: mode,
+      heroBackgroundUrl: course.heroBackgroundUrl,
+    };
+  }
+
+  await prisma.course.update({
+    where: { id: course.id },
+    data: { heroBackgroundUrl: nextUrl },
+  });
+  await audit(admin.userId, "course.hero-background-update", course.id, {
+    mode,
+    hadCustomImage: Boolean(course.heroBackgroundUrl),
+    hasCustomImage: Boolean(nextUrl),
+  });
+
+  revalidatePath(`/admin/cours/${course.id}`);
+  revalidatePath(`/cours/${course.slug}`);
+  if (course.status === "PUBLISHED") updateTag("courses");
+
+  if (course.heroBackgroundUrl) {
+    await cleanupDeletedCourseMedia({
+      ownerId: course.instructorId,
+      muxAssetIds: [],
+      storedUrls: [course.heroBackgroundUrl],
+    });
+  }
+
+  return {
+    success: true,
+    message: nextUrl
+      ? "Image d’arrière-plan enregistrée."
+      : "Image par défaut restaurée.",
+    appliedMode: mode,
+    heroBackgroundUrl: nextUrl,
+  };
 }

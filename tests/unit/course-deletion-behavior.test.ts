@@ -49,5 +49,6 @@ test("la transaction bloque toutes les relations sensibles et collecte seulement
   assert.match(service, /error\.code === "P2003"/);
   assert.match(service, /error\.code === "P2034"/);
   assert.match(service, /promoVideoMuxId/);
+  assert.match(service, /heroBackgroundUrl/);
   assert.match(service, /lesson\.resources\.map/);
 });
