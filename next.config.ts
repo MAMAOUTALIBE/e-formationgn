@@ -48,7 +48,12 @@ const cspPolicy = [
   "base-uri 'self'",
   "form-action 'self'",
   "frame-ancestors 'none'",
-  "upgrade-insecure-requests",
+  // `upgrade-insecure-requests` n'existe pas en report-only : le navigateur
+  // l'ignore et écrit une erreur dans la console à CHAQUE page. Or report-only
+  // est précisément le mode où l'on lit la console pour ajuster la politique —
+  // ce bruit y noyait les vraies violations. On ne la déclare donc que là où
+  // elle a un effet.
+  ...(cspMode === "enforce" ? ["upgrade-insecure-requests"] : []),
 ].join("; ");
 const cspHeaderKey =
   cspMode === "enforce"

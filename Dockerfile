@@ -59,6 +59,16 @@ ARG NEXT_PUBLIC_APP_NAME="Gandal"
 ARG NEXT_PUBLIC_TURNSTILE_SITE_KEY=""
 ARG NEXT_PUBLIC_SENTRY_DSN=""
 ARG NEXT_PUBLIC_PLATFORM_MODE="marketplace"
+# CSP_MODE relève du même piège que les NEXT_PUBLIC_* : `next.config.ts`
+# construit l'en-tête pendant `next build`, et Next le fige dans
+# `routes-manifest.json`. Le poser dans docker-compose ou dans le `.env` du VPS
+# ne change donc rien à l'en-tête servi — alors que `.env.production.example`
+# le déclare et que `validate-production-env.sh` le contrôle comme une variable
+# d'exécution. Sans cette ligne, basculer la CSP en report-only pour un
+# diagnostic n'avait aucun effet, et un build fait avec report-only aurait servi
+# une CSP inopérante qu'aucun réglage sur le serveur n'aurait pu corriger.
+ARG CSP_MODE="enforce"
+ENV CSP_MODE=${CSP_MODE}
 ENV NEXT_PUBLIC_APP_URL=${NEXT_PUBLIC_APP_URL}
 ENV NEXT_PUBLIC_APP_NAME=${NEXT_PUBLIC_APP_NAME}
 ENV NEXT_PUBLIC_TURNSTILE_SITE_KEY=${NEXT_PUBLIC_TURNSTILE_SITE_KEY}

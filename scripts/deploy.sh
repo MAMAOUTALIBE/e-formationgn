@@ -106,12 +106,18 @@ echo
 # valeurs de production ci-dessous.
 if [ -f .env.deploy ]; then
   eval "$(grep -E '^NEXT_PUBLIC_[A-Z0-9_]+=' .env.deploy | sed 's/^/export /')"
+  # CSP_MODE n'a pas le préfixe NEXT_PUBLIC_ mais subit la même contrainte :
+  # l'en-tête CSP est construit pendant `next build` et figé dans l'image.
+  eval "$(grep -E '^CSP_MODE=' .env.deploy | sed 's/^/export /')"
 fi
 : "${NEXT_PUBLIC_APP_URL:=}"
 : "${NEXT_PUBLIC_APP_NAME:=Gandal}"
 : "${NEXT_PUBLIC_TURNSTILE_SITE_KEY:=}"
 : "${NEXT_PUBLIC_SENTRY_DSN:=}"
 : "${NEXT_PUBLIC_PLATFORM_MODE:=}"
+# Défaut volontairement strict : une image construite sans consigne applique la
+# politique plutôt que de se contenter de la rapporter.
+: "${CSP_MODE:=enforce}"
 : "${ALLOW_OPTIONAL_MONITORING:=0}"
 
 case "${NEXT_PUBLIC_PLATFORM_MODE}" in
@@ -121,6 +127,11 @@ case "${NEXT_PUBLIC_PLATFORM_MODE}" in
     echo "   avec la valeur marketplace ou centre_formation." >&2
     exit 1
     ;;
+esac
+
+case "${CSP_MODE}" in
+  enforce|report-only) ;;
+  *) echo "❌ CSP_MODE doit valoir enforce ou report-only." >&2; exit 1 ;;
 esac
 
 case "${ALLOW_OPTIONAL_MONITORING}" in
@@ -143,6 +154,8 @@ fi
 echo "▶ Variables publiques embarquées dans l'image :"
 printf "    NEXT_PUBLIC_APP_URL            = %s\n" "${NEXT_PUBLIC_APP_URL}"
 printf "    NEXT_PUBLIC_PLATFORM_MODE      = %s\n" "${NEXT_PUBLIC_PLATFORM_MODE}"
+printf "    CSP_MODE                       = %s%s\n" "${CSP_MODE}" \
+  "$([ "${CSP_MODE}" = "enforce" ] && echo '' || echo '  ⚠ la CSP ne bloquera rien')"
 printf "    NEXT_PUBLIC_TURNSTILE_SITE_KEY = %s\n" \
   "$([ -n "${NEXT_PUBLIC_TURNSTILE_SITE_KEY}" ] && echo 'définie' || echo 'ABSENTE → aucun captcha sur connexion/inscription')"
 printf "    NEXT_PUBLIC_SENTRY_DSN         = %s\n" \
@@ -211,6 +224,7 @@ docker buildx build \
   --build-arg NEXT_PUBLIC_TURNSTILE_SITE_KEY="${NEXT_PUBLIC_TURNSTILE_SITE_KEY}" \
   --build-arg NEXT_PUBLIC_SENTRY_DSN="${NEXT_PUBLIC_SENTRY_DSN}" \
   --build-arg NEXT_PUBLIC_PLATFORM_MODE="${NEXT_PUBLIC_PLATFORM_MODE}" \
+  --build-arg CSP_MODE="${CSP_MODE}" \
   -t "${REPO}:latest" \
   -t "${REPO}:${TAG}" \
   --push .

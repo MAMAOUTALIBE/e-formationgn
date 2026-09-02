@@ -160,4 +160,26 @@ if PRODUCTION_ENV_FILE="${fixture}" "${validator}" >/dev/null 2>&1; then
   exit 1
 fi
 
+# Le fichier d'exemple livré est ce que l'exploitant copie pour composer son
+# `.env` de production (cf. DEPLOY.md / REDEPLOY.md). Il doit donc passer ce
+# validateur tel quel : il annonçait NEXT_PUBLIC_PLATFORM_MODE=centre_formation
+# en haut et PLATFORM_MODE=marketplace en bas, deux valeurs que le validateur
+# exige justement identiques — le déploiement était refusé pour qui suivait la
+# documentation à la lettre.
+example="${root_dir}/.env.production.example"
+if [ ! -f "${example}" ]; then
+  echo "Fichier .env.production.example introuvable." >&2
+  exit 1
+fi
+expected_public="$(sed -n 's/^NEXT_PUBLIC_PLATFORM_MODE=//p' "${example}" | tr -d '"' | head -n 1)"
+if [ -z "${expected_public}" ]; then
+  echo "NEXT_PUBLIC_PLATFORM_MODE absent de .env.production.example." >&2
+  exit 1
+fi
+if ! PRODUCTION_ENV_FILE="${example}" EXPECTED_PLATFORM_MODE="${expected_public}" \
+  "${validator}" >/dev/null 2>&1; then
+  echo ".env.production.example ne passe pas le validateur de production." >&2
+  exit 1
+fi
+
 echo "validate-production-env: PASS"
