@@ -29,18 +29,20 @@ test("le hero utilise uniquement l’image propre à la formation et conserve so
   assert.match(page, /bg-\[linear-gradient\(125deg,#f1faf6_0%,#f8fcfa_72%,#edf8f2_100%\)\]/);
 });
 
-test("les libellés publics utilisent apprenant et Quiz de validation", () => {
+test("les libellés publics utilisent apprenant", () => {
   const publicPresentation = `${page}\n${accessNotice}\n${curriculum}`;
 
   assert.match(publicPresentation, /apprenant/);
-  assert.match(publicPresentation, /Quiz de validation/);
   assert.doesNotMatch(publicPresentation, /Avis des élèves/);
   assert.match(accessNotice, /Demander mon inscription/);
 });
 
-test("le programme conserve son accordéon accessible", () => {
-  assert.match(curriculum, /aria-expanded=\{isOpen\}/);
-  assert.match(curriculum, /onClick=\{\(\) => toggle\(section.id\)\}/);
-  assert.match(curriculum, /Tout masquer/);
-  assert.match(curriculum, /Tout afficher/);
+test("le programme présente uniquement des cartes de section statiques", () => {
+  assert.match(curriculum, /SECTION_ACCENTS/);
+  assert.match(curriculum, /border-l-\[6px\]/);
+  assert.match(curriculum, /borderLeftColor: accent\.borderColor/);
+  assert.match(curriculum, /section\.title/);
+  assert.doesNotMatch(curriculum, /aria-expanded|onClick|ChevronDown/);
+  assert.doesNotMatch(curriculum, /Tout masquer|Tout afficher/);
+  assert.doesNotMatch(curriculum, /lesson\.title|videoDurationSeconds|formatLessonDuration/);
 });

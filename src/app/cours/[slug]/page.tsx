@@ -5,7 +5,6 @@ import {
   Award,
   BookOpen,
   CalendarClock,
-  CheckCircle2,
   CircleHelp,
   Globe2,
   GraduationCap,
@@ -14,7 +13,6 @@ import {
   ListTree,
   MessageSquare,
   Star,
-  Target,
   Users,
 } from "lucide-react";
 
@@ -377,45 +375,16 @@ export default async function CourseDetailPage({
         {/* Contenu principal et état d'accès */}
         <Container className="grid gap-8 py-8 lg:grid-cols-[1fr_360px]">
           {/* Colonne principale */}
-          <div className="space-y-8">
+          <div id="apercu" className="scroll-mt-28 space-y-8">
             {/* Card prix inline mobile/tablette (sous le hero) */}
             <div className="lg:hidden">{accessCard}</div>
-
-            {course.whatYouWillLearn && course.whatYouWillLearn.length > 0 ? (
-              <section
-                id="apercu"
-                aria-labelledby="objectives"
-                className="scroll-mt-28 rounded-xl border border-[#d6e3de] bg-card p-5 shadow-[0_1px_2px_rgba(15,23,42,0.03)] sm:p-6"
-              >
-                <div className="flex items-start gap-4">
-                  <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl bg-[#e8f7ee] text-[#07883f]"><Target className="h-7 w-7" aria-hidden /></div>
-                  <div className="min-w-0">
-                <h2 id="objectives" className="text-lg font-semibold text-[#13213a]">Ce que vous allez apprendre</h2>
-                <ul className="mt-2 grid gap-x-8 gap-y-2 sm:grid-cols-2">
-                  {course.whatYouWillLearn.map((item, index) => (
-                    <li
-                      key={index}
-                      className="flex items-start gap-2 text-sm text-foreground"
-                    >
-                      <CheckCircle2
-                        className="mt-0.5 h-4 w-4 shrink-0 text-[#07883f]"
-                        aria-hidden
-                      />
-                      <span>{item}</span>
-                    </li>
-                  ))}
-                </ul>
-                  </div>
-                </div>
-              </section>
-            ) : null}
 
             <section id="programme" aria-labelledby="curriculum" className="scroll-mt-28">
               <h2 id="curriculum" className="text-xl font-semibold text-foreground">
                 Programme de la formation
               </h2>
               <div className="mt-4">
-                <CourseCurriculum sections={course.sections} courseSlug={course.slug} />
+                <CourseCurriculum sections={course.sections} />
               </div>
             </section>
 
