@@ -70,7 +70,29 @@ Every sensitive Server Action must:
 2. Validate input with Zod (`.strict()`) from [src/lib/validators/](src/lib/validators/).
 3. Never trust commission rates / prices from the client — recompute server-side via [src/lib/commission.ts](src/lib/commission.ts) and snapshot onto the `OrderItem`.
 
-### Payments: dual-PSP by currency
+### Payments: **disabled platform-wide** — read this before touching commerce code
+
+The whole financial surface is switched off, in two places at once:
+
+- `src/proxy.ts` — `REMOVED_PAGES` returns **404** for `/panier`, `/commande`,
+  `/admin/finances/*`, `/admin/commissions`, promo codes, affiliation,
+  `/formateur/paiements`, `/admin/support/litiges`, …, and `REMOVED_APIS`
+  returns **410** for `/api/webhooks/{stripe,cinetpay}`, `/api/formateur/ventes`,
+  `/api/admin/transactions-csv` and the reconciliation crons.
+- `src/lib/platform-mode.ts` — `getPlatformMode()` returns `"centre_formation"`
+  **hard-coded**; it does not read `PLATFORM_MODE`. Self-registration is closed
+  and refused server-side in `registerUser`.
+
+The code below still exists but is **dormant** — kept so the mode can be
+reverted without demolishing the order tunnel. Two consequences when working
+here: a page under a removed route is unreachable, so a link added to it is a
+dead link (`tests/unit/removed-pages-links.test.ts` and
+`tests/e2e/rbac-roles.spec.ts` enforce that); and `PLATFORM_MODE` /
+`NEXT_PUBLIC_PLATFORM_MODE` remain required by `scripts/deploy.sh` and
+`scripts/validate-production-env.sh`, which demand they match — they gate the
+deploy even though the runtime ignores them.
+
+#### Dormant design: dual-PSP by currency
 
 | Currency | PSP | Modes |
 |---|---|---|
@@ -138,7 +160,7 @@ Production is **live at https://gandal.org** on a Hostinger VPS. [REDEPLOY.md](R
 - The Postgres password **must be URL-safe (hex)** — a base64 password (`+`/`/`) breaks the runtime `@prisma/adapter-pg` connection-string parser even though `prisma migrate deploy` tolerates it.
 - Healthcheck: `GET /api/health` → 200 (or 503 if DB is unreachable).
 - [DEPLOY.md](DEPLOY.md) documents the original from-scratch install (with Caddy) — partly historical; trust REDEPLOY.md for current reality.
-- CSP is currently `Report-Only` in [next.config.ts](next.config.ts); the long-standing TODO is to flip to enforce after 48h of clean reports in prod.
+- CSP **is enforced**: `next.config.ts` defaults `CSP_MODE` to `enforce`, and the value now travels to the image as a Docker build-arg (`Dockerfile` + `scripts/deploy.sh`). It is a **build-time** setting — Next bakes the header into `routes-manifest.json`, so changing it in the VPS `.env` and restarting does nothing; rebuild the image.
 
 ## Demo accounts
 
