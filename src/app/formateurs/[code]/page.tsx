@@ -26,13 +26,27 @@ interface PageProps {
   params: Promise<{ code: string }>;
 }
 
+/**
+ * Métadonnées d'une ressource absente.
+ *
+ * Le layout racine déclare `robots: { index: true, follow: true }` pour tout le
+ * site. Une page qui ne trouve pas sa ressource en hérite, et se retrouve avec
+ * deux directives contradictoires : celle du layout et le `noindex` que Next
+ * injecte avec `notFound()`. Google retient la plus restrictive, mais tous les
+ * robots ne le garantissent pas — et sur `/cours/[slug]`, dont le segment
+ * possède un `loading.tsx`, la réponse part en streaming avec un statut 200 :
+ * le `noindex` est alors la seule chose qui empêche l'indexation d'une page
+ * fantôme. Il doit donc être affirmé, pas seulement injecté.
+ */
+const MISSING_ROBOTS = { robots: { index: false, follow: false } } as const;
+
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { code } = await params;
   const instructor = await prisma.user.findUnique({
     where: { affiliateCode: code },
     select: { name: true, firstName: true, lastName: true, headline: true, bio: true },
   });
-  if (!instructor) return { title: "Formateur introuvable" };
+  if (!instructor) return { title: "Formateur introuvable", ...MISSING_ROBOTS };
 
   const name =
     instructor.name ??

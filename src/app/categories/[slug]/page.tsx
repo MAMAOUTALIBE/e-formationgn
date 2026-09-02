@@ -24,10 +24,24 @@ interface PageProps {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }
 
+/**
+ * Métadonnées d'une ressource absente.
+ *
+ * Le layout racine déclare `robots: { index: true, follow: true }` pour tout le
+ * site. Une page qui ne trouve pas sa ressource en hérite, et se retrouve avec
+ * deux directives contradictoires : celle du layout et le `noindex` que Next
+ * injecte avec `notFound()`. Google retient la plus restrictive, mais tous les
+ * robots ne le garantissent pas — et sur `/cours/[slug]`, dont le segment
+ * possède un `loading.tsx`, la réponse part en streaming avec un statut 200 :
+ * le `noindex` est alors la seule chose qui empêche l'indexation d'une page
+ * fantôme. Il doit donc être affirmé, pas seulement injecté.
+ */
+const MISSING_ROBOTS = { robots: { index: false, follow: false } } as const;
+
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { slug } = await params;
   const category = await getCategoryBySlug(slug);
-  if (!category) return { title: "Catégorie introuvable" };
+  if (!category) return { title: "Catégorie introuvable", ...MISSING_ROBOTS };
   return {
     title: category.name,
     description:
