@@ -88,6 +88,18 @@ test("le programme permet de gérer les ressources sur chaque carte de leçon", 
   assert.match(cards, /aria-expanded=\{resourcesOpen\}/);
 });
 
+test("les cartes de leçon restent blanches dans tous les thèmes", async () => {
+  const cards = await read(
+    "src/components/features/instructor/program-lessons-list.tsx",
+  );
+
+  assert.match(cards, /bg-white/);
+  assert.match(cards, /dark:bg-white/);
+  assert.match(cards, /\[color-scheme:light\]/);
+  assert.match(cards, /\[--foreground:var\(--neutral-900\)\]/);
+  assert.doesNotMatch(cards, /dark:bg-slate-950/);
+});
+
 test("la carte de ressources est l'unique interface d'ajout d'une leçon", async () => {
   const [createForm, editForm, editPage, actions] = await Promise.all([
     read("src/components/features/instructor/lesson-create-form.tsx"),

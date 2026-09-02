@@ -96,7 +96,10 @@ function ProgramLessonCard({
     resourceCount > 0 ? `Ressources (${resourceCount})` : "Ajouter des ressources";
 
   return (
-    <li className="relative min-w-0 overflow-hidden rounded-[10px] border border-[#D8E0EA] bg-white shadow-[0_2px_6px_rgba(15,23,42,0.06)] transition-[border-color,box-shadow] duration-200 hover:border-[#2563EB] hover:shadow-[0_4px_12px_rgba(15,23,42,0.12)] focus-within:border-[#2563EB] focus-within:shadow-[0_4px_12px_rgba(15,23,42,0.12)] dark:border-slate-700 dark:bg-slate-950 dark:hover:border-[#2563EB]">
+    <li
+      data-lesson-card
+      className="relative min-w-0 overflow-hidden rounded-[10px] border border-[#D8E0EA] bg-white [color-scheme:light] [--background:white] [--border:var(--neutral-200)] [--card:white] [--card-foreground:var(--neutral-900)] [--foreground:var(--neutral-900)] [--input:var(--neutral-200)] [--muted:var(--neutral-100)] [--muted-foreground:var(--neutral-600)] shadow-[0_2px_6px_rgba(15,23,42,0.06)] transition-[border-color,box-shadow] duration-200 hover:border-[#2563EB] hover:shadow-[0_4px_12px_rgba(15,23,42,0.12)] focus-within:border-[#2563EB] focus-within:shadow-[0_4px_12px_rgba(15,23,42,0.12)] dark:border-[#D8E0EA] dark:bg-white dark:hover:border-[#2563EB]"
+    >
       <span
         aria-hidden
         className="absolute inset-y-0 left-0 z-10 w-1 bg-[color:var(--brand-success)]"
@@ -148,8 +151,8 @@ function ProgramLessonCard({
             aria-label={resourceLabel}
             title={resourceLabel}
             className={cn(
-              "h-auto border-blue-200 bg-blue-50 px-1.5 text-[color:var(--brand-secondary)] hover:bg-blue-100 dark:border-blue-800 dark:bg-blue-950/40 dark:hover:bg-blue-950/70 md:px-2",
-              resourcesOpen && "border-[#2563EB] bg-blue-100 dark:bg-blue-950/70",
+              "h-auto border-blue-200 bg-blue-50 px-1.5 text-[color:var(--brand-secondary)] hover:bg-blue-100 dark:border-blue-200 dark:bg-blue-50 dark:hover:bg-blue-100 md:px-2",
+              resourcesOpen && "border-[#2563EB] bg-blue-100 dark:bg-blue-100",
             )}
           >
             {resourceCount > 0 ? (
@@ -204,7 +207,7 @@ function ProgramLessonCard({
         <section
           id={panelId}
           aria-labelledby={titleId}
-          className="border-t border-blue-200 bg-blue-50/70 p-3 dark:border-blue-900 dark:bg-blue-950/20 sm:p-4"
+          className="border-t border-blue-200 bg-blue-50/70 p-3 dark:border-blue-200 dark:bg-blue-50/70 sm:p-4"
         >
           <div className="mb-3 flex items-start justify-between gap-3">
             <div>
