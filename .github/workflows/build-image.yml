@@ -104,12 +104,18 @@ jobs:
           tags: |
             bahm2062/e-formationgn:latest
             bahm2062/e-formationgn:${{ steps.meta.outputs.sha }}
+          # CSP_MODE : la politique est composée pendant `next build` et figée
+          # dans routes-manifest.json, donc la poser côté serveur est sans effet.
+          # Sans cette ligne, elle ne parviendrait pas au build fait ici, qui est
+          # pourtant le chemin recommandé. Défaut `enforce`, comme le Dockerfile
+          # et scripts/deploy.sh.
           build-args: |
             NEXT_PUBLIC_APP_URL=${{ vars.NEXT_PUBLIC_APP_URL }}
             NEXT_PUBLIC_APP_NAME=${{ vars.NEXT_PUBLIC_APP_NAME }}
             NEXT_PUBLIC_PLATFORM_MODE=${{ vars.NEXT_PUBLIC_PLATFORM_MODE }}
             NEXT_PUBLIC_TURNSTILE_SITE_KEY=${{ vars.NEXT_PUBLIC_TURNSTILE_SITE_KEY }}
             NEXT_PUBLIC_SENTRY_DSN=${{ vars.NEXT_PUBLIC_SENTRY_DSN }}
+            CSP_MODE=${{ vars.CSP_MODE || 'enforce' }}
             NEXT_BUILD_WORKERS=4
           # Le cache survit d'une exécution à l'autre : les couches de
           # dépendances ne sont reconstruites que lorsque package-lock.json
