@@ -135,14 +135,26 @@ API sensibles (`/api/admin/search`) : `Cache-Control: private, no-store, max-age
 
 ## CVE résiduelles connues
 
-Au 2026-08-20, `npm audit --omit=dev` signale `deepmerge-ts@7.1.5` via
-`prisma -> @prisma/config`. Le correctif est une version majeure 8 hors plage
-déclarée par Prisma. Aucun override n'est forcé : cette chaîne sert à la CLI et
-à la lecture de configuration Prisma pendant build/migrations, elle n'est pas
-appelée par une requête HTTP du runtime Next.js. Risque accepté temporairement,
-à réévaluer à chaque mise à jour Prisma et au plus tard le 2026-09-20. Une
-résolution ne sera acceptée qu'avec lockfile reproductible puis `prisma
-validate`, typecheck, tests unitaires et build complets.
+**Au 2026-09-02 : `npm audit` et `npm audit --omit=dev` signalent 0 vulnérabilité.**
+
+Les deux chaînes qui restaient ouvertes sont résolues par des `overrides` npm,
+déclarés dans `package.json` :
+
+| Override | Pourquoi |
+|---|---|
+| `mysql2: ^3.24.3` | Prisma fige `mysql2@3.15.3`, sous le seuil de GHSA-3f6p-5ww8-9rcr (fuite d'identifiants en clair sur négociation d'authentification). Le paquet n'est jamais chargé ici — la base est PostgreSQL via `@prisma/adapter-pg` — mais il est présent dans l'image de production, puisque `prisma` est une dépendance runtime de `@prisma/client` et survit donc à `npm ci --omit=dev`. La montée reste dans la plage `^3`. |
+| `deepmerge-ts: ^8.0.2` | Épuisement de pile sur graphes récursifs, via `prisma -> @prisma/config`. La version corrigée est une majeure hors de la plage déclarée par Prisma, d'où l'override. L'entrée fusionnée est `prisma.config.ts`, un fichier du dépôt : la faille n'était pas atteignable par une requête. |
+
+Ces deux overrides ont été validés dans les conditions que cette section
+exigeait avant toute résolution : `prisma migrate deploy` et `prisma validate`
+sur une base réelle, `prisma generate`, `npm run typecheck`, `npm run lint`,
+`npm run test:unit` (241 tests) et `npm run build` — tous verts, lockfile
+régénéré.
+
+**À surveiller** : un override survit aux montées de version de Prisma et peut
+un jour contredire une contrainte réelle. À chaque mise à jour de Prisma,
+vérifier si l'override est devenu inutile (`npm ls mysql2 deepmerge-ts`) et le
+retirer le cas échéant, plutôt que de le laisser masquer la contrainte amont.
 
 ## Hardening recommandé (post-MVP)
 
