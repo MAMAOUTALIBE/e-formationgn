@@ -105,11 +105,12 @@ export const ADMIN_NAV: WorkspaceNavigation = {
       icon: "lifebuoy",
       group: "communaute",
       roles: SUPPORT_SIDE,
-      badgeKeys: ["openTickets", "openDisputes"],
-      children: [
-        { href: "/admin/support/tickets", label: "Tickets" },
-        { href: "/admin/support/litiges", label: "Litiges" },
-      ],
+      // Les litiges relèvent du volet financier, retiré au niveau du proxy
+      // (`REMOVED_PAGES`). Ni l'entrée de menu ni la pastille ne doivent les
+      // annoncer : le lien menait à un 404 en texte brut, et le compteur
+      // gonflait le badge Support d'éléments introuvables sous Support.
+      badgeKeys: ["openTickets"],
+      children: [{ href: "/admin/support/tickets", label: "Tickets" }],
     },
     {
       href: "/admin/formations",

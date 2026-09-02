@@ -49,13 +49,6 @@ export function AdminNotificationsBell({ badges }: { badges: AdminSidebarBadges 
       tone: "info",
     },
     {
-      key: "openDisputes",
-      count: badges.openDisputes,
-      label: `${badges.openDisputes} litige${badges.openDisputes > 1 ? "s" : ""} ouvert${badges.openDisputes > 1 ? "s" : ""}`,
-      href: "/admin/support/litiges",
-      tone: "danger",
-    },
-    {
       key: "pendingReports",
       count: badges.pendingReports,
       label: `${badges.pendingReports} signalement${badges.pendingReports > 1 ? "s" : ""} à traiter`,

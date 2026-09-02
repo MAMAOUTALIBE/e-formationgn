@@ -418,28 +418,24 @@ export async function getRevenueByCategory(
 }
 
 export interface AdminAlert {
-  kind: "pending-courses" | "open-disputes" | "stripe-missing" | "failed-payments" | "pending-reports";
+  kind: "pending-courses" | "stripe-missing" | "pending-reports";
   count: number;
   href: string;
   label: string;
 }
 
+// Une alerte est un raccourci vers l'écran qui la traite : elle n'a de sens
+// que si cet écran existe. Les litiges et les paiements échoués relèvent du
+// volet financier retiré au niveau du proxy (`REMOVED_PAGES`) — les annoncer
+// reviendrait à envoyer l'administration vers un 404.
 export async function getAdminAlerts(): Promise<AdminAlert[]> {
-  const last24h = new Date(Date.now() - 24 * 3600 * 1000);
-  const [pendingCourses, openDisputes, stripeMissing, failedPayments, pendingReports] =
-    await Promise.all([
-      prisma.course.count({ where: { status: "PENDING_REVIEW" } }),
-      prisma.dispute.count({
-        where: { status: { in: ["OPEN", "IN_REVIEW"] } },
-      }),
-      prisma.user.count({
-        where: { isInstructor: true, stripeOnboardingDone: false },
-      }),
-      prisma.order.count({
-        where: { status: "FAILED", updatedAt: { gte: last24h } },
-      }),
-      prisma.report.count({ where: { status: "PENDING" } }),
-    ]);
+  const [pendingCourses, stripeMissing, pendingReports] = await Promise.all([
+    prisma.course.count({ where: { status: "PENDING_REVIEW" } }),
+    prisma.user.count({
+      where: { isInstructor: true, stripeOnboardingDone: false },
+    }),
+    prisma.report.count({ where: { status: "PENDING" } }),
+  ]);
 
   const alerts: AdminAlert[] = [];
   if (pendingCourses > 0)
@@ -449,26 +445,12 @@ export async function getAdminAlerts(): Promise<AdminAlert[]> {
       href: "/admin/cours?status=PENDING_REVIEW",
       label: `${pendingCourses} formation${pendingCourses > 1 ? "s" : ""} en attente de modération`,
     });
-  if (openDisputes > 0)
-    alerts.push({
-      kind: "open-disputes",
-      count: openDisputes,
-      href: "/admin/support/litiges",
-      label: `${openDisputes} litige${openDisputes > 1 ? "s" : ""} ouvert${openDisputes > 1 ? "s" : ""}`,
-    });
   if (stripeMissing > 0)
     alerts.push({
       kind: "stripe-missing",
       count: stripeMissing,
       href: "/admin/formateurs?stripe=missing",
       label: `${stripeMissing} formateur${stripeMissing > 1 ? "s" : ""} sans Stripe Connect`,
-    });
-  if (failedPayments > 0)
-    alerts.push({
-      kind: "failed-payments",
-      count: failedPayments,
-      href: "/admin/finances/transactions?status=FAILED",
-      label: `${failedPayments} paiement${failedPayments > 1 ? "s" : ""} échoué${failedPayments > 1 ? "s" : ""} (24 h)`,
     });
   if (pendingReports > 0)
     alerts.push({
