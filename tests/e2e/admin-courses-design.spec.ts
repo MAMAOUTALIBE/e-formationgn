@@ -35,6 +35,11 @@ test.describe("CRM admin — cours", () => {
     expect(querySource).toContain("totalEnrollments");
     expect(querySource).toContain("instructors");
     expect(tableSource).toContain('data-testid="course-actions-menu"');
-    expect(tableSource).toContain("from-brand-primary to-blue-950");
+    // Le menu d'actions a perdu son dégradé le 26/08 : posé sur un calque
+    // flottant, il rendait les libellés illisibles. On vérifie désormais ce qui
+    // a remplacé ce dégradé — un fond opaque — et non sa présence, sinon cette
+    // ligne redemanderait le défaut qu'elle avait servi à constater.
+    expect(tableSource).not.toContain("from-brand-primary to-blue-950");
+    expect(tableSource).toContain("AdminActionMenu");
   });
 });
