@@ -17,7 +17,7 @@ test("le header réserve et espace les commandes sans recouvrir la recherche", a
   );
   assert.match(source, /lg:gap-5 lg:px-6 xl:gap-6/);
   assert.match(source, /sm:gap-2 lg:gap-3/);
-  assert.match(source, /<ThemeToggle className="hidden md:inline-flex" \/>/);
+  assert.doesNotMatch(source, /ThemeToggle/);
   assert.match(source, /<UserMenu showIdentity user=\{user\} \/>/);
   assert.doesNotMatch(source, /lg:grid-cols-\[1fr_minmax\(16rem,36rem\)_1fr\]/);
   assert.match(userMenuSource, /showIdentity && "xl:pr-2\.5"/);

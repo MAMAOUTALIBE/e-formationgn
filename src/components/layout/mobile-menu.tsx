@@ -7,7 +7,6 @@ import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 
 import { HeaderSearch } from "@/components/features/courses/header-search";
-import { ThemeToggle } from "@/components/features/theme/theme-toggle";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -146,10 +145,6 @@ export function MobileMenu({ isLoggedIn, role }: MobileMenuProps) {
                 ) : null}
               </nav>
 
-              <div className="mt-6 flex items-center justify-between gap-3 border-t border-border pt-4">
-                <span className="text-sm font-medium text-foreground">Apparence</span>
-                <ThemeToggle />
-              </div>
             </div>
 
             {!isLoggedIn ? (

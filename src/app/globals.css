@@ -1,5 +1,9 @@
 @import "tailwindcss";
 
+/* Les variantes `dark:*` historiques ne doivent pas suivre automatiquement
+   le thème du système : elles ne s'activent que si une classe `.dark` existe. */
+@custom-variant dark (&:where(.dark, .dark *));
+
 /* ==========================================================================
    E-FormationGN — Design tokens (Tailwind v4 CSS-first config)
    Palette corporate bleue, sobre et professionnelle (LinkedIn Learning style).
@@ -72,7 +76,8 @@
   --space-fluid-lg: clamp(1.25rem, 0.85rem + 1vw, 2.5rem);
 }
 
-/* Mode sombre — activé via classe .dark sur <html> (toggle utilisateur) */
+/* Palette sombre conservée pour les composants historiques, mais aucune
+   classe `.dark` n'est désormais appliquée par l'application. */
 .dark {
   --background: #0b1220;
   --foreground: #e2e8f0;

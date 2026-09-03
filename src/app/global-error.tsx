@@ -1,7 +1,7 @@
 "use client";
 
 // Error boundary GLOBAL : dernier filet si l'erreur survient dans le root
-// layout lui-même (ThemeProvider, fonts…). À ce niveau le layout n'est PAS
+// layout lui-même (fonts, styles globaux…). À ce niveau le layout n'est PAS
 // monté → ce composant doit rendre ses propres <html> et <body>. Style inline
 // autonome volontaire : aucun import de composant ni de CSS qui pourrait
 // dépendre du contexte cassé.

@@ -1,201 +1,168 @@
-// Footer 6 colonnes inspiré Udemy — adapté Aiduca :
-//   - Col 1 (double) : logo + tagline + newsletter inline
-//   - Col 2 : Découvrir (catalogue, catégories, nouveautés)
-//   - Col 3 : Accès et accompagnement
-//   - Col 4 : Aiduca (à propos, blog, contact, crédits)
-//   - Col 5 : Aide & support + mentions légales
-// Bottom bar : copyright + information RGPD
-
+import { Mail, MapPin, Phone, Smartphone } from "lucide-react";
 import Link from "next/link";
 
 import { Logo } from "@/components/branding/logo";
-import { NewsletterForm } from "@/components/features/marketing/newsletter-form";
 import { Container } from "@/components/ui/container";
 import { BRAND } from "@/lib/brand";
 import { getDictionary } from "@/lib/i18n/server";
+
+const ESSENTIAL_LINKS = [
+  { href: "/cours", label: "Catalogue" },
+  { href: "/a-propos", label: "À propos" },
+  { href: "/contact", label: "Contact" },
+  { href: "/connexion", label: "Se connecter" },
+] as const;
+
+const LEGAL_LINKS = [
+  { href: "/mentions-legales", label: "Mentions légales" },
+  { href: "/cgv", label: "CGV" },
+  { href: "/confidentialite", label: "Confidentialité" },
+] as const;
 
 export async function SiteFooter() {
   const { t } = await getDictionary();
 
   return (
-    <footer className="relative isolate overflow-hidden border-t border-white/20 bg-[#031735] [&_.text-foreground]:text-white [&_.text-muted-foreground]:text-slate-200 [&_a:hover]:text-white">
+    <footer className="relative isolate overflow-hidden border-t border-white/20 bg-[#031735] text-white">
       <div
         aria-hidden="true"
-        className="pointer-events-none absolute -inset-1 z-0 scale-[1.02] bg-cover bg-center blur-[2px]"
+        className="pointer-events-none absolute inset-0 z-0 bg-cover bg-center"
         style={{ backgroundImage: "url('/images/footer-modern-building-construction.webp')" }}
       />
       <div
         aria-hidden="true"
-        className="pointer-events-none absolute inset-0 z-0 bg-[#031735]/85"
+        className="pointer-events-none absolute inset-0 z-0 bg-[#031735]/88"
       />
 
-      <Container className="relative z-10 grid gap-10 py-12 lg:grid-cols-6">
-        {/* Col 1 — Brand + Newsletter (double largeur) */}
-        <div className="lg:col-span-2">
+      <Container className="relative z-10 grid gap-10 py-12 md:grid-cols-2 lg:grid-cols-[minmax(0,1fr)_minmax(22rem,1.35fr)_minmax(18rem,1fr)] lg:gap-12 lg:py-16">
+        <section aria-label="Présentation d'Aiduca">
           <Logo width={170} />
-          <p className="mt-3 text-sm text-muted-foreground">{t.footer.tagline}</p>
-          <div className="mt-5">
-            <p className="text-sm font-semibold text-foreground">
-              Newsletter mensuelle
+          <p className="mt-5 max-w-sm text-base leading-7 text-slate-200">
+            {t.footer.tagline}
+          </p>
+        </section>
+
+        <nav aria-label="Liens essentiels" className="md:col-span-2 lg:col-span-1">
+          <h2 className="text-lg font-semibold">Liens essentiels</h2>
+          <span
+            aria-hidden="true"
+            className="mt-3 block h-0.5 w-14 bg-[color:var(--brand-mint-deep)]"
+          />
+          <ul className="mt-7 flex flex-wrap gap-x-5 gap-y-3 text-sm text-slate-100 sm:text-base lg:gap-x-4 xl:gap-x-6">
+            {ESSENTIAL_LINKS.map((link, index) => (
+              <li key={link.href} className="flex items-center gap-4 xl:gap-6">
+                <Link
+                  href={link.href}
+                  className="underline-offset-4 transition-colors hover:text-[color:var(--brand-mint)] hover:underline focus-visible:rounded-sm focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white"
+                >
+                  {link.label}
+                </Link>
+                {index < ESSENTIAL_LINKS.length - 1 ? (
+                  <span
+                    aria-hidden="true"
+                    className="h-1.5 w-1.5 shrink-0 rounded-full bg-[color:var(--brand-mint-deep)]"
+                  />
+                ) : null}
+              </li>
+            ))}
+          </ul>
+        </nav>
+
+        <section
+          aria-labelledby="footer-contact-title"
+          className="md:row-start-1 md:col-start-2 lg:col-start-3 lg:justify-self-end"
+        >
+          <h2 id="footer-contact-title" className="text-lg font-semibold">
+            Nous contacter
+          </h2>
+          <span
+            aria-hidden="true"
+            className="mt-3 block h-0.5 w-14 bg-[color:var(--brand-mint-deep)]"
+          />
+
+          <address className="mt-7 space-y-3 text-sm not-italic text-slate-100 sm:text-base">
+            <p className="flex items-start gap-3">
+              <MapPin
+                aria-hidden="true"
+                className="mt-0.5 h-5 w-5 shrink-0 text-[color:var(--brand-mint-deep)]"
+              />
+              <span>{BRAND.address}</span>
             </p>
-            <p className="mt-1 text-xs text-muted-foreground">
-              Conseils d&apos;élèves, nouveautés du catalogue et témoignages.
-            </p>
-            <div className="mt-3 max-w-sm">
-              <NewsletterForm source="footer" variant="compact" />
-            </div>
-          </div>
-        </div>
-
-        {/* Col 2 — Découvrir */}
-        <div>
-          <h3 className="text-sm font-semibold text-foreground">Découvrir</h3>
-          <ul className="mt-3 space-y-2 text-sm text-muted-foreground">
-            <li>
-              <Link href="/cours" className="hover:text-foreground">
-                Catalogue
-              </Link>
-            </li>
-            <li>
-              <Link href="/categories" className="hover:text-foreground">
-                Catégories
-              </Link>
-            </li>
-            <li>
-              <Link href="/cours?sort=newest" className="hover:text-foreground">
-                Nouveautés
-              </Link>
-            </li>
-            <li>
-              <Link href="/cours?sort=popular" className="hover:text-foreground">
-                Formations populaires
-              </Link>
-            </li>
-          </ul>
-        </div>
-
-        {/* Col 3 — Accès et accompagnement */}
-        <div>
-          <h3 className="text-sm font-semibold text-foreground">Accès</h3>
-          <ul className="mt-3 space-y-2 text-sm text-muted-foreground">
-            <li>
-              <Link href="/connexion" className="hover:text-foreground">
-                Se connecter
-              </Link>
-            </li>
-            <li>
-              <Link href="/aide" className="hover:text-foreground">
-                Centre d&apos;aide
-              </Link>
-            </li>
-            <li>
-              <Link href="/contact" className="hover:text-foreground">
-                Contacter le centre
-              </Link>
-            </li>
-          </ul>
-        </div>
-
-        {/* Col 4 — Aiduca */}
-        <div>
-          <h3 className="text-sm font-semibold text-foreground">Aiduca</h3>
-          <ul className="mt-3 space-y-2 text-sm text-muted-foreground">
-            <li>
-              <Link href="/a-propos" className="hover:text-foreground">
-                À propos
-              </Link>
-            </li>
-            <li>
-              <Link href="/contact" className="hover:text-foreground">
-                {t.footer.contact}
-              </Link>
-            </li>
-            <li>
-              <Link href="/credits" className="hover:text-foreground">
-                Crédits et licences
-              </Link>
-            </li>
-          </ul>
-          <div className="mt-5 space-y-1 text-xs text-muted-foreground">
-            <p>{BRAND.address}</p>
-            <p>
-              <a href={`mailto:${BRAND.email}`} className="hover:text-foreground">
+            <p className="flex items-center gap-3">
+              <Mail
+                aria-hidden="true"
+                className="h-5 w-5 shrink-0 text-[color:var(--brand-mint-deep)]"
+              />
+              <a
+                href={`mailto:${BRAND.email}`}
+                className="underline-offset-4 hover:text-white hover:underline focus-visible:rounded-sm focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white"
+              >
                 {BRAND.email}
               </a>
             </p>
-            <p>
-              <a href={`tel:${BRAND.phone.replaceAll(" ", "")}`} className="hover:text-foreground">
+            <p className="flex items-center gap-3">
+              <Phone
+                aria-hidden="true"
+                className="h-5 w-5 shrink-0 text-[color:var(--brand-mint-deep)]"
+              />
+              <a
+                href={`tel:${BRAND.phone.replaceAll(" ", "")}`}
+                className="underline-offset-4 hover:text-white hover:underline focus-visible:rounded-sm focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white"
+              >
                 {BRAND.phone}
               </a>
             </p>
-            <p>
-              <a href={`tel:${BRAND.mobile.replaceAll(" ", "")}`} className="hover:text-foreground">
+            <p className="flex items-center gap-3">
+              <Smartphone
+                aria-hidden="true"
+                className="h-5 w-5 shrink-0 text-[color:var(--brand-mint-deep)]"
+              />
+              <a
+                href={`tel:${BRAND.mobile.replaceAll(" ", "")}`}
+                className="underline-offset-4 hover:text-white hover:underline focus-visible:rounded-sm focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white"
+              >
                 {BRAND.mobile}
               </a>
             </p>
+          </address>
+
+          <div className="mt-6 max-w-xs">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={BRAND.qualiopiLogoUrl}
               alt="Certification Qualiopi — Actions de formation"
-              width="120"
-              height="95"
+              width="150"
+              height="119"
               loading="lazy"
-              className="mt-3 rounded bg-white p-1"
+              className="rounded-md bg-white p-1.5"
             />
-            <p>
-              Certification Qualiopi — certificat {BRAND.qualiopiCertificate}, valide jusqu&apos;au{" "}
-              {BRAND.qualiopiValidUntil}.
+            <p className="mt-2 text-xs leading-5 text-slate-300">
+              Certification Qualiopi — certificat {BRAND.qualiopiCertificate}, valide
+              jusqu&apos;au {BRAND.qualiopiValidUntil}.
             </p>
           </div>
-        </div>
-
-        {/* Col 5 — Aide & mentions légales (fusionnées pour rester 6 cols) */}
-        <div>
-          <h3 className="text-sm font-semibold text-foreground">Aide</h3>
-          <ul className="mt-3 space-y-2 text-sm text-muted-foreground">
-            <li>
-              <Link href="/aide" className="hover:text-foreground">
-                Centre d&apos;aide
-              </Link>
-            </li>
-            <li>
-              <Link href="/contact" className="hover:text-foreground">
-                Contacter le support
-              </Link>
-            </li>
-            <li>
-              <Link href="/cgv" className="hover:text-foreground">
-                CGV
-              </Link>
-            </li>
-            <li>
-              <Link href="/mentions-legales" className="hover:text-foreground">
-                Mentions légales
-              </Link>
-            </li>
-            <li>
-              <Link href="/confidentialite" className="hover:text-foreground">
-                Confidentialité
-              </Link>
-            </li>
-            <li>
-              <Link href="/cookies" className="hover:text-foreground">
-                Cookies
-              </Link>
-            </li>
-          </ul>
-        </div>
+        </section>
       </Container>
 
-      {/* Bottom bar — copyright + information RGPD */}
-      <div className="relative z-10 border-t border-white/20">
-        <Container className="flex flex-col items-center justify-between gap-3 py-6 text-xs text-muted-foreground sm:flex-row">
+      <div className="relative z-10 border-t border-white/25 bg-[#031735]/45">
+        <Container className="flex flex-col items-center justify-between gap-4 py-5 text-center text-xs text-slate-200 sm:flex-row sm:text-left">
           <p>
             © {new Date().getFullYear()} AIDUCA · SIREN {BRAND.siren}. {t.footer.rights}
           </p>
-          <div className="flex items-center gap-3">
-            <span className="hidden sm:inline">{t.footer.rgpd}</span>
-          </div>
+          <nav aria-label="Informations légales">
+            <ul className="flex flex-wrap items-center justify-center gap-x-5 gap-y-2 sm:justify-end">
+              {LEGAL_LINKS.map((link) => (
+                <li key={link.href}>
+                  <Link
+                    href={link.href}
+                    className="underline-offset-4 hover:text-white hover:underline focus-visible:rounded-sm focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white"
+                  >
+                    {link.label}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </nav>
         </Container>
       </div>
     </footer>

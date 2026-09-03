@@ -22,7 +22,6 @@ import { WorkspaceMobileSidebar } from "@/components/features/workspace/workspac
 import { WorkspaceSectionNav } from "@/components/features/workspace/workspace-section-nav";
 import { WorkspaceSidebar } from "@/components/features/workspace/workspace-sidebar";
 import type { WorkspaceBadges } from "@/components/features/workspace/workspace-nav";
-import { ThemeToggle } from "@/components/features/theme/theme-toggle";
 import { adminThemeCssVars } from "@/lib/admin/theme";
 import { cn } from "@/lib/utils";
 import {
@@ -50,7 +49,7 @@ interface WorkspaceShellProps {
   searchPlaceholder?: string;
   /** Lien « Paramètres » du pied de page. */
   settingsHref?: string;
-  /** Actions propres à l'espace, insérées à gauche du sélecteur de thème. */
+  /** Actions propres à l'espace, insérées avant le menu utilisateur. */
   headerActions?: React.ReactNode;
   /** Ajustement ponctuel de la largeur de la zone métier. */
   contentClassName?: string;
@@ -130,8 +129,8 @@ export async function WorkspaceShell({
               centrée tant que l'espace le permet. À partir de `lg`, la colonne
               de droite garde toutefois au minimum la largeur réelle de ses
               commandes (`max-content`) : elle ne peut donc plus déborder sur
-              le champ de recherche lorsque thème, notifications et identité
-              utilisateur sont tous visibles. Les espacements renforcés sur
+              le champ de recherche lorsque notifications et identité utilisateur
+              sont visibles. Les espacements renforcés sur
               desktop raccourcissent légèrement la recherche pour laisser une
               respiration nette avant les commandes d'affichage. */}
           <div className="grid min-h-16 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 px-3 py-2 sm:gap-3 sm:px-4 lg:grid-cols-[minmax(0,1fr)_minmax(16rem,36rem)_minmax(max-content,1fr)] lg:gap-5 lg:px-6 xl:gap-6">
@@ -162,7 +161,6 @@ export async function WorkspaceShell({
 
             <div className="flex min-w-0 shrink-0 items-center gap-1 justify-self-end sm:gap-2 lg:gap-3">
               {headerActions}
-              <ThemeToggle className="hidden md:inline-flex" />
               <UserMenu showIdentity user={user} />
             </div>
           </div>

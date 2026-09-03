@@ -7,7 +7,6 @@ import { PageViewTracker } from "@/components/features/analytics/page-view-track
 import { CookieBanner } from "@/components/features/cookie-consent/cookie-banner";
 import { SitewideBanner } from "@/components/features/marketing/sitewide-banner";
 import { ServiceWorkerRegister } from "@/components/features/pwa/sw-register";
-import { ThemeProvider } from "@/components/features/theme/theme-provider";
 import { Toaster } from "@/components/ui/toaster";
 import { BRAND } from "@/lib/brand";
 
@@ -92,10 +91,7 @@ export const metadata: Metadata = {
 export const dynamic = "force-dynamic";
 
 export const viewport: Viewport = {
-  themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#ffffff" },
-    { media: "(prefers-color-scheme: dark)", color: "#0b1220" },
-  ],
+  themeColor: "#ffffff",
   width: "device-width",
   initialScale: 1,
 };
@@ -109,24 +105,21 @@ export default function RootLayout({
     <html
       lang="fr"
       className={`${inter.variable} h-full antialiased`}
-      suppressHydrationWarning
     >
       <body className="min-h-full bg-background text-foreground flex flex-col">
-        <ThemeProvider>
-          <Suspense fallback={null}>
-            <ImpersonationBanner />
-          </Suspense>
-          <Suspense fallback={null}>
-            <SitewideBanner />
-          </Suspense>
-          <Suspense fallback={null}>
-            <PageViewTracker />
-          </Suspense>
-          <ServiceWorkerRegister />
-          {children}
-          <Toaster />
-          <CookieBanner />
-        </ThemeProvider>
+        <Suspense fallback={null}>
+          <ImpersonationBanner />
+        </Suspense>
+        <Suspense fallback={null}>
+          <SitewideBanner />
+        </Suspense>
+        <Suspense fallback={null}>
+          <PageViewTracker />
+        </Suspense>
+        <ServiceWorkerRegister />
+        {children}
+        <Toaster />
+        <CookieBanner />
       </body>
     </html>
   );

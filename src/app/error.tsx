@@ -2,7 +2,7 @@
 
 // Error boundary de segment (App Router). Remplace le contenu de la page quand
 // une erreur runtime est levée pendant le render/handler. Le root layout
-// (html/body/ThemeProvider/Toaster) reste monté autour.
+// (html/body/Toaster) reste monté autour.
 //
 // NB : error.tsx DOIT être un Client Component → on n'importe pas SiteHeader/
 // SiteFooter (Server Components async). On rend une page autonome, brandée,

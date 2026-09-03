@@ -3,7 +3,6 @@ import Link from "next/link";
 import { auth } from "@/auth";
 import { Logo } from "@/components/branding/logo";
 import { UserMenu } from "@/components/features/auth/user-menu";
-import { ThemeToggle } from "@/components/features/theme/theme-toggle";
 import { HeaderSearch } from "@/components/features/courses/header-search";
 import { NotificationBell } from "@/components/features/notifications/notification-bell";
 import { CategoriesDropdown } from "@/components/layout/categories-dropdown";
@@ -65,7 +64,6 @@ export async function SiteHeader() {
         </div>
 
         <div className="flex items-center gap-1 md:gap-2">
-          <ThemeToggle className="hidden md:inline-flex" />
           {user ? (
             <>
               <NotificationBell unreadCount={unreadNotifs} />
