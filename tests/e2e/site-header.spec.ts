@@ -54,4 +54,17 @@ test.describe("Header public", () => {
       await page.evaluate(() => document.documentElement.scrollWidth),
     ).toBeLessThanOrEqual(390);
   });
+
+  test("reste fixé en haut pendant le défilement", async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 700 });
+    await page.goto("/");
+
+    const header = page.locator("header").first();
+    await expect(header).toHaveCSS("position", "fixed");
+    expect((await header.boundingBox())?.y).toBe(0);
+
+    await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+    await expect.poll(async () => (await header.boundingBox())?.y).toBe(0);
+    await expect(header.getByRole("link", { name: "Accueil Aiduca" })).toBeVisible();
+  });
 });

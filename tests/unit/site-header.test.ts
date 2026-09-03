@@ -19,6 +19,8 @@ test("le header conserve ses fonctions tout en portant le nouveau traitement vis
   for (const component of ["Logo", "NotificationBell", "UserMenu", "MobileMenu"]) {
     assert.match(header, new RegExp(`<${component}`));
   }
+  assert.match(header, /fixed inset-x-0 top-0/);
+  assert.match(header, /aria-hidden="true" className="h-\[69px\]/);
   assert.match(header, /h-16/);
   assert.match(search, /rounded-full/);
   assert.match(search, /aria-label="Lancer la recherche"/);

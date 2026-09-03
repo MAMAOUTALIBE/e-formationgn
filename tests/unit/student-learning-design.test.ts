@@ -5,7 +5,7 @@ import test from "node:test";
 test("l'accueil membre est personnalisé, chaleureux et compatible thème", () => {
   const source = readFileSync("src/components/features/marketing/member-home.tsx", "utf8");
   assert.match(source, /Bonjour\{firstName/);
-  assert.match(source, /Votre espace personnel/);
+  assert.doesNotMatch(source, /Votre espace personnel/);
   assert.match(source, /bg-gradient-to-br/);
   assert.match(source, /var\(--brand-primary\)/);
   assert.match(source, /var\(--brand-accent\)/);

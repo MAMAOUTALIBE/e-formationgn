@@ -41,15 +41,15 @@ export async function SiteFooter() {
           <p className="mt-5 max-w-sm text-base leading-7 text-slate-200">
             {t.footer.tagline}
           </p>
-          <div className="mt-6 max-w-sm">
+          <div className="@container mt-6 max-w-md">
             <h2 className="text-sm font-semibold text-white">Newsletter mensuelle</h2>
-            <p className="mt-1 text-xs leading-5 text-slate-300">
+            <p className="mt-1 text-xs leading-5 text-slate-300 @[25rem]:whitespace-nowrap">
               Conseils pratiques, nouveautés du catalogue et actualités du centre.
             </p>
             <NewsletterForm
               source="footer"
               variant="compact"
-              className="mt-3 [&_a]:text-emerald-300 [&_input]:text-slate-950 [&_input]:placeholder:text-slate-500"
+              className="mt-3 max-w-sm [&_a]:text-emerald-300 [&_input]:text-slate-950 [&_input]:placeholder:text-slate-500"
             />
           </div>
         </section>

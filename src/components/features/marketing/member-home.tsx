@@ -2,7 +2,7 @@
 // reprendre l'apprentissage, recommandations, puis découverte. Pas de héro
 // marketing (l'utilisateur est déjà membre).
 
-import { BookOpen, Heart, Search, Sparkles } from "lucide-react";
+import { BookOpen, Heart, Search } from "lucide-react";
 import Link from "next/link";
 
 import { CategoryCard } from "@/components/features/courses/category-card";
@@ -45,9 +45,6 @@ export async function MemberHome({ userId, userName }: MemberHomeProps) {
           <Container>
             <div className="flex max-w-3xl flex-col gap-5">
               <div>
-                <p className="mb-2 inline-flex items-center gap-1.5 rounded-full border border-[color:var(--brand-secondary)]/20 bg-background/80 px-3 py-1 text-xs font-semibold text-[color:var(--brand-secondary)] dark:text-blue-300">
-                  <Sparkles className="h-3.5 w-3.5" aria-hidden /> Votre espace personnel
-                </p>
                 <h1 className="text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
                   Bonjour{firstName ? ` ${firstName}` : ""} 👋
                 </h1>
