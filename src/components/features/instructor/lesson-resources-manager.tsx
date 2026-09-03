@@ -1,14 +1,13 @@
 "use client";
 
-// Pièces jointes d'une leçon : vidéos de tout format, PDF, diaporamas,
+// Pièce jointe d'une leçon : vidéo de tout format, PDF, diaporama,
 // tableurs, images, archives, audio.
 //
 // Même mécanique que la vignette (`ThumbnailUploader`) : presign → PUT direct
 // vers le stockage → l'URL obtenue est rattachée à la leçon par une Server
-// Action. La différence tient à la liste : on gère plusieurs fichiers, chacun
-// enregistré dès la fin de son upload, sans passer par la soumission du
-// formulaire de la leçon. Un formateur qui dépose cinq supports puis ferme
-// l'onglet ne perd rien.
+// Action. Le fichier est enregistré dès la fin de son upload, sans passer par
+// la soumission du formulaire de la leçon. Une leçon ne peut recevoir qu'un
+// seul support.
 
 import { FileText, FileVideo, Loader2, Trash2, UploadCloud } from "lucide-react";
 import { useRouter } from "next/navigation";
@@ -44,8 +43,6 @@ export interface LessonResourceRow {
 interface LessonResourcesManagerProps {
   lessonId: string;
   resources: LessonResourceRow[];
-  /** Plafond côté serveur, répété ici pour désactiver la zone quand il est atteint. */
-  maxResources?: number;
   /** Réduit la zone de dépôt lorsqu'elle est affichée directement dans le programme. */
   compact?: boolean;
 }
@@ -61,7 +58,6 @@ interface PendingUpload {
 export function LessonResourcesManager({
   lessonId,
   resources,
-  maxResources = 20,
   compact = false,
 }: LessonResourcesManagerProps) {
   const router = useRouter();
@@ -71,7 +67,7 @@ export function LessonResourcesManager({
   const [dragOver, setDragOver] = React.useState(false);
   const [busyId, setBusyId] = React.useState<string | null>(null);
 
-  const remaining = Math.max(0, maxResources - resources.length - pending.length);
+  const remaining = Math.max(0, 1 - resources.length - pending.length);
   const isFull = remaining === 0;
 
   async function uploadOne(file: File, key: string): Promise<string | null> {
@@ -169,7 +165,7 @@ export function LessonResourcesManager({
     const messages = failures.filter((message): message is string => Boolean(message));
     if (rejected > 0) {
       messages.push(
-        `${rejected} fichier(s) ignoré(s) : maximum ${maxResources} ressources par leçon.`,
+        `${rejected} fichier(s) ignoré(s) : une seule ressource est autorisée par leçon.`,
       );
     }
     setErrors(messages);
@@ -225,12 +221,11 @@ export function LessonResourcesManager({
                 <p className="truncate px-1 text-xs text-muted-foreground">
                   {resource.fileSizeBytes ? `${formatFileSize(resource.fileSizeBytes)} · ` : ""}
                   <a
-                    href={lessonResourceHref(lessonId, resource.id)}
-                    target="_blank"
-                    rel="noopener noreferrer"
+                    href={lessonResourceHref(lessonId, resource.id, true)}
+                    download
                     className="hover:underline"
                   >
-                    Ouvrir
+                    Télécharger
                   </a>
                 </p>
               </div>
@@ -318,8 +313,8 @@ export function LessonResourcesManager({
         </div>
         <p className="text-sm font-medium text-foreground">
           {isFull
-            ? `Maximum ${maxResources} ressources atteint`
-            : "Cliquez ou glissez vos fichiers"}
+            ? "Une ressource est déjà attachée"
+            : "Cliquez ou glissez votre fichier"}
         </p>
         <p className="text-xs text-muted-foreground">
           Vidéos de tout format, sans limite de taille — PDF, Word, Excel,
@@ -327,14 +322,13 @@ export function LessonResourcesManager({
           {Math.round(MAX_RESOURCE_BYTES / (1024 * 1024))} Mo
         </p>
         <Button type="button" variant="outline" size="sm" disabled={isFull}>
-          Choisir des fichiers
+          Choisir un fichier
         </Button>
       </div>
 
       <input
         ref={inputRef}
         type="file"
-        multiple
         accept={RESOURCE_ACCEPT_ATTRIBUTE}
         className="hidden"
         disabled={isFull}

@@ -3,7 +3,8 @@
 // Curriculum collapsible, façon Udemy :
 //   - chaque section est un <details> avec un compteur "X / Y · MM min"
 //   - section contenant la leçon courante est ouverte par défaut
-//   - icônes Lesson différenciées (vidéo / quiz / texte / ressource)
+//   - icônes Lesson différenciées (vidéo / quiz / texte)
+//   - l'unique ressource éventuelle se télécharge directement sous sa leçon
 //   - bouton de complétion = check rond filled
 //
 // Composant client uniquement pour gérer le rendu progressif `<details>`
@@ -16,9 +17,7 @@ import {
   ChevronDown,
   Circle,
   Download,
-  ExternalLink,
   FileText,
-  FolderOpen,
   HelpCircle,
   Paperclip,
   PlayCircle,
@@ -67,20 +66,20 @@ export function LearningSidebar({
   currentLessonId,
 }: LearningSidebarProps) {
   const [query, setQuery] = useState("");
-  const [openResourcesLessonId, setOpenResourcesLessonId] = useState<string | null>(
-    null,
-  );
   const q = query.trim().toLowerCase();
 
   // Filtrage : on garde l'index d'origine de chaque section pour conserver la
   // numérotation « Section N » même quand on filtre.
   const filteredSections = sections
     .map((section, index) => {
-      if (!q) return { section, index };
+      const learningLessons = section.lessons.filter(
+        (lesson) => lesson.type !== "RESOURCE",
+      );
+      if (!q) return { section: { ...section, lessons: learningLessons }, index };
       const sectionMatches = section.title.toLowerCase().includes(q);
       const lessons = sectionMatches
-        ? section.lessons
-        : section.lessons.filter((l) => l.title.toLowerCase().includes(q));
+        ? learningLessons
+        : learningLessons.filter((l) => l.title.toLowerCase().includes(q));
       return { section: { ...section, lessons }, index };
     })
     .filter(({ section }) => section.lessons.length > 0);
@@ -148,10 +147,12 @@ export function LearningSidebar({
               {section.lessons.map((lesson, lessonIdx) => {
                 const isCompleted = completedLessonIds.has(lesson.id);
                 const isActive = lesson.id === currentLessonId;
-                const resourceCount =
-                  lesson.resources.length + (lesson.legacyResource ? 1 : 0);
-                const resourcesOpen = openResourcesLessonId === lesson.id;
-                const resourcesPanelId = `learning-resources-${lesson.id}`;
+                const resource = lesson.resources[0] ?? null;
+                const resourceHref = resource
+                  ? lessonResourceHref(lesson.id, resource.id, true)
+                  : lesson.legacyResource?.url;
+                const resourceTitle = resource?.title ?? lesson.legacyResource?.title;
+                const resourceSize = resource?.fileSizeBytes ?? null;
                 return (
                   <li
                     key={lesson.id}
@@ -205,86 +206,34 @@ export function LearningSidebar({
                         </div>
                       </Link>
 
-                      {resourceCount > 0 ? (
-                        <div className="mt-2.5 flex justify-end pl-7 max-[379px]:pl-0">
-                          <button
-                            type="button"
-                            onClick={() =>
-                              setOpenResourcesLessonId((current) =>
-                                current === lesson.id ? null : lesson.id,
-                              )
-                            }
-                            aria-expanded={resourcesOpen}
-                            aria-controls={resourcesPanelId}
-                            aria-label={`Ressources de la leçon (${resourceCount})`}
-                            className="inline-flex shrink-0 items-center justify-center gap-1.5 rounded-md border border-violet-500 bg-card px-3 py-1.5 text-xs font-medium text-violet-600 transition-colors hover:border-violet-600 hover:bg-violet-50 dark:border-violet-500 dark:text-violet-300 dark:hover:bg-violet-950/40 max-[379px]:w-full"
-                          >
-                            <FolderOpen className="h-3.5 w-3.5" aria-hidden />
-                            <span>Ressources</span>
-                            <ChevronDown
-                              className={cn(
-                                "h-3.5 w-3.5 transition-transform",
-                                resourcesOpen && "rotate-180",
-                              )}
-                              aria-hidden
-                            />
-                          </button>
-                        </div>
+                      {resourceHref && resourceTitle ? (
+                        <a
+                          href={resourceHref}
+                          download
+                          aria-label={`Télécharger la ressource ${resourceTitle}`}
+                          className="mt-2.5 ml-7 flex min-w-0 items-center gap-2 rounded-md border border-blue-200 bg-blue-50/70 px-2.5 py-2 text-foreground transition-colors hover:border-blue-400 hover:bg-blue-100 dark:border-blue-900 dark:bg-blue-950/20 dark:hover:bg-blue-950/40"
+                        >
+                          <Paperclip
+                            className="h-3.5 w-3.5 shrink-0 text-[color:var(--brand-secondary)]"
+                            aria-hidden
+                          />
+                          <span className="min-w-0 flex-1">
+                            <span className="block truncate text-xs font-medium">
+                              {resourceTitle}
+                            </span>
+                            {resourceSize ? (
+                              <span className="block text-[10px] text-muted-foreground">
+                                {formatFileSize(resourceSize)}
+                              </span>
+                            ) : null}
+                          </span>
+                          <span className="inline-flex shrink-0 items-center gap-1 text-[11px] font-medium text-[color:var(--brand-secondary)]">
+                            <Download className="h-3.5 w-3.5" aria-hidden />
+                            Télécharger
+                          </span>
+                        </a>
                       ) : null}
                     </div>
-
-                    {resourcesOpen ? (
-                      <div
-                        id={resourcesPanelId}
-                        className="border-t border-blue-200 bg-blue-50/70 px-3 py-2.5 dark:border-blue-900 dark:bg-blue-950/20"
-                      >
-                        <ul className="space-y-1.5">
-                          {lesson.resources.map((resource) => (
-                            <li key={resource.id}>
-                              <a
-                                href={lessonResourceHref(lesson.id, resource.id, true)}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="flex items-center gap-2 rounded-md border border-blue-100 bg-card px-2.5 py-2 text-foreground transition-colors hover:border-blue-300 hover:bg-blue-50 dark:border-blue-900 dark:hover:bg-blue-950/40"
-                              >
-                                <Download
-                                  className="h-3.5 w-3.5 shrink-0 text-[color:var(--brand-secondary)]"
-                                  aria-hidden
-                                />
-                                <span className="min-w-0 flex-1">
-                                  <span className="block truncate text-xs font-medium">
-                                    {resource.title}
-                                  </span>
-                                  {resource.fileSizeBytes ? (
-                                    <span className="block text-[10px] text-muted-foreground">
-                                      {formatFileSize(resource.fileSizeBytes)}
-                                    </span>
-                                  ) : null}
-                                </span>
-                              </a>
-                            </li>
-                          ))}
-                          {lesson.legacyResource ? (
-                            <li>
-                              <a
-                                href={lesson.legacyResource.url}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="flex items-center gap-2 rounded-md border border-blue-100 bg-card px-2.5 py-2 text-xs font-medium text-foreground transition-colors hover:border-blue-300 hover:bg-blue-50 dark:border-blue-900 dark:hover:bg-blue-950/40"
-                              >
-                                <ExternalLink
-                                  className="h-3.5 w-3.5 shrink-0 text-[color:var(--brand-secondary)]"
-                                  aria-hidden
-                                />
-                                <span className="min-w-0 flex-1 truncate">
-                                  {lesson.legacyResource.title}
-                                </span>
-                              </a>
-                            </li>
-                          ) : null}
-                        </ul>
-                      </div>
-                    ) : null}
                   </li>
                 );
               })}

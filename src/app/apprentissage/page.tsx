@@ -73,7 +73,7 @@ export default async function LearningPage({ searchParams }: PageProps) {
               select: {
                 lessons: {
                   orderBy: { displayOrder: "asc" },
-                  select: { id: true },
+                  select: { id: true, type: true },
                 },
               },
             },
@@ -113,6 +113,7 @@ export default async function LearningPage({ searchParams }: PageProps) {
       where: {
         userId,
         lesson: {
+          type: { not: "RESOURCE" },
           section: { courseId: { in: enrollments.map((e) => e.courseId) } },
         },
       },
@@ -244,8 +245,9 @@ export default async function LearningPage({ searchParams }: PageProps) {
                 {visibleEnrollments.map((enrollment) => {
                   const slug = enrollment.course.slug;
                   const lastLessonId = lastProgressBySlug.get(slug);
-                  const firstLessonId =
-                    enrollment.course.sections[0]?.lessons[0]?.id;
+                  const firstLessonId = enrollment.course.sections
+                    .flatMap((section) => section.lessons)
+                    .find((lesson) => lesson.type !== "RESOURCE")?.id;
                   const resumeHref = lastLessonId
                     ? `/apprentissage/${slug}/lecons/${lastLessonId}`
                     : firstLessonId

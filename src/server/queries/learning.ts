@@ -281,9 +281,15 @@ export async function computeCourseProgress(
   courseId: string,
 ): Promise<CourseLearningStats> {
   const [total, completed] = await Promise.all([
-    prisma.lesson.count({ where: { section: { courseId } } }),
+    prisma.lesson.count({
+      where: { type: { not: "RESOURCE" }, section: { courseId } },
+    }),
     prisma.lessonProgress.count({
-      where: { userId, isCompleted: true, lesson: { section: { courseId } } },
+      where: {
+        userId,
+        isCompleted: true,
+        lesson: { type: { not: "RESOURCE" }, section: { courseId } },
+      },
     }),
   ]);
   const progressPercent = total === 0 ? 0 : Math.round((completed / total) * 100);

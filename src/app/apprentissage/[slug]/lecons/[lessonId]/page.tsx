@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { ArrowLeft, ArrowRight, Download, FileText, FileVideo } from "lucide-react";
+import { ArrowLeft, ArrowRight } from "lucide-react";
 
 import { auth } from "@/auth";
 import { CourseAnnouncements } from "@/components/features/learning/course-announcements";
@@ -20,16 +20,10 @@ import { LessonNotes } from "@/components/features/learning/lesson-notes";
 import { LessonPlayer } from "@/components/features/learning/lesson-player";
 import { MarkdownContent } from "@/components/features/learning/markdown-content";
 import { LessonReader } from "@/components/features/learning/lesson-reader";
-import { LessonResourceStage } from "@/components/features/learning/lesson-resource-stage";
 import { LearningActivityHeartbeat } from "@/components/features/learning/use-learning-heartbeat";
 import { LessonQuestions } from "@/components/features/learning/lesson-questions";
 import { signMuxPlaybackToken } from "@/lib/mux";
 import { estimateReadingMinutes } from "@/lib/markdown";
-import {
-  formatFileSize,
-  isVideoResource,
-  lessonResourceHref,
-} from "@/lib/resource-file";
 import { LessonTutor } from "@/components/features/learning/lesson-tutor";
 import { QuizAttempt } from "@/components/features/learning/quiz-attempt";
 import { CourseReviewsList } from "@/components/features/courses/course-reviews-list";
@@ -68,9 +62,24 @@ export default async function LessonViewerPage({ params }: PageProps) {
   if (!data) redirect(`/cours/${slug}`);
   const { course } = data;
 
-  const flatLessons = course.sections.flatMap((s) =>
+  const allLessons = course.sections.flatMap((s) =>
     s.lessons.map((l) => ({ ...l, sectionId: s.id })),
   );
+  const requestedLesson = allLessons.find((lesson) => lesson.id === lessonId);
+  if (!requestedLesson) notFound();
+
+  // Les anciennes leçons de type RESOURCE ne doivent plus ouvrir une scène
+  // dans le lecteur. Elles restent administrables par le formateur le temps
+  // d'être remplacées par l'unique pièce jointe d'une vraie leçon.
+  if (requestedLesson.type === "RESOURCE") {
+    const fallbackLesson = allLessons.find((lesson) => lesson.type !== "RESOURCE");
+    if (fallbackLesson) {
+      redirect(`/apprentissage/${course.slug}/lecons/${fallbackLesson.id}`);
+    }
+    notFound();
+  }
+
+  const flatLessons = allLessons.filter((lesson) => lesson.type !== "RESOURCE");
   const lessonIndex = flatLessons.findIndex((l) => l.id === lessonId);
   if (lessonIndex === -1) notFound();
   const lesson = flatLessons[lessonIndex];
@@ -190,63 +199,6 @@ export default async function LessonViewerPage({ params }: PageProps) {
     </div>
   );
 
-  // Deux sources cohabitent : les pièces jointes téléversées par le formateur
-  // (`lesson.resources`) et l'unique lien historique porté par la leçon
-  // (`resourceUrl`), conservé pour les cours créés avant l'upload de fichiers.
-  const hasResources = lesson.resources.length > 0 || Boolean(lesson.resourceUrl);
-  const resourceCount = lesson.resources.length + (lesson.resourceUrl ? 1 : 0);
-
-  const resourcesContent = hasResources ? (
-    <div className="space-y-4">
-      {lesson.resources.length > 0 ? (
-        <ul className="divide-y divide-border rounded-lg border border-border">
-          {lesson.resources.map((resource) => (
-            <li key={resource.id} className="flex items-center gap-3 px-3 py-3">
-              {isVideoResource(resource.url, "") ? (
-                <FileVideo className="h-4 w-4 shrink-0 text-muted-foreground" />
-              ) : (
-                <FileText className="h-4 w-4 shrink-0 text-muted-foreground" />
-              )}
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-medium text-foreground">
-                  {resource.title}
-                </p>
-                {resource.fileSizeBytes ? (
-                  <p className="text-xs text-muted-foreground">
-                    {formatFileSize(resource.fileSizeBytes)}
-                  </p>
-                ) : null}
-              </div>
-              <Button asChild variant="outline" size="sm">
-                <Link
-                  href={lessonResourceHref(lesson.id, resource.id, true)}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  <Download className="h-4 w-4" />
-                  Télécharger
-                </Link>
-              </Button>
-            </li>
-          ))}
-        </ul>
-      ) : null}
-
-      {lesson.resourceUrl ? (
-        <Button asChild>
-          <Link href={lesson.resourceUrl} target="_blank" rel="noopener noreferrer">
-            <Download className="h-4 w-4" />
-            {lesson.resourceFileName ?? "Télécharger"}
-          </Link>
-        </Button>
-      ) : null}
-    </div>
-  ) : (
-    <p className="text-sm text-muted-foreground">
-      Aucune ressource attachée à cette leçon.
-    </p>
-  );
-
   const tabs = [
     { key: "presentation", label: "Présentation", content: presentationContent },
     { key: "notes", label: "Mes notes", content: notesContent },
@@ -278,12 +230,6 @@ export default async function LessonViewerPage({ params }: PageProps) {
       label: "Avis",
       badge: reviewsBundle.totalRatings > 0 ? reviewsBundle.totalRatings : undefined,
       content: reviewsContent,
-    },
-    {
-      key: "resources",
-      label: "Ressources",
-      badge: resourceCount > 0 ? resourceCount : undefined,
-      content: resourcesContent,
     },
   ];
 
@@ -411,20 +357,6 @@ export default async function LessonViewerPage({ params }: PageProps) {
                   )
                 ) : null}
 
-                {lesson.type === "RESOURCE" ? (
-                  <LessonResourceStage
-                    key={lesson.id}
-                    lessonId={lesson.id}
-                    resources={lesson.resources.map((resource) => ({
-                      id: resource.id,
-                      title: resource.title,
-                      url: resource.url,
-                      fileSizeBytes: resource.fileSizeBytes,
-                    }))}
-                    legacyUrl={lesson.resourceUrl}
-                    legacyFileName={lesson.resourceFileName}
-                  />
-                ) : null}
               </div>
             </div>
 
@@ -489,23 +421,25 @@ export default async function LessonViewerPage({ params }: PageProps) {
                   sections={course.sections.map((s) => ({
                     id: s.id,
                     title: s.title,
-                    lessons: s.lessons.map((l) => ({
-                      id: l.id,
-                      title: l.title,
-                      type: l.type,
-                      videoDurationSeconds: l.videoDurationSeconds,
-                      resources: l.resources.map((resource) => ({
-                        id: resource.id,
-                        title: resource.title,
-                        fileSizeBytes: resource.fileSizeBytes,
+                    lessons: s.lessons
+                      .filter((l) => l.type !== "RESOURCE")
+                      .map((l) => ({
+                        id: l.id,
+                        title: l.title,
+                        type: l.type,
+                        videoDurationSeconds: l.videoDurationSeconds,
+                        resources: l.resources.slice(0, 1).map((resource) => ({
+                          id: resource.id,
+                          title: resource.title,
+                          fileSizeBytes: resource.fileSizeBytes,
+                        })),
+                        legacyResource: l.resourceUrl
+                          ? {
+                              title: l.resourceFileName ?? "Ressource",
+                              url: l.resourceUrl,
+                            }
+                          : undefined,
                       })),
-                      legacyResource: l.resourceUrl
-                        ? {
-                            title: l.resourceFileName ?? "Ressource",
-                            url: l.resourceUrl,
-                          }
-                        : undefined,
-                    })),
                   }))}
                   completedLessonIds={completedIds}
                   currentLessonId={lesson.id}

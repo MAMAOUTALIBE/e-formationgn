@@ -53,7 +53,9 @@ export default async function CourseLearningPage({ params }: PageProps) {
     progressList.filter((p) => p.isCompleted).map((p) => p.lessonId),
   );
 
-  const firstLesson = course.sections[0]?.lessons[0];
+  const firstLesson = course.sections
+    .flatMap((section) => section.lessons)
+    .find((lesson) => lesson.type !== "RESOURCE");
   const nextLesson = findNextLesson(course.sections, completedIds);
   const completed = stats.progressPercent === 100;
   const recipientName =
@@ -220,7 +222,7 @@ export default async function CourseLearningPage({ params }: PageProps) {
                 sections={course.sections.map((s) => ({
                   id: s.id,
                   title: s.title,
-                  lessons: s.lessons.map((l) => ({
+                  lessons: s.lessons.filter((l) => l.type !== "RESOURCE").map((l) => ({
                     id: l.id,
                     title: l.title,
                     type: l.type,
@@ -257,7 +259,7 @@ function findNextLesson(
 ) {
   for (const section of sections) {
     for (const lesson of section.lessons) {
-      if (!completedIds.has(lesson.id)) return lesson;
+      if (lesson.type !== "RESOURCE" && !completedIds.has(lesson.id)) return lesson;
     }
   }
   return null;

@@ -131,11 +131,11 @@ export default async function LessonEditPage({ params }: PageProps) {
 
       <Card>
         <CardHeader>
-          <CardTitle>Ressources téléchargeables</CardTitle>
+          <CardTitle>Ressource téléchargeable</CardTitle>
           <CardDescription>
-            Supports de cours joints à cette leçon : PDF, diaporamas, tableurs,
-            images, archives. L&apos;élève inscrit les retrouve dans l&apos;onglet
-            « Ressources » du lecteur.
+            Ajoutez au maximum un support à cette leçon : PDF, diaporama,
+            tableur, image ou archive. L&apos;élève le télécharge directement
+            sous la leçon dans le programme.
           </CardDescription>
         </CardHeader>
         <CardContent>

@@ -5,6 +5,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
+import { Prisma } from "@/generated/prisma/client";
 import {
   AuthorizationError,
   requireCourseOwnership,
@@ -34,8 +35,9 @@ import type { ActionResult } from "./auth";
 // est centralisée dans `requireCourseOwnership` (lib/auth/authorization).
 const requireOwnership = requireCourseOwnership;
 
-/** Plafond de pièces jointes par leçon. */
-const MAX_RESOURCES_PER_LESSON = 20;
+/** Une leçon peut proposer au plus une pièce jointe téléchargeable. */
+const MAX_RESOURCES_PER_LESSON = 1;
+const RESOURCE_LIMIT_REACHED = "RESOURCE_LIMIT_REACHED";
 const RETIRED_RESOURCE_TYPE_MESSAGE =
   "Ajoutez les fichiers avec la carte Ressources téléchargeables.";
 
@@ -473,24 +475,41 @@ export async function addLessonResource(
     };
   }
 
-  // Plafond par leçon : la liste est destinée à être lue par l'élève, pas à
-  // servir d'espace de stockage.
-  const existing = await prisma.lessonResource.count({ where: { lessonId } });
-  if (existing >= MAX_RESOURCES_PER_LESSON) {
-    return {
-      success: false,
-      message: `Maximum ${MAX_RESOURCES_PER_LESSON} ressources par leçon.`,
-    };
-  }
+  try {
+    await prisma.$transaction(
+      async (tx) => {
+        // Une ressource reste un complément direct de la leçon, jamais une
+        // bibliothèque de fichiers indépendante. Le niveau Serializable
+        // empêche deux ajouts simultanés de voir tous les deux un compteur nul.
+        const existing = await tx.lessonResource.count({ where: { lessonId } });
+        if (existing >= MAX_RESOURCES_PER_LESSON) {
+          throw new Error(RESOURCE_LIMIT_REACHED);
+        }
 
-  await prisma.lessonResource.create({
-    data: {
-      lessonId,
-      title: parsed.data.title,
-      url: parsed.data.url,
-      fileSizeBytes: parsed.data.fileSizeBytes ?? null,
-    },
-  });
+        await tx.lessonResource.create({
+          data: {
+            lessonId,
+            title: parsed.data.title,
+            url: parsed.data.url,
+            fileSizeBytes: parsed.data.fileSizeBytes ?? null,
+          },
+        });
+      },
+      { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+    );
+  } catch (error) {
+    const limitReached =
+      (error instanceof Error && error.message === RESOURCE_LIMIT_REACHED) ||
+      (error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === "P2034");
+    if (limitReached) {
+      return {
+        success: false,
+        message: "Une seule ressource est autorisée par leçon.",
+      };
+    }
+    throw error;
+  }
 
   const courseId = lesson.section.course.id;
   revalidatePath(`/formateur/cours/${courseId}/lecons/${lessonId}`);

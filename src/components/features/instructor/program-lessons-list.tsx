@@ -93,7 +93,7 @@ function ProgramLessonCard({
   const titleId = `${panelId}-title`;
   const resourceCount = lesson.resources.length;
   const resourceLabel =
-    resourceCount > 0 ? `Ressources (${resourceCount})` : "Ajouter des ressources";
+    resourceCount > 0 ? "Ressource" : "Ajouter une ressource";
 
   return (
     <li
@@ -212,12 +212,12 @@ function ProgramLessonCard({
           <div className="mb-3 flex items-start justify-between gap-3">
             <div>
               <h4 id={titleId} className="text-sm font-semibold text-foreground">
-                Ressources de la leçon
+                Ressource de la leçon
               </h4>
               <p className="text-xs text-muted-foreground">
                 {resourceCount > 0
-                  ? `${resourceCount} ressource${resourceCount > 1 ? "s" : ""} disponible${resourceCount > 1 ? "s" : ""}`
-                  : "Ajoutez uniquement les supports utiles à cette leçon."}
+                  ? "Un fichier téléchargeable est disponible."
+                  : "Ajoutez un seul support téléchargeable à cette leçon."}
               </p>
             </div>
             <Button

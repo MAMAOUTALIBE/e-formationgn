@@ -49,16 +49,16 @@ test("la route publique /uploads refuse le préfixe des supports de cours", asyn
 });
 
 test("aucun écran ne lie encore l'adresse de stockage d'une ressource", async () => {
-  const [stage, tab, manager] = await Promise.all([
+  const [stage, sidebar, manager] = await Promise.all([
     read("src/components/features/learning/lesson-resource-stage.tsx"),
-    read("src/app/apprentissage/[slug]/lecons/[lessonId]/page.tsx"),
+    read("src/components/features/learning/learning-sidebar.tsx"),
     read("src/components/features/instructor/lesson-resources-manager.tsx"),
   ]);
-  for (const source of [stage, tab, manager]) {
+  for (const source of [stage, sidebar, manager]) {
     assert.match(source, /lessonResourceHref/);
   }
   // `href={resource.url}` était le lien direct vers le stockage.
-  assert.doesNotMatch(tab, /href=\{resource\.url\}/);
+  assert.doesNotMatch(sidebar, /href=\{resource\.url\}/);
   assert.doesNotMatch(manager, /href=\{resource\.url\}/);
 });
 
@@ -81,8 +81,8 @@ test("le programme permet de gérer les ressources sur chaque carte de leçon", 
   assert.match(programme, /lesson\.resources\.map/);
   assert.match(programme, /sectionResourceCount/);
 
-  assert.match(cards, /Ajouter des ressources/);
-  assert.match(cards, /Ressources \(\$\{resourceCount\}\)/);
+  assert.match(cards, /Ajouter une ressource/);
+  assert.match(cards, /Ressource de la leçon/);
   assert.match(cards, /<LessonResourcesManager/);
   assert.match(cards, /openLessonId/);
   assert.match(cards, /aria-expanded=\{resourcesOpen\}/);
@@ -119,40 +119,54 @@ test("la carte de ressources est l'unique interface d'ajout d'une leçon", async
   assert.match(actions, /RETIRED_RESOURCE_TYPE_MESSAGE/);
 });
 
-test("le lecteur montre les ressources modernes et historiques sans imbriquer les actions", async () => {
+test("le lecteur place une seule ressource sous sa leçon sans écran dédié", async () => {
   const [page, sidebar] = await Promise.all([
     read("src/app/apprentissage/[slug]/lecons/[lessonId]/page.tsx"),
     read("src/components/features/learning/learning-sidebar.tsx"),
   ]);
 
-  // L'ancien code ne regardait que `resourceUrl` et rendait invisibles dans
-  // la barre latérale les pièces jointes stockées dans `lesson.resources`.
-  assert.match(page, /resources: l\.resources\.map/);
+  assert.match(page, /resources: l\.resources\.slice\(0, 1\)\.map/);
   assert.match(page, /legacyResource: l\.resourceUrl/);
-  assert.match(page, /lesson\.resources\.length \+ \(lesson\.resourceUrl \? 1 : 0\)/);
-  assert.doesNotMatch(page, /hasResource: Boolean\(l\.resourceUrl\)/);
+  assert.match(page, /lesson\.type !== "RESOURCE"/);
+  assert.doesNotMatch(page, /label: "Ressources"/);
+  assert.doesNotMatch(page, /<LessonResourceStage/);
 
-  assert.match(sidebar, /resourceCount > 0/);
-  assert.match(sidebar, /aria-controls=\{resourcesPanelId\}/);
+  assert.match(sidebar, /const resource = lesson\.resources\[0\] \?\? null/);
   assert.match(sidebar, /lessonResourceHref\(lesson\.id, resource\.id, true\)/);
-  assert.match(sidebar, /openResourcesLessonId/);
+  assert.match(sidebar, /aria-label=\{`Télécharger la ressource \$\{resourceTitle\}`\}/);
+  assert.doesNotMatch(sidebar, /openResourcesLessonId/);
+  assert.doesNotMatch(sidebar, /aria-controls=\{resourcesPanelId\}/);
 });
 
-test("le bouton de ressources ne partage jamais la ligne du titre", async () => {
+test("le téléchargement est affiché directement après la leçon", async () => {
   const sidebar = await read(
     "src/components/features/learning/learning-sidebar.tsx",
   );
 
   const lessonLinkEnd = sidebar.indexOf("</Link>", sidebar.indexOf("aria-current="));
-  const resourceButton = sidebar.indexOf("<button", lessonLinkEnd);
+  const resourceLink = sidebar.indexOf("<a", lessonLinkEnd);
 
   assert.ok(lessonLinkEnd > -1);
-  assert.ok(resourceButton > lessonLinkEnd);
-  assert.match(sidebar, /mt-2\.5 flex justify-end pl-7/);
+  assert.ok(resourceLink > lessonLinkEnd);
+  assert.match(sidebar, /mt-2\.5 ml-7 flex min-w-0 items-center/);
   assert.match(sidebar, /whitespace-normal break-words leading-5 \[overflow-wrap:anywhere\]/);
   assert.doesNotMatch(sidebar, /cn\("truncate", isActive/);
-  assert.match(sidebar, /border-violet-500/);
-  assert.match(sidebar, /<FolderOpen[^>]+aria-hidden \/>/);
-  assert.match(sidebar, /<span>Ressources<\/span>/);
-  assert.match(sidebar, /max-\[379px\]:w-full/);
+  assert.match(sidebar, /download/);
+  assert.match(sidebar, /Télécharger/);
+  assert.doesNotMatch(sidebar, /<span>Ressources<\/span>/);
+});
+
+test("une leçon n'accepte qu'une seule ressource", async () => {
+  const [manager, actions] = await Promise.all([
+    read("src/components/features/instructor/lesson-resources-manager.tsx"),
+    read("src/server/actions/curriculum.ts"),
+  ]);
+
+  assert.match(manager, /Math\.max\(0, 1 - resources\.length - pending\.length\)/);
+  assert.doesNotMatch(manager, /type="file"\s+multiple/);
+  assert.match(manager, /Une ressource est déjà attachée/);
+  assert.match(actions, /MAX_RESOURCES_PER_LESSON = 1/);
+  assert.match(actions, /Une seule ressource est autorisée par leçon/);
+  assert.match(actions, /TransactionIsolationLevel\.Serializable/);
+  assert.match(actions, /error\.code === "P2034"/);
 });
