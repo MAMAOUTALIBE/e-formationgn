@@ -58,6 +58,37 @@ test.describe("Catalogue — filtres", () => {
     const response = await request.get("/cours?price=free");
     expect(response.status()).toBe(200);
   });
+
+  test("la barre desktop prépare, applique et réinitialise les filtres", async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 1440, height: 1100 });
+    await page.goto("/cours?q=fondamentaux&sort=newest");
+
+    const sidebar = page.getByRole("complementary", {
+      name: "Filtres du catalogue",
+    });
+    await expect(sidebar).toBeVisible();
+    await expect(sidebar.getByRole("heading", { name: "Filtres" })).toBeVisible();
+
+    for (const group of ["Catégorie", "Note", "Niveau", "Durée"]) {
+      await expect(sidebar.getByRole("button", { name: group })).toBeVisible();
+    }
+
+    const beginner = sidebar.getByRole("checkbox", { name: /Débutant/ });
+    await beginner.check();
+    await expect(page).not.toHaveURL(/level=BEGINNER/);
+
+    await sidebar.getByRole("button", { name: "Appliquer" }).click();
+    await expect(page).toHaveURL(/level=BEGINNER/);
+
+    await sidebar.getByRole("button", { name: "Réinitialiser" }).click();
+    await expect(beginner).not.toBeChecked();
+    await sidebar.getByRole("button", { name: "Appliquer" }).click();
+    await expect(page).not.toHaveURL(/level=/);
+    await expect(page).toHaveURL(/q=fondamentaux/);
+    await expect(page).toHaveURL(/sort=newest/);
+  });
 });
 
 test.describe("Catalogue — recherche full-text", () => {

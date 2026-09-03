@@ -14,7 +14,9 @@ test("le footer public reste limité aux informations essentielles", async () =>
   assert.match(source, /footer-modern-building-construction\.webp/);
   assert.match(source, /bg-\[#031735\]\/88/);
   assert.match(source, /<Logo width=\{170\} \/>/);
-  assert.doesNotMatch(source, /newsletter/i);
+  assert.match(source, /Newsletter mensuelle/);
+  assert.match(source, /<NewsletterForm/);
+  assert.match(source, /source="footer"/);
 
   for (const label of ["Catalogue", "À propos", "Contact", "Se connecter"]) {
     assert.match(source, new RegExp(`label: "${label}"`));

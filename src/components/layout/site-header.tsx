@@ -31,14 +31,14 @@ export async function SiteHeader() {
   ]);
 
   return (
-    <header className="sticky top-0 z-40 w-full border-b border-border bg-background/95 shadow-sm backdrop-blur supports-[backdrop-filter]:bg-background/80">
+    <header className="sticky top-0 z-40 w-full border-b border-slate-200/80 bg-white/95 shadow-[0_8px_24px_rgba(15,23,42,0.06)] backdrop-blur supports-[backdrop-filter]:bg-white/85">
       {/* Fine bande gradient marketing */}
       <div
         aria-hidden
         className="h-1 w-full bg-gradient-to-r from-[color:var(--brand-primary)] via-[color:var(--brand-violet)] to-[color:var(--brand-mint)]"
       />
 
-      <Container className="flex h-16 items-center justify-between gap-3 md:gap-6">
+      <Container className="flex h-16 items-center gap-2.5 xl:gap-4">
         <Link
           href="/"
           className="flex shrink-0 items-center"
@@ -48,7 +48,7 @@ export async function SiteHeader() {
         </Link>
 
         <nav
-          className="hidden items-center gap-6 lg:flex"
+          className="hidden shrink-0 items-center gap-2 lg:flex"
           aria-label="Navigation principale"
         >
           <CategoriesDropdown
@@ -59,14 +59,17 @@ export async function SiteHeader() {
           {user ? <NavLink href="/apprentissage">{t.common.myLearning}</NavLink> : null}
         </nav>
 
-        <div className="hidden flex-1 max-w-md lg:block">
+        <div className="hidden min-w-0 flex-1 lg:block xl:max-w-3xl">
           <HeaderSearch />
         </div>
 
-        <div className="flex items-center gap-1 md:gap-2">
+        <div className="ml-auto flex shrink-0 items-center gap-1 md:gap-2">
           {user ? (
             <>
-              <NotificationBell unreadCount={unreadNotifs} />
+              <NotificationBell
+                unreadCount={unreadNotifs}
+                className="border border-slate-200/80 bg-white shadow-[0_3px_12px_rgba(15,23,42,0.06)] hover:border-sky-200 hover:bg-sky-50"
+              />
               <UserMenu
                 user={{
                   name: user.name,

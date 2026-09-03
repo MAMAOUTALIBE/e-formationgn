@@ -2,6 +2,7 @@ import { Mail, MapPin, Phone, Smartphone } from "lucide-react";
 import Link from "next/link";
 
 import { Logo } from "@/components/branding/logo";
+import { NewsletterForm } from "@/components/features/marketing/newsletter-form";
 import { Container } from "@/components/ui/container";
 import { BRAND } from "@/lib/brand";
 import { getDictionary } from "@/lib/i18n/server";
@@ -23,7 +24,7 @@ export async function SiteFooter() {
   const { t } = await getDictionary();
 
   return (
-    <footer className="relative isolate overflow-hidden border-t border-white/20 bg-[#031735] text-white">
+    <footer className="relative isolate overflow-hidden border-t border-white/20 bg-[#031735] text-white [&_.text-foreground]:text-white [&_.text-muted-foreground]:text-slate-200">
       <div
         aria-hidden="true"
         className="pointer-events-none absolute inset-0 z-0 bg-cover bg-center"
@@ -40,6 +41,17 @@ export async function SiteFooter() {
           <p className="mt-5 max-w-sm text-base leading-7 text-slate-200">
             {t.footer.tagline}
           </p>
+          <div className="mt-6 max-w-sm">
+            <h2 className="text-sm font-semibold text-white">Newsletter mensuelle</h2>
+            <p className="mt-1 text-xs leading-5 text-slate-300">
+              Conseils pratiques, nouveautés du catalogue et actualités du centre.
+            </p>
+            <NewsletterForm
+              source="footer"
+              variant="compact"
+              className="mt-3 [&_a]:text-emerald-300 [&_input]:text-slate-950 [&_input]:placeholder:text-slate-500"
+            />
+          </div>
         </section>
 
         <nav aria-label="Liens essentiels" className="md:col-span-2 lg:col-span-1">

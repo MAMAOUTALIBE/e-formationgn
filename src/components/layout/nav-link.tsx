@@ -27,21 +27,16 @@ export function NavLink({
   return (
     <Link
       href={href}
+      aria-current={isActive ? "page" : undefined}
       className={cn(
-        "relative text-sm font-medium transition-colors",
+        "inline-flex min-h-10 items-center rounded-full border px-4 text-sm font-semibold shadow-[0_3px_12px_rgba(15,23,42,0.05)] transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400",
         isActive
-          ? "text-[color:var(--brand-violet-deep)]"
-          : "text-muted-foreground hover:text-foreground",
+          ? "border-emerald-200 bg-emerald-50 text-[color:var(--brand-primary)]"
+          : "border-slate-200/80 bg-white text-slate-700 hover:border-sky-200 hover:bg-sky-50 hover:text-[color:var(--brand-primary)]",
         className,
       )}
     >
       {children}
-      {isActive ? (
-        <span
-          aria-hidden
-          className="absolute inset-x-0 -bottom-[22px] mx-auto h-0.5 w-full rounded-full bg-gradient-to-r from-[color:var(--brand-violet)] to-[color:var(--brand-mint)]"
-        />
-      ) : null}
     </Link>
   );
 }

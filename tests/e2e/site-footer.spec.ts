@@ -27,7 +27,10 @@ test.describe("Footer public simplifié", () => {
       "CGV",
       "Confidentialité",
     ]);
-    await expect(footer.getByText(/Newsletter mensuelle/i)).toHaveCount(0);
+    await expect(footer.getByText(/Newsletter mensuelle/i)).toBeVisible();
+    await expect(footer.getByRole("textbox", { name: "Adresse email" })).toBeVisible();
+    await expect(footer.getByRole("checkbox")).toBeVisible();
+    await expect(footer.getByRole("button", { name: "S'inscrire" })).toBeVisible();
     await expect(contact.getByText("info@aiduca.fr")).toBeVisible();
     await expect(contact.getByAltText(/Certification Qualiopi/)).toBeVisible();
     await expect(

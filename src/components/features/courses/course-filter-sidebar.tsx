@@ -12,7 +12,7 @@
 // (checkboxes). Catégorie et Note restent mono-select (radios).
 // Format URL : "?level=BEGINNER,INTERMEDIATE&duration=short,medium".
 
-import { ChevronDown, X } from "lucide-react";
+import { Check, ChevronDown, RotateCcw, SlidersHorizontal } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import * as React from "react";
 
@@ -60,144 +60,182 @@ export function CourseFilterSidebar({
 }: CourseFilterSidebarProps) {
   const router = useRouter();
   const params = useSearchParams();
-  const { startTransition } = useFilterTransition();
+  const { pending, startTransition } = useFilterTransition();
 
   const currentCategory = params.get("category") ?? "";
   const currentLevels = parseCsv(params.get("level"));
   const currentDurations = parseCsv(params.get("duration"));
   const currentRating = params.get("rating") ?? "";
 
-  const update = React.useCallback(
-    (patch: Record<string, string | undefined>) => {
-      const next = new URLSearchParams(params.toString());
-      for (const [key, value] of Object.entries(patch)) {
-        if (!value) next.delete(key);
-        else next.set(key, value);
-      }
-      next.delete("page");
-      startTransition(() => {
-        router.push(`?${next.toString()}`, { scroll: false });
-      });
-    },
-    [params, router, startTransition],
-  );
+  const urlFilterKey = [
+    currentCategory,
+    currentLevels.join(","),
+    currentDurations.join(","),
+    currentRating,
+  ].join("|");
+  const [syncedUrlFilterKey, setSyncedUrlFilterKey] = React.useState(urlFilterKey);
+  const [category, setCategory] = React.useState(currentCategory);
+  const [levels, setLevels] = React.useState(currentLevels);
+  const [durations, setDurations] = React.useState(currentDurations);
+  const [rating, setRating] = React.useState(currentRating);
 
-  // Toggle d'une valeur dans une liste CSV — pattern multi-select.
-  const toggle = React.useCallback(
-    (key: "level" | "duration", value: string) => {
-      const current = parseCsv(params.get(key));
-      const next = current.includes(value)
-        ? current.filter((v) => v !== value)
-        : [...current, value];
-      update({ [key]: next.length > 0 ? next.join(",") : undefined });
-    },
-    [params, update],
-  );
+  // Resynchronise les choix lors d'une navigation externe (retour navigateur
+  // ou lien filtré), sans effacer une sélection en cours de préparation.
+  if (urlFilterKey !== syncedUrlFilterKey) {
+    setSyncedUrlFilterKey(urlFilterKey);
+    setCategory(currentCategory);
+    setLevels(currentLevels);
+    setDurations(currentDurations);
+    setRating(currentRating);
+  }
 
-  function reset() {
-    const term = params.get("q");
-    const sort = params.get("sort");
-    const next = new URLSearchParams();
-    if (term) next.set("q", term);
-    if (sort) next.set("sort", sort);
+  function toggle(
+    values: string[],
+    setValues: React.Dispatch<React.SetStateAction<string[]>>,
+    value: string,
+  ) {
+    setValues(
+      values.includes(value)
+        ? values.filter((item) => item !== value)
+        : [...values, value],
+    );
+  }
+
+  function apply(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const next = new URLSearchParams(params.toString());
+    const set = (key: string, value: string) => {
+      if (value) next.set(key, value);
+      else next.delete(key);
+    };
+
+    if (!hideCategory) set("category", category);
+    set("level", levels.join(","));
+    set("duration", durations.join(","));
+    set("rating", rating);
+    next.delete("page");
+
     startTransition(() => {
       router.push(`?${next.toString()}`, { scroll: false });
     });
   }
 
-  const activeCount =
-    (currentCategory && !hideCategory ? 1 : 0) +
-    currentLevels.length +
-    currentDurations.length +
-    (currentRating ? 1 : 0);
+  function reset() {
+    setCategory("");
+    setLevels([]);
+    setDurations([]);
+    setRating("");
+  }
 
   return (
     <aside
       aria-label="Filtres du catalogue"
       className={cn(
-        "sticky top-20 max-h-[calc(100vh-6rem)] overflow-y-auto rounded-lg border border-border bg-card p-4 text-sm",
+        "sticky top-20 max-h-[calc(100vh-6rem)] overflow-y-auto rounded-[1.75rem] border border-sky-500/70 bg-[linear-gradient(145deg,#031735_0%,#04132d_58%,#021a26_100%)] p-4 text-sm text-slate-100 shadow-[0_0_22px_rgba(14,165,233,0.18),0_0_42px_rgba(34,197,94,0.08)]",
         className,
       )}
     >
-      <div className="mb-3 flex items-center justify-between">
-        <h2 className="text-sm font-semibold text-foreground">Filtres</h2>
-        {activeCount > 0 ? (
-          <button
-            type="button"
-            onClick={reset}
-            className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
-          >
-            <X className="h-3 w-3" aria-hidden />
-            Effacer ({activeCount})
-          </button>
-        ) : null}
+      <div className="mb-4 flex items-center gap-3 px-1 pt-1">
+        <h2 className="text-2xl font-bold tracking-tight text-white">Filtres</h2>
+        <span className="rounded-xl border border-sky-400/25 bg-sky-400/10 p-2 shadow-[0_0_16px_rgba(34,211,238,0.14)]">
+          <SlidersHorizontal className="h-5 w-5 text-emerald-400" aria-hidden />
+        </span>
       </div>
 
-      {!hideCategory && categories.length > 0 ? (
-        <Section title="Catégorie" defaultOpen>
-          <RadioRow
-            label="Toutes"
-            checked={!currentCategory}
-            onChange={() => update({ category: undefined })}
-          />
-          {categories.map((c) => (
+      <form onSubmit={apply}>
+        {!hideCategory && categories.length > 0 ? (
+          <Section title="Catégorie" defaultOpen>
             <RadioRow
-              key={c.slug}
-              label={c.name}
-              count={countLabel(counts?.categories?.[c.slug])}
-              checked={currentCategory === c.slug}
-              onChange={() => update({ category: c.slug })}
+              name="sidebar-category"
+              label="Toutes"
+              checked={!category}
+              onChange={() => setCategory("")}
+            />
+            {categories.map((c) => (
+              <RadioRow
+                key={c.slug}
+                name="sidebar-category"
+                label={c.name}
+                count={countLabel(counts?.categories?.[c.slug])}
+                checked={category === c.slug}
+                onChange={() => setCategory(c.slug)}
+              />
+            ))}
+          </Section>
+        ) : null}
+
+        <Section title="Note" defaultOpen>
+          <RadioRow
+            name="sidebar-rating"
+            label="Toutes"
+            checked={!rating}
+            onChange={() => setRating("")}
+          />
+          {RATING_THRESHOLDS.map((threshold) => (
+            <RadioRow
+              key={threshold}
+              name="sidebar-rating"
+              label={
+                <span className="inline-flex flex-wrap items-center gap-x-2 gap-y-1">
+                  <Stars
+                    rating={threshold}
+                    size="sm"
+                    className="[&_svg]:stroke-slate-300"
+                  />
+                  <span>{threshold.toFixed(1)} et +</span>
+                </span>
+              }
+              count={countLabel(counts?.ratings?.[String(threshold)])}
+              checked={rating === String(threshold)}
+              onChange={() => setRating(String(threshold))}
             />
           ))}
         </Section>
-      ) : null}
 
-      <Section title="Note" defaultOpen>
-        <RadioRow
-          label="Toutes"
-          checked={!currentRating}
-          onChange={() => update({ rating: undefined })}
-        />
-        {RATING_THRESHOLDS.map((threshold) => (
-          <RadioRow
-            key={threshold}
-            label={
-              <span className="inline-flex items-center gap-2">
-                <Stars rating={threshold} size="sm" />
-                <span>{threshold.toFixed(1)} et +</span>
-              </span>
-            }
-            count={countLabel(counts?.ratings?.[String(threshold)])}
-            checked={currentRating === String(threshold)}
-            onChange={() => update({ rating: String(threshold) })}
-          />
-        ))}
-      </Section>
+        <Section title="Niveau" defaultOpen>
+          {COURSE_LEVELS.map((lv) => (
+            <CheckRow
+              key={lv}
+              label={COURSE_LEVEL_LABELS[lv]}
+              count={countLabel(counts?.levels?.[lv])}
+              checked={levels.includes(lv)}
+              onChange={() => toggle(levels, setLevels, lv)}
+            />
+          ))}
+        </Section>
 
-      <Section title="Niveau" defaultOpen>
-        {COURSE_LEVELS.map((lv) => (
-          <CheckRow
-            key={lv}
-            label={COURSE_LEVEL_LABELS[lv]}
-            count={countLabel(counts?.levels?.[lv])}
-            checked={currentLevels.includes(lv)}
-            onChange={() => toggle("level", lv)}
-          />
-        ))}
-      </Section>
+        <Section title="Durée" defaultOpen>
+          {DURATION_FILTERS.filter((d) => d !== "all").map((d) => (
+            <CheckRow
+              key={d}
+              label={DURATION_FILTER_LABELS[d]}
+              count={countLabel(counts?.durations?.[d])}
+              checked={durations.includes(d)}
+              onChange={() => toggle(durations, setDurations, d)}
+            />
+          ))}
+        </Section>
 
-      <Section title="Durée" defaultOpen>
-        {DURATION_FILTERS.filter((d) => d !== "all").map((d) => (
-          <CheckRow
-            key={d}
-            label={DURATION_FILTER_LABELS[d]}
-            count={countLabel(counts?.durations?.[d])}
-            checked={currentDurations.includes(d)}
-            onChange={() => toggle("duration", d)}
-          />
-        ))}
-      </Section>
-
+        <div className="mt-4 grid grid-cols-2 gap-2.5">
+          <button
+            type="button"
+            onClick={reset}
+            disabled={pending}
+            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-sky-500/80 bg-slate-950/25 px-3 font-semibold text-slate-100 transition hover:bg-sky-500/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 disabled:cursor-wait disabled:opacity-60"
+          >
+            <RotateCcw className="h-4 w-4 text-cyan-400" aria-hidden />
+            Réinitialiser
+          </button>
+          <button
+            type="submit"
+            disabled={pending}
+            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-emerald-500 to-green-400 px-3 font-bold text-slate-950 shadow-[0_0_18px_rgba(34,197,94,0.18)] transition hover:brightness-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300 focus-visible:ring-offset-2 focus-visible:ring-offset-[#031735] disabled:cursor-wait disabled:opacity-60"
+          >
+            <Check className="h-4 w-4" aria-hidden />
+            Appliquer
+          </button>
+        </div>
+      </form>
     </aside>
   );
 }
@@ -213,30 +251,35 @@ function Section({
 }) {
   const [open, setOpen] = React.useState(defaultOpen);
   return (
-    <div className="border-t border-border py-3 first:border-t-0 first:pt-0">
+    <section className="mb-3 rounded-2xl border border-slate-600/60 bg-slate-950/30 p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)] last:mb-0">
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
         aria-expanded={open}
-        className="flex w-full items-center justify-between text-left text-xs font-semibold uppercase tracking-wide text-foreground"
+        className="flex w-full items-center justify-between rounded-lg text-left text-xs font-bold uppercase tracking-[0.08em] text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400"
       >
         <span>{title}</span>
         <ChevronDown
-          className={cn("h-4 w-4 transition-transform", open && "rotate-180")}
+          className={cn(
+            "h-4 w-4 text-emerald-400 transition-transform",
+            open && "rotate-180",
+          )}
           aria-hidden
         />
       </button>
-      {open ? <ul className="mt-2 space-y-1">{children}</ul> : null}
-    </div>
+      {open ? <ul className="mt-3 space-y-1.5">{children}</ul> : null}
+    </section>
   );
 }
 
 function RadioRow({
+  name,
   label,
   count,
   checked,
   onChange,
 }: {
+  name: string;
   label: React.ReactNode;
   count?: string;
   checked: boolean;
@@ -246,23 +289,24 @@ function RadioRow({
     <li>
       <label
         className={cn(
-          "flex cursor-pointer items-center justify-between gap-2 rounded-md px-2 py-1.5 text-sm transition-colors",
+          "flex cursor-pointer items-center justify-between gap-2 rounded-xl border px-2.5 py-2 text-sm leading-snug transition",
           checked
-            ? "bg-[color:var(--brand-secondary)]/10 text-foreground"
-            : "text-foreground hover:bg-muted",
+            ? "border-sky-500/80 bg-sky-500/10 text-white shadow-[0_0_14px_rgba(14,165,233,0.12)]"
+            : "border-transparent text-slate-200 hover:border-slate-600/60 hover:bg-white/5",
         )}
       >
-        <span className="flex items-center gap-2">
+        <span className="flex min-w-0 items-center gap-2.5">
           <input
             type="radio"
+            name={name}
             checked={checked}
             onChange={onChange}
-            className="h-3.5 w-3.5 accent-[color:var(--brand-secondary)]"
+            className="h-4 w-4 shrink-0 accent-emerald-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400"
           />
-          {label}
+          <span className="min-w-0">{label}</span>
         </span>
         {count ? (
-          <span className="text-xs tabular-nums text-muted-foreground">{count}</span>
+          <span className="shrink-0 text-xs tabular-nums text-slate-400">{count}</span>
         ) : null}
       </label>
     </li>
@@ -284,23 +328,23 @@ function CheckRow({
     <li>
       <label
         className={cn(
-          "flex cursor-pointer items-center justify-between gap-2 rounded-md px-2 py-1.5 text-sm transition-colors",
+          "flex cursor-pointer items-center justify-between gap-2 rounded-xl border px-2.5 py-2 text-sm leading-snug transition",
           checked
-            ? "bg-[color:var(--brand-secondary)]/10 text-foreground"
-            : "text-foreground hover:bg-muted",
+            ? "border-sky-500/80 bg-sky-500/10 text-white shadow-[0_0_14px_rgba(14,165,233,0.12)]"
+            : "border-transparent text-slate-200 hover:border-slate-600/60 hover:bg-white/5",
         )}
       >
-        <span className="flex items-center gap-2">
+        <span className="flex min-w-0 items-center gap-2.5">
           <input
             type="checkbox"
             checked={checked}
             onChange={onChange}
-            className="h-4 w-4 rounded accent-[color:var(--brand-secondary)]"
+            className="h-4 w-4 shrink-0 rounded accent-emerald-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400"
           />
-          {label}
+          <span className="min-w-0">{label}</span>
         </span>
         {count ? (
-          <span className="text-xs tabular-nums text-muted-foreground">{count}</span>
+          <span className="shrink-0 text-xs tabular-nums text-slate-400">{count}</span>
         ) : null}
       </label>
     </li>

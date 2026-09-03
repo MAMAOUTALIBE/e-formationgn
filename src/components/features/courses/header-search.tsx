@@ -111,11 +111,15 @@ export function HeaderSearch({ className }: { className?: string }) {
   const showPopover = open && value.trim().length >= 2;
 
   return (
-    <div ref={containerRef} className={cn("relative w-full max-w-md", className)}>
-      <form role="search" onSubmit={handleSubmit} className="flex items-center">
+    <div ref={containerRef} className={cn("relative w-full", className)}>
+      <form
+        role="search"
+        onSubmit={handleSubmit}
+        className="flex items-center rounded-full border border-slate-300/90 bg-white shadow-[0_4px_16px_rgba(15,23,42,0.08)] transition focus-within:border-sky-400 focus-within:shadow-[0_5px_20px_rgba(37,99,235,0.14)]"
+      >
         <div className="relative w-full">
           <Search
-            className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
+            className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-500"
             aria-hidden
           />
           <Input
@@ -139,8 +143,15 @@ export function HeaderSearch({ className }: { className?: string }) {
             aria-autocomplete="list"
             aria-controls={listboxId}
             aria-expanded={showPopover}
-            className="pl-10"
+            className="h-11 rounded-full border-0 bg-transparent pl-12 pr-14 text-slate-900 shadow-none placeholder:text-slate-500 focus-visible:ring-0 focus-visible:ring-offset-0"
           />
+          <button
+            type="submit"
+            aria-label="Lancer la recherche"
+            className="absolute right-1 top-1/2 inline-flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full bg-[color:var(--brand-secondary)] text-white shadow-[0_3px_10px_rgba(37,99,235,0.28)] transition hover:brightness-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-300 focus-visible:ring-offset-2"
+          >
+            <Search className="h-4.5 w-4.5" aria-hidden />
+          </button>
         </div>
       </form>
 
@@ -148,7 +159,7 @@ export function HeaderSearch({ className }: { className?: string }) {
         <div
           id={listboxId}
           role="listbox"
-          className="absolute left-0 right-0 top-full z-50 mt-2 overflow-hidden rounded-md border border-border bg-popover shadow-lg"
+          className="absolute left-0 right-0 top-full z-50 mt-2 overflow-hidden rounded-2xl border border-border bg-popover shadow-xl"
         >
           {visibleSuggestions.length === 0 ? (
             <p className="px-4 py-3 text-sm text-muted-foreground">

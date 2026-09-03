@@ -9,6 +9,7 @@
 
 import Link from "next/link";
 import { ChevronDown } from "lucide-react";
+import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 
 import { cn } from "@/lib/utils";
@@ -26,6 +27,8 @@ interface CategoriesDropdownProps {
 
 export function CategoriesDropdown({ categories, label }: CategoriesDropdownProps) {
   const [open, setOpen] = useState(false);
+  const pathname = usePathname();
+  const isActive = pathname === "/categories" || pathname.startsWith("/categories/");
   const closeTimerRef = useRef<number | null>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
@@ -81,9 +84,15 @@ export function CategoriesDropdown({ categories, label }: CategoriesDropdownProp
         type="button"
         aria-expanded={open}
         aria-haspopup="menu"
+        aria-current={isActive ? "page" : undefined}
         onClick={() => setOpen((o) => !o)}
         onFocus={openWithoutDelay}
-        className="inline-flex items-center gap-1 text-sm font-medium text-foreground/80 transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        className={cn(
+          "inline-flex min-h-10 items-center gap-1.5 rounded-full border px-4 text-sm font-semibold shadow-[0_3px_12px_rgba(15,23,42,0.05)] transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400",
+          isActive
+            ? "border-emerald-200 bg-emerald-50 text-[color:var(--brand-primary)]"
+            : "border-slate-200/80 bg-white text-slate-700 hover:border-sky-200 hover:bg-sky-50 hover:text-[color:var(--brand-primary)]",
+        )}
       >
         {label}
         <ChevronDown
