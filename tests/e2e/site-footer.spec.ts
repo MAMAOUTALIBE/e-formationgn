@@ -28,6 +28,10 @@ test.describe("Footer public simplifié", () => {
       "Confidentialité",
     ]);
     await expect(footer.getByText(/Newsletter mensuelle/i)).toBeVisible();
+    await expect(presentation.getByRole("img", { name: "AIDUCA" })).toHaveAttribute(
+      "src",
+      "/images/aiduca-logo-transparent.png",
+    );
     await expect(footer.getByRole("textbox", { name: "Adresse email" })).toBeVisible();
     await expect(footer.getByRole("checkbox")).toBeVisible();
     await expect(footer.getByRole("button", { name: "S'inscrire" })).toBeVisible();

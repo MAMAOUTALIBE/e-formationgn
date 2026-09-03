@@ -37,7 +37,7 @@ export async function SiteFooter() {
 
       <Container className="relative z-10 grid gap-10 py-12 md:grid-cols-2 lg:grid-cols-[minmax(0,1fr)_minmax(22rem,1.35fr)_minmax(18rem,1fr)] lg:gap-12 lg:py-16">
         <section aria-label="Présentation d'Aiduca">
-          <Logo width={170} />
+          <Logo width={170} transparentBackground />
           <p className="mt-5 max-w-sm text-base leading-7 text-slate-200">
             {t.footer.tagline}
           </p>

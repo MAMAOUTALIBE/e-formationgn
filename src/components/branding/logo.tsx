@@ -16,6 +16,8 @@ interface LogoProps {
   priority?: boolean;
   /** Hauteur maximale optionnelle. */
   height?: number;
+  /** Utilise le fichier local dont seul le fond extérieur a été rendu transparent. */
+  transparentBackground?: boolean;
 }
 
 export function Logo({
@@ -24,6 +26,7 @@ export function Logo({
   className,
   priority = false,
   height,
+  transparentBackground = false,
 }: LogoProps) {
   if (variant === "mark") {
     return (
@@ -41,11 +44,11 @@ export function Logo({
   }
 
   return (
-    // Le fichier est le logo officiel publié par Aiduca. Il reste distant afin
-    // de ne pas dupliquer une marque tierce dans le dépôt.
+    // La version locale conserve le logo officiel à l'identique et retire
+    // uniquement son fond blanc extérieur pour les surfaces sombres.
     // eslint-disable-next-line @next/next/no-img-element
     <img
-      src={BRAND.logoUrl}
+      src={transparentBackground ? "/images/aiduca-logo-transparent.png" : BRAND.logoUrl}
       alt={BRAND.name}
       width={width}
       height={height ?? Math.round(width * 0.45)}

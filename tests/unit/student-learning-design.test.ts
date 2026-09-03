@@ -9,10 +9,15 @@ test("l'accueil membre est personnalisé, chaleureux et compatible thème", () =
   assert.match(source, /Formations à découvrir/);
   assert.match(source, /coursesToDiscover\.map/);
   assert.match(source, /<CourseCard key=\{course\.id\} course=\{course\} currency="EUR"/);
-  assert.match(source, /bg-gradient-to-br/);
-  assert.match(source, /var\(--brand-primary\)/);
-  assert.match(source, /var\(--brand-accent\)/);
+  assert.match(source, /member-hero-renewable-ai\.webp/);
+  assert.match(source, /scale-\[1\.01\] object-cover object-center blur-\[1px\]/);
+  assert.match(source, /linear-gradient\(90deg, rgba\(255,255,255,0\.96\)/);
+  assert.match(source, /<Container className="relative z-10">/);
   assert.match(source, /Votre prochaine compétence commence ici/);
+  assert.match(source, /aria-label="Catégories de formation"/);
+  assert.match(source, /flex flex-nowrap gap-4 overflow-x-auto scroll-smooth/);
+  assert.match(source, /w-\[85vw\] max-w-80 shrink-0 snap-start/);
+  assert.match(source, />Voir toutes les catégories<\/Link>/);
 });
 
 test("mon apprentissage distingue les états et reste responsive", () => {

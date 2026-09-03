@@ -3,6 +3,7 @@
 // marketing (l'utilisateur est déjà membre).
 
 import { BookOpen, Heart, Search } from "lucide-react";
+import Image from "next/image";
 import Link from "next/link";
 
 import { CategoryCard } from "@/components/features/courses/category-card";
@@ -43,8 +44,26 @@ export async function MemberHome({ userId, userName }: MemberHomeProps) {
 
       <main className="flex-1">
         {/* HERO compact personnalisé */}
-        <section className="relative overflow-hidden border-b border-[color:var(--brand-secondary)]/15 bg-gradient-to-br from-[color:var(--brand-primary)]/8 via-background to-[color:var(--brand-accent)]/10 py-8 sm:py-10">
-          <Container>
+        <section className="relative overflow-hidden border-b border-[color:var(--brand-secondary)]/15 py-8 sm:py-10">
+          <div aria-hidden className="pointer-events-none absolute -inset-1">
+            <Image
+              src="/images/member-hero-renewable-ai.webp"
+              alt=""
+              fill
+              priority
+              sizes="100vw"
+              className="scale-[1.01] object-cover object-center blur-[1px]"
+            />
+            <div
+              className="absolute inset-0"
+              style={{
+                background:
+                  "linear-gradient(90deg, rgba(255,255,255,0.96) 0%, rgba(255,255,255,0.86) 38%, rgba(255,255,255,0.42) 63%, rgba(255,255,255,0.08) 100%)",
+              }}
+            />
+          </div>
+
+          <Container className="relative z-10">
             <div className="flex max-w-3xl flex-col gap-5">
               <div>
                 <h1 className="text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
@@ -162,21 +181,27 @@ export async function MemberHome({ userId, userName }: MemberHomeProps) {
         {categories.length > 0 ? (
           <section className="py-9">
             <Container>
-              <div className="flex items-end justify-between gap-4">
-                <h2 className="text-xl font-bold tracking-tight text-foreground sm:text-2xl">
-                  Explorer par catégorie
-                </h2>
-                <Link
-                  href="/categories"
-                  className="text-sm font-medium text-[color:var(--brand-secondary)] hover:underline"
-                >
-                  Tout voir →
-                </Link>
-              </div>
-              <div className="mt-5 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+              <h2 className="text-xl font-bold tracking-tight text-foreground sm:text-2xl">
+                Explorer par catégorie
+              </h2>
+              <div
+                role="region"
+                aria-label="Catégories de formation"
+                className="mt-5 flex flex-nowrap gap-4 overflow-x-auto scroll-smooth pb-3 snap-x snap-mandatory overscroll-x-contain [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+              >
                 {categories.map((category, index) => (
-                  <CategoryCard key={category.id} category={category} variant={index} />
+                  <CategoryCard
+                    key={category.id}
+                    category={category}
+                    variant={index}
+                    className="w-[85vw] max-w-80 shrink-0 snap-start"
+                  />
                 ))}
+              </div>
+              <div className="mt-5 flex justify-center">
+                <Button asChild variant="outline" className="rounded-full px-6">
+                  <Link href="/categories">Voir toutes les catégories</Link>
+                </Button>
               </div>
             </Container>
           </section>

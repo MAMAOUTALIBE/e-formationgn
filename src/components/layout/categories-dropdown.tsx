@@ -8,7 +8,7 @@
 // Le hover n'est qu'un + visuel : tout marche au clavier.
 
 import Link from "next/link";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, ChevronLeft, ChevronRight } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 
@@ -32,6 +32,7 @@ export function CategoriesDropdown({ categories, label }: CategoriesDropdownProp
   const closeTimerRef = useRef<number | null>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
+  const categoriesRef = useRef<HTMLUListElement>(null);
 
   // Fermeture par Échap ou clic en-dehors.
   useEffect(() => {
@@ -73,6 +74,16 @@ export function CategoriesDropdown({ categories, label }: CategoriesDropdownProp
     closeTimerRef.current = window.setTimeout(() => setOpen(false), 150);
   }
 
+  function scrollCategories(direction: -1 | 1) {
+    const list = categoriesRef.current;
+    if (!list) return;
+
+    list.scrollBy({
+      left: direction * Math.max(list.clientWidth * 0.75, 180),
+      behavior: "smooth",
+    });
+  }
+
   return (
     <div
       className="relative"
@@ -107,35 +118,60 @@ export function CategoriesDropdown({ categories, label }: CategoriesDropdownProp
       {open ? (
         <div
           ref={panelRef}
-          role="menu"
-          aria-label={label}
-          className="absolute left-0 top-full z-50 mt-2 w-64 overflow-hidden rounded-lg border border-border bg-card shadow-xl"
+          className="fixed left-1/2 top-[4.75rem] z-50 flex w-[calc(100vw-1.5rem)] max-w-6xl -translate-x-1/2 flex-wrap items-center gap-2 overflow-hidden rounded-xl border border-border bg-card p-2 shadow-xl sm:flex-nowrap sm:gap-3 sm:p-3"
           onMouseEnter={openWithoutDelay}
           onMouseLeave={scheduleClose}
         >
-          <ul className="max-h-[60vh] overflow-y-auto py-1">
-            {categories.map((c) => (
-              <li key={c.slug}>
-                <Link
-                  href={`/categories/${c.slug}`}
-                  role="menuitem"
-                  className="flex items-center justify-between gap-2 px-4 py-2 text-sm text-foreground transition-colors hover:bg-muted focus-visible:bg-muted focus-visible:outline-none"
-                  onClick={() => setOpen(false)}
-                >
-                  <span>{c.name}</span>
-                </Link>
-              </li>
-            ))}
-          </ul>
-          <div className="border-t border-border bg-muted/30 px-4 py-2">
-            <Link
-              href="/categories"
-              className="inline-flex min-h-6 items-center text-xs font-semibold text-[color:var(--brand-secondary)] hover:underline"
-              onClick={() => setOpen(false)}
+          <div className="flex min-w-0 flex-1 basis-full items-center gap-2 sm:basis-auto sm:gap-3">
+            <button
+              type="button"
+              aria-label="Faire défiler les catégories vers la gauche"
+              className="inline-flex size-8 shrink-0 items-center justify-center rounded-full border border-border text-muted-foreground transition-colors hover:border-sky-300 hover:text-[color:var(--brand-secondary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 sm:size-9"
+              onClick={() => scrollCategories(-1)}
             >
-              Voir toutes les catégories →
-            </Link>
+              <ChevronLeft className="size-4" aria-hidden />
+            </button>
+
+            <ul
+              ref={categoriesRef}
+              role="menu"
+              aria-label={label}
+              className="flex min-w-0 flex-1 flex-nowrap items-center gap-3 overflow-x-auto scroll-smooth whitespace-nowrap py-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+            >
+              {categories.map((c) => (
+                <li
+                  key={c.slug}
+                  className="flex shrink-0 items-center gap-3 after:h-4 after:w-px after:bg-border last:after:hidden"
+                >
+                  <Link
+                    href={`/categories/${c.slug}`}
+                    role="menuitem"
+                    className="py-1.5 text-sm font-medium text-foreground transition-colors hover:text-[color:var(--brand-secondary)] hover:underline hover:underline-offset-4 focus-visible:rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400"
+                    onClick={() => setOpen(false)}
+                  >
+                    {c.name}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+
+            <button
+              type="button"
+              aria-label="Faire défiler les catégories vers la droite"
+              className="inline-flex size-8 shrink-0 items-center justify-center rounded-full border border-border text-muted-foreground transition-colors hover:border-sky-300 hover:text-[color:var(--brand-secondary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 sm:size-9"
+              onClick={() => scrollCategories(1)}
+            >
+              <ChevronRight className="size-4" aria-hidden />
+            </button>
           </div>
+
+          <Link
+            href="/categories"
+            className="ml-auto inline-flex min-h-9 shrink-0 items-center whitespace-nowrap rounded-full bg-[color:var(--brand-secondary)] px-3 text-xs font-semibold text-white shadow-sm transition hover:brightness-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 focus-visible:ring-offset-2 sm:px-4 sm:text-sm"
+            onClick={() => setOpen(false)}
+          >
+            Voir toutes les catégories →
+          </Link>
         </div>
       ) : null}
     </div>

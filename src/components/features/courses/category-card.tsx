@@ -1,5 +1,6 @@
 import Link from "next/link";
 import * as Icons from "lucide-react";
+import Image from "next/image";
 import { createElement } from "react";
 
 import { CategoryPattern } from "@/components/features/courses/category-pattern";
@@ -28,6 +29,19 @@ const VARIANTS = [
   "bg-gradient-to-br from-[#f59e0b] via-[#db2777] to-[#7c3aed]",
 ];
 
+const CATEGORY_BACKGROUNDS: Record<string, string> = {
+  developpement: "/images/categories/developpement.webp",
+  isolation: "/images/categories/isolation.webp",
+  pac: "/images/categories/pac.webp",
+  pv: "/images/categories/photovoltaique.webp",
+  photovoltaique: "/images/categories/photovoltaique.webp",
+  elec: "/images/categories/electricite.webp",
+  electricite: "/images/categories/electricite.webp",
+  marketing: "/images/categories/marketing.webp",
+  "marketing-digital": "/images/categories/marketing.webp",
+  "developpement-personnel": "/images/categories/developpement-personnel.webp",
+};
+
 export function CategoryCard({
   category,
   variant = 0,
@@ -36,28 +50,38 @@ export function CategoryCard({
   const courseCount = category._count?.courses ?? 0;
   const IconComponent = resolveIcon(category.iconName);
   const v = VARIANTS[variant % VARIANTS.length];
+  const backgroundImage = CATEGORY_BACKGROUNDS[category.slug];
 
   return (
     <Link
       href={`/categories/${category.slug}`}
       className={cn(
         "group relative flex h-full min-h-[180px] flex-col justify-end overflow-hidden rounded-xl text-white shadow-md transition-all hover:shadow-2xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-        v,
+        backgroundImage ? "bg-slate-900" : v,
         className,
       )}
     >
-      {/* Pattern SVG décoratif IA/tech */}
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-0 opacity-60 transition-opacity group-hover:opacity-80"
-      >
-        <CategoryPattern variant={variant} className="h-full w-full" />
-      </div>
+      {backgroundImage ? (
+        <Image
+          src={backgroundImage}
+          alt=""
+          fill
+          sizes="(max-width: 640px) 85vw, 320px"
+          className="object-cover transition-transform duration-500 group-hover:scale-[1.03]"
+        />
+      ) : (
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-0 opacity-60 transition-opacity group-hover:opacity-80"
+        >
+          <CategoryPattern variant={variant} className="h-full w-full" />
+        </div>
+      )}
 
       {/* Voile sombre pour lisibilité du texte */}
       <div
         aria-hidden
-        className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/55 via-black/15 to-transparent"
+        className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/75 via-black/20 to-transparent"
       />
 
       {/* Icône en haut à droite */}
