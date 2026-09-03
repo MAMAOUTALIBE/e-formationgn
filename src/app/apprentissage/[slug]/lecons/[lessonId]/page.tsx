@@ -246,7 +246,7 @@ export default async function LessonViewerPage({ params }: PageProps) {
       <main className="flex-1 bg-muted/20">
         <div
           data-learning-grid
-          className="mx-auto grid w-full max-w-[1600px] grid-cols-[minmax(0,1fr)] gap-0 lg:grid-cols-[minmax(0,1fr)_360px]"
+          className="mx-auto grid w-full max-w-[4608px] grid-cols-[minmax(0,1fr)] gap-0 lg:grid-cols-[minmax(0,1fr)_360px] 2xl:grid-cols-[minmax(0,1fr)_400px] 3xl:grid-cols-[minmax(0,1fr)_480px] 4xl:grid-cols-[minmax(0,1fr)_560px]"
         >
           {/* ── Colonne principale : player + tabs ───────────────────── */}
           <section className="order-1 min-w-0 bg-card">
@@ -256,7 +256,7 @@ export default async function LessonViewerPage({ params }: PageProps) {
               </div>
             ) : null}
             <div className={lesson.type === "VIDEO" ? "bg-black" : "bg-card"}>
-              <div className="mx-auto w-full max-w-[1280px]">
+              <div className="mx-auto w-full max-w-[1280px] 2xl:max-w-[1600px] 3xl:max-w-[2080px] 4xl:max-w-[3200px]">
                 {lesson.type === "VIDEO" ? (
                   lesson.muxPlaybackId || lesson.externalVideoUrl ? (
                     <LessonPlayer
@@ -404,7 +404,7 @@ export default async function LessonViewerPage({ params }: PageProps) {
           <aside
             data-learning-sidebar
             aria-label="Programme de la formation"
-            className="order-2 border-l border-border bg-card lg:sticky lg:top-14 lg:max-h-[calc(100vh-3.5rem)] lg:overflow-y-auto"
+            className="order-2 border-l border-border bg-card lg:sticky lg:top-14 lg:max-h-[calc(100vh-3.5rem)] lg:overflow-y-auto 4xl:top-16 4xl:max-h-[calc(100vh-4rem)]"
           >
             <LearningSidebarPanel
               header={

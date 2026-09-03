@@ -70,7 +70,7 @@ export function EnrollmentCard({ enrollment, resumeHref }: EnrollmentCardProps) 
             src={course.thumbnailUrl}
             alt={`Vignette de la formation ${course.title}`}
             fill
-            sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
+            sizes="(min-width: 2560px) 16vw, (min-width: 1920px) 25vw, (min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
             className="object-cover"
           />
         ) : (
@@ -186,7 +186,7 @@ export function WishlistCard({ course, addedAt }: WishlistCardProps) {
             src={course.thumbnailUrl}
             alt={`Vignette de la formation ${course.title}`}
             fill
-            sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
+            sizes="(min-width: 2560px) 16vw, (min-width: 1920px) 25vw, (min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
             className="object-cover"
           />
         ) : (

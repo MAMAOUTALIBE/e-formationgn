@@ -29,10 +29,13 @@ export function navigationForRole(role: string): WorkspaceNavigation {
 export async function AccountShell({
   children,
   callbackUrl,
+  contentClassName,
 }: {
   children: React.ReactNode;
   /** Route à rejoindre après connexion si la session manque. */
   callbackUrl: string;
+  /** Permet aux écrans riches, comme l'apprentissage, d'utiliser un grand moniteur. */
+  contentClassName?: string;
 }) {
   const session = await auth();
   if (!session?.user) {
@@ -49,6 +52,7 @@ export async function AccountShell({
         role: session.user.role,
       }}
       searchPlaceholder="Rechercher un écran…"
+      contentClassName={contentClassName}
     >
       {children}
     </WorkspaceShell>

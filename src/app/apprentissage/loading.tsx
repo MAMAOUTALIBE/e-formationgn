@@ -8,15 +8,15 @@ import { Skeleton } from "@/components/ui/skeleton";
 export default function LearningLoading() {
   return (
     <main className="flex-1 bg-muted/20 py-8">
-      <Container className="space-y-6">
+      <Container className="max-w-[3840px] space-y-6 3xl:space-y-8 4xl:px-16">
         <Skeleton className="h-4 w-48" />
         <div>
           <Skeleton className="mb-2 h-8 w-64" />
           <Skeleton className="h-4 w-32" />
         </div>
 
-        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          {Array.from({ length: 3 }).map((_, i) => (
+        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 3xl:grid-cols-4 3xl:gap-8 4xl:grid-cols-6">
+          {Array.from({ length: 6 }).map((_, i) => (
             <Card key={i} className="overflow-hidden">
               <Skeleton className="aspect-video w-full rounded-none" />
               <CardContent className="space-y-3 p-4">

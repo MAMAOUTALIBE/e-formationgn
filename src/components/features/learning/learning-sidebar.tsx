@@ -86,7 +86,7 @@ export function LearningSidebar({
 
   return (
     <nav aria-label="Programme de la formation" className="divide-y divide-border">
-      <div className="border-b border-border p-3">
+      <div className="border-b border-border p-3 3xl:p-4">
         <div className="relative">
           <Search
             className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
@@ -98,7 +98,7 @@ export function LearningSidebar({
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Rechercher une leçon…"
             aria-label="Rechercher une leçon"
-            className="w-full rounded-md border border-border bg-background py-1.5 pl-8 pr-3 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+            className="w-full rounded-md border border-border bg-background py-1.5 pl-8 pr-3 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring 3xl:py-2 4xl:text-base"
           />
         </div>
       </div>
@@ -128,13 +128,13 @@ export function LearningSidebar({
             open={containsCurrent || q !== ""}
             className="group"
           >
-            <summary className="flex cursor-pointer list-none items-start gap-3 bg-muted/40 px-4 py-3 transition-colors hover:bg-muted/70">
+            <summary className="flex cursor-pointer list-none items-start gap-3 bg-muted/40 px-4 py-3 transition-colors hover:bg-muted/70 3xl:px-5 3xl:py-4">
               <ChevronDown
                 className="mt-1 h-4 w-4 shrink-0 text-muted-foreground transition-transform group-open:rotate-180"
                 aria-hidden
               />
               <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-semibold text-foreground">
+                <p className="truncate text-sm font-semibold text-foreground 4xl:text-base">
                   Section {index + 1} : {section.title}
                 </p>
                 <p className="mt-0.5 text-xs text-muted-foreground tabular-nums">
@@ -163,7 +163,7 @@ export function LearningSidebar({
                         : "border-transparent text-muted-foreground hover:bg-muted/60 hover:text-foreground",
                     )}
                   >
-                    <div className="min-w-0 px-3 py-2.5 pl-4">
+                    <div className="min-w-0 px-3 py-2.5 pl-4 3xl:px-4 3xl:py-3.5 3xl:pl-5">
                       <Link
                         href={`/apprentissage/${courseSlug}/lecons/${lesson.id}`}
                         aria-current={isActive ? "page" : undefined}

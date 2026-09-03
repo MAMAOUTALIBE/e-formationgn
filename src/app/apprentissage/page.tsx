@@ -168,18 +168,21 @@ export default async function LearningPage({ searchParams }: PageProps) {
   // aussi le lecteur de leçon, qui est immersif et porte déjà sa propre
   // colonne programme.
   return (
-    <AccountShell callbackUrl="/apprentissage">
-      <Container className="space-y-6">
+    <AccountShell
+      callbackUrl="/apprentissage"
+      contentClassName="max-w-[3840px] 3xl:px-10 4xl:px-16"
+    >
+      <Container className="max-w-none space-y-6 3xl:space-y-8 4xl:space-y-10">
           <Breadcrumbs
             items={[{ label: "Accueil", href: "/" }, { label: "Mon apprentissage" }]}
           />
 
-          <header className="relative overflow-hidden rounded-2xl border border-[color:var(--brand-secondary)]/20 bg-gradient-to-br from-[color:var(--brand-primary)]/8 via-card to-[color:var(--brand-accent)]/10 p-5 shadow-sm sm:p-7">
+          <header className="relative overflow-hidden rounded-2xl border border-[color:var(--brand-secondary)]/20 bg-gradient-to-br from-[color:var(--brand-primary)]/8 via-card to-[color:var(--brand-accent)]/10 p-5 shadow-sm sm:p-7 3xl:p-9 4xl:p-10">
             <p className="mb-2 inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-[.12em] text-[color:var(--brand-secondary)] dark:text-blue-300"><Sparkles className="h-3.5 w-3.5" aria-hidden /> Votre parcours</p>
-            <h1 className="text-3xl font-semibold tracking-tight text-foreground">
+            <h1 className="text-3xl font-semibold tracking-tight text-foreground 3xl:text-4xl 4xl:text-5xl">
               {firstName ? `${firstName}, poursuivez votre progression` : "Mon apprentissage"}
             </h1>
-            <p className="mt-1 text-sm text-muted-foreground">
+            <p className="mt-1 text-sm text-muted-foreground 3xl:mt-2 3xl:text-base 4xl:text-lg">
               {counts.all.toLocaleString("fr-FR")}{" "}
               {pluralize(counts.all, "formation suivie", "formations suivies")}
               {counts["in-progress"] > 0 ? ` · ${counts["in-progress"]} en cours` : ""}
@@ -187,7 +190,7 @@ export default async function LearningPage({ searchParams }: PageProps) {
                 ? ` · ${counts.completed} terminé${counts.completed > 1 ? "s" : ""}`
                 : ""}
             </p>
-            <div className="mt-5 grid grid-cols-2 gap-2 sm:grid-cols-4 sm:gap-3" aria-label="Résumé de mon apprentissage">
+            <div className="mt-5 grid grid-cols-2 gap-2 sm:grid-cols-4 sm:gap-3 3xl:mt-7 3xl:gap-5" aria-label="Résumé de mon apprentissage">
               <LearningStat icon={<BookOpen />} label="Formations" value={counts.all} tone="primary" />
               <LearningStat icon={<CircleDashed />} label="À commencer" value={notStartedCount} tone="neutral" />
               <LearningStat icon={<PlayCircle />} label="En cours" value={counts["in-progress"]} tone="accent" />
@@ -241,7 +244,7 @@ export default async function LearningPage({ searchParams }: PageProps) {
                 }
               />
             ) : (
-              <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+              <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 3xl:grid-cols-4 3xl:gap-8 4xl:grid-cols-6">
                 {visibleEnrollments.map((enrollment) => {
                   const slug = enrollment.course.slug;
                   const lastLessonId = lastProgressBySlug.get(slug);
@@ -286,7 +289,7 @@ export default async function LearningPage({ searchParams }: PageProps) {
                 }
               />
             ) : (
-              <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+              <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 3xl:grid-cols-4 3xl:gap-8 4xl:grid-cols-6">
                 {wishlistItems.map((item) => (
                   <WishlistCard
                     key={item.id}
@@ -330,8 +333,8 @@ function LearningStat({ icon, label, value, tone }: { icon: React.ReactNode; lab
     accent: "bg-[color:var(--brand-accent)]/10 text-[color:var(--brand-accent)]",
     success: "bg-[color:var(--brand-success)]/10 text-[color:var(--brand-success)]",
   };
-  return <div className="flex items-center gap-2.5 rounded-xl border border-border/70 bg-background/80 p-3 shadow-sm">
-    <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg [&_svg]:h-4 [&_svg]:w-4 ${colors[tone]}`} aria-hidden>{icon}</span>
-    <span><strong className="block text-lg leading-none tabular-nums text-foreground">{value}</strong><span className="mt-1 block text-[10px] text-muted-foreground sm:text-xs">{label}</span></span>
+  return <div className="flex items-center gap-2.5 rounded-xl border border-border/70 bg-background/80 p-3 shadow-sm 3xl:gap-3.5 3xl:p-4 4xl:p-5">
+    <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg [&_svg]:h-4 [&_svg]:w-4 3xl:h-10 3xl:w-10 3xl:[&_svg]:h-5 3xl:[&_svg]:w-5 ${colors[tone]}`} aria-hidden>{icon}</span>
+    <span><strong className="block text-lg leading-none tabular-nums text-foreground 3xl:text-xl 4xl:text-2xl">{value}</strong><span className="mt-1 block text-[10px] text-muted-foreground sm:text-xs 4xl:text-sm">{label}</span></span>
   </div>;
 }

@@ -98,8 +98,11 @@ export default async function CourseLearningPage({ params }: PageProps) {
   // aussi le lecteur de leçon, qui est immersif et porte déjà sa propre
   // colonne programme.
   return (
-    <AccountShell callbackUrl="/apprentissage">
-      <Container className="space-y-6">
+    <AccountShell
+      callbackUrl="/apprentissage"
+      contentClassName="max-w-[3840px] 3xl:px-10 4xl:px-16"
+    >
+      <Container className="max-w-none space-y-6 3xl:space-y-8 4xl:space-y-10">
           <Breadcrumbs
             items={[
               { label: "Mon apprentissage", href: "/apprentissage" },
@@ -107,9 +110,9 @@ export default async function CourseLearningPage({ params }: PageProps) {
             ]}
           />
 
-          <header className="grid gap-4 rounded-2xl border border-[color:var(--brand-secondary)]/20 bg-gradient-to-br from-[color:var(--brand-primary)]/8 via-card to-[color:var(--brand-accent)]/10 p-5 shadow-sm sm:p-6 lg:grid-cols-[1fr_360px]">
+          <header className="grid gap-4 rounded-2xl border border-[color:var(--brand-secondary)]/20 bg-gradient-to-br from-[color:var(--brand-primary)]/8 via-card to-[color:var(--brand-accent)]/10 p-5 shadow-sm sm:p-6 lg:grid-cols-[minmax(0,1fr)_360px] 3xl:grid-cols-[minmax(0,1fr)_440px] 3xl:gap-8 3xl:p-9 4xl:grid-cols-[minmax(0,1fr)_520px] 4xl:p-10">
             <div className="space-y-3 self-center">
-              <h1 className="text-2xl font-semibold tracking-tight text-foreground">
+              <h1 className="text-2xl font-semibold tracking-tight text-foreground 3xl:text-3xl 4xl:text-4xl">
                 {course.title}
               </h1>
               <p className="text-sm text-muted-foreground">
@@ -214,7 +217,7 @@ export default async function CourseLearningPage({ params }: PageProps) {
             </section>
           ) : null}
 
-          <div className="grid gap-6 lg:grid-cols-[280px_1fr]">
+          <div className="grid gap-6 lg:grid-cols-[280px_minmax(0,1fr)] 3xl:grid-cols-[360px_minmax(0,1fr)] 3xl:gap-8 4xl:grid-cols-[440px_minmax(0,1fr)]">
             <aside className="rounded-xl border border-[color:var(--brand-secondary)]/20 bg-card p-4 shadow-sm">
               <h2 className="mb-3 text-sm font-semibold text-foreground">Programme</h2>
               <LessonSidebar

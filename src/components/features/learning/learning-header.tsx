@@ -28,13 +28,13 @@ export function LearningHeader({
   const clampedPercent = Math.max(0, Math.min(100, Math.round(progressPercent)));
   return (
     <header className="sticky top-0 z-40 border-b border-border bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/80">
-      <div className="flex h-14 items-center gap-4 px-4 sm:px-6">
+      <div className="flex h-14 items-center gap-4 px-4 sm:px-6 3xl:gap-6 3xl:px-8 4xl:h-16 4xl:px-10">
         <Link
           href="/"
           aria-label="Retour à l'accueil Aiduca"
           className="shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
-          <Logo width={120} />
+          <Logo width={120} className="4xl:max-h-16 4xl:w-36" />
         </Link>
 
         <div className="hidden h-6 w-px bg-border sm:block" aria-hidden />
@@ -44,14 +44,14 @@ export function LearningHeader({
         <Link
           href={`/apprentissage/${courseSlug}`}
           title={courseTitle}
-          className="min-w-0 flex-1 truncate text-sm font-semibold text-foreground hover:underline"
+          className="min-w-0 flex-1 truncate text-sm font-semibold text-foreground hover:underline 3xl:text-base 4xl:text-lg"
         >
           {courseTitle}
         </Link>
 
         {/* Progression — version compacte (mobile) puis pleine (desktop) */}
         <div className="hidden items-center gap-3 md:flex" aria-hidden>
-          <div className="w-40 overflow-hidden rounded-full bg-muted">
+          <div className="w-40 overflow-hidden rounded-full bg-muted 3xl:w-52 4xl:w-64">
             <div
               className="h-1.5 bg-[color:var(--brand-success)] transition-[width] duration-300"
               style={{ width: `${clampedPercent}%` }}

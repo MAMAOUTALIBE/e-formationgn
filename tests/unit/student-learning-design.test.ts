@@ -19,6 +19,9 @@ test("mon apprentissage distingue les états et reste responsive", () => {
   assert.match(page, /En cours/);
   assert.match(page, /Terminées/);
   assert.match(page, /grid-cols-2[^"]+sm:grid-cols-4/);
+  assert.match(page, /3xl:grid-cols-4/);
+  assert.match(page, /4xl:grid-cols-6/);
+  assert.match(page, /max-w-\[3840px\]/);
   assert.match(page, /dark:text-blue-300/);
   assert.match(card, /À commencer/);
   assert.match(card, /En cours/);
@@ -35,6 +38,43 @@ test("la vue d'ensemble du cours différencie progression, programme et attestat
   assert.match(source, /bg-gradient-to-br/);
   assert.match(source, /Attestation/);
   assert.match(source, /Programme/);
+  assert.match(source, /3xl:grid-cols-\[360px_minmax\(0,1fr\)\]/);
+  assert.match(source, /4xl:grid-cols-\[440px_minmax\(0,1fr\)\]/);
+});
+
+test("le lecteur de leçon exploite progressivement les écrans jusqu'au 5K", () => {
+  const page = readFileSync(
+    "src/app/apprentissage/[slug]/lecons/[lessonId]/page.tsx",
+    "utf8",
+  );
+  const header = readFileSync(
+    "src/components/features/learning/learning-header.tsx",
+    "utf8",
+  );
+
+  assert.match(page, /max-w-\[4608px\]/);
+  assert.match(page, /4xl:grid-cols-\[minmax\(0,1fr\)_560px\]/);
+  assert.match(page, /4xl:max-w-\[3200px\]/);
+  assert.match(page, /4xl:top-16/);
+  assert.match(header, /4xl:h-16/);
+  assert.doesNotMatch(page, /max-w-\[1600px\] grid-cols/);
+});
+
+test("la coquille de compte accepte une largeur dédiée sans élargir les autres espaces", () => {
+  const accountShell = readFileSync(
+    "src/components/features/workspace/account-shell.tsx",
+    "utf8",
+  );
+  const workspaceShell = readFileSync(
+    "src/components/features/workspace/workspace-shell.tsx",
+    "utf8",
+  );
+
+  assert.match(accountShell, /contentClassName\?: string/);
+  assert.match(accountShell, /contentClassName=\{contentClassName\}/);
+  assert.match(workspaceShell, /contentClassName\?: string/);
+  assert.match(workspaceShell, /cn\([\s\S]+contentClassName/);
+  assert.match(workspaceShell, /max-w-\[2400px\]/);
 });
 
 function luminance(hex: string): number {

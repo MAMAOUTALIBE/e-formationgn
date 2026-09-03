@@ -27,7 +27,7 @@ export function LearningSidebarPanel({
 
   const tabClass = (active: boolean) =>
     cn(
-      "flex flex-1 items-center justify-center gap-1.5 border-b-2 px-3 py-2.5 text-sm font-medium transition-colors",
+      "flex flex-1 items-center justify-center gap-1.5 border-b-2 px-3 py-2.5 text-sm font-medium transition-colors 3xl:px-4 3xl:py-3.5 4xl:text-base",
       active
         ? "border-[color:var(--brand-primary)] text-foreground"
         : "border-transparent text-muted-foreground hover:text-foreground",
@@ -64,7 +64,7 @@ export function LearningSidebarPanel({
           {curriculum}
         </div>
       ) : (
-        <div className="p-4">{tutor}</div>
+        <div className="p-4 3xl:p-5 4xl:p-6">{tutor}</div>
       )}
     </div>
   );

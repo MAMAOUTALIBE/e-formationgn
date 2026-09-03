@@ -24,6 +24,7 @@ import { WorkspaceSidebar } from "@/components/features/workspace/workspace-side
 import type { WorkspaceBadges } from "@/components/features/workspace/workspace-nav";
 import { ThemeToggle } from "@/components/features/theme/theme-toggle";
 import { adminThemeCssVars } from "@/lib/admin/theme";
+import { cn } from "@/lib/utils";
 import {
   resolveWorkspaceNav,
   type WorkspaceNavigation,
@@ -51,6 +52,8 @@ interface WorkspaceShellProps {
   settingsHref?: string;
   /** Actions propres à l'espace, insérées à gauche du sélecteur de thème. */
   headerActions?: React.ReactNode;
+  /** Ajustement ponctuel de la largeur de la zone métier. */
+  contentClassName?: string;
   /** Rendu tout en haut, hors flux — raccourcis clavier, écouteurs… */
   extras?: React.ReactNode;
   children: React.ReactNode;
@@ -64,6 +67,7 @@ export async function WorkspaceShell({
   searchPlaceholder = "Rechercher un écran…",
   settingsHref,
   headerActions,
+  contentClassName,
   extras,
   children,
 }: WorkspaceShellProps) {
@@ -168,7 +172,12 @@ export async function WorkspaceShell({
 
         {/* Seule zone défilante de l'espace. */}
         <main className="workspace-main min-h-0 min-w-0 flex-1 overflow-y-auto overflow-x-hidden overscroll-contain bg-[radial-gradient(circle_at_top_right,color-mix(in_srgb,var(--brand-primary)_4%,transparent),transparent_24rem)]">
-          <div className="workspace-content mx-auto min-w-0 w-full max-w-[2400px] px-[clamp(0.75rem,2vw,2.5rem)] py-[clamp(1rem,2vw,2rem)]">
+          <div
+            className={cn(
+              "workspace-content mx-auto min-w-0 w-full max-w-[2400px] px-[clamp(0.75rem,2vw,2.5rem)] py-[clamp(1rem,2vw,2rem)]",
+              contentClassName,
+            )}
+          >
             {children}
           </div>
         </main>
