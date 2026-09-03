@@ -10,6 +10,10 @@ test("le footer public reste limité aux informations essentielles", async () =>
     path.join(root, "src/components/layout/site-footer.tsx"),
     "utf8",
   );
+  const newsletterSource = await readFile(
+    path.join(root, "src/components/features/marketing/newsletter-form.tsx"),
+    "utf8",
+  );
 
   assert.match(source, /footer-modern-building-construction\.webp/);
   assert.match(source, /bg-\[#031735\]\/88/);
@@ -34,4 +38,8 @@ test("le footer public reste limité aux informations essentielles", async () =>
   assert.match(source, /BRAND\.phone/);
   assert.match(source, /BRAND\.mobile/);
   assert.match(source, /BRAND\.qualiopiLogoUrl/);
+  assert.match(newsletterSource, /aria-label="Inscription à la newsletter"/);
+  assert.match(newsletterSource, /flex w-full min-w-0 items-center rounded-full/);
+  assert.match(newsletterSource, /h-10 shrink-0 rounded-full/);
+  assert.match(newsletterSource, /flex items-start gap-2 text-xs/);
 });

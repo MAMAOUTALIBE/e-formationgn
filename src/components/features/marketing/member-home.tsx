@@ -34,6 +34,8 @@ export async function MemberHome({ userId, userName }: MemberHomeProps) {
     listFeaturedCategories(8),
     listLatestCourses(8),
   ]);
+  const coursesToDiscover = (latest.length > 0 ? latest : recommended).slice(0, 4);
+  const hasInProgressCourses = inProgress.length > 0;
 
   return (
     <>
@@ -93,29 +95,37 @@ export async function MemberHome({ userId, userName }: MemberHomeProps) {
           <Container>
             <div className="flex items-end justify-between gap-4">
               <h2 className="text-xl font-bold tracking-tight text-foreground sm:text-2xl">
-                Reprendre l&apos;apprentissage
+                {hasInProgressCourses
+                  ? "Reprendre l’apprentissage"
+                  : "Formations à découvrir"}
               </h2>
               <Link
-                href="/apprentissage"
+                href={hasInProgressCourses ? "/apprentissage" : "/cours"}
                 className="text-sm font-medium text-[color:var(--brand-secondary)] hover:underline"
               >
                 Tout voir →
               </Link>
             </div>
 
-            {inProgress.length > 0 ? (
+            {hasInProgressCourses ? (
               <div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
                 {inProgress.map((enrollment) => (
                   <EnrollmentCard key={enrollment.id} enrollment={enrollment} />
                 ))}
               </div>
+            ) : coursesToDiscover.length > 0 ? (
+              <div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                {coursesToDiscover.map((course) => (
+                  <CourseCard key={course.id} course={course} currency="EUR" />
+                ))}
+              </div>
             ) : (
-              <div className="mt-5 rounded-2xl border border-dashed border-[color:var(--brand-secondary)]/30 bg-[color:var(--brand-secondary)]/5 p-7 text-center sm:p-9">
+              <div className="mt-5 rounded-2xl border border-dashed border-[color:var(--brand-secondary)]/30 bg-[color:var(--brand-secondary)]/5 p-5 text-center">
                 <span className="mx-auto flex h-11 w-11 items-center justify-center rounded-full bg-[color:var(--brand-secondary)]/10 text-[color:var(--brand-secondary)]"><BookOpen className="h-5 w-5" aria-hidden /></span>
                 <p className="mt-3 text-sm font-medium text-foreground">Votre prochaine compétence commence ici.</p>
-                <p className="mt-1 text-sm text-muted-foreground">Choisissez une formation à votre rythme, puis retrouvez-la facilement dans cet espace.</p>
+                <p className="mt-1 text-sm text-muted-foreground">Le catalogue sera bientôt enrichi de nouvelles formations.</p>
                 <Button asChild className="mt-3">
-                  <Link href="/cours">Découvrir une première formation</Link>
+                  <Link href="/cours">Consulter le catalogue</Link>
                 </Button>
               </div>
             )}

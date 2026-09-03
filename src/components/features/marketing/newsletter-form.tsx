@@ -52,21 +52,42 @@ export function NewsletterForm({
     <form action={formAction} className={`space-y-3 ${className ?? ""}`} noValidate>
       <input type="hidden" name="source" value={source} />
 
-      <div className={variant === "large" ? "sm:flex sm:gap-2" : ""}>
-        <div className="flex-1">
-          <label htmlFor={`newsletter-email-${source}`} className="sr-only">
-            Adresse email
-          </label>
-          <Input
-            id={`newsletter-email-${source}`}
-            name="email"
-            type="email"
-            required
-            placeholder="votre@email.com"
-            aria-invalid={Boolean(emailError)}
-            aria-describedby={emailError ? `newsletter-email-error-${source}` : undefined}
-            disabled={pending}
-          />
+      {variant === "compact" ? (
+        <div>
+          <div
+            role="group"
+            aria-label="Inscription à la newsletter"
+            className="flex w-full min-w-0 items-center rounded-full border border-slate-200 bg-white p-1 shadow-[0_6px_20px_rgba(15,23,42,0.12)] transition focus-within:border-sky-400 focus-within:ring-2 focus-within:ring-sky-400/30"
+          >
+            <label htmlFor={`newsletter-email-${source}`} className="sr-only">
+              Adresse email
+            </label>
+            <Input
+              id={`newsletter-email-${source}`}
+              name="email"
+              type="email"
+              required
+              placeholder="votre@email.com"
+              aria-invalid={Boolean(emailError)}
+              aria-describedby={emailError ? `newsletter-email-error-${source}` : undefined}
+              disabled={pending}
+              className="h-10 min-w-0 flex-1 rounded-full border-0 bg-transparent px-3 text-base text-slate-950 shadow-none placeholder:text-slate-500 focus-visible:ring-0 focus-visible:ring-offset-0 sm:text-sm"
+            />
+            <Button
+              type="submit"
+              disabled={pending}
+              className="h-10 shrink-0 rounded-full px-3 text-xs shadow-none sm:px-5 sm:text-sm"
+            >
+              {pending ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+                  Envoi…
+                </>
+              ) : (
+                "S'inscrire"
+              )}
+            </Button>
+          </div>
           {emailError ? (
             <p
               id={`newsletter-email-error-${source}`}
@@ -76,21 +97,43 @@ export function NewsletterForm({
             </p>
           ) : null}
         </div>
-        <Button
-          type="submit"
-          disabled={pending}
-          className={variant === "large" ? "mt-2 sm:mt-0" : "mt-0 w-full"}
-        >
-          {pending ? (
-            <>
-              <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
-              Envoi…
-            </>
-          ) : (
-            "S'inscrire"
-          )}
-        </Button>
-      </div>
+      ) : (
+        <div className="sm:flex sm:gap-2">
+          <div className="flex-1">
+            <label htmlFor={`newsletter-email-${source}`} className="sr-only">
+              Adresse email
+            </label>
+            <Input
+              id={`newsletter-email-${source}`}
+              name="email"
+              type="email"
+              required
+              placeholder="votre@email.com"
+              aria-invalid={Boolean(emailError)}
+              aria-describedby={emailError ? `newsletter-email-error-${source}` : undefined}
+              disabled={pending}
+            />
+            {emailError ? (
+              <p
+                id={`newsletter-email-error-${source}`}
+                className="mt-1 text-xs text-[color:var(--brand-danger)]"
+              >
+                {emailError}
+              </p>
+            ) : null}
+          </div>
+          <Button type="submit" disabled={pending} className="mt-2 sm:mt-0">
+            {pending ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+                Envoi…
+              </>
+            ) : (
+              "S'inscrire"
+            )}
+          </Button>
+        </div>
+      )}
 
       <label className="flex items-start gap-2 text-xs text-muted-foreground">
         <Checkbox name="consent" defaultChecked={false} required disabled={pending} />

@@ -31,6 +31,18 @@ test.describe("Footer public simplifié", () => {
     await expect(footer.getByRole("textbox", { name: "Adresse email" })).toBeVisible();
     await expect(footer.getByRole("checkbox")).toBeVisible();
     await expect(footer.getByRole("button", { name: "S'inscrire" })).toBeVisible();
+    const newsletterCapsule = footer.getByRole("group", {
+      name: "Inscription à la newsletter",
+    });
+    await expect(newsletterCapsule).toHaveClass(/rounded-full/);
+    const [emailBox, subscribeBox] = await Promise.all([
+      newsletterCapsule.getByRole("textbox", { name: "Adresse email" }).boundingBox(),
+      newsletterCapsule.getByRole("button", { name: "S'inscrire" }).boundingBox(),
+    ]);
+    expect(emailBox).not.toBeNull();
+    expect(subscribeBox).not.toBeNull();
+    expect(Math.abs(emailBox!.y - subscribeBox!.y)).toBeLessThanOrEqual(2);
+    expect(emailBox!.x + emailBox!.width).toBeLessThanOrEqual(subscribeBox!.x + 1);
     await expect(contact.getByText("info@aiduca.fr")).toBeVisible();
     await expect(contact.getByAltText(/Certification Qualiopi/)).toBeVisible();
     await expect(
@@ -70,6 +82,19 @@ test.describe("Footer public simplifié", () => {
     expect(contactBox).not.toBeNull();
     expect(presentationBox!.y).toBeLessThan(essentialsBox!.y);
     expect(essentialsBox!.y).toBeLessThan(contactBox!.y);
+    const newsletterCapsule = footer.getByRole("group", {
+      name: "Inscription à la newsletter",
+    });
+    const [emailBox, subscribeBox, consentBox] = await Promise.all([
+      newsletterCapsule.getByRole("textbox", { name: "Adresse email" }).boundingBox(),
+      newsletterCapsule.getByRole("button", { name: "S'inscrire" }).boundingBox(),
+      footer.getByRole("checkbox").boundingBox(),
+    ]);
+    expect(emailBox).not.toBeNull();
+    expect(subscribeBox).not.toBeNull();
+    expect(consentBox).not.toBeNull();
+    expect(Math.abs(emailBox!.y - subscribeBox!.y)).toBeLessThanOrEqual(2);
+    expect(consentBox!.y).toBeGreaterThan(subscribeBox!.y + subscribeBox!.height);
     expect(
       await page.evaluate(() => document.documentElement.scrollWidth),
     ).toBeLessThanOrEqual(390);
