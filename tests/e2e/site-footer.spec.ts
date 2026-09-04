@@ -5,7 +5,7 @@ test.describe("Footer public simplifié", () => {
     page,
   }) => {
     await page.setViewportSize({ width: 1440, height: 1000 });
-    await page.goto("/");
+    await page.goto("/credits");
 
     const footer = page.getByRole("contentinfo");
     await footer.scrollIntoViewIfNeeded();
@@ -49,9 +49,10 @@ test.describe("Footer public simplifié", () => {
     expect(emailBox!.x + emailBox!.width).toBeLessThanOrEqual(subscribeBox!.x + 1);
     await expect(contact.getByText("info@aiduca.fr")).toBeVisible();
     await expect(contact.getByAltText(/Certification Qualiopi/)).toBeVisible();
-    await expect(
-      footer.locator('[style*="footer-modern-building-construction.webp"]'),
-    ).toHaveCount(1);
+    const backgroundSlides = footer.locator("[data-footer-slide]");
+    await expect(backgroundSlides).toHaveCount(5);
+    await expect(backgroundSlides.first()).toHaveAttribute("alt", "");
+    await expect(backgroundSlides.first()).toHaveCSS("animation-duration", "150s");
 
     const [presentationBox, essentialsBox, contactBox] = await Promise.all([
       presentation.boundingBox(),
@@ -67,7 +68,7 @@ test.describe("Footer public simplifié", () => {
 
   test("empile le contenu sans débordement sur mobile", async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
-    await page.goto("/");
+    await page.goto("/credits");
 
     const footer = page.getByRole("contentinfo");
     await footer.scrollIntoViewIfNeeded();

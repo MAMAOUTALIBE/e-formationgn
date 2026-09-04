@@ -1,4 +1,5 @@
 import { Mail, MapPin, Phone, Smartphone } from "lucide-react";
+import Image from "next/image";
 import Link from "next/link";
 
 import { Logo } from "@/components/branding/logo";
@@ -6,6 +7,8 @@ import { NewsletterForm } from "@/components/features/marketing/newsletter-form"
 import { Container } from "@/components/ui/container";
 import { BRAND } from "@/lib/brand";
 import { getDictionary } from "@/lib/i18n/server";
+
+import styles from "./site-footer.module.css";
 
 const ESSENTIAL_LINKS = [
   { href: "/cours", label: "Catalogue" },
@@ -20,19 +23,50 @@ const LEGAL_LINKS = [
   { href: "/confidentialite", label: "Confidentialité" },
 ] as const;
 
+const FOOTER_BACKGROUNDS = [
+  {
+    src: "/images/footer-slideshow/artificial-intelligence.webp",
+    topic: "intelligence-artificielle",
+  },
+  {
+    src: "/images/footer-slideshow/solar-energy.webp",
+    topic: "energie-solaire",
+  },
+  {
+    src: "/images/footer-slideshow/renewable-energy.webp",
+    topic: "energies-renouvelables",
+  },
+  {
+    src: "/images/footer-slideshow/renovation.webp",
+    topic: "renovation",
+  },
+  {
+    src: "/images/footer-slideshow/digital-marketing.webp",
+    topic: "marketing-digital",
+  },
+] as const;
+
 export async function SiteFooter() {
   const { t } = await getDictionary();
 
   return (
     <footer className="relative isolate overflow-hidden border-t border-white/20 bg-[#031735] text-white [&_.text-foreground]:text-white [&_.text-muted-foreground]:text-slate-200">
+      <div aria-hidden="true" className={styles.slideshow}>
+        {FOOTER_BACKGROUNDS.map((background) => (
+          <Image
+            key={background.src}
+            src={background.src}
+            alt=""
+            fill
+            sizes="100vw"
+            className={styles.slide}
+            data-footer-slide={background.topic}
+          />
+        ))}
+      </div>
       <div
         aria-hidden="true"
-        className="pointer-events-none absolute inset-0 z-0 bg-cover bg-center"
-        style={{ backgroundImage: "url('/images/footer-modern-building-construction.webp')" }}
-      />
-      <div
-        aria-hidden="true"
-        className="pointer-events-none absolute inset-0 z-0 bg-[#031735]/88"
+        className="pointer-events-none absolute inset-0 z-0 bg-[#031735]/82"
       />
 
       <Container className="relative z-10 grid gap-10 py-12 md:grid-cols-2 lg:grid-cols-[minmax(0,1fr)_minmax(22rem,1.35fr)_minmax(18rem,1fr)] lg:gap-12 lg:py-16">

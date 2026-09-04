@@ -14,9 +14,26 @@ test("le footer public reste limité aux informations essentielles", async () =>
     path.join(root, "src/components/features/marketing/newsletter-form.tsx"),
     "utf8",
   );
+  const styles = await readFile(
+    path.join(root, "src/components/layout/site-footer.module.css"),
+    "utf8",
+  );
 
-  assert.match(source, /footer-modern-building-construction\.webp/);
-  assert.match(source, /bg-\[#031735\]\/88/);
+  const backgrounds = source.match(/\/images\/footer-slideshow\/[a-z-]+\.webp/g);
+  assert.equal(backgrounds?.length, 5);
+  for (const topic of [
+    "artificial-intelligence",
+    "solar-energy",
+    "renewable-energy",
+    "renovation",
+    "digital-marketing",
+  ]) {
+    assert.match(source, new RegExp(`${topic}\\.webp`));
+  }
+  assert.match(source, /<Image[\s\S]*?alt=""[\s\S]*?fill[\s\S]*?sizes="100vw"/);
+  assert.match(source, /bg-\[#031735\]\/82/);
+  assert.match(styles, /animation: footer-background-cycle 150s linear infinite both/);
+  assert.match(styles, /prefers-reduced-motion: reduce/);
   assert.match(source, /<Logo width=\{170\} transparentBackground \/>/);
   assert.match(source, /Newsletter mensuelle/);
   assert.match(source, /<NewsletterForm/);
