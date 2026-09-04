@@ -90,7 +90,16 @@ export function ContactAssistant({
   useEffect(() => {
     const feed = feedRef.current;
     if (!feed) return;
-    feed.scrollTo({ top: feed.scrollHeight });
+    const followLatestMessage = () => {
+      feed.scrollTo({ top: feed.scrollHeight });
+    };
+    followLatestMessage();
+
+    // Une rotation d'écran ou l'apparition du récapitulatif réduit la hauteur
+    // du fil. Le ResizeObserver maintient alors le dernier message visible.
+    const observer = new ResizeObserver(followLatestMessage);
+    observer.observe(feed);
+    return () => observer.disconnect();
   }, [messages, pending]);
 
   function message(role: ChatMessage["role"], text: string): ChatMessage {
@@ -227,21 +236,23 @@ export function ContactAssistant({
     <section
       data-testid="contact-assistant"
       aria-labelledby="contact-assistant-title"
-      className="overflow-hidden rounded-3xl border border-border bg-background shadow-sm"
+      className="flex h-full min-h-0 flex-col overflow-hidden rounded-2xl border border-border bg-background shadow-sm"
     >
-      <header className="flex items-center justify-between gap-4 border-b border-border bg-[color:var(--brand-primary)] px-5 py-4 text-white sm:px-6">
-        <div className="flex min-w-0 items-center gap-3">
-          <span className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-white/15">
-            <Bot className="h-6 w-6" aria-hidden />
+      <header className="flex shrink-0 items-center justify-between gap-3 border-b border-border bg-[color:var(--brand-primary)] px-3 py-2.5 text-white sm:px-4 sm:py-3">
+        <div className="flex min-w-0 items-center gap-2.5">
+          <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-white/15">
+            <Bot className="h-5 w-5" aria-hidden />
           </span>
           <div className="min-w-0">
-            <h2 id="contact-assistant-title" className="font-semibold">
+            <h2 id="contact-assistant-title" className="text-sm font-semibold">
               Aiduca-IA
             </h2>
-            <p className="text-xs text-white/75">Assistant de qualification</p>
+            <p className="text-[11px] leading-4 text-white/75">
+              Assistant de qualification
+            </p>
           </div>
         </div>
-        <span className="inline-flex items-center gap-1.5 text-xs text-white/80">
+        <span className="inline-flex items-center gap-1.5 text-[11px] text-white/80">
           <span className="h-2 w-2 rounded-full bg-emerald-300" aria-hidden />
           En ligne
         </span>
@@ -252,13 +263,13 @@ export function ContactAssistant({
         role="log"
         aria-live="polite"
         aria-relevant="additions"
-        className="max-h-[32rem] min-h-80 space-y-4 overflow-y-auto bg-muted/20 px-4 py-5 sm:px-6"
+        className="min-h-0 flex-1 space-y-2 overflow-y-auto overscroll-contain bg-muted/20 px-3 py-3 sm:px-4"
       >
         {messages.map((entry) => (
           <div
             key={entry.id}
             className={cn(
-              "w-fit max-w-[92%] rounded-2xl px-4 py-3 text-sm leading-6",
+              "w-fit max-w-[94%] rounded-xl px-3 py-2 text-sm leading-5 [&>div]:!space-y-2 [&_li]:!text-sm [&_li]:!leading-5 [&_p]:!text-sm [&_p]:!leading-5",
               entry.role === "visitor"
                 ? "ml-auto rounded-br-sm bg-[color:var(--brand-secondary)] text-white"
                 : "rounded-bl-sm border border-border bg-background text-foreground",
@@ -273,19 +284,19 @@ export function ContactAssistant({
         ))}
 
         {pending ? (
-          <p className="flex w-fit items-center gap-2 rounded-2xl rounded-bl-sm border border-border bg-background px-4 py-3 text-sm text-muted-foreground">
+          <p className="flex w-fit items-center gap-2 rounded-xl rounded-bl-sm border border-border bg-background px-3 py-2 text-sm text-muted-foreground">
             <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
             {step === "need" ? "Aiduca-IA analyse votre besoin…" : "Transmission…"}
           </p>
         ) : null}
       </div>
 
-      <div className="border-t border-border px-4 py-4 sm:px-6">
+      <div className="shrink-0 border-t border-border px-3 py-2.5 sm:px-4">
         {activeField ? (
-          <form onSubmit={submitCurrentField} className="space-y-3" noValidate>
+          <form onSubmit={submitCurrentField} className="space-y-2" noValidate>
             <label
               htmlFor={`contact-assistant-${activeField}`}
-              className="block text-sm font-medium text-foreground"
+              className="block text-xs font-medium text-foreground sm:text-sm"
             >
               {QUESTIONS[activeField]}
             </label>
@@ -296,12 +307,12 @@ export function ContactAssistant({
                   data-testid="contact-assistant-input"
                   value={draft}
                   onChange={(event) => setDraft(event.target.value)}
-                  rows={activeField === "need" ? 3 : 2}
+                  rows={2}
                   maxLength={MAX_LENGTH[activeField]}
                   placeholder={PLACEHOLDERS[activeField]}
                   autoFocus
                   disabled={pending}
-                  className="min-w-0 flex-1 resize-none rounded-2xl border border-border bg-background px-4 py-3 text-base outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-60 sm:text-sm"
+                  className="min-w-0 flex-1 resize-none rounded-xl border border-border bg-background px-3 py-2 text-base leading-5 outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-60 sm:text-sm"
                 />
               ) : (
                 <input
@@ -321,14 +332,14 @@ export function ContactAssistant({
                   autoComplete={autoCompleteFor(activeField)}
                   autoFocus
                   disabled={pending}
-                  className="min-w-0 flex-1 rounded-2xl border border-border bg-background px-4 py-3 text-base outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-60 sm:text-sm"
+                  className="min-w-0 flex-1 rounded-xl border border-border bg-background px-3 py-2 text-base leading-5 outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-60 sm:text-sm"
                 />
               )}
               <button
                 type="submit"
                 aria-label="Continuer"
                 disabled={pending || draft.trim().length === 0}
-                className="inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-[color:var(--brand-secondary)] text-white transition-opacity disabled:opacity-40"
+                className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[color:var(--brand-secondary)] text-white transition-opacity disabled:opacity-40"
               >
                 {pending ? (
                   <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
@@ -341,7 +352,7 @@ export function ContactAssistant({
               <button
                 type="button"
                 onClick={() => setDraft("Particulier")}
-                className="text-sm font-medium text-[color:var(--brand-secondary)] underline underline-offset-4"
+                className="text-xs font-medium text-[color:var(--brand-secondary)] underline underline-offset-4"
               >
                 Je fais cette demande à titre particulier
               </button>
@@ -350,18 +361,18 @@ export function ContactAssistant({
         ) : null}
 
         {step === "consent" ? (
-          <div data-testid="contact-assistant-consent" className="space-y-4">
+          <div data-testid="contact-assistant-consent" className="space-y-2">
             <Review answers={answers} />
-            <div className="rounded-2xl border border-[color:var(--brand-secondary)]/25 bg-[color:var(--brand-secondary)]/5 p-4">
-              <p className="flex items-start gap-2 text-sm leading-6 text-foreground">
+            <div className="rounded-xl border border-[color:var(--brand-secondary)]/25 bg-[color:var(--brand-secondary)]/5 p-3">
+              <p className="flex items-start gap-2 text-xs leading-5 text-foreground">
                 <ShieldCheck
-                  className="mt-0.5 h-5 w-5 shrink-0 text-[color:var(--brand-secondary)]"
+                  className="mt-0.5 h-4 w-4 shrink-0 text-[color:var(--brand-secondary)]"
                   aria-hidden
                 />
                 J&apos;accepte qu&apos;Aiduca conserve ces informations et les
                 utilise pour me recontacter au sujet de cette demande.
               </p>
-              <p className="mt-2 pl-7 text-xs leading-5 text-muted-foreground">
+              <p className="mt-1 pl-6 text-[11px] leading-4 text-muted-foreground">
                 Consultez notre{" "}
                 <Link href="/confidentialite" className="underline underline-offset-2">
                   politique de confidentialité
@@ -369,12 +380,12 @@ export function ContactAssistant({
                 .
               </p>
             </div>
-            <div className="flex flex-col gap-2 sm:flex-row">
+            <div className="grid grid-cols-2 gap-2">
               <button
                 type="button"
                 onClick={() => void consentAndSend()}
                 disabled={pending}
-                className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl bg-[color:var(--brand-secondary)] px-4 py-3 text-sm font-semibold text-white disabled:opacity-50"
+                className="inline-flex min-h-10 items-center justify-center gap-1.5 rounded-xl bg-[color:var(--brand-secondary)] px-2 py-2 text-xs font-semibold text-white disabled:opacity-50"
               >
                 {pending ? (
                   <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
@@ -387,7 +398,7 @@ export function ContactAssistant({
                 type="button"
                 onClick={decline}
                 disabled={pending}
-                className="rounded-xl border border-border px-4 py-3 text-sm font-semibold text-foreground hover:bg-muted"
+                className="min-h-10 rounded-xl border border-border px-2 py-2 text-xs font-semibold text-foreground hover:bg-muted"
               >
                 Non, ne rien envoyer
               </button>
@@ -398,7 +409,7 @@ export function ContactAssistant({
         {step === "done" ? (
           <p
             role="status"
-            className="flex items-center gap-2 rounded-2xl border border-emerald-500/30 bg-emerald-500/10 p-4 text-sm font-medium text-emerald-800 dark:text-emerald-200"
+            className="flex items-center gap-2 rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-3 text-sm font-medium text-emerald-800 dark:text-emerald-200"
           >
             <CheckCircle2 className="h-5 w-5 shrink-0" aria-hidden />
             Votre demande est enregistrée dans notre liste de prospection.
@@ -421,9 +432,11 @@ export function ContactAssistant({
           </p>
         ) : null}
 
-        <p className="mt-3 text-xs leading-5 text-muted-foreground">
-          Aucune donnée n&apos;est envoyée à la prospection avant votre accord.
-        </p>
+        {activeField ? (
+          <p className="mt-2 text-[11px] leading-4 text-muted-foreground">
+            Aucune donnée n&apos;est envoyée à la prospection avant votre accord.
+          </p>
+        ) : null}
       </div>
     </section>
   );
@@ -441,7 +454,7 @@ function Review({ answers }: { answers: Partial<Answers> }) {
   ];
 
   return (
-    <dl className="grid gap-2 rounded-2xl border border-border bg-muted/20 p-4 text-sm sm:grid-cols-[8rem_1fr]">
+    <dl className="grid grid-cols-[5.75rem_minmax(0,1fr)] gap-x-2 gap-y-1 rounded-xl border border-border bg-muted/20 p-2 text-xs leading-4 sm:grid-cols-[7rem_minmax(0,1fr)]">
       {rows.map(([label, value]) => (
         <div key={label} className="contents">
           <dt className="font-medium text-muted-foreground">{label}</dt>

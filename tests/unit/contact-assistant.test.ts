@@ -61,7 +61,7 @@ test("le message du prospect contient la source et le résumé attendus par le C
 });
 
 test("la page Contact intègre son chatbot sans doubler le widget flottant", async () => {
-  const [page, mount] = await Promise.all([
+  const [page, mount, globalCss, assistant] = await Promise.all([
     readFile(path.join(root, "src/app/contact/page.tsx"), "utf8"),
     readFile(
       path.join(
@@ -70,10 +70,24 @@ test("la page Contact intègre son chatbot sans doubler le widget flottant", asy
       ),
       "utf8",
     ),
+    readFile(path.join(root, "src/app/globals.css"), "utf8"),
+    readFile(
+      path.join(
+        root,
+        "src/components/features/contact/contact-assistant.tsx",
+      ),
+      "utf8",
+    ),
   ]);
 
   assert.match(page, /<ContactAssistant/);
+  assert.match(page, /contact-view/);
+  assert.doesNotMatch(page, /<SiteFooter/);
   assert.match(mount, /"\/contact"/);
+  assert.match(globalCss, /html:has\(\.contact-view\)/);
+  assert.match(globalCss, /body:has\(\.contact-view\)/);
+  assert.match(assistant, /h-full min-h-0 flex-col/);
+  assert.match(assistant, /min-h-0 flex-1[^"]*overflow-y-auto/);
 });
 
 test("l'écriture serveur cible uniquement la liste de prospects existante", async () => {

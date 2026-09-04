@@ -192,6 +192,20 @@ body:has(.workspace-shell) {
   overflow: hidden;
 }
 
+/* La page Contact est un parcours conversationnel en une vue : le document
+ * reste calé au viewport et seul le fil d'Aiduca-IA porte le défilement. Le
+ * sélecteur `:has()` borne strictement cette règle à `/contact`. */
+html:has(.contact-view),
+body:has(.contact-view) {
+  height: 100%;
+  max-height: 100dvh;
+  overflow: hidden;
+}
+
+body:has(.contact-view) {
+  min-height: 0;
+}
+
 /* Le contenu long reste mesurable et défilable dans `.workspace-main`, mais
  * son débordement ne doit pas agrandir la zone de défilement de `<html>`. */
 .workspace-main {
