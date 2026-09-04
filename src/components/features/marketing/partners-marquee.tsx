@@ -1,12 +1,15 @@
 "use client";
 
 import Image from "next/image";
-import { Pause, Play } from "lucide-react";
-import { useState } from "react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
+import { useRef } from "react";
 
 import { Container } from "@/components/ui/container";
 
 import styles from "./partners-marquee.module.css";
+
+const ANIMATION_DURATION_MS = 100_000;
+const ARROW_STEP_MS = 2_400;
 
 const PARTNERS = [
   { name: "ACTIS", src: "/images/partners/actis.png", width: 157, height: 41 },
@@ -80,10 +83,33 @@ function PartnerGroup({ duplicate = false }: { duplicate?: boolean }) {
 }
 
 export function PartnersMarquee() {
-  const [paused, setPaused] = useState(false);
+  const viewportRef = useRef<HTMLDivElement>(null);
+  const trackRef = useRef<HTMLDivElement>(null);
+
+  function move(direction: -1 | 1) {
+    const animation = trackRef.current?.getAnimations()[0];
+
+    if (animation) {
+      const currentTime = Number(animation.currentTime ?? 0);
+      animation.currentTime =
+        (currentTime + direction * ARROW_STEP_MS + ANIMATION_DURATION_MS) %
+        ANIMATION_DURATION_MS;
+      return;
+    }
+
+    viewportRef.current?.scrollBy({
+      left: direction * 180,
+      behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches
+        ? "auto"
+        : "smooth",
+    });
+  }
 
   return (
-    <section className="overflow-hidden py-12" aria-labelledby="partners-title">
+    <section
+      className="overflow-hidden py-8 sm:py-9"
+      aria-labelledby="partners-title"
+    >
       <Container>
         <div className="mx-auto max-w-2xl text-center">
           <h2
@@ -97,38 +123,38 @@ export function PartnersMarquee() {
           </p>
         </div>
 
-        <div className="mt-8">
-          <div className={styles.viewport}>
+        <div className="relative mt-5">
+          <div
+            ref={viewportRef}
+            className={styles.viewport}
+            data-partner-viewport
+          >
             <div
+              ref={trackRef}
               className={styles.track}
               data-partner-track
-              data-paused={paused}
             >
               <PartnerGroup />
               <PartnerGroup duplicate />
             </div>
           </div>
 
-          <div className="mt-4 flex justify-center">
-            <button
-              type="button"
-              className={`${styles.motionControl} items-center gap-2 rounded-full border border-border bg-card px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:border-[color:var(--brand-secondary)]/40 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2`}
-              aria-pressed={paused}
-              aria-label={
-                paused
-                  ? "Reprendre le défilement des partenaires"
-                  : "Mettre en pause le défilement des partenaires"
-              }
-              onClick={() => setPaused((current) => !current)}
-            >
-              {paused ? (
-                <Play className="h-3.5 w-3.5" aria-hidden />
-              ) : (
-                <Pause className="h-3.5 w-3.5" aria-hidden />
-              )}
-              {paused ? "Reprendre" : "Mettre en pause"}
-            </button>
-          </div>
+          <button
+            type="button"
+            className={`${styles.arrow} ${styles.previous}`}
+            aria-label="Afficher les partenaires précédents"
+            onClick={() => move(-1)}
+          >
+            <ChevronLeft className="h-4 w-4" aria-hidden />
+          </button>
+          <button
+            type="button"
+            className={`${styles.arrow} ${styles.next}`}
+            aria-label="Afficher les partenaires suivants"
+            onClick={() => move(1)}
+          >
+            <ChevronRight className="h-4 w-4" aria-hidden />
+          </button>
         </div>
       </Container>
     </section>

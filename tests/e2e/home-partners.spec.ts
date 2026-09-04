@@ -12,20 +12,44 @@ test.describe("Partenaires — accueil", () => {
     await expect(section.getByAltText("ADEME")).toHaveCount(1);
   });
 
-  test("le défilement peut être mis en pause puis repris", async ({ page }) => {
+  test("défile en continu et répond aux flèches latérales", async ({ page }) => {
     await page.goto("/", { waitUntil: "networkidle" });
 
     const track = page.locator("[data-partner-track]");
-    const control = page
-      .getByRole("region", { name: "Nos partenaires" })
-      .locator('button[aria-pressed]');
+    const section = page.getByRole("region", { name: "Nos partenaires" });
+    const next = section.getByRole("button", {
+      name: "Afficher les partenaires suivants",
+    });
+    const previous = section.getByRole("button", {
+      name: "Afficher les partenaires précédents",
+    });
 
     await expect(track).toHaveCSS("animation-play-state", "running");
-    await control.click();
-    await expect(track).toHaveCSS("animation-play-state", "paused");
-    await expect(control).toHaveAttribute("aria-pressed", "true");
+    const viewportBox = await page.locator("[data-partner-viewport]").boundingBox();
+    if (!viewportBox) throw new Error("Le carrousel partenaires n'est pas visible");
+    await page.mouse.move(
+      viewportBox.x + viewportBox.width / 2,
+      viewportBox.y + viewportBox.height / 2,
+    );
+    await expect(track).toHaveCSS("animation-play-state", "running");
+    await expect(previous).toBeVisible();
+    await expect(next).toBeVisible();
+    await expect(section.getByRole("button", { name: /pause/i })).toHaveCount(0);
 
-    await control.click();
+    const before = await track.evaluate(
+      (element) => Number(element.getAnimations()[0]?.currentTime ?? 0),
+    );
+    await next.click();
+    const after = await track.evaluate(
+      (element) => Number(element.getAnimations()[0]?.currentTime ?? 0),
+    );
+
+    expect(after - before).toBeGreaterThan(2_000);
+    await previous.click();
+    const afterPrevious = await track.evaluate(
+      (element) => Number(element.getAnimations()[0]?.currentTime ?? 0),
+    );
+    expect(after - afterPrevious).toBeGreaterThan(2_000);
     await expect(track).toHaveCSS("animation-play-state", "running");
   });
 
@@ -34,9 +58,13 @@ test.describe("Partenaires — accueil", () => {
     await page.goto("/", { waitUntil: "networkidle" });
 
     await expect(page.getByRole("region", { name: "Nos partenaires" })).toBeVisible();
+    const sectionHeight = await page
+      .getByRole("region", { name: "Nos partenaires" })
+      .evaluate((element) => element.getBoundingClientRect().height);
     const overflow = await page.evaluate(
       () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
     );
+    expect(sectionHeight).toBeLessThan(250);
     expect(overflow).toBeLessThanOrEqual(2);
   });
 
@@ -46,11 +74,13 @@ test.describe("Partenaires — accueil", () => {
 
     await expect(page.locator("[data-partner-track]")).toHaveCSS("animation-name", "none");
     await expect(page.locator('[data-partner-copy="duplicate"]')).toBeHidden();
-    await expect(
-      page.getByRole("button", {
-        name: /défilement des partenaires/,
-        includeHidden: true,
-      }),
-    ).toBeHidden();
+
+    const viewport = page.locator("[data-partner-viewport]");
+    const before = await viewport.evaluate((element) => element.scrollLeft);
+    await page
+      .getByRole("button", { name: "Afficher les partenaires suivants" })
+      .click();
+    const after = await viewport.evaluate((element) => element.scrollLeft);
+    expect(after).toBeGreaterThan(before);
   });
 });
