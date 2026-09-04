@@ -4,6 +4,7 @@ import Image from "next/image";
 import { createElement } from "react";
 
 import { CategoryPattern } from "@/components/features/courses/category-pattern";
+import { getCourseDomainBackground } from "@/lib/courses/domain-backgrounds";
 import { cn } from "@/lib/utils";
 import { pluralize } from "@/lib/format/labels";
 import type { CategoryWithCount } from "@/server/queries/categories";
@@ -29,19 +30,6 @@ const VARIANTS = [
   "bg-gradient-to-br from-[#f59e0b] via-[#db2777] to-[#7c3aed]",
 ];
 
-const CATEGORY_BACKGROUNDS: Record<string, string> = {
-  developpement: "/images/categories/developpement.webp",
-  isolation: "/images/categories/isolation.webp",
-  pac: "/images/categories/pac.webp",
-  pv: "/images/categories/photovoltaique.webp",
-  photovoltaique: "/images/categories/photovoltaique.webp",
-  elec: "/images/categories/electricite.webp",
-  electricite: "/images/categories/electricite.webp",
-  marketing: "/images/categories/marketing.webp",
-  "marketing-digital": "/images/categories/marketing.webp",
-  "developpement-personnel": "/images/categories/developpement-personnel.webp",
-};
-
 export function CategoryCard({
   category,
   variant = 0,
@@ -50,7 +38,7 @@ export function CategoryCard({
   const courseCount = category._count?.courses ?? 0;
   const IconComponent = resolveIcon(category.iconName);
   const v = VARIANTS[variant % VARIANTS.length];
-  const backgroundImage = CATEGORY_BACKGROUNDS[category.slug];
+  const backgroundImage = getCourseDomainBackground(category.slug);
 
   return (
     <Link

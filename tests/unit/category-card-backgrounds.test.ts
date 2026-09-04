@@ -7,6 +7,10 @@ test("les catégories publiées utilisent leurs images sans remplacer leurs donn
     "src/components/features/courses/category-card.tsx",
     "utf8",
   );
+  const backgrounds = readFileSync(
+    "src/lib/courses/domain-backgrounds.ts",
+    "utf8",
+  );
 
   for (const image of [
     "developpement.webp",
@@ -17,10 +21,10 @@ test("les catégories publiées utilisent leurs images sans remplacer leurs donn
     "marketing.webp",
     "developpement-personnel.webp",
   ]) {
-    assert.match(source, new RegExp(`/images/categories/${image}`));
+    assert.match(backgrounds, new RegExp(`/images/categories/${image}`));
   }
 
-  assert.match(source, /CATEGORY_BACKGROUNDS\[category\.slug\]/);
+  assert.match(source, /getCourseDomainBackground\(category\.slug\)/);
   assert.match(source, /category\.name/);
   assert.match(source, /category\.description/);
   assert.match(source, /category\.iconName/);

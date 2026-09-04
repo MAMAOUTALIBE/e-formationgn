@@ -5,6 +5,7 @@ import Link from "next/link";
 import { CardWishlistButton } from "@/components/features/wishlist/card-wishlist-button";
 import type { Currency } from "@/generated/prisma/enums";
 import { getCourseBadges } from "@/lib/courses/badges";
+import { resolveCourseCardBackground } from "@/lib/courses/domain-backgrounds";
 import { pluralize } from "@/lib/format/labels";
 import type { PublicCourseListItem } from "@/server/queries/courses";
 
@@ -37,6 +38,10 @@ export function CourseCard({
   href,
 }: CourseCardProps) {
   const courseHref = href ?? `/cours/${course.slug}`;
+  const backgroundImage = resolveCourseCardBackground(
+    course.category.slug,
+    course.thumbnailUrl,
+  );
   const instructorName =
     course.instructor.name ??
     ([course.instructor.firstName, course.instructor.lastName].filter(Boolean).join(" ") ||
@@ -62,9 +67,9 @@ export function CourseCard({
   return (
     <article className="group/card relative flex h-full flex-col overflow-hidden rounded-lg border border-border bg-card text-card-foreground shadow-sm transition-shadow hover:shadow-md">
       <div className="relative aspect-video w-full overflow-hidden bg-muted">
-        {course.thumbnailUrl ? (
+        {backgroundImage ? (
           <Image
-            src={course.thumbnailUrl}
+            src={backgroundImage}
             alt={`Vignette de la formation ${course.title}`}
             fill
             sizes="(min-width: 1280px) 25vw, (min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"

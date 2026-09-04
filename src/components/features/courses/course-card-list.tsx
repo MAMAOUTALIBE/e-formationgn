@@ -10,6 +10,7 @@ import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Stars } from "@/components/ui/stars";
 import { getCourseBadges } from "@/lib/courses/badges";
+import { resolveCourseCardBackground } from "@/lib/courses/domain-backgrounds";
 import { COURSE_LEVEL_LABELS, pluralize } from "@/lib/format/labels";
 import { formatDurationFromSeconds } from "@/lib/format/duration";
 import type { PublicCourseListItem } from "@/server/queries/courses";
@@ -21,6 +22,10 @@ interface CourseCardListProps {
 }
 
 export function CourseCardList({ course }: CourseCardListProps) {
+  const backgroundImage = resolveCourseCardBackground(
+    course.category.slug,
+    course.thumbnailUrl,
+  );
   const instructorName =
     course.instructor.name ??
     ([course.instructor.firstName, course.instructor.lastName].filter(Boolean).join(" ") ||
@@ -42,9 +47,9 @@ export function CourseCardList({ course }: CourseCardListProps) {
         aria-label={`Voir la formation ${course.title}`}
       >
         <div className="relative aspect-video w-full overflow-hidden rounded-md bg-muted sm:w-[260px]">
-          {course.thumbnailUrl ? (
+          {backgroundImage ? (
             <Image
-              src={course.thumbnailUrl}
+              src={backgroundImage}
               alt={`Vignette de la formation ${course.title}`}
               fill
               sizes="(min-width: 640px) 260px, 100vw"

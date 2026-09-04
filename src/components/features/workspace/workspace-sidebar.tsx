@@ -51,16 +51,19 @@ export function WorkspaceSidebar({
         collapsed ? "lg:w-[4.75rem]" : "lg:w-64 2xl:w-72",
       )}
     >
-      {/* Le logo est posé sur une carte blanche : la barre latérale est
-          recolorable (cf. /admin/parametres/branding) et le wordmark bleu
-          marine deviendrait illisible sur un fond sombre. */}
+      {/* Le même fichier transparent que dans le footer laisse apparaître la
+          couleur personnalisable de la barre latérale autour du logo. */}
       <div className={cn("shrink-0 pt-4", collapsed ? "px-2" : "px-3")}>
         <Link
           href={nav.homeHref}
           aria-label="Retour à l'accueil"
-          className="flex items-center justify-center rounded-xl bg-white px-3 py-3 shadow-sm ring-1 ring-black/5 transition-shadow hover:shadow-md"
+          className="flex items-center justify-center px-3 py-3 transition-opacity hover:opacity-90"
         >
-          <Logo variant={collapsed ? "mark" : "default"} width={collapsed ? 90 : 140} />
+          <Logo
+            variant={collapsed ? "mark" : "default"}
+            width={collapsed ? 90 : 140}
+            transparentBackground
+          />
         </Link>
       </div>
 

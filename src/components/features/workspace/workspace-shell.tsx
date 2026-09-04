@@ -147,7 +147,7 @@ export async function WorkspaceShell({
                 aria-label="Retour à l'accueil"
                 className="hidden md:block lg:hidden"
               >
-                <Logo width={120} priority />
+                <Logo width={120} priority transparentBackground />
               </Link>
             </div>
 
