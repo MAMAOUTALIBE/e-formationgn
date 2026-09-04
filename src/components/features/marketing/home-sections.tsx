@@ -1,4 +1,4 @@
-// Sections de la page d'accueil : « Comment ça marche », « Pourquoi Aiduca »,
+// Sections de la page d'accueil : « Pourquoi Aiduca » et
 // « Formateurs en vedette ». Composants serveur (pas d'interactivité), aux
 // couleurs de la marque.
 
@@ -8,8 +8,6 @@ import {
   GraduationCap,
   ChartNoAxesCombined,
   Languages,
-  PlayCircle,
-  Search,
   MonitorSmartphone,
 } from "lucide-react";
 import Link from "next/link";
@@ -17,63 +15,6 @@ import Link from "next/link";
 import { Avatar } from "@/components/ui/avatar";
 import { Container } from "@/components/ui/container";
 import type { FeaturedInstructor } from "@/server/queries/instructors-public";
-
-// --- Comment ça marche -----------------------------------------------------
-
-const STEPS = [
-  {
-    icon: Search,
-    title: "Choisissez une formation",
-    text: "Parcourez le catalogue par catégorie ou recherchez le sujet qui vous intéresse.",
-  },
-  {
-    icon: PlayCircle,
-    title: "Apprenez à votre rythme",
-    text: "Vidéos, quiz et ressources accessibles selon votre parcours, sur ordinateur comme sur mobile.",
-  },
-  {
-    icon: Award,
-    title: "Obtenez votre attestation",
-    text: "Terminez la formation et recevez une attestation nominative vérifiable en ligne.",
-  },
-];
-
-export function HowItWorks() {
-  return (
-    <section className="py-12">
-      <Container>
-        <div className="mx-auto max-w-2xl text-center">
-          <h2 className="text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
-            Comment ça marche ?
-          </h2>
-          <p className="mt-2 text-sm text-muted-foreground">
-            Se former n&apos;a jamais été aussi simple — en 3 étapes.
-          </p>
-        </div>
-
-        <div className="mt-8 grid gap-6 sm:grid-cols-3">
-          {STEPS.map((step, i) => {
-            const Icon = step.icon;
-            return (
-              <div key={step.title} className="relative text-center">
-                <div className="mx-auto inline-flex h-14 w-14 items-center justify-center rounded-2xl bg-[color:var(--brand-secondary)]/10 text-[color:var(--brand-secondary)]">
-                  <Icon className="h-6 w-6" aria-hidden />
-                </div>
-                <p className="mt-4 text-xs font-bold uppercase tracking-wide text-[color:var(--brand-secondary)]">
-                  Étape {i + 1}
-                </p>
-                <h3 className="mt-1 text-base font-semibold text-foreground">
-                  {step.title}
-                </h3>
-                <p className="mt-1.5 text-sm text-muted-foreground">{step.text}</p>
-              </div>
-            );
-          })}
-        </div>
-      </Container>
-    </section>
-  );
-}
 
 // --- Pourquoi Aiduca -------------------------------------------------------
 

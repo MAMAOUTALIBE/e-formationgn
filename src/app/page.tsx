@@ -10,10 +10,10 @@ import { CourseCarousel } from "@/components/features/courses/course-carousel";
 import { HeroTechBackground } from "@/components/features/marketing/hero-tech-bg";
 import {
   FeaturedInstructors,
-  HowItWorks,
   WhyAiduca,
 } from "@/components/features/marketing/home-sections";
 import { MemberHome } from "@/components/features/marketing/member-home";
+import { PartnersMarquee } from "@/components/features/marketing/partners-marquee";
 import { HomeTestimonials } from "@/components/features/marketing/testimonials";
 import { SiteFooter } from "@/components/layout/site-footer";
 import { SiteHeader } from "@/components/layout/site-header";
@@ -177,8 +177,8 @@ export default async function HomePage() {
           </section>
         ) : null}
 
-        {/* COMMENT ÇA MARCHE — 3 étapes */}
-        <HowItWorks />
+        {/* PARTENAIRES — défilement continu */}
+        <PartnersMarquee />
 
         {/* CATÉGORIES — grille dense */}
         {featuredCategories.length > 0 ? (
