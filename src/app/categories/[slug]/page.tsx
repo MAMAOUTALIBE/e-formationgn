@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 import { notFound } from "next/navigation";
 
 import { auth } from "@/auth";
@@ -13,9 +14,10 @@ import { SiteFooter } from "@/components/layout/site-footer";
 import { SiteHeader } from "@/components/layout/site-header";
 import { Breadcrumbs } from "@/components/ui/breadcrumbs";
 import { Container } from "@/components/ui/container";
+import { getCourseDomainBackground } from "@/lib/courses/domain-backgrounds";
+import { courseFiltersSchema } from "@/lib/validators/courses";
 import { getCategoryBySlug, listCategories } from "@/server/queries/categories";
 import { getCourseFilterCounts, listPublishedCourses } from "@/server/queries/courses";
-import { courseFiltersSchema } from "@/lib/validators/courses";
 
 const CATALOG_MAX_ITEMS = 200;
 
@@ -74,6 +76,7 @@ export default async function CategoryDetailPage({ params, searchParams }: PageP
   ]);
 
   const categoryOptions = allCategories.map((c) => ({ slug: c.slug, name: c.name }));
+  const heroBackground = getCourseDomainBackground(category.slug);
   const resetKey = JSON.stringify({
     q: filters.q ?? "",
     level: filters.level ?? "",
@@ -88,54 +91,73 @@ export default async function CategoryDetailPage({ params, searchParams }: PageP
       <SiteHeader />
 
       <FilterTransitionProvider>
-        <main className="flex-1 bg-muted/20 py-8">
-          <Container className="space-y-6">
-          <Breadcrumbs
-            items={[
-              { label: "Accueil", href: "/" },
-              { label: "Catégories", href: "/categories" },
-              { label: category.name },
-            ]}
-          />
-
-          <header>
-            <h1 className="text-3xl font-semibold tracking-tight text-foreground">
-              {category.name}
-            </h1>
-            {category.description ? (
-              <p className="mt-2 max-w-3xl text-sm text-muted-foreground">
-                {category.description}
-              </p>
+        <main className="flex-1 bg-muted/20">
+          <section className="relative isolate overflow-hidden border-b border-slate-200/70 bg-white">
+            {heroBackground ? (
+              <Image
+                src={heroBackground}
+                alt=""
+                fill
+                priority
+                sizes="100vw"
+                className="-z-20 object-cover object-center"
+              />
             ) : null}
-            <p className="mt-2 text-sm text-muted-foreground">
-              {total.toLocaleString("fr-FR")} {total > 1 ? "formations disponibles" : "formation disponible"}
-            </p>
-          </header>
-
-          <CourseSearchBar />
-
-          <CourseFilterBar
-            categories={categoryOptions}
-            counts={filterCounts}
-            hideCategory
-            className="hidden sm:flex"
-          />
-
-          {items.length === 0 ? (
-            <CourseEmptyState
-              basePath={`/categories/${slug}`}
-              preserveParams={["q"]}
-              suggestedCategories={categoryOptions
-                .filter((c) => c.slug !== slug)
-                .slice(0, 6)}
+            <div
+              aria-hidden
+              className="absolute inset-0 -z-10 bg-[linear-gradient(90deg,rgba(255,255,255,0.98)_0%,rgba(255,255,255,0.92)_38%,rgba(255,255,255,0.52)_62%,rgba(255,255,255,0.10)_100%)]"
             />
-          ) : (
-            <CourseCarousel resetKey={resetKey}>
-              {items.map((course) => (
-                <CourseCard key={course.id} course={course} currency={currency} />
-              ))}
-            </CourseCarousel>
-          )}
+
+            <Container className="space-y-6 py-8 sm:py-12 lg:py-16">
+              <Breadcrumbs
+                items={[
+                  { label: "Accueil", href: "/" },
+                  { label: "Catégories", href: "/categories" },
+                  { label: category.name },
+                ]}
+              />
+
+              <header>
+                <h1 className="text-3xl font-semibold tracking-tight text-foreground">
+                  {category.name}
+                </h1>
+                {category.description ? (
+                  <p className="mt-2 max-w-3xl text-sm text-muted-foreground">
+                    {category.description}
+                  </p>
+                ) : null}
+                <p className="mt-2 text-sm text-muted-foreground">
+                  {total.toLocaleString("fr-FR")} {total > 1 ? "formations disponibles" : "formation disponible"}
+                </p>
+              </header>
+
+              <CourseSearchBar integrated />
+            </Container>
+          </section>
+
+          <Container className="space-y-6 py-8">
+            <CourseFilterBar
+              categories={categoryOptions}
+              counts={filterCounts}
+              hideCategory
+              className="hidden sm:flex"
+            />
+
+            {items.length === 0 ? (
+              <CourseEmptyState
+                basePath={`/categories/${slug}`}
+                preserveParams={["q"]}
+                suggestedCategories={categoryOptions
+                  .filter((c) => c.slug !== slug)
+                  .slice(0, 6)}
+              />
+            ) : (
+              <CourseCarousel resetKey={resetKey}>
+                {items.map((course) => (
+                  <CourseCard key={course.id} course={course} currency={currency} />
+                ))}
+              </CourseCarousel>
+            )}
           </Container>
         </main>
 
