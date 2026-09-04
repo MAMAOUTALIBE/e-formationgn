@@ -8,7 +8,7 @@ import "server-only";
 //   3. Filtre les cours déjà possédés ou en panier
 //   4. Tri par popularité + note (totalEnrollments DESC, averageRating DESC)
 //
-// Pas d'appel IA pour la V1 — on peut ajouter une couche Claude pour générer
+// Pas d'appel IA pour la V1 — on peut ajouter une couche Groq pour générer
 // l'explication "pourquoi ce cours" en post-traitement plus tard.
 
 import type { Prisma } from "@/generated/prisma/client";

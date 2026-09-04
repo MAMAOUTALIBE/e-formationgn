@@ -1,7 +1,7 @@
 // Contrat de réponse d'Aiduca-IA — types partagés et re-validation serveur.
 //
 // Ce module est volontairement PUR : aucune dépendance à Prisma, au SDK
-// Anthropic ni à `server-only`. C'est ce qui permet de tester l'essentiel de
+// Groq ni à `server-only`. C'est ce qui permet de tester l'essentiel de
 // la garantie d'ancrage sans base de données, sans clé API et sans facturer un
 // seul appel au modèle (voir tests/unit/assistant-grounding.test.ts).
 //

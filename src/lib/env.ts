@@ -70,8 +70,8 @@ const serverSchema = z.object({
   // Sentry (monitoring)
   SENTRY_DSN: z.string().url().optional(),
 
-  // Anthropic (Aiduca-IA, tuteur et assistants de rédaction/modération)
-  ANTHROPIC_API_KEY: z.string().optional(),
+  // Groq (Aiduca-IA, tuteur et assistants de rédaction/modération)
+  GROQ_API_KEY: z.string().optional(),
 
   // Cron job (Vercel Cron ou crontab système). Obligatoire en prod
   // (la route /api/cron/cleanup refuse l'accès si CRON_SECRET est absent).

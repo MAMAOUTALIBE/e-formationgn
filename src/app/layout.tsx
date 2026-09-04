@@ -123,7 +123,7 @@ export default function RootLayout({
         <Toaster />
         <CookieBanner />
         {/* Aiduca-IA : le garde est côté serveur, donc aucun bouton mort
-            n'est rendu quand ANTHROPIC_API_KEY n'est pas configurée. */}
+            n'est rendu quand GROQ_API_KEY n'est pas configurée. */}
         {isAiducaAssistantConfigured() ? <AssistantMount /> : null}
       </body>
     </html>

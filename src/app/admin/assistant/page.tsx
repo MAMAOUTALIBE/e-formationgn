@@ -66,7 +66,7 @@ export default async function AdminAssistantPage() {
         >
           <p className="font-semibold">Assistant désactivé</p>
           <p className="mt-1">
-            La variable <code>ANTHROPIC_API_KEY</code> n&apos;est pas
+            La variable <code>GROQ_API_KEY</code> n&apos;est pas
             configurée : le widget n&apos;apparaît pas sur le site. La base
             documentaire reste modifiable, elle sera utilisée dès l&apos;activation.
           </p>

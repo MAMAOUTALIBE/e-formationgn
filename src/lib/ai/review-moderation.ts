@@ -4,14 +4,15 @@ import "server-only";
 // harcèlement, contenu inapproprié, ou hors-sujet (ex: critique d'un autre
 // cours, lien externe vers concurrent, langage haineux).
 //
-// Utilise Claude Haiku — assez rapide (~500 ms) et bon marché pour ce type
-// de classification binaire courte.
+// Utilise le modèle Groq rapide pour cette classification binaire courte.
 
-import { getAnthropicClient, isAnthropicConfigured } from "@/lib/ai/client";
-import { MODEL_HAIKU } from "@/lib/ai/models";
+import { z } from "zod";
+
+import { getGroqClient, getGroqToolInput, isGroqConfigured } from "@/lib/ai/client";
+import { MODEL_FAST } from "@/lib/ai/models";
 
 export function isReviewModerationConfigured(): boolean {
-  return isAnthropicConfigured();
+  return isGroqConfigured();
 }
 
 export type ReviewModerationCategory =
@@ -43,10 +44,12 @@ Règles :
 
 Réponds UNIQUEMENT via l'outil submit_classification.`;
 
-interface ToolInput {
-  category: ReviewModerationCategory;
-  reason?: string;
-}
+const TOOL_INPUT_SCHEMA = z
+  .object({
+    category: z.enum(["SPAM", "HARASSMENT", "INAPPROPRIATE", "OFF_TOPIC", "OK"]),
+    reason: z.string().max(120).optional(),
+  })
+  .strict();
 
 export async function classifyReviewContent(
   text: string,
@@ -60,34 +63,43 @@ export async function classifyReviewContent(
     return { category: "OK", flagged: false };
   }
 
-  const client = getAnthropicClient("Modération IA des avis");
-  const response = await client.messages.create({
-    model: MODEL_HAIKU,
-    max_tokens: 200,
-    system: SYSTEM_PROMPT,
+  const client = getGroqClient("Modération IA des avis");
+  const response = await client.chat.completions.create({
+    model: MODEL_FAST,
+    max_completion_tokens: 200,
+    reasoning_effort: "low",
+    citation_options: "disabled",
+    parallel_tool_calls: false,
     tools: [
       {
-        name: "submit_classification",
-        description: "Soumet la classification finale.",
-        input_schema: {
-          type: "object",
-          properties: {
-            category: {
-              type: "string",
-              enum: ["SPAM", "HARASSMENT", "INAPPROPRIATE", "OFF_TOPIC", "OK"],
+        type: "function",
+        function: {
+          name: "submit_classification",
+          description: "Soumet la classification finale.",
+          parameters: {
+            type: "object",
+            properties: {
+              category: {
+                type: "string",
+                enum: ["SPAM", "HARASSMENT", "INAPPROPRIATE", "OFF_TOPIC", "OK"],
+              },
+              reason: {
+                type: "string",
+                description: "Courte justification (≤ 80 caractères). Vide si OK.",
+                maxLength: 120,
+              },
             },
-            reason: {
-              type: "string",
-              description: "Courte justification (≤ 80 caractères). Vide si OK.",
-              maxLength: 120,
-            },
+            required: ["category"],
           },
-          required: ["category"],
         },
       },
     ],
-    tool_choice: { type: "tool", name: "submit_classification" },
+    tool_choice: {
+      type: "function",
+      function: { name: "submit_classification" },
+    },
     messages: [
+      { role: "system", content: SYSTEM_PROMPT },
       {
         role: "user",
         content: `Avis à classer :\n\n"""${trimmed.slice(0, 2000)}"""`,
@@ -95,11 +107,13 @@ export async function classifyReviewContent(
     ],
   });
 
-  const toolUse = response.content.find((b) => b.type === "tool_use");
-  if (!toolUse || toolUse.type !== "tool_use") {
+  const parsed = TOOL_INPUT_SCHEMA.safeParse(
+    getGroqToolInput(response, "submit_classification"),
+  );
+  if (!parsed.success) {
     return { category: "OK", flagged: false };
   }
-  const data = toolUse.input as ToolInput;
+  const data = parsed.data;
   const flagged = data.category !== "OK";
   return {
     category: data.category,

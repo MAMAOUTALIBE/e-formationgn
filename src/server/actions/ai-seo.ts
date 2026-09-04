@@ -2,7 +2,7 @@
 
 // Server Action : génération assistée des champs SEO d'un cours.
 // Réservée au formateur propriétaire (ou admin). Rate-limit dur (5/h)
-// pour limiter le coût Claude.
+// pour limiter le coût du modèle Groq.
 
 import {
   AuthorizationError,

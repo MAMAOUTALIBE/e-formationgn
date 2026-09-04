@@ -2,7 +2,7 @@
 
 // Bouton « Assistant IA » du header du CRM + son panneau latéral.
 //
-// Le composant n'est rendu que si la plateforme a une clé Anthropic (le layout
+// Le composant n'est rendu que si la plateforme a une clé Groq (le layout
 // le décide) : pas de bouton mort quand la fonctionnalité est désactivée.
 //
 // L'échange n'est pas persisté — c'est un assistant d'orientation, pas une

@@ -6,7 +6,7 @@ import "server-only";
 // admin.
 //
 // Même contrat que les autres helpers de src/lib/ai/ : une seule variable
-// ANTHROPIC_API_KEY, un garde `isAdminAssistantConfigured()`, et une
+// GROQ_API_KEY, un garde `isAdminAssistantConfigured()`, et une
 // dégradation gracieuse — sans clé, la fonctionnalité disparaît de l'interface
 // au lieu de lever.
 //
@@ -14,11 +14,16 @@ import "server-only";
 // qu'écrire du texte. Les chiffres qu'il commente sont ceux qu'on lui passe.
 
 import { ADMIN_NAV } from "@/lib/workspace/admin-nav";
-import { getAnthropicClient, isAnthropicConfigured } from "@/lib/ai/client";
-import { MODEL_OPUS } from "@/lib/ai/models";
+import {
+  getGroqClient,
+  getGroqText,
+  getGroqUsage,
+  isGroqConfigured,
+} from "@/lib/ai/client";
+import { MODEL_PRIMARY } from "@/lib/ai/models";
 
 export function isAdminAssistantConfigured(): boolean {
-  return isAnthropicConfigured();
+  return isGroqConfigured();
 }
 
 /** Instantané chiffré de la plateforme, construit côté serveur. */
@@ -103,52 +108,33 @@ export async function askAdminAssistant(
   snapshot: AdminAssistantSnapshot,
   question: string,
 ): Promise<AdminAssistantAnswer> {
-  const client = getAnthropicClient("Assistant IA du CRM");
+  const client = getGroqClient("Assistant IA du CRM");
 
-  // Prompt caching : consigne + registre des pages sont identiques d'une
-  // question à l'autre, l'instantané ne l'est pas. Le point de cache est donc
-  // posé sur le registre, et l'instantané vient après — sinon chaque question
-  // réécrirait le cache au lieu de le lire.
-  const response = await client.messages.create({
-    model: MODEL_OPUS,
-    max_tokens: 8000,
-    thinking: { type: "adaptive" },
-    // Orienter le CRM, ce n'est pas un problème de raisonnement profond :
-    // l'effort bas garde la latence basse pour une boîte de dialogue.
-    output_config: { effort: "low" },
-    system: [
-      { type: "text", text: SYSTEM_PROMPT },
+  // Les blocs stables viennent en premier pour bénéficier du prompt caching
+  // automatique de Groq ; l'instantané variable reste placé après le registre.
+  const response = await client.chat.completions.create({
+    model: MODEL_PRIMARY,
+    max_completion_tokens: 8000,
+    reasoning_effort: "low",
+    citation_options: "disabled",
+    messages: [
+      { role: "system", content: SYSTEM_PROMPT },
       {
-        type: "text",
-        text: buildPageRegistryBlock(),
-        cache_control: { type: "ephemeral" },
+        role: "system",
+        content: buildPageRegistryBlock(),
       },
-      { type: "text", text: buildSnapshotBlock(snapshot) },
+      { role: "system", content: buildSnapshotBlock(snapshot) },
+      { role: "user", content: question.trim().slice(0, 1000) },
     ],
-    messages: [{ role: "user", content: question.trim().slice(0, 1000) }],
   });
 
-  // Un refus de classifieur renvoie un HTTP 200 avec un `content` vide : lire
-  // content[0] sans vérifier stop_reason planterait sur ce cas.
-  if (response.stop_reason === "refusal") {
-    return {
-      text: "Cette question n'a pas pu être traitée. Reformulez-la ou consultez directement l'écran concerné.",
-      inputTokens: response.usage.input_tokens,
-      outputTokens: response.usage.output_tokens,
-      cacheReadTokens: response.usage.cache_read_input_tokens ?? 0,
-    };
-  }
-
-  const textBlock = response.content.find((b) => b.type === "text");
   const text =
-    textBlock && textBlock.type === "text"
-      ? textBlock.text
-      : "Aucune réponse n'a pu être générée. Réessayez dans un instant.";
+    getGroqText(response) ??
+    "Aucune réponse n'a pu être générée. Réessayez dans un instant.";
+  const usage = getGroqUsage(response);
 
   return {
     text,
-    inputTokens: response.usage.input_tokens,
-    outputTokens: response.usage.output_tokens,
-    cacheReadTokens: response.usage.cache_read_input_tokens ?? 0,
+    ...usage,
   };
 }

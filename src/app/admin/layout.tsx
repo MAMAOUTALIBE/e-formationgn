@@ -21,7 +21,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
 
   const badges = await getAdminSidebarBadges();
 
-  // Sans clé Anthropic, le bouton d'assistant n'est pas rendu du tout — même
+  // Sans clé Groq, le bouton d'assistant n'est pas rendu du tout — même
   // contrat que les autres fonctionnalités IA : absente plutôt que présente et
   // cassée.
   const assistantEnabled = isAdminAssistantConfigured();

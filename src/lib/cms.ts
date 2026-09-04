@@ -105,7 +105,7 @@ Vos données sont accessibles au personnel habilité du centre, ainsi qu'à l'en
 - Mux (États-Unis) — hébergement et diffusion des vidéos de formation
 - Cloudflare R2 (États-Unis) — stockage des documents et supports de cours
 - Resend (États-Unis) — acheminement des courriels transactionnels, lorsqu'il est activé
-- Anthropic (États-Unis) — assistants de rédaction et d'accompagnement pédagogique, lorsqu'ils sont activés : les questions posées à l'assistant et les avis soumis à modération lui sont transmis
+- Groq (États-Unis) — assistants de rédaction et d'accompagnement pédagogique, lorsqu'ils sont activés : les questions posées à l'assistant et les avis soumis à modération lui sont transmis
 Aucun de ces prestataires n'est autorisé à utiliser vos données pour son propre compte.
 
 Transferts hors Union européenne

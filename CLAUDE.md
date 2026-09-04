@@ -136,9 +136,9 @@ In-memory `Map`-based limiter in [src/lib/rate-limit.ts](src/lib/rate-limit.ts) 
 
 Course thumbnails / instructor uploads use Cloudflare R2 ([src/lib/storage/r2.ts](src/lib/storage/r2.ts) — S3-compatible). Mux handles video (direct upload + asset/upload helpers in [src/lib/mux.ts](src/lib/mux.ts)). `next.config.ts` sets `images.unoptimized: true` because thumbnails can come from arbitrary instructor-provided URLs — don't reintroduce an `images.remotePatterns` allow-list without coordinating.
 
-### AI features (Anthropic)
+### AI features (Groq)
 
-[src/lib/ai/](src/lib/ai/) holds seven independent Claude-backed helpers — `lesson-summary`, `quiz-generator`, `seo-suggestions` (Sonnet), `review-moderation` (Haiku), `tutor`, `admin-assistant` and `assistant` (Opus). Model IDs are centralized in [src/lib/ai/models.ts](src/lib/ai/models.ts) and the SDK client in [src/lib/ai/client.ts](src/lib/ai/client.ts) (`getAnthropicClient`) — do not re-declare either. All share the same contract: a single `ANTHROPIC_API_KEY` env var, an `isXxxConfigured()` guard, and **graceful degradation** when the key is absent (the feature is simply skipped, never throws). When adding an AI feature, follow that pattern — never make a code path hard-depend on the AI being configured.
+[src/lib/ai/](src/lib/ai/) holds seven independent Groq-backed helpers — `lesson-summary`, `quiz-generator`, `seo-suggestions`, `review-moderation`, `tutor`, `admin-assistant` and `assistant`. Production model IDs are centralized in [src/lib/ai/models.ts](src/lib/ai/models.ts) and the SDK client plus response parsers in [src/lib/ai/client.ts](src/lib/ai/client.ts) (`getGroqClient`) — do not re-declare either. All share the same contract: a single `GROQ_API_KEY` env var, an `isXxxConfigured()` guard, and **graceful degradation** when the key is absent (the feature is simply skipped, never throws). When adding an AI feature, follow that pattern — never make a code path hard-depend on the AI being configured.
 
 ### Aiduca-IA (public assistant)
 

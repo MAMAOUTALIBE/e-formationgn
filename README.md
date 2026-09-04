@@ -94,7 +94,7 @@ Ouvrir http://localhost:3000.
 | `MUX_WEBHOOK_SECRET` | pour les webhooks | Mux → Settings → Webhooks |
 | `RESEND_API_KEY` | optionnel | Resend → API Keys (mode stub si absent) |
 | `RESEND_FROM_EMAIL` | optionnel | Email vérifié dans Resend |
-| `ANTHROPIC_API_KEY` | pour les fonctions IA | Anthropic Console → API Keys (le widget Aiduca-IA reste masqué si absent) |
+| `GROQ_API_KEY` | pour les fonctions IA | Groq Console → API Keys (le widget Aiduca-IA reste masqué si absent) |
 | `PLATFORM_COMMISSION_INSTRUCTOR_BPS` | optionnel | Défaut 1500 (15 %) |
 | `PLATFORM_COMMISSION_PLATFORM_BPS` | optionnel | Défaut 3000 (30 %) |
 
@@ -131,7 +131,7 @@ Ouvrir http://localhost:3000.
 
 ### Aiduca-IA
 
-Après les migrations, configurez `ANTHROPIC_API_KEY`, puis ouvrez
+Après les migrations, configurez `GROQ_API_KEY`, puis ouvrez
 `/admin/assistant/sources` et cliquez sur **Synchroniser le site**. La même
 opération est disponible en local avec `npm run assistant:seed`. Elle met à
 jour uniquement les documents générés dont le slug commence par `auto-` ; les

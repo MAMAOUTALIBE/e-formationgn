@@ -104,13 +104,13 @@ test("l'assistant suit le contrat des autres helpers IA", async () => {
   );
   assert.match(
     source,
-    /getAnthropicClient\(/,
-    "le client Anthropic partagé doit être utilisé, pas une septième copie du singleton",
+    /getGroqClient\(/,
+    "le client Groq partagé doit être utilisé, pas une septième copie du singleton",
   );
   assert.match(
     source,
-    /response\.stop_reason === "refusal"/,
-    "un refus de classifieur renvoie un contenu vide : il doit être traité",
+    /if \(!parsed\.success\)/,
+    "une réponse sans appel d'outil valide doit déclencher le repli sûr",
   );
   assert.match(
     source,
@@ -119,7 +119,7 @@ test("l'assistant suit le contrat des autres helpers IA", async () => {
   );
   assert.match(
     source,
-    /tool_choice: \{ type: "tool", name: "repondre" \}/,
+    /tool_choice: \{ type: "function", function: \{ name: "repondre" \} \}/,
     "la réponse est structurée et forcée, pas du texte libre",
   );
 });
@@ -139,7 +139,7 @@ test("tous les helpers IA passent par la fabrique de client partagée", async ()
     const source = await readFile(path.join(root, `src/lib/ai/${helper}.ts`), "utf8");
     assert.doesNotMatch(
       source,
-      /new Anthropic\(/,
+      /new Groq\(/,
       `${helper}.ts ne doit plus instancier son propre client`,
     );
     assert.match(

@@ -3,13 +3,13 @@ import "server-only";
 // AI résumé de leçon : produit un récap pédagogique court (3-5 puces) à
 // partir du texte de la leçon (textContent) et/ou de la transcription Mux.
 //
-// Modèle Claude Sonnet — bon compromis qualité/coût pour rédactionnel court.
+// Modèle Groq rapide — bon compromis qualité/coût pour du rédactionnel court.
 
-import { getAnthropicClient, isAnthropicConfigured } from "@/lib/ai/client";
-import { MODEL_SONNET } from "@/lib/ai/models";
+import { getGroqClient, getGroqText, isGroqConfigured } from "@/lib/ai/client";
+import { MODEL_FAST } from "@/lib/ai/models";
 
 export function isLessonSummaryConfigured(): boolean {
-  return isAnthropicConfigured();
+  return isGroqConfigured();
 }
 
 export interface SummarizeLessonInput {
@@ -43,12 +43,14 @@ export async function generateLessonSummary(
     return "Cette leçon n'a pas encore assez de contenu pour un résumé précis.";
   }
 
-  const client = getAnthropicClient("Résumé de leçon IA");
-  const response = await client.messages.create({
-    model: MODEL_SONNET,
-    max_tokens: 600,
-    system: SYSTEM_PROMPT,
+  const client = getGroqClient("Résumé de leçon IA");
+  const response = await client.chat.completions.create({
+    model: MODEL_FAST,
+    max_completion_tokens: 600,
+    reasoning_effort: "low",
+    citation_options: "disabled",
     messages: [
+      { role: "system", content: SYSTEM_PROMPT },
       {
         role: "user",
         content: [
@@ -62,9 +64,9 @@ export async function generateLessonSummary(
     ],
   });
 
-  const textBlock = response.content.find((b) => b.type === "text");
-  if (!textBlock || textBlock.type !== "text") {
+  const text = getGroqText(response);
+  if (!text) {
     throw new Error("Réponse IA invalide.");
   }
-  return textBlock.text.trim().slice(0, 4000);
+  return text.slice(0, 4000);
 }

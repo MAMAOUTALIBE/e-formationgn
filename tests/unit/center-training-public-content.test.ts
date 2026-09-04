@@ -85,7 +85,7 @@ test("la politique de confidentialité porte les mentions obligatoires de l'arti
   assert.match(cms, /portabilité/);
 
   // Les sous-traitants doivent être nommés, et les transferts hors UE encadrés.
-  for (const soustraitant of ["Hostinger", "Mux", "Cloudflare", "Resend", "Anthropic"]) {
+  for (const soustraitant of ["Hostinger", "Mux", "Cloudflare", "Resend", "Groq"]) {
     assert.match(cms, new RegExp(soustraitant), `sous-traitant non déclaré : ${soustraitant}`);
   }
   assert.match(cms, /hors de l'Union européenne|hors Union européenne/);

@@ -5,7 +5,7 @@
 //  - celles qui n'appellent PAS le modèle (ouverture, accessibilité, clavier,
 //    responsive, escalade) : elles tournent toujours, à chaque exécution ;
 //  - celle qui pose une vraie question : elle facture un appel API, elle est
-//    donc ignorée quand ANTHROPIC_API_KEY est absente — même conditionnement
+//    donc ignorée quand GROQ_API_KEY est absente — même conditionnement
 //    que admin-smoke.spec.ts avec ses identifiants.
 //
 // Cette séparation est délibérée : l'essentiel de ce qu'on veut garantir
@@ -14,7 +14,7 @@
 
 import { expect, test, type Page } from "@playwright/test";
 
-const MODEL_AVAILABLE = Boolean(process.env.ANTHROPIC_API_KEY);
+const MODEL_AVAILABLE = Boolean(process.env.GROQ_API_KEY);
 
 const VIEWPORTS = [
   { nom: "mobile", width: 390, height: 844 },
@@ -218,7 +218,7 @@ test.describe("Escalade vers un conseiller", () => {
 });
 
 test.describe("Réponse du modèle", () => {
-  test.skip(!MODEL_AVAILABLE, "ANTHROPIC_API_KEY absente : aucun appel facturé.");
+  test.skip(!MODEL_AVAILABLE, "GROQ_API_KEY absente : aucun appel facturé.");
 
   test("une question sur le prix n'aboutit jamais à un montant", async ({ page }) => {
     await page.goto("/");

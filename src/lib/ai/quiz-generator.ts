@@ -3,15 +3,17 @@ import "server-only";
 // AI génération de quiz : produit 3-5 questions à choix multiples à partir
 // du contenu d'une leçon (textContent ou transcript Mux).
 //
-// Modèle Claude Sonnet + tool use (output JSON contraint). On limite la
-// génération à 5 questions max pour rester sous max_tokens et éviter du
+// Modèle Groq rapide + tool use (output JSON contraint). On limite la
+// génération à 5 questions max pour rester sous la limite de sortie et éviter du
 // contenu peu pertinent.
 
-import { getAnthropicClient, isAnthropicConfigured } from "@/lib/ai/client";
-import { MODEL_SONNET } from "@/lib/ai/models";
+import { z } from "zod";
+
+import { getGroqClient, getGroqToolInput, isGroqConfigured } from "@/lib/ai/client";
+import { MODEL_FAST } from "@/lib/ai/models";
 
 export function isQuizGenConfigured(): boolean {
-  return isAnthropicConfigured();
+  return isGroqConfigured();
 }
 
 export type GeneratedQuestionKind = "SINGLE_CHOICE" | "TRUE_FALSE";
@@ -51,14 +53,32 @@ Si le contenu est trop court ou trop générique pour produire un quiz pertinent
 
 Réponds UNIQUEMENT via l'outil submit_quiz.`;
 
-interface ToolInput {
-  questions: Array<{
-    prompt: string;
-    kind: "SINGLE_CHOICE" | "TRUE_FALSE";
-    options: Array<{ label: string; isCorrect: boolean }>;
-    explanation?: string;
-  }>;
-}
+const TOOL_INPUT_SCHEMA = z
+  .object({
+    questions: z
+      .array(
+        z
+          .object({
+            prompt: z.string().min(5).max(500),
+            kind: z.enum(["SINGLE_CHOICE", "TRUE_FALSE"]),
+            options: z
+              .array(
+                z
+                  .object({
+                    label: z.string().min(1).max(300),
+                    isCorrect: z.boolean(),
+                  })
+                  .strict(),
+              )
+              .min(2)
+              .max(6),
+            explanation: z.string().max(500).optional(),
+          })
+          .strict(),
+      )
+      .max(5),
+  })
+  .strict();
 
 export async function generateQuizFromLesson(
   input: GenerateQuizInput,
@@ -69,52 +89,58 @@ export async function generateQuizFromLesson(
   }
   const target = Math.min(5, Math.max(3, input.count ?? 4));
 
-  const client = getAnthropicClient("Génération de quiz IA");
-  const response = await client.messages.create({
-    model: MODEL_SONNET,
-    max_tokens: 2000,
-    system: SYSTEM_PROMPT,
+  const client = getGroqClient("Génération de quiz IA");
+  const response = await client.chat.completions.create({
+    model: MODEL_FAST,
+    max_completion_tokens: 2000,
+    reasoning_effort: "low",
+    citation_options: "disabled",
+    parallel_tool_calls: false,
     tools: [
       {
-        name: "submit_quiz",
-        description: "Soumet la liste finale de questions de quiz.",
-        input_schema: {
-          type: "object",
-          properties: {
-            questions: {
-              type: "array",
-              minItems: 0,
-              maxItems: 5,
-              items: {
-                type: "object",
-                properties: {
-                  prompt: { type: "string", maxLength: 500 },
-                  kind: { type: "string", enum: ["SINGLE_CHOICE", "TRUE_FALSE"] },
-                  options: {
-                    type: "array",
-                    minItems: 2,
-                    maxItems: 6,
-                    items: {
-                      type: "object",
-                      properties: {
-                        label: { type: "string", maxLength: 300 },
-                        isCorrect: { type: "boolean" },
+        type: "function",
+        function: {
+          name: "submit_quiz",
+          description: "Soumet la liste finale de questions de quiz.",
+          parameters: {
+            type: "object",
+            properties: {
+              questions: {
+                type: "array",
+                minItems: 0,
+                maxItems: 5,
+                items: {
+                  type: "object",
+                  properties: {
+                    prompt: { type: "string", maxLength: 500 },
+                    kind: { type: "string", enum: ["SINGLE_CHOICE", "TRUE_FALSE"] },
+                    options: {
+                      type: "array",
+                      minItems: 2,
+                      maxItems: 6,
+                      items: {
+                        type: "object",
+                        properties: {
+                          label: { type: "string", maxLength: 300 },
+                          isCorrect: { type: "boolean" },
+                        },
+                        required: ["label", "isCorrect"],
                       },
-                      required: ["label", "isCorrect"],
                     },
+                    explanation: { type: "string", maxLength: 500 },
                   },
-                  explanation: { type: "string", maxLength: 500 },
+                  required: ["prompt", "kind", "options"],
                 },
-                required: ["prompt", "kind", "options"],
               },
             },
+            required: ["questions"],
           },
-          required: ["questions"],
         },
       },
     ],
-    tool_choice: { type: "tool", name: "submit_quiz" },
+    tool_choice: { type: "function", function: { name: "submit_quiz" } },
     messages: [
+      { role: "system", content: SYSTEM_PROMPT },
       {
         role: "user",
         content: [
@@ -129,18 +155,15 @@ export async function generateQuizFromLesson(
     ],
   });
 
-  const toolUse = response.content.find((b) => b.type === "tool_use");
-  if (!toolUse || toolUse.type !== "tool_use") {
-    return [];
-  }
-  const data = toolUse.input as ToolInput;
+  const parsed = TOOL_INPUT_SCHEMA.safeParse(
+    getGroqToolInput(response, "submit_quiz"),
+  );
+  if (!parsed.success) return [];
+  const data = parsed.data;
 
   // Validation finale côté serveur (le modèle peut déraper malgré tool schema).
   return data.questions
     .filter((q) => {
-      if (typeof q.prompt !== "string" || q.prompt.trim().length < 5) return false;
-      if (!["SINGLE_CHOICE", "TRUE_FALSE"].includes(q.kind)) return false;
-      if (!Array.isArray(q.options) || q.options.length < 2) return false;
       const correctCount = q.options.filter((o) => o.isCorrect === true).length;
       if (correctCount !== 1) return false;
       return true;
@@ -148,10 +171,10 @@ export async function generateQuizFromLesson(
     .slice(0, 5)
     .map((q) => ({
       prompt: q.prompt.trim().slice(0, 500),
-      kind: q.kind as GeneratedQuestionKind,
+      kind: q.kind,
       options: q.options.slice(0, 6).map((o) => ({
-        label: String(o.label).trim().slice(0, 300),
-        isCorrect: Boolean(o.isCorrect),
+        label: o.label.trim().slice(0, 300),
+        isCorrect: o.isCorrect,
       })),
       explanation: q.explanation?.trim().slice(0, 500),
     }));

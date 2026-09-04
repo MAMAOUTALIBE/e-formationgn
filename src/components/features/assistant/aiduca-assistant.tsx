@@ -2,7 +2,7 @@
 
 // Widget public Aiduca-IA : bouton flottant + panneau de conversation.
 //
-// Le composant n'est monté que si la plateforme a une clé Anthropic (décision
+// Le composant n'est monté que si la plateforme a une clé Groq (décision
 // prise côté serveur dans assistant-mount.tsx) : pas de bouton mort quand la
 // fonctionnalité est désactivée.
 //

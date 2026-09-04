@@ -3,14 +3,16 @@ import "server-only";
 // AI SEO suggestions — propose meta title, meta description et points clés
 // "ce que vous allez apprendre" à partir du titre + description du cours.
 //
-// Modèle : Claude Sonnet (plus rapide + moins coûteux que Opus pour du
-// court rédactionnel). Pas de cache car les requêtes sont uniques par cours.
+// Modèle Groq rapide pour du court rédactionnel. Pas de cache car les requêtes
+// sont uniques par cours.
 
-import { getAnthropicClient, isAnthropicConfigured } from "@/lib/ai/client";
-import { MODEL_SONNET } from "@/lib/ai/models";
+import { z } from "zod";
+
+import { getGroqClient, getGroqToolInput, isGroqConfigured } from "@/lib/ai/client";
+import { MODEL_FAST } from "@/lib/ai/models";
 
 export function isSeoAiConfigured(): boolean {
-  return isAnthropicConfigured();
+  return isGroqConfigured();
 }
 
 export interface SeoSuggestionInput {
@@ -39,16 +41,18 @@ Règles :
 - Pas de superlatifs vides ("incroyable", "le meilleur")
 - Réponds UNIQUEMENT en JSON valide selon le schéma fourni — aucun texte avant ou après.`;
 
-interface ToolInputSchema {
-  metaTitle: string;
-  metaDescription: string;
-  whatYouWillLearn: string[];
-}
+const TOOL_INPUT_SCHEMA = z
+  .object({
+    metaTitle: z.string().min(1).max(70),
+    metaDescription: z.string().min(1).max(170),
+    whatYouWillLearn: z.array(z.string().min(1).max(140)).min(3).max(7),
+  })
+  .strict();
 
 export async function generateSeoSuggestions(
   input: SeoSuggestionInput,
 ): Promise<SeoSuggestion> {
-  const client = getAnthropicClient("Suggestions SEO IA");
+  const client = getGroqClient("Suggestions SEO IA");
 
   const userMessage = [
     `Titre : ${input.title}`,
@@ -60,48 +64,58 @@ export async function generateSeoSuggestions(
     .filter(Boolean)
     .join("\n");
 
-  const response = await client.messages.create({
-    model: MODEL_SONNET,
-    max_tokens: 800,
-    system: SYSTEM_PROMPT,
+  const response = await client.chat.completions.create({
+    model: MODEL_FAST,
+    max_completion_tokens: 800,
+    reasoning_effort: "low",
+    citation_options: "disabled",
+    parallel_tool_calls: false,
     tools: [
       {
-        name: "submit_seo",
-        description: "Soumet la proposition SEO finale.",
-        input_schema: {
-          type: "object",
-          properties: {
-            metaTitle: {
-              type: "string",
-              description: "Titre SEO (60 chars max)",
-              maxLength: 70,
+        type: "function",
+        function: {
+          name: "submit_seo",
+          description: "Soumet la proposition SEO finale.",
+          parameters: {
+            type: "object",
+            properties: {
+              metaTitle: {
+                type: "string",
+                description: "Titre SEO (60 chars max)",
+                maxLength: 70,
+              },
+              metaDescription: {
+                type: "string",
+                description: "Description SEO (155 chars max)",
+                maxLength: 170,
+              },
+              whatYouWillLearn: {
+                type: "array",
+                items: { type: "string", maxLength: 140 },
+                minItems: 3,
+                maxItems: 7,
+                description: "Bullets concrètes commençant par un verbe d'action",
+              },
             },
-            metaDescription: {
-              type: "string",
-              description: "Description SEO (155 chars max)",
-              maxLength: 170,
-            },
-            whatYouWillLearn: {
-              type: "array",
-              items: { type: "string", maxLength: 140 },
-              minItems: 3,
-              maxItems: 7,
-              description: "Bullets concrètes commençant par un verbe d'action",
-            },
+            required: ["metaTitle", "metaDescription", "whatYouWillLearn"],
           },
-          required: ["metaTitle", "metaDescription", "whatYouWillLearn"],
         },
       },
     ],
-    tool_choice: { type: "tool", name: "submit_seo" },
-    messages: [{ role: "user", content: userMessage }],
+    tool_choice: { type: "function", function: { name: "submit_seo" } },
+    messages: [
+      { role: "system", content: SYSTEM_PROMPT },
+      { role: "user", content: userMessage },
+    ],
   });
 
-  const toolUse = response.content.find((b) => b.type === "tool_use");
-  if (!toolUse || toolUse.type !== "tool_use") {
+  const parsed = TOOL_INPUT_SCHEMA.safeParse(
+    getGroqToolInput(response, "submit_seo"),
+  );
+  if (!parsed.success) {
     throw new Error("Le modèle n'a pas renvoyé de proposition SEO valide.");
   }
-  const data = toolUse.input as ToolInputSchema;
+  const data = parsed.data;
 
   // Garde-fous longueur côté serveur (au cas où le modèle déborde)
   return {
