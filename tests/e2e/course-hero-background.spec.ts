@@ -45,11 +45,16 @@ test.describe.serial("Image d’arrière-plan du hero d’une formation", () => 
     await page.goto(`/cours/${QA_COURSES.instructor}`);
     await expect(page.getByRole("heading", { name: "QA — Formation du formateur un" })).toBeVisible();
     const hero = page.locator("main > section").first();
+    const background = hero.locator("[aria-hidden]").first();
+    const veil = hero.locator("[aria-hidden]").nth(1);
     await expect(hero).toBeVisible();
-    await expect(hero).toHaveClass(/bg-cover/);
-    await expect(hero).toHaveClass(/bg-center/);
-    await expect(hero.locator(".bg-black\\/55")).toHaveCount(1);
-    expect(await hero.evaluate((element) => getComputedStyle(element).backgroundImage)).toContain("url(");
+    await expect(background).toHaveClass(/bg-cover/);
+    await expect(background).toHaveClass(/bg-center/);
+    await expect(background).toHaveClass(/blur-\[1\.5px\]/);
+    expect(await background.evaluate((element) => getComputedStyle(element).backgroundImage)).toContain("url(");
+    expect(await veil.evaluate((element) => getComputedStyle(element).backgroundImage)).toContain(
+      "linear-gradient",
+    );
     expect(Math.round((await hero.boundingBox())?.width ?? 0)).toBe(
       await page.evaluate(() => window.innerWidth),
     );
@@ -59,7 +64,7 @@ test.describe.serial("Image d’arrière-plan du hero d’une formation", () => 
     await expect(page.getByRole("heading", { name: "QA — Formation du formateur un" })).toBeVisible();
     const mobileHero = page.locator("main > section").first();
     await expect(mobileHero).toBeVisible();
-    await expect(mobileHero).toHaveClass(/bg-cover/);
+    await expect(mobileHero.locator("[aria-hidden]").first()).toHaveClass(/bg-cover/);
     expect(Math.round((await mobileHero.boundingBox())?.width ?? 0)).toBe(390);
 
     await page.setViewportSize({ width: 1280, height: 720 });
@@ -72,9 +77,11 @@ test.describe.serial("Image d’arrière-plan du hero d’une formation", () => 
     await page.goto(`/cours/${QA_COURSES.instructor}`);
     await expect(page.getByRole("heading", { name: "QA — Formation du formateur un" })).toBeVisible();
     const defaultHero = page.locator("main > section").first();
-    await expect(defaultHero).not.toHaveClass(/bg-cover/);
-    await expect(defaultHero.locator(".bg-black\\/55")).toHaveCount(0);
-    expect(await defaultHero.evaluate((element) => getComputedStyle(element).backgroundImage)).toContain("linear-gradient");
+    const defaultBackground = defaultHero.locator("[aria-hidden]").first();
+    await expect(defaultBackground).toHaveClass(/bg-cover/);
+    expect(
+      await defaultBackground.evaluate((element) => getComputedStyle(element).backgroundImage),
+    ).toContain("course-hero-solar-digital.webp");
   });
 
   test("la route d’import refuse un visiteur anonyme", async ({ browser }) => {

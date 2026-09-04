@@ -179,6 +179,9 @@ export default async function CourseDetailPage({
     isFeatured: course.isFeatured,
   });
 
+  const heroBackgroundUrl =
+    course.heroBackgroundUrl ?? "/images/course-hero-solar-digital.webp";
+
   // Card prix : extraite en fragment pour être réutilisée dans la sticky
   // desktop ET dans la version inline mobile (sous le hero).
   const accessCard = (
@@ -242,21 +245,16 @@ export default async function CourseDetailPage({
         {/* Hero — fond plein largeur ; la sticky card de droite (desktop)
             est positionnée par-dessus via le grid du bloc suivant avec
             marge négative `lg:-mt-72`. */}
-        <section
-          className={`relative isolate border-b border-[#d8e4df] py-6 text-foreground sm:py-8 ${
-            course.heroBackgroundUrl
-              ? "bg-cover bg-center"
-              : "bg-[linear-gradient(125deg,#f1faf6_0%,#f8fcfa_72%,#edf8f2_100%)]"
-          }`}
-          style={
-            course.heroBackgroundUrl
-              ? { backgroundImage: `url(${JSON.stringify(course.heroBackgroundUrl)})` }
-              : undefined
-          }
-        >
-          {course.heroBackgroundUrl ? (
-            <div className="absolute inset-0 -z-10 bg-black/55" aria-hidden />
-          ) : null}
+        <section className="relative isolate overflow-hidden border-b border-[#d8e4df] py-6 text-foreground sm:py-8">
+          <div
+            className="absolute -inset-1 -z-20 bg-cover bg-center blur-[1.5px]"
+            style={{ backgroundImage: `url(${JSON.stringify(heroBackgroundUrl)})` }}
+            aria-hidden
+          />
+          <div
+            className="absolute inset-0 -z-10 bg-[linear-gradient(90deg,rgba(255,255,255,0.96)_0%,rgba(255,255,255,0.9)_42%,rgba(255,255,255,0.36)_72%,rgba(255,255,255,0.12)_100%)]"
+            aria-hidden
+          />
           <Container className="grid gap-8 lg:grid-cols-[1fr_360px]">
             <div>
               <Breadcrumbs
@@ -388,6 +386,15 @@ export default async function CourseDetailPage({
               </div>
             </section>
 
+            <section aria-labelledby="description">
+              <h2 id="description" className="text-xl font-semibold text-foreground">
+                Description
+              </h2>
+              <div className="prose prose-sm mt-4 max-w-none whitespace-pre-line text-muted-foreground">
+                {course.description}
+              </div>
+            </section>
+
             {course.requirements && course.requirements.length > 0 ? (
               <section aria-labelledby="requirements">
                 <h2 id="requirements" className="text-xl font-semibold text-foreground">
@@ -400,15 +407,6 @@ export default async function CourseDetailPage({
                 </ul>
               </section>
             ) : null}
-
-            <section aria-labelledby="description">
-              <h2 id="description" className="text-xl font-semibold text-foreground">
-                Description
-              </h2>
-              <div className="prose prose-sm mt-4 max-w-none whitespace-pre-line text-muted-foreground">
-                {course.description}
-              </div>
-            </section>
 
             {course.targetAudience && course.targetAudience.length > 0 ? (
               <section aria-labelledby="audience">

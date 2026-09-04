@@ -22,11 +22,13 @@ test("la fiche formation reprend la navigation et la carte sticky de la maquette
   assert.match(page, /Attestation de fin de formation/);
 });
 
-test("le hero utilise uniquement l’image propre à la formation et conserve son fond actuel par défaut", () => {
+test("le hero utilise l’image propre à la formation ou le fond photovoltaïque par défaut", () => {
   assert.match(page, /course\.heroBackgroundUrl/);
+  assert.match(page, /course-hero-solar-digital\.webp/);
   assert.match(page, /bg-cover bg-center/);
-  assert.match(page, /bg-black\/55/);
-  assert.match(page, /bg-\[linear-gradient\(125deg,#f1faf6_0%,#f8fcfa_72%,#edf8f2_100%\)\]/);
+  assert.match(page, /blur-\[1\.5px\]/);
+  assert.match(page, /linear-gradient\(90deg,rgba\(255,255,255,0\.96\)/);
+  assert.doesNotMatch(page, /bg-black\/55/);
 });
 
 test("les libellés publics utilisent apprenant", () => {
@@ -45,4 +47,16 @@ test("le programme présente uniquement des cartes de section statiques", () => 
   assert.doesNotMatch(curriculum, /aria-expanded|onClick|ChevronDown/);
   assert.doesNotMatch(curriculum, /Tout masquer|Tout afficher/);
   assert.doesNotMatch(curriculum, /lesson\.title|videoDurationSeconds|formatLessonDuration/);
+});
+
+test("la description apparaît immédiatement après le programme, avant les pré-requis", () => {
+  const programmeIndex = page.indexOf('<section id="programme"');
+  const descriptionIndex = page.indexOf('<section aria-labelledby="description"');
+  const requirementsIndex = page.indexOf("{course.requirements &&");
+
+  assert.notEqual(programmeIndex, -1);
+  assert.notEqual(descriptionIndex, -1);
+  assert.notEqual(requirementsIndex, -1);
+  assert.ok(programmeIndex < descriptionIndex);
+  assert.ok(descriptionIndex < requirementsIndex);
 });
