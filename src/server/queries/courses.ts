@@ -86,7 +86,8 @@ export function serializeCourseListItem(
 
 interface ListCoursesParams {
   filters?: Partial<CourseFilters>;
-  take?: number;
+  /** `null` désactive la limite pour l'affichage explicite « Voir tout ». */
+  take?: number | null;
   skip?: number;
 }
 
@@ -179,11 +180,11 @@ function buildWhere(filters: Partial<CourseFilters> = {}): Prisma.CourseWhereInp
   return where;
 }
 
-export async function listPublishedCourses({
-  filters = {},
-  take = COURSES_PER_PAGE,
-  skip = 0,
-}: ListCoursesParams = {}): Promise<ListCoursesResult> {
+export async function listPublishedCourses(
+  params: ListCoursesParams = {},
+): Promise<ListCoursesResult> {
+  const { filters = {}, skip = 0 } = params;
+  const take = params.take === null ? undefined : (params.take ?? COURSES_PER_PAGE);
   const where = buildWhere(filters);
   const sort = filters.sort ?? "relevance";
   const page = filters.page ?? 1;
@@ -202,6 +203,10 @@ export async function listPublishedCourses({
     const sqlFilters = buildFullTextFilterSql(filters);
     const tsQuery = Prisma.sql`plainto_tsquery('french', ${term})`;
     const sqlOrder = buildFullTextOrderSql(sort, tsQuery);
+    const pagination =
+      typeof take === "number"
+        ? Prisma.sql`LIMIT ${take} OFFSET ${skip}`
+        : Prisma.empty;
 
     // 1 — IDs paginés + ordre stable côté DB
     const idRows = await prisma.$queryRaw<Array<{ id: string }>>(
@@ -213,7 +218,7 @@ export async function listPublishedCourses({
           AND c."searchVector" @@ ${tsQuery}
           ${sqlFilters.where}
         ORDER BY ${sqlOrder}
-        LIMIT ${take} OFFSET ${skip}
+        ${pagination}
       `,
     );
 
@@ -230,7 +235,13 @@ export async function listPublishedCourses({
     );
     const total = Number(countRows[0]?.total ?? 0);
     if (idRows.length === 0) {
-      return { items: [], total, page, pageCount: Math.max(1, Math.ceil(total / take)), perPage: take };
+      return {
+        items: [],
+        total,
+        page,
+        pageCount: take ? Math.max(1, Math.ceil(total / take)) : 1,
+        perPage: take ?? total,
+      };
     }
 
     // 3 — Hydrate via Prisma. `findMany` ne garantit pas l'ordre du `in`,
@@ -250,8 +261,8 @@ export async function listPublishedCourses({
       items: ordered.map(serializeCourseListItem),
       total,
       page,
-      pageCount: Math.max(1, Math.ceil(total / take)),
-      perPage: take,
+      pageCount: take ? Math.max(1, Math.ceil(total / take)) : 1,
+      perPage: take ?? total,
     };
   }
 
@@ -263,7 +274,7 @@ export async function listPublishedCourses({
       omit: COURSE_PUBLIC_OMIT,
       orderBy: buildOrderBy(sort),
       take,
-      skip,
+      skip: take ? skip : undefined,
     }),
     prisma.course.count({ where }),
   ]);
@@ -272,8 +283,8 @@ export async function listPublishedCourses({
     items: items.map(serializeCourseListItem),
     total,
     page,
-    pageCount: Math.max(1, Math.ceil(total / take)),
-    perPage: take,
+    pageCount: take ? Math.max(1, Math.ceil(total / take)) : 1,
+    perPage: take ?? total,
   };
 }
 

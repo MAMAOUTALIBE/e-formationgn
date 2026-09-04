@@ -1,4 +1,4 @@
-// Tests E2E catalogue — protège la refonte Sprint 1 (pagination réelle 12/page)
+// Tests E2E catalogue — protège la refonte Sprint 1 (8 cartes avant « Voir tout »)
 // et Sprint 4 (recherche full-text raw SQL avec tie-breaker stable).
 
 import { expect, test } from "@playwright/test";
@@ -26,6 +26,22 @@ test.describe("Catalogue — pagination", () => {
     expect(response.status()).toBe(200);
   });
 
+  test("le catalogue affiche au plus 8 cartes puis permet de tout voir", async ({
+    request,
+  }) => {
+    const limited = await request.get("/cours");
+    const all = await request.get("/cours?view=all");
+    expect(limited.status()).toBe(200);
+    expect(all.status()).toBe(200);
+
+    const limitedSlugs = extractCourseSlugs(await limited.text());
+    const allHtml = await all.text();
+    const allSlugs = extractCourseSlugs(allHtml);
+    expect(limitedSlugs.length).toBeLessThanOrEqual(8);
+    expect(allSlugs.length).toBeGreaterThanOrEqual(limitedSlugs.length);
+    expect(allHtml).not.toContain("Voir toutes les formations →");
+  });
+
   test("page invalide est plafonnée et ne casse pas", async ({ request }) => {
     // courseFiltersSchema plafonne page à 500.
     const response = await request.get("/cours?page=99999");
@@ -37,7 +53,7 @@ test.describe("Catalogue — pagination", () => {
 
 test.describe("Catalogue — filtres", () => {
   test("filtre par catégorie restreint la liste", async ({ request }) => {
-    const all = await request.get("/cours");
+    const all = await request.get("/cours?view=all");
     const filtered = await request.get(`/cours?category=${CATEGORY_SLUG}`);
     expect(filtered.status()).toBe(200);
     // Au moins une URL diffère — sauf cas pathologique d'une seule catégorie.
@@ -59,7 +75,7 @@ test.describe("Catalogue — filtres", () => {
     expect(response.status()).toBe(200);
   });
 
-  test("la barre desktop prépare, applique et réinitialise les filtres", async ({
+  test("la barre desktop prépare, applique et réinitialise la catégorie", async ({
     page,
   }) => {
     await page.setViewportSize({ width: 1440, height: 1100 });
@@ -71,21 +87,22 @@ test.describe("Catalogue — filtres", () => {
     await expect(sidebar).toBeVisible();
     await expect(sidebar.getByRole("heading", { name: "Filtres" })).toBeVisible();
 
-    for (const group of ["Catégorie", "Note", "Niveau", "Durée"]) {
-      await expect(sidebar.getByRole("button", { name: group })).toBeVisible();
+    await expect(sidebar.getByRole("button", { name: "Catégorie" })).toBeVisible();
+    for (const removed of ["Note", "Niveau", "Durée"]) {
+      await expect(sidebar.getByText(removed, { exact: true })).toHaveCount(0);
     }
 
-    const beginner = sidebar.getByRole("checkbox", { name: /Débutant/ });
-    await beginner.check();
-    await expect(page).not.toHaveURL(/level=BEGINNER/);
+    const category = sidebar.locator('input[type="radio"]').nth(1);
+    await category.check();
+    await expect(page).not.toHaveURL(/category=/);
 
     await sidebar.getByRole("button", { name: "Appliquer" }).click();
-    await expect(page).toHaveURL(/level=BEGINNER/);
+    await expect(page).toHaveURL(/category=/);
 
     await sidebar.getByRole("button", { name: "Réinitialiser" }).click();
-    await expect(beginner).not.toBeChecked();
+    await expect(category).not.toBeChecked();
     await sidebar.getByRole("button", { name: "Appliquer" }).click();
-    await expect(page).not.toHaveURL(/level=/);
+    await expect(page).not.toHaveURL(/category=/);
     await expect(page).toHaveURL(/q=fondamentaux/);
     await expect(page).toHaveURL(/sort=newest/);
   });

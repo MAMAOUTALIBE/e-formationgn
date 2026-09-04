@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Image from "next/image";
+import Link from "next/link";
 
 import { auth } from "@/auth";
 import { CourseEmptyState } from "@/components/features/courses/course-empty-state";
@@ -8,7 +9,6 @@ import { CourseFilterSidebar } from "@/components/features/courses/course-filter
 import { CourseResultsArea } from "@/components/features/courses/course-results-area";
 import { FilterTransitionProvider } from "@/components/features/courses/filter-transition-context";
 import { CourseMobileFilterBar } from "@/components/features/courses/course-mobile-filter-bar";
-import { CoursePagination } from "@/components/features/courses/course-pagination";
 import { CourseSearchBar } from "@/components/features/courses/course-search-bar";
 import { SiteFooter } from "@/components/layout/site-footer";
 import { SiteHeader } from "@/components/layout/site-header";
@@ -37,15 +37,16 @@ interface PageProps {
 export default async function CoursesCatalogPage({ searchParams }: PageProps) {
   const params = await searchParams;
   const filters = courseFiltersSchema.parse(params);
+  const showAll = filters.view === "all";
   const session = await auth();
   const currency = session?.user.preferredCurrency ?? "EUR";
 
-  const [{ items, total, page, pageCount }, categories, filterCounts] =
+  const [{ items, total }, categories, filterCounts] =
     await Promise.all([
       listPublishedCourses({
         filters,
-        take: COURSES_PER_PAGE,
-        skip: (filters.page - 1) * COURSES_PER_PAGE,
+        take: showAll ? null : COURSES_PER_PAGE,
+        skip: showAll ? 0 : (filters.page - 1) * COURSES_PER_PAGE,
       }),
       listCategories(),
       getCourseFilterCounts(filters),
@@ -127,12 +128,16 @@ export default async function CoursesCatalogPage({ searchParams }: PageProps) {
                       total={total}
                       searchTerm={filters.q}
                     />
-                    <CoursePagination
-                      currentPage={page}
-                      pageCount={pageCount}
-                      searchParams={params}
-                      basePath="/cours"
-                    />
+                    {!showAll && total > COURSES_PER_PAGE ? (
+                      <div className="flex justify-center pt-2">
+                        <Link
+                          href={buildViewAllHref(params)}
+                          className="inline-flex min-h-11 items-center justify-center rounded-full bg-[color:var(--brand-secondary)] px-6 text-sm font-semibold text-white shadow-sm transition hover:brightness-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--brand-secondary)] focus-visible:ring-offset-2"
+                        >
+                          Voir toutes les formations →
+                        </Link>
+                      </div>
+                    ) : null}
                   </>
                 )}
               </div>
@@ -150,4 +155,17 @@ export default async function CoursesCatalogPage({ searchParams }: PageProps) {
       <SiteFooter />
     </>
   );
+}
+
+function buildViewAllHref(
+  searchParams: Record<string, string | string[] | undefined>,
+): string {
+  const next = new URLSearchParams();
+  for (const [key, value] of Object.entries(searchParams)) {
+    if (typeof value === "string" && value.length > 0) next.set(key, value);
+    else if (Array.isArray(value) && value.length > 0) next.set(key, value[0]);
+  }
+  next.delete("page");
+  next.set("view", "all");
+  return `/cours?${next.toString()}`;
 }

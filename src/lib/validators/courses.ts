@@ -24,7 +24,7 @@ export const DURATION_FILTERS = ["all", "short", "medium", "long"] as const;
 export type DurationFilter = (typeof DURATION_FILTERS)[number];
 // short  = < 3h, medium = 3-10h, long = > 10h
 
-export const COURSES_PER_PAGE = 12;
+export const COURSES_PER_PAGE = 8;
 
 const stringOrFirst = z
   .preprocess((value) => (Array.isArray(value) ? value[0] : value), z.string())
@@ -71,6 +71,7 @@ export const courseFiltersSchema = z.object({
       ? (value as CourseSort)
       : ("relevance" as CourseSort);
   }),
+  view: stringOrFirst.transform((value) => (value === "all" ? ("all" as const) : undefined)),
   page: stringOrFirst.transform((value) => {
     if (!value) return 1;
     const parsed = Number(value);
