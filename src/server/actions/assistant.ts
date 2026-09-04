@@ -21,6 +21,11 @@ import {
   buildUnavailableAnswer,
   type AssistantAnswer,
 } from "@/lib/assistant/contract";
+import {
+  buildContactProspectMessage,
+  contactAssistantLeadSchema,
+  type ContactAssistantLeadInput,
+} from "@/lib/assistant/contact-prospect";
 import { checkIpRateLimit, checkUserRateLimit, clientIpHash, rateLimitMessage } from "@/lib/auth/rate-limit-ip";
 import { BRAND } from "@/lib/brand";
 import { sendTransactionalEmail } from "@/lib/email/client";
@@ -389,6 +394,104 @@ export async function submitAssistantLead(
     };
   } catch (error) {
     logError("assistant-lead", error);
+    return {
+      ok: false,
+      message:
+        "L'envoi a échoué. Contactez directement l'équipe au " +
+        `${BRAND.phone} ou à ${BRAND.email}.`,
+    };
+  }
+}
+
+/**
+ * Enregistre le parcours guidé de la page Contact dans la liste Prospects
+ * existante. La mutation n'est appelée qu'après le consentement explicite du
+ * visiteur ; le serveur le vérifie de nouveau avant toute écriture.
+ */
+export async function submitContactAssistantLead(
+  input: ContactAssistantLeadInput,
+): Promise<AssistantLeadResult> {
+  const parsed = contactAssistantLeadSchema.safeParse(input);
+  if (!parsed.success) {
+    const fieldErrors: Record<string, string> = {};
+    for (const issue of parsed.error.issues) {
+      const key = String(issue.path[0] ?? "");
+      if (key && !fieldErrors[key]) fieldErrors[key] = issue.message;
+    }
+    return {
+      ok: false,
+      message: "Certaines informations sont invalides.",
+      fieldErrors,
+    };
+  }
+
+  const limit = await checkIpRateLimit({
+    prefix: "contact-assistant-lead",
+    windowMs: 60 * 60 * 1000,
+    max: 5,
+  });
+  if (!limit.ok) {
+    return { ok: false, message: rateLimitMessage(limit.resetAt) };
+  }
+
+  try {
+    const jar = await cookies();
+    const publicId = jar.get(CONVERSATION_COOKIE)?.value;
+    const conversation = publicId
+      ? await prisma.assistantConversation.findUnique({
+          where: { publicId },
+          select: { id: true },
+        })
+      : null;
+
+    const transcriptNewestFirst = conversation
+      ? await prisma.assistantMessage.findMany({
+          where: { conversationId: conversation.id },
+          orderBy: [{ createdAt: "desc" }, { role: "desc" }],
+          take: HISTORY_TURNS,
+          select: { role: true, content: true },
+        })
+      : [];
+    const transcript = transcriptNewestFirst.reverse();
+    const message = buildContactProspectMessage(parsed.data);
+
+    const lead = await prisma.assistantLead.create({
+      data: {
+        conversationId: conversation?.id ?? null,
+        name: parsed.data.name,
+        email: parsed.data.email,
+        phone: parsed.data.phone,
+        message,
+        ipHash: await clientIpHash(),
+      },
+      select: { id: true },
+    });
+
+    if (conversation) {
+      await prisma.assistantConversation.update({
+        where: { id: conversation.id },
+        data: { escalated: true },
+      });
+    }
+
+    await notifyTeam({
+      leadId: lead.id,
+      name: parsed.data.name,
+      email: parsed.data.email,
+      phone: parsed.data.phone,
+      message,
+      courseTitle: parsed.data.training,
+      transcript,
+    });
+
+    return {
+      ok: true,
+      message:
+        "Merci, vos informations ont été ajoutées à notre liste de prospection. " +
+        "Un conseiller Aiduca vous recontactera sous 48 heures ouvrées.",
+    };
+  } catch (error) {
+    logError("contact-assistant-lead", error);
     return {
       ok: false,
       message:

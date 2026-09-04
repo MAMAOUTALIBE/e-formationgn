@@ -6,8 +6,9 @@
 // vingtaine de pages publiques rendent `SiteFooter`, et les oublier une à une
 // est le moyen le plus sûr de livrer un assistant absent de la moitié du site.
 //
-// Trois exclusions, chacune pour une raison différente :
+// Exclusions, chacune pour une raison différente :
 //  - /admin et /formateur ont déjà leur propre assistant d'exploitation ;
+//  - /contact possède son parcours Aiduca-IA intégré ;
 //  - l'atelier de leçon a le tuteur pédagogique, ancré sur la leçon en cours ;
 //  - les écrans d'authentification doivent rester sans distraction.
 
@@ -18,6 +19,7 @@ import { AiducaAssistant } from "@/components/features/assistant/aiduca-assistan
 const HIDDEN_PREFIXES = [
   "/admin",
   "/formateur",
+  "/contact",
   "/connexion",
   "/inscription",
   "/mot-de-passe-oublie",
