@@ -10,7 +10,8 @@ const search = readFileSync(
 
 test("le hero du catalogue utilise le fond IA dédié sans modifier ses textes", () => {
   assert.match(catalog, /catalog-hero-ai-renovation\.webp/);
-  assert.match(catalog, /min-h-\[clamp\(22rem,34vw,41rem\)\]/);
+  assert.doesNotMatch(catalog, /min-h-\[clamp\(22rem,34vw,41rem\)\]/);
+  assert.match(catalog, /relative isolate overflow-hidden/);
   assert.match(catalog, /Catalogue des formations/);
   assert.match(catalog, /label: "Accueil"/);
   assert.match(catalog, /label: "Catalogue"/);

@@ -28,12 +28,14 @@ interface CourseMobileFilterBarProps {
     ratings?: Record<string, number>;
   };
   hideCategory?: boolean;
+  categoryOnly?: boolean;
 }
 
 export function CourseMobileFilterBar({
   categories,
   counts,
   hideCategory,
+  categoryOnly = false,
 }: CourseMobileFilterBarProps) {
   const router = useRouter();
   const params = useSearchParams();
@@ -43,12 +45,15 @@ export function CourseMobileFilterBar({
 
   const currentSort = params.get("sort") ?? "relevance";
 
-  const activeCount =
-    (params.get("category") ? 1 : 0) +
-    (params.get("level") ? 1 : 0) +
-    (params.get("price") ? 1 : 0) +
-    (params.get("duration") ? 1 : 0) +
-    (params.get("rating") ? 1 : 0);
+  const activeCount = categoryOnly
+    ? params.get("category")
+      ? 1
+      : 0
+    : (params.get("category") ? 1 : 0) +
+      (params.get("level") ? 1 : 0) +
+      (params.get("price") ? 1 : 0) +
+      (params.get("duration") ? 1 : 0) +
+      (params.get("rating") ? 1 : 0);
 
   function setSort(value: string) {
     const next = new URLSearchParams(params.toString());
@@ -70,7 +75,7 @@ export function CourseMobileFilterBar({
           className="flex items-center justify-center gap-2 py-3 text-sm font-medium text-foreground hover:bg-muted"
         >
           <SlidersHorizontal className="h-4 w-4" />
-          Filtres
+          {categoryOnly ? "Catégorie" : "Filtres"}
           {activeCount > 0 ? (
             <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-[color:var(--brand-secondary)] px-1.5 text-[10px] font-semibold text-white">
               {activeCount}
@@ -95,6 +100,7 @@ export function CourseMobileFilterBar({
         categories={categories}
         counts={counts}
         hideCategory={hideCategory}
+        categoryOnly={categoryOnly}
       />
 
       <DetailDrawer

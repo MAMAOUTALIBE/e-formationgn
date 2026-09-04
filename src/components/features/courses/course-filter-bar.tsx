@@ -38,6 +38,7 @@ interface CourseFilterBarProps {
   categories: CategoryOption[];
   counts?: CourseFilterCountsProp;
   hideCategory?: boolean;
+  categoryOnly?: boolean;
   className?: string;
 }
 
@@ -51,6 +52,7 @@ export function CourseFilterBar({
   categories,
   counts,
   hideCategory,
+  categoryOnly = false,
   className,
 }: CourseFilterBarProps) {
   const router = useRouter();
@@ -75,12 +77,18 @@ export function CourseFilterBar({
         if (!value) next.delete(key);
         else next.set(key, value);
       }
+      if (categoryOnly) {
+        next.delete("level");
+        next.delete("duration");
+        next.delete("rating");
+        next.delete("price");
+      }
       next.delete("page");
       startTransition(() => {
         router.push(`?${next.toString()}`, { scroll: false });
       });
     },
-    [params, router, startTransition],
+    [categoryOnly, params, router, startTransition],
   );
 
   function reset() {
@@ -92,11 +100,14 @@ export function CourseFilterBar({
     });
   }
 
-  const activeCount =
-    (currentCategory ? 1 : 0) +
-    currentLevels.length +
-    currentDurations.length +
-    (currentRating ? 1 : 0);
+  const activeCount = categoryOnly
+    ? currentCategory
+      ? 1
+      : 0
+    : (currentCategory ? 1 : 0) +
+      currentLevels.length +
+      currentDurations.length +
+      (currentRating ? 1 : 0);
 
   const categoryName =
     categories.find((c) => c.slug === currentCategory)?.name ?? "";
@@ -111,19 +122,21 @@ export function CourseFilterBar({
         role="toolbar"
         aria-label="Filtres du catalogue"
       >
-        <button
-          type="button"
-          onClick={() => setDrawerOpen(true)}
-          className="inline-flex items-center gap-2 rounded-full border border-foreground/30 bg-card px-4 py-2 text-sm font-medium text-foreground hover:bg-muted"
-        >
-          <SlidersHorizontal className="h-4 w-4" />
-          Tous les filtres
-          {activeCount > 0 ? (
-            <span className="ml-1 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-[color:var(--brand-secondary)] px-1.5 text-[10px] font-semibold text-white">
-              {activeCount}
-            </span>
-          ) : null}
-        </button>
+        {!categoryOnly ? (
+          <button
+            type="button"
+            onClick={() => setDrawerOpen(true)}
+            className="inline-flex items-center gap-2 rounded-full border border-foreground/30 bg-card px-4 py-2 text-sm font-medium text-foreground hover:bg-muted"
+          >
+            <SlidersHorizontal className="h-4 w-4" />
+            Tous les filtres
+            {activeCount > 0 ? (
+              <span className="ml-1 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-[color:var(--brand-secondary)] px-1.5 text-[10px] font-semibold text-white">
+                {activeCount}
+              </span>
+            ) : null}
+          </button>
+        ) : null}
 
         {!hideCategory && categories.length > 0 ? (
           <FilterChip
@@ -161,115 +174,121 @@ export function CourseFilterBar({
           </FilterChip>
         ) : null}
 
-        <FilterChip
-          label="Niveau"
-          value={currentLevelRaw}
-          valueLabel={
-            currentLevels.length === 1
-              ? COURSE_LEVEL_LABELS[currentLevels[0] as keyof typeof COURSE_LEVEL_LABELS]
-              : currentLevels.length > 1
-                ? `${currentLevels.length} sélectionnés`
-                : ""
-          }
-          onClear={() => update({ level: undefined })}
-        >
-          {(close) => (
-            <FilterMenu>
-              <FilterOption
-                selected={!currentLevel}
-                onClick={() => {
-                  update({ level: undefined });
-                  close();
-                }}
-              >
-                Tous les niveaux
-              </FilterOption>
-              {COURSE_LEVELS.map((lv) => (
+        {!categoryOnly ? (
+          <FilterChip
+            label="Niveau"
+            value={currentLevelRaw}
+            valueLabel={
+              currentLevels.length === 1
+                ? COURSE_LEVEL_LABELS[currentLevels[0] as keyof typeof COURSE_LEVEL_LABELS]
+                : currentLevels.length > 1
+                  ? `${currentLevels.length} sélectionnés`
+                  : ""
+            }
+            onClear={() => update({ level: undefined })}
+          >
+            {(close) => (
+              <FilterMenu>
                 <FilterOption
-                  key={lv}
-                  selected={currentLevel === lv}
+                  selected={!currentLevel}
                   onClick={() => {
-                    update({ level: lv });
+                    update({ level: undefined });
                     close();
                   }}
                 >
-                  {COURSE_LEVEL_LABELS[lv]}
-                  {countSuffix(counts?.levels?.[lv])}
+                  Tous les niveaux
                 </FilterOption>
-              ))}
-            </FilterMenu>
-          )}
-        </FilterChip>
+                {COURSE_LEVELS.map((lv) => (
+                  <FilterOption
+                    key={lv}
+                    selected={currentLevel === lv}
+                    onClick={() => {
+                      update({ level: lv });
+                      close();
+                    }}
+                  >
+                    {COURSE_LEVEL_LABELS[lv]}
+                    {countSuffix(counts?.levels?.[lv])}
+                  </FilterOption>
+                ))}
+              </FilterMenu>
+            )}
+          </FilterChip>
+        ) : null}
 
-        <FilterChip
-          label="Durée"
-          value={currentDurationRaw}
-          valueLabel={
-            currentDurations.length === 1
-              ? DURATION_FILTER_LABELS[currentDurations[0] as keyof typeof DURATION_FILTER_LABELS]
-              : currentDurations.length > 1
-                ? `${currentDurations.length} sélectionnées`
-                : ""
-          }
-          onClear={() => update({ duration: undefined })}
-        >
-          {(close) => (
-            <FilterMenu>
-              {DURATION_FILTERS.map((d) => (
+        {!categoryOnly ? (
+          <FilterChip
+            label="Durée"
+            value={currentDurationRaw}
+            valueLabel={
+              currentDurations.length === 1
+                ? DURATION_FILTER_LABELS[currentDurations[0] as keyof typeof DURATION_FILTER_LABELS]
+                : currentDurations.length > 1
+                  ? `${currentDurations.length} sélectionnées`
+                  : ""
+            }
+            onClear={() => update({ duration: undefined })}
+          >
+            {(close) => (
+              <FilterMenu>
+                {DURATION_FILTERS.map((d) => (
+                  <FilterOption
+                    key={d}
+                    selected={d === "all" ? !currentDuration : currentDuration === d}
+                    onClick={() => {
+                      update({ duration: d === "all" ? undefined : d });
+                      close();
+                    }}
+                  >
+                    {DURATION_FILTER_LABELS[d]}
+                    {d !== "all" ? countSuffix(counts?.durations?.[d]) : ""}
+                  </FilterOption>
+                ))}
+              </FilterMenu>
+            )}
+          </FilterChip>
+        ) : null}
+
+        {!categoryOnly ? (
+          <FilterChip
+            label="Note"
+            value={currentRating}
+            valueLabel={currentRating ? `${Number(currentRating).toFixed(1)}+ ★` : ""}
+            onClear={() => update({ rating: undefined })}
+          >
+            {(close) => (
+              <FilterMenu>
                 <FilterOption
-                  key={d}
-                  selected={d === "all" ? !currentDuration : currentDuration === d}
+                  selected={!currentRating}
                   onClick={() => {
-                    update({ duration: d === "all" ? undefined : d });
+                    update({ rating: undefined });
                     close();
                   }}
                 >
-                  {DURATION_FILTER_LABELS[d]}
-                  {d !== "all" ? countSuffix(counts?.durations?.[d]) : ""}
+                  Toutes les notes
                 </FilterOption>
-              ))}
-            </FilterMenu>
-          )}
-        </FilterChip>
-
-        <FilterChip
-          label="Note"
-          value={currentRating}
-          valueLabel={currentRating ? `${Number(currentRating).toFixed(1)}+ ★` : ""}
-          onClear={() => update({ rating: undefined })}
-        >
-          {(close) => (
-            <FilterMenu>
-              <FilterOption
-                selected={!currentRating}
-                onClick={() => {
-                  update({ rating: undefined });
-                  close();
-                }}
-              >
-                Toutes les notes
-              </FilterOption>
-              {RATING_THRESHOLDS.map((threshold) => (
-                <FilterOption
-                  key={threshold}
-                  selected={currentRating === String(threshold)}
-                  onClick={() => {
-                    update({ rating: String(threshold) });
-                    close();
-                  }}
-                >
-                  <span className="inline-flex items-center gap-2">
-                    <Stars rating={threshold} size="sm" />
-                    <span>
-                      {threshold.toFixed(1)} et plus
-                      {countSuffix(counts?.ratings?.[String(threshold)])}
+                {RATING_THRESHOLDS.map((threshold) => (
+                  <FilterOption
+                    key={threshold}
+                    selected={currentRating === String(threshold)}
+                    onClick={() => {
+                      update({ rating: String(threshold) });
+                      close();
+                    }}
+                  >
+                    <span className="inline-flex items-center gap-2">
+                      <Stars rating={threshold} size="sm" />
+                      <span>
+                        {threshold.toFixed(1)} et plus
+                        {countSuffix(counts?.ratings?.[String(threshold)])}
+                      </span>
                     </span>
-                  </span>
-                </FilterOption>
-              ))}
-            </FilterMenu>
-          )}
-        </FilterChip>
+                  </FilterOption>
+                ))}
+              </FilterMenu>
+            )}
+          </FilterChip>
+        ) : null}
 
         {activeCount > 0 ? (
           <button
@@ -315,6 +334,7 @@ export function CourseFilterBar({
         categories={categories}
         counts={counts}
         hideCategory={hideCategory}
+        categoryOnly={categoryOnly}
       />
     </>
   );

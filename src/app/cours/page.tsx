@@ -62,7 +62,7 @@ export default async function CoursesCatalogPage({ searchParams }: PageProps) {
           top bar tablette, drawer + tri mobile) et à la zone résultats. */}
       <FilterTransitionProvider>
         <main className="flex-1 bg-muted/20">
-          <section className="relative isolate min-h-[clamp(22rem,34vw,41rem)] overflow-hidden border-b border-slate-200/70 bg-white">
+          <section className="relative isolate overflow-hidden border-b border-slate-200/70 bg-white">
             <Image
               src="/images/catalog-hero-ai-renovation.webp"
               alt=""
@@ -102,6 +102,7 @@ export default async function CoursesCatalogPage({ searchParams }: PageProps) {
                 <CourseFilterBar
                   categories={categoryOptions}
                   counts={filterCounts}
+                  categoryOnly
                   className="hidden sm:flex lg:hidden"
                 />
 
@@ -139,7 +140,11 @@ export default async function CoursesCatalogPage({ searchParams }: PageProps) {
           </Container>
         </main>
 
-        <CourseMobileFilterBar categories={categoryOptions} counts={filterCounts} />
+        <CourseMobileFilterBar
+          categories={categoryOptions}
+          counts={filterCounts}
+          categoryOnly
+        />
       </FilterTransitionProvider>
 
       <SiteFooter />

@@ -36,6 +36,7 @@ interface CourseFilterDrawerProps {
     ratings?: Record<string, number>;
   };
   hideCategory?: boolean;
+  categoryOnly?: boolean;
 }
 
 function countSuffix(count: number | undefined): string {
@@ -49,6 +50,7 @@ export function CourseFilterDrawer({
   categories,
   counts,
   hideCategory,
+  categoryOnly = false,
 }: CourseFilterDrawerProps) {
   const router = useRouter();
   const params = useSearchParams();
@@ -81,9 +83,16 @@ export function CourseFilterDrawer({
       else next.set(key, value);
     };
     if (!hideCategory) set("category", category);
-    set("level", level);
-    set("duration", duration);
-    set("rating", rating);
+    if (categoryOnly) {
+      next.delete("level");
+      next.delete("duration");
+      next.delete("rating");
+      next.delete("price");
+    } else {
+      set("level", level);
+      set("duration", duration);
+      set("rating", rating);
+    }
     next.delete("page");
     startTransition(() => {
       router.push(`?${next.toString()}`, { scroll: false });
@@ -102,8 +111,12 @@ export function CourseFilterDrawer({
     <DetailDrawer
       open={open}
       onClose={onClose}
-      title="Tous les filtres"
-      description="Affinez votre sélection pour trouver la formation idéale."
+      title={categoryOnly ? "Catégorie" : "Tous les filtres"}
+      description={
+        categoryOnly
+          ? "Choisissez une catégorie de formation."
+          : "Affinez votre sélection pour trouver la formation idéale."
+      }
       size="md"
       footer={
         <div className="flex items-center justify-between gap-3">
@@ -136,69 +149,75 @@ export function CourseFilterDrawer({
           </div>
         ) : null}
 
-        <div className="space-y-1.5">
-          <Label htmlFor="drawer-level">Niveau</Label>
-          <Select
-            id="drawer-level"
-            value={level}
-            onChange={(e) => setLevel(e.target.value)}
-          >
-            <option value="">Tous les niveaux</option>
-            {COURSE_LEVELS.map((lv) => (
-              <option key={lv} value={lv}>
-                {COURSE_LEVEL_LABELS[lv]}
-                {countSuffix(counts?.levels?.[lv])}
-              </option>
-            ))}
-          </Select>
-        </div>
+        {!categoryOnly ? (
+          <div className="space-y-1.5">
+            <Label htmlFor="drawer-level">Niveau</Label>
+            <Select
+              id="drawer-level"
+              value={level}
+              onChange={(e) => setLevel(e.target.value)}
+            >
+              <option value="">Tous les niveaux</option>
+              {COURSE_LEVELS.map((lv) => (
+                <option key={lv} value={lv}>
+                  {COURSE_LEVEL_LABELS[lv]}
+                  {countSuffix(counts?.levels?.[lv])}
+                </option>
+              ))}
+            </Select>
+          </div>
+        ) : null}
 
-        <div className="space-y-1.5">
-          <Label htmlFor="drawer-duration">Durée</Label>
-          <Select
-            id="drawer-duration"
-            value={duration}
-            onChange={(e) => setDuration(e.target.value)}
-          >
-            {DURATION_FILTERS.map((d) => (
-              <option key={d} value={d === "all" ? "" : d}>
-                {DURATION_FILTER_LABELS[d]}
-                {d !== "all" ? countSuffix(counts?.durations?.[d]) : ""}
-              </option>
-            ))}
-          </Select>
-        </div>
+        {!categoryOnly ? (
+          <div className="space-y-1.5">
+            <Label htmlFor="drawer-duration">Durée</Label>
+            <Select
+              id="drawer-duration"
+              value={duration}
+              onChange={(e) => setDuration(e.target.value)}
+            >
+              {DURATION_FILTERS.map((d) => (
+                <option key={d} value={d === "all" ? "" : d}>
+                  {DURATION_FILTER_LABELS[d]}
+                  {d !== "all" ? countSuffix(counts?.durations?.[d]) : ""}
+                </option>
+              ))}
+            </Select>
+          </div>
+        ) : null}
 
-        <div className="space-y-2">
-          <p className="text-sm font-medium text-foreground">Note minimale</p>
-          <ul className="space-y-1.5">
-            {RATING_THRESHOLDS.map((threshold) => {
-              const isSelected = rating === String(threshold);
-              return (
-                <li key={threshold}>
-                  <button
-                    type="button"
-                    onClick={() => setRating(isSelected ? "" : String(threshold))}
-                    aria-pressed={isSelected}
-                    className={`flex w-full items-center justify-between rounded-md px-2 py-1.5 text-sm transition-colors ${
-                      isSelected
-                        ? "bg-[color:var(--brand-primary)]/10 text-foreground"
-                        : "text-muted-foreground hover:bg-muted hover:text-foreground"
-                    }`}
-                  >
-                    <span className="inline-flex items-center gap-2">
-                      <Stars rating={threshold} size="sm" />
-                      <span>
-                        {threshold.toFixed(1)} et plus
-                        {countSuffix(counts?.ratings?.[String(threshold)])}
+        {!categoryOnly ? (
+          <div className="space-y-2">
+            <p className="text-sm font-medium text-foreground">Note minimale</p>
+            <ul className="space-y-1.5">
+              {RATING_THRESHOLDS.map((threshold) => {
+                const isSelected = rating === String(threshold);
+                return (
+                  <li key={threshold}>
+                    <button
+                      type="button"
+                      onClick={() => setRating(isSelected ? "" : String(threshold))}
+                      aria-pressed={isSelected}
+                      className={`flex w-full items-center justify-between rounded-md px-2 py-1.5 text-sm transition-colors ${
+                        isSelected
+                          ? "bg-[color:var(--brand-primary)]/10 text-foreground"
+                          : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                      }`}
+                    >
+                      <span className="inline-flex items-center gap-2">
+                        <Stars rating={threshold} size="sm" />
+                        <span>
+                          {threshold.toFixed(1)} et plus
+                          {countSuffix(counts?.ratings?.[String(threshold)])}
+                        </span>
                       </span>
-                    </span>
-                  </button>
-                </li>
-              );
-            })}
-          </ul>
-        </div>
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+        ) : null}
       </div>
     </DetailDrawer>
   );

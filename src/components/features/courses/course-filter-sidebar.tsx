@@ -1,34 +1,15 @@
 "use client";
 
-// Sidebar verticale de filtres — pattern Udemy desktop. Visible uniquement
-// en lg+ (lg:block, hidden par défaut). Sur mobile/tablette, on garde la
-// top bar de chips + le drawer "Tous les filtres" + la bottom bar fixe.
-//
-// Pourquoi : sur grand écran, scanner verticalement une liste de filtres
-// avec count est plus rapide qu'ouvrir 5 dropdowns. Et on garde le
-// contexte de la page (résultats à côté).
-//
-// Multi-select : Niveau et Durée acceptent plusieurs valeurs simultanées
-// (checkboxes). Catégorie et Note restent mono-select (radios).
-// Format URL : "?level=BEGINNER,INTERMEDIATE&duration=short,medium".
+// Sidebar verticale du filtre Catégorie — visible uniquement en lg+.
+// Sur mobile/tablette, la même sélection est proposée dans les variantes
+// compactes du catalogue.
 
 import { Check, ChevronDown, RotateCcw, SlidersHorizontal } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import * as React from "react";
 
 import { useFilterTransition } from "@/components/features/courses/filter-transition-context";
-import { Stars } from "@/components/ui/stars";
 import { cn } from "@/lib/utils";
-import {
-  COURSE_LEVEL_LABELS,
-  DURATION_FILTER_LABELS,
-} from "@/lib/format/labels";
-import {
-  COURSE_LEVELS,
-  DURATION_FILTERS,
-} from "@/lib/validators/courses";
-
-const RATING_THRESHOLDS = [4.5, 4, 3.5, 3] as const;
 
 interface CategoryOption {
   slug: string;
@@ -39,9 +20,6 @@ interface CourseFilterSidebarProps {
   categories: CategoryOption[];
   counts?: {
     categories?: Record<string, number>;
-    levels?: Record<string, number>;
-    durations?: Record<string, number>;
-    ratings?: Record<string, number>;
   };
   hideCategory?: boolean;
   className?: string;
@@ -63,42 +41,14 @@ export function CourseFilterSidebar({
   const { pending, startTransition } = useFilterTransition();
 
   const currentCategory = params.get("category") ?? "";
-  const currentLevels = parseCsv(params.get("level"));
-  const currentDurations = parseCsv(params.get("duration"));
-  const currentRating = params.get("rating") ?? "";
-
-  const urlFilterKey = [
-    currentCategory,
-    currentLevels.join(","),
-    currentDurations.join(","),
-    currentRating,
-  ].join("|");
-  const [syncedUrlFilterKey, setSyncedUrlFilterKey] = React.useState(urlFilterKey);
+  const [syncedUrlCategory, setSyncedUrlCategory] = React.useState(currentCategory);
   const [category, setCategory] = React.useState(currentCategory);
-  const [levels, setLevels] = React.useState(currentLevels);
-  const [durations, setDurations] = React.useState(currentDurations);
-  const [rating, setRating] = React.useState(currentRating);
 
   // Resynchronise les choix lors d'une navigation externe (retour navigateur
   // ou lien filtré), sans effacer une sélection en cours de préparation.
-  if (urlFilterKey !== syncedUrlFilterKey) {
-    setSyncedUrlFilterKey(urlFilterKey);
+  if (currentCategory !== syncedUrlCategory) {
+    setSyncedUrlCategory(currentCategory);
     setCategory(currentCategory);
-    setLevels(currentLevels);
-    setDurations(currentDurations);
-    setRating(currentRating);
-  }
-
-  function toggle(
-    values: string[],
-    setValues: React.Dispatch<React.SetStateAction<string[]>>,
-    value: string,
-  ) {
-    setValues(
-      values.includes(value)
-        ? values.filter((item) => item !== value)
-        : [...values, value],
-    );
   }
 
   function apply(event: React.FormEvent<HTMLFormElement>) {
@@ -110,9 +60,10 @@ export function CourseFilterSidebar({
     };
 
     if (!hideCategory) set("category", category);
-    set("level", levels.join(","));
-    set("duration", durations.join(","));
-    set("rating", rating);
+    next.delete("level");
+    next.delete("duration");
+    next.delete("rating");
+    next.delete("price");
     next.delete("page");
 
     startTransition(() => {
@@ -122,9 +73,6 @@ export function CourseFilterSidebar({
 
   function reset() {
     setCategory("");
-    setLevels([]);
-    setDurations([]);
-    setRating("");
   }
 
   return (
@@ -163,58 +111,6 @@ export function CourseFilterSidebar({
             ))}
           </Section>
         ) : null}
-
-        <Section title="Note" defaultOpen>
-          <RadioRow
-            name="sidebar-rating"
-            label="Toutes"
-            checked={!rating}
-            onChange={() => setRating("")}
-          />
-          {RATING_THRESHOLDS.map((threshold) => (
-            <RadioRow
-              key={threshold}
-              name="sidebar-rating"
-              label={
-                <span className="inline-flex flex-wrap items-center gap-x-2 gap-y-1">
-                  <Stars
-                    rating={threshold}
-                    size="sm"
-                    className="[&_svg]:stroke-slate-300"
-                  />
-                  <span>{threshold.toFixed(1)} et +</span>
-                </span>
-              }
-              count={countLabel(counts?.ratings?.[String(threshold)])}
-              checked={rating === String(threshold)}
-              onChange={() => setRating(String(threshold))}
-            />
-          ))}
-        </Section>
-
-        <Section title="Niveau" defaultOpen>
-          {COURSE_LEVELS.map((lv) => (
-            <CheckRow
-              key={lv}
-              label={COURSE_LEVEL_LABELS[lv]}
-              count={countLabel(counts?.levels?.[lv])}
-              checked={levels.includes(lv)}
-              onChange={() => toggle(levels, setLevels, lv)}
-            />
-          ))}
-        </Section>
-
-        <Section title="Durée" defaultOpen>
-          {DURATION_FILTERS.filter((d) => d !== "all").map((d) => (
-            <CheckRow
-              key={d}
-              label={DURATION_FILTER_LABELS[d]}
-              count={countLabel(counts?.durations?.[d])}
-              checked={durations.includes(d)}
-              onChange={() => toggle(durations, setDurations, d)}
-            />
-          ))}
-        </Section>
 
         <div className="mt-4 grid grid-cols-2 gap-2.5">
           <button
@@ -311,48 +207,4 @@ function RadioRow({
       </label>
     </li>
   );
-}
-
-function CheckRow({
-  label,
-  count,
-  checked,
-  onChange,
-}: {
-  label: React.ReactNode;
-  count?: string;
-  checked: boolean;
-  onChange: () => void;
-}) {
-  return (
-    <li>
-      <label
-        className={cn(
-          "flex cursor-pointer items-center justify-between gap-2 rounded-xl border px-2.5 py-2 text-sm leading-snug transition",
-          checked
-            ? "border-sky-500/80 bg-sky-500/10 text-white shadow-[0_0_14px_rgba(14,165,233,0.12)]"
-            : "border-transparent text-slate-200 hover:border-slate-600/60 hover:bg-white/5",
-        )}
-      >
-        <span className="flex min-w-0 items-center gap-2.5">
-          <input
-            type="checkbox"
-            checked={checked}
-            onChange={onChange}
-            className="h-4 w-4 shrink-0 rounded accent-emerald-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400"
-          />
-          <span className="min-w-0">{label}</span>
-        </span>
-        {count ? (
-          <span className="shrink-0 text-xs tabular-nums text-slate-400">{count}</span>
-        ) : null}
-      </label>
-    </li>
-  );
-}
-
-// Parse une string CSV de l'URL en array de valeurs trimées.
-function parseCsv(raw: string | null): string[] {
-  if (!raw) return [];
-  return raw.split(",").map((v) => v.trim()).filter(Boolean);
 }
