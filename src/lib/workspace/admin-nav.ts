@@ -146,6 +146,20 @@ export const ADMIN_NAV: WorkspaceNavigation = {
       ],
     },
     {
+      href: "/admin/assistant",
+      label: "Aiduca-IA",
+      icon: "help",
+      group: "configuration",
+      roles: ALL_ADMIN,
+      badgeKeys: ["unansweredQuestions"],
+      children: [
+        { href: "/admin/assistant/sources", label: "Base documentaire" },
+        { href: "/admin/assistant/conversations", label: "Conversations" },
+        { href: "/admin/assistant/questions", label: "Questions sans réponse" },
+        { href: "/admin/assistant/prospects", label: "Prospects" },
+      ],
+    },
+    {
       href: "/admin/equipe",
       label: "Équipe & accès",
       icon: "users",

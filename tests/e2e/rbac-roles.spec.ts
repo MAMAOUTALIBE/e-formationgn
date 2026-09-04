@@ -68,6 +68,8 @@ const ADMIN_PAGES = [
   "/admin/societes",
   "/admin/equipe",
   "/admin/classes-virtuelles",
+  "/admin/assistant",
+  "/admin/assistant/sources",
 ];
 
 /** Espaces privés d'un compte élève. */

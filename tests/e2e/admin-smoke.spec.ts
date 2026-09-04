@@ -50,6 +50,11 @@ const SCREENS = [
   "/admin/analytics/apprentissage",
   "/admin/cms",
   "/admin/parametres",
+  "/admin/assistant",
+  "/admin/assistant/sources",
+  "/admin/assistant/conversations",
+  "/admin/assistant/questions",
+  "/admin/assistant/prospects",
 ];
 
 /** Les filtres sont rendus par des sous-composants : on les exerce aussi. */

@@ -4,10 +4,12 @@ import { Suspense } from "react";
 
 import { ImpersonationBanner } from "@/components/features/admin/impersonation-banner";
 import { PageViewTracker } from "@/components/features/analytics/page-view-tracker";
+import { AssistantMount } from "@/components/features/assistant/assistant-mount";
 import { CookieBanner } from "@/components/features/cookie-consent/cookie-banner";
 import { SitewideBanner } from "@/components/features/marketing/sitewide-banner";
 import { ServiceWorkerRegister } from "@/components/features/pwa/sw-register";
 import { Toaster } from "@/components/ui/toaster";
+import { isAiducaAssistantConfigured } from "@/lib/ai/assistant";
 import { BRAND } from "@/lib/brand";
 
 import "./globals.css";
@@ -120,6 +122,9 @@ export default function RootLayout({
         {children}
         <Toaster />
         <CookieBanner />
+        {/* Aiduca-IA : le garde est côté serveur, donc aucun bouton mort
+            n'est rendu quand ANTHROPIC_API_KEY n'est pas configurée. */}
+        {isAiducaAssistantConfigured() ? <AssistantMount /> : null}
       </body>
     </html>
   );

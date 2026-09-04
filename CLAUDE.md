@@ -138,7 +138,17 @@ Course thumbnails / instructor uploads use Cloudflare R2 ([src/lib/storage/r2.ts
 
 ### AI features (Anthropic)
 
-[src/lib/ai/](src/lib/ai/) holds five independent Claude-backed helpers — `lesson-summary`, `quiz-generator`, `seo-suggestions` (Sonnet), `review-moderation` (Haiku), and `tutor` (Opus). All share the same contract: a single `ANTHROPIC_API_KEY` env var, an `isXxxConfigured()` guard, and **graceful degradation** when the key is absent (the feature is simply skipped, never throws). When adding an AI feature, follow that pattern — never make a code path hard-depend on the AI being configured.
+[src/lib/ai/](src/lib/ai/) holds seven independent Claude-backed helpers — `lesson-summary`, `quiz-generator`, `seo-suggestions` (Sonnet), `review-moderation` (Haiku), `tutor`, `admin-assistant` and `assistant` (Opus). Model IDs are centralized in [src/lib/ai/models.ts](src/lib/ai/models.ts) and the SDK client in [src/lib/ai/client.ts](src/lib/ai/client.ts) (`getAnthropicClient`) — do not re-declare either. All share the same contract: a single `ANTHROPIC_API_KEY` env var, an `isXxxConfigured()` guard, and **graceful degradation** when the key is absent (the feature is simply skipped, never throws). When adding an AI feature, follow that pattern — never make a code path hard-depend on the AI being configured.
+
+### Aiduca-IA (public assistant)
+
+`assistant` is the public-facing one, and the only feature that answers **visitors**. It is grounded by construction rather than by prompting alone:
+
+1. Retrieval is deterministic and happens *before* the model call — [src/server/queries/assistant.ts](src/server/queries/assistant.ts) is the single place that decides what the model may see. It never selects `internalNotes`, prices, or learner data, and reads only published rows. The model has **no tools**: it cannot fetch anything it wasn't shown.
+2. The model fills a forced tool (`repondre`) rather than writing free text, and its output is re-checked against the retrieved context by `normalizeAssistantAnswer` in [src/lib/assistant/contract.ts](src/lib/assistant/contract.ts) — a hallucinated course slug is dropped before it can become a button, and any certainty below `CERTAINE` forces the "contact an advisor" path and flags the question in `/admin/assistant/questions`.
+3. **Never let it quote a price.** The platform is in `centre_formation` mode: no price is displayed anywhere and there is no checkout. The seeded knowledge base states this explicitly; `tests/unit/assistant-safety.test.ts` enforces that the price columns stay out of the retrieval layer.
+
+Retrieval uses Postgres French full-text search over `AssistantChunk.searchVector` (trigger + GIN, same pattern as `Course.searchVector`). Unlike the catalogue search it ORs the query lexemes instead of ANDing them — a natural-language question rarely has every one of its words in the answer. Documents are managed at `/admin/assistant/sources` and seeded from the site's own content with the “Synchroniser le site” action or `npm run assistant:seed` (idempotent; both only overwrite the `auto-` prefixed documents they created).
 
 ## Conventions enforced by the codebase
 

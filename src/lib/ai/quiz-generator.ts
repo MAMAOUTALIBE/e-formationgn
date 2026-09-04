@@ -7,21 +7,11 @@ import "server-only";
 // génération à 5 questions max pour rester sous max_tokens et éviter du
 // contenu peu pertinent.
 
-import Anthropic from "@anthropic-ai/sdk";
+import { getAnthropicClient, isAnthropicConfigured } from "@/lib/ai/client";
 import { MODEL_SONNET } from "@/lib/ai/models";
 
-let cachedClient: Anthropic | null = null;
-
-function getClient(): Anthropic {
-  if (cachedClient) return cachedClient;
-  const apiKey = process.env.ANTHROPIC_API_KEY;
-  if (!apiKey) throw new Error("ANTHROPIC_API_KEY manquant");
-  cachedClient = new Anthropic({ apiKey });
-  return cachedClient;
-}
-
 export function isQuizGenConfigured(): boolean {
-  return Boolean(process.env.ANTHROPIC_API_KEY);
+  return isAnthropicConfigured();
 }
 
 export type GeneratedQuestionKind = "SINGLE_CHOICE" | "TRUE_FALSE";
@@ -79,7 +69,7 @@ export async function generateQuizFromLesson(
   }
   const target = Math.min(5, Math.max(3, input.count ?? 4));
 
-  const client = getClient();
+  const client = getAnthropicClient("Génération de quiz IA");
   const response = await client.messages.create({
     model: MODEL_SONNET,
     max_tokens: 2000,

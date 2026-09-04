@@ -31,22 +31,35 @@ export async function GET(request: NextRequest) {
   const ninetyDaysAgo = new Date(now.getTime() - 90 * 24 * 3600 * 1000);
   const sixMonthsAgo = new Date(now.getTime() - 180 * 24 * 3600 * 1000);
 
-  const [sessions, emailTokens, resetTokens, loginAttempts, pageViews] =
-    await Promise.all([
-      prisma.session.deleteMany({ where: { expires: { lt: now } } }),
-      prisma.emailVerificationToken.deleteMany({
-        where: { expires: { lt: now } },
-      }),
-      prisma.passwordResetToken.deleteMany({
-        where: { expires: { lt: now } },
-      }),
-      prisma.loginAttempt.deleteMany({
-        where: { createdAt: { lt: ninetyDaysAgo } },
-      }),
-      prisma.pageView.deleteMany({
-        where: { createdAt: { lt: sixMonthsAgo } },
-      }),
-    ]);
+  const [
+    sessions,
+    emailTokens,
+    resetTokens,
+    loginAttempts,
+    pageViews,
+    assistantConversations,
+  ] = await Promise.all([
+    prisma.session.deleteMany({ where: { expires: { lt: now } } }),
+    prisma.emailVerificationToken.deleteMany({
+      where: { expires: { lt: now } },
+    }),
+    prisma.passwordResetToken.deleteMany({
+      where: { expires: { lt: now } },
+    }),
+    prisma.loginAttempt.deleteMany({
+      where: { createdAt: { lt: ninetyDaysAgo } },
+    }),
+    prisma.pageView.deleteMany({
+      where: { createdAt: { lt: sixMonthsAgo } },
+    }),
+    // Conversations Aiduca-IA : 90 jours, comme annoncé aux visiteurs dans le
+    // widget. Les messages partent en cascade ; les prospects survivent
+    // (conversationId passe à NULL), car une demande de rappel a une valeur
+    // commerciale propre et un fondement de conservation distinct.
+    prisma.assistantConversation.deleteMany({
+      where: { lastMessageAt: { lt: ninetyDaysAgo } },
+    }),
+  ]);
 
   return NextResponse.json({
     ok: true,
@@ -56,6 +69,7 @@ export async function GET(request: NextRequest) {
       resetTokens: resetTokens.count,
       loginAttempts: loginAttempts.count,
       pageViews: pageViews.count,
+      assistantConversations: assistantConversations.count,
     },
   });
 }

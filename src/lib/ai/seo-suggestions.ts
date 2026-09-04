@@ -6,25 +6,11 @@ import "server-only";
 // Modèle : Claude Sonnet (plus rapide + moins coûteux que Opus pour du
 // court rédactionnel). Pas de cache car les requêtes sont uniques par cours.
 
-import Anthropic from "@anthropic-ai/sdk";
+import { getAnthropicClient, isAnthropicConfigured } from "@/lib/ai/client";
 import { MODEL_SONNET } from "@/lib/ai/models";
 
-let cachedClient: Anthropic | null = null;
-
-function getClient(): Anthropic {
-  if (cachedClient) return cachedClient;
-  const apiKey = process.env.ANTHROPIC_API_KEY;
-  if (!apiKey) {
-    throw new Error(
-      "AI non configuré. Renseignez ANTHROPIC_API_KEY dans .env.",
-    );
-  }
-  cachedClient = new Anthropic({ apiKey });
-  return cachedClient;
-}
-
 export function isSeoAiConfigured(): boolean {
-  return Boolean(process.env.ANTHROPIC_API_KEY);
+  return isAnthropicConfigured();
 }
 
 export interface SeoSuggestionInput {
@@ -62,7 +48,7 @@ interface ToolInputSchema {
 export async function generateSeoSuggestions(
   input: SeoSuggestionInput,
 ): Promise<SeoSuggestion> {
-  const client = getClient();
+  const client = getAnthropicClient("Suggestions SEO IA");
 
   const userMessage = [
     `Titre : ${input.title}`,

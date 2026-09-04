@@ -13,27 +13,12 @@ import "server-only";
 // L'assistant est en LECTURE SEULE : il n'a aucun outil, il ne peut donc
 // qu'écrire du texte. Les chiffres qu'il commente sont ceux qu'on lui passe.
 
-import Anthropic from "@anthropic-ai/sdk";
-
 import { ADMIN_NAV } from "@/lib/workspace/admin-nav";
+import { getAnthropicClient, isAnthropicConfigured } from "@/lib/ai/client";
 import { MODEL_OPUS } from "@/lib/ai/models";
 
-let cachedClient: Anthropic | null = null;
-
-function getClient(): Anthropic {
-  if (cachedClient) return cachedClient;
-  const apiKey = process.env.ANTHROPIC_API_KEY;
-  if (!apiKey) {
-    throw new Error(
-      "Assistant IA non configuré. Renseignez ANTHROPIC_API_KEY dans .env.",
-    );
-  }
-  cachedClient = new Anthropic({ apiKey });
-  return cachedClient;
-}
-
 export function isAdminAssistantConfigured(): boolean {
-  return Boolean(process.env.ANTHROPIC_API_KEY);
+  return isAnthropicConfigured();
 }
 
 /** Instantané chiffré de la plateforme, construit côté serveur. */
@@ -118,7 +103,7 @@ export async function askAdminAssistant(
   snapshot: AdminAssistantSnapshot,
   question: string,
 ): Promise<AdminAssistantAnswer> {
-  const client = getClient();
+  const client = getAnthropicClient("Assistant IA du CRM");
 
   // Prompt caching : consigne + registre des pages sont identiques d'une
   // question à l'autre, l'instantané ne l'est pas. Le point de cache est donc

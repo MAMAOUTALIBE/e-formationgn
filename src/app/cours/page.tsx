@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 
 import { auth } from "@/auth";
 import { CourseEmptyState } from "@/components/features/courses/course-empty-state";
@@ -60,18 +61,34 @@ export default async function CoursesCatalogPage({ searchParams }: PageProps) {
           le pending state se propage à tous les filtres (sidebar desktop,
           top bar tablette, drawer + tri mobile) et à la zone résultats. */}
       <FilterTransitionProvider>
-        <main className="flex-1 bg-muted/20 py-8">
-          <Container className="space-y-6">
-            <Breadcrumbs items={[{ label: "Accueil", href: "/" }, { label: "Catalogue" }]} />
+        <main className="flex-1 bg-muted/20">
+          <section className="relative isolate min-h-[clamp(22rem,34vw,41rem)] overflow-hidden border-b border-slate-200/70 bg-white">
+            <Image
+              src="/images/catalog-hero-ai-renovation.webp"
+              alt=""
+              fill
+              priority
+              sizes="100vw"
+              className="-z-20 object-cover object-center"
+            />
+            <div
+              aria-hidden
+              className="absolute inset-0 -z-10 bg-[linear-gradient(90deg,rgba(255,255,255,0.98)_0%,rgba(255,255,255,0.92)_38%,rgba(255,255,255,0.52)_62%,rgba(255,255,255,0.10)_100%)]"
+            />
 
-            <header className="space-y-4">
-              <h1 className="text-3xl font-semibold tracking-tight text-foreground">
-                Catalogue des formations
-              </h1>
-              <CourseSearchBar />
-            </header>
+            <Container className="space-y-6 py-8 sm:py-12 lg:py-16">
+              <Breadcrumbs items={[{ label: "Accueil", href: "/" }, { label: "Catalogue" }]} />
 
+              <header className="space-y-4">
+                <h1 className="text-3xl font-semibold tracking-tight text-foreground">
+                  Catalogue des formations
+                </h1>
+                <CourseSearchBar integrated />
+              </header>
+            </Container>
+          </section>
 
+          <Container className="space-y-6 py-8">
             {/* Layout 2 colonnes : sidebar filtres + grid résultats, dès lg+.
                 En sm-md on garde la top bar de chips + mobile bottom bar. */}
             <div className="grid gap-6 lg:grid-cols-[260px_1fr]">

@@ -7,21 +7,11 @@ import "server-only";
 // Utilise Claude Haiku — assez rapide (~500 ms) et bon marché pour ce type
 // de classification binaire courte.
 
-import Anthropic from "@anthropic-ai/sdk";
+import { getAnthropicClient, isAnthropicConfigured } from "@/lib/ai/client";
 import { MODEL_HAIKU } from "@/lib/ai/models";
 
-let cachedClient: Anthropic | null = null;
-
-function getClient(): Anthropic {
-  if (cachedClient) return cachedClient;
-  const apiKey = process.env.ANTHROPIC_API_KEY;
-  if (!apiKey) throw new Error("ANTHROPIC_API_KEY manquant");
-  cachedClient = new Anthropic({ apiKey });
-  return cachedClient;
-}
-
 export function isReviewModerationConfigured(): boolean {
-  return Boolean(process.env.ANTHROPIC_API_KEY);
+  return isAnthropicConfigured();
 }
 
 export type ReviewModerationCategory =
@@ -70,7 +60,7 @@ export async function classifyReviewContent(
     return { category: "OK", flagged: false };
   }
 
-  const client = getClient();
+  const client = getAnthropicClient("Modération IA des avis");
   const response = await client.messages.create({
     model: MODEL_HAIKU,
     max_tokens: 200,

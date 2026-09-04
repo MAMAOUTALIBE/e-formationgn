@@ -5,21 +5,11 @@ import "server-only";
 //
 // Modèle Claude Sonnet — bon compromis qualité/coût pour rédactionnel court.
 
-import Anthropic from "@anthropic-ai/sdk";
+import { getAnthropicClient, isAnthropicConfigured } from "@/lib/ai/client";
 import { MODEL_SONNET } from "@/lib/ai/models";
 
-let cachedClient: Anthropic | null = null;
-
-function getClient(): Anthropic {
-  if (cachedClient) return cachedClient;
-  const apiKey = process.env.ANTHROPIC_API_KEY;
-  if (!apiKey) throw new Error("ANTHROPIC_API_KEY manquant");
-  cachedClient = new Anthropic({ apiKey });
-  return cachedClient;
-}
-
 export function isLessonSummaryConfigured(): boolean {
-  return Boolean(process.env.ANTHROPIC_API_KEY);
+  return isAnthropicConfigured();
 }
 
 export interface SummarizeLessonInput {
@@ -53,7 +43,7 @@ export async function generateLessonSummary(
     return "Cette leçon n'a pas encore assez de contenu pour un résumé précis.";
   }
 
-  const client = getClient();
+  const client = getAnthropicClient("Résumé de leçon IA");
   const response = await client.messages.create({
     model: MODEL_SONNET,
     max_tokens: 600,

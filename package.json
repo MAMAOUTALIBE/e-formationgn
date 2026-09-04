@@ -13,6 +13,7 @@
     "test:e2e": "playwright test",
     "test:e2e:install": "playwright install --with-deps chromium",
     "db:seed": "tsx prisma/seed.ts",
+    "assistant:seed": "tsx scripts/seed-assistant-knowledge.ts",
     "check:payments": "tsx scripts/check-payments.ts",
     "db:migrate:deploy": "prisma migrate deploy",
     "deploy": "bash scripts/deploy.sh",

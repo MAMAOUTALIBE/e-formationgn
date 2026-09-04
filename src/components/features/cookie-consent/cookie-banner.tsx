@@ -6,7 +6,7 @@
 // localStorage de façon SSR-safe sans setState dans un useEffect.
 
 import Link from "next/link";
-import { useEffect, useState, useSyncExternalStore } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 
 import { Button } from "@/components/ui/button";
 
@@ -27,14 +27,36 @@ function readAccepted(): boolean {
   }
 }
 
-/** Hauteur réservée sous la page tant que le bandeau est affiché. */
-const BANNER_SPACE = "7.5rem";
+/**
+ * Réserve initiale, avant que le bandeau ait pu être mesuré.
+ *
+ * Cette valeur était utilisée telle quelle : elle sous-estime la hauteur
+ * réelle sur écran étroit, où le bandeau passe en colonne et dépasse les
+ * 7,5 rem. La mesure ci-dessous la remplace dès le premier rendu.
+ */
+const BANNER_SPACE_FALLBACK = "7.5rem";
+
+/** Marge entre le bandeau et ce qui se pose au-dessus de lui. */
+const BANNER_GAP_PX = 24;
+
+/**
+ * Variable CSS publiée tant que le bandeau est visible.
+ *
+ * Le `padding-bottom` du body ne décale pas les éléments `position: fixed`.
+ * Le bouton flottant d'Aiduca-IA se retrouvait donc SOUS le bandeau, et un
+ * visiteur n'ayant pas encore accepté les cookies ne pouvait pas ouvrir
+ * l'assistant du tout. Plutôt que de coder en dur la géométrie de ce bandeau
+ * dans l'autre composant, on expose la mesure ici : c'est le bandeau qui sait
+ * combien de place il prend.
+ */
+const BANNER_SPACE_VAR = "--cookie-banner-space";
 
 export function CookieBanner() {
   // SSR : on assume "accepté" pour éviter d'afficher un bandeau qui flash.
   // Hydratation : on lit la vraie valeur dans localStorage.
   const accepted = useSyncExternalStore(subscribe, readAccepted, () => true);
   const [dismissed, setDismissed] = useState(false);
+  const bandeauRef = useRef<HTMLDivElement>(null);
   const visible = !accepted && !dismissed;
 
   // Tant que le bandeau est là, la page lui réserve sa place.
@@ -50,11 +72,32 @@ export function CookieBanner() {
     const racine = document.documentElement;
     const scrollPrecedent = racine.style.scrollPaddingBottom;
     const paddingPrecedent = document.body.style.paddingBottom;
-    racine.style.scrollPaddingBottom = BANNER_SPACE;
-    document.body.style.paddingBottom = BANNER_SPACE;
+
+    // La hauteur est MESURÉE, pas devinée : sur écran étroit le bandeau passe
+    // en colonne et dépasse largement la réserve forfaitaire. Une réserve trop
+    // courte laisse le bandeau recouvrir ce qui se pose au-dessus de lui — le
+    // bouton flottant de l'assistant s'y retrouvait inatteignable sur mobile.
+    const appliquer = () => {
+      const hauteur = bandeauRef.current?.offsetHeight;
+      const espace = hauteur
+        ? `${hauteur + BANNER_GAP_PX}px`
+        : BANNER_SPACE_FALLBACK;
+      racine.style.scrollPaddingBottom = espace;
+      document.body.style.paddingBottom = espace;
+      racine.style.setProperty(BANNER_SPACE_VAR, espace);
+    };
+
+    appliquer();
+    const observateur = new ResizeObserver(appliquer);
+    if (bandeauRef.current) observateur.observe(bandeauRef.current);
+    window.addEventListener("resize", appliquer);
+
     return () => {
+      observateur.disconnect();
+      window.removeEventListener("resize", appliquer);
       racine.style.scrollPaddingBottom = scrollPrecedent;
       document.body.style.paddingBottom = paddingPrecedent;
+      racine.style.removeProperty(BANNER_SPACE_VAR);
     };
   }, [visible]);
 
@@ -74,6 +117,7 @@ export function CookieBanner() {
     // piège pas le focus et n'attend pas de décision — l'annoncer comme un
     // dialogue trompait les lecteurs d'écran.
     <div
+      ref={bandeauRef}
       role="region"
       aria-label="Information sur les cookies"
       className="fixed inset-x-3 bottom-3 z-50 mx-auto max-w-3xl rounded-lg border border-border bg-card p-4 shadow-lg sm:inset-x-auto sm:right-4"

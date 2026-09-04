@@ -70,7 +70,7 @@ const serverSchema = z.object({
   // Sentry (monitoring)
   SENTRY_DSN: z.string().url().optional(),
 
-  // Anthropic (tuteur IA)
+  // Anthropic (Aiduca-IA, tuteur et assistants de rédaction/modération)
   ANTHROPIC_API_KEY: z.string().optional(),
 
   // Cron job (Vercel Cron ou crontab système). Obligatoire en prod

@@ -35,6 +35,11 @@ const PUBLIC_PAGES: RouteCase[] = [
 
 const PROTECTED_PAGES: RouteCase[] = [
   { path: "/admin", expected: 302 },
+  { path: "/admin/assistant", expected: 302 },
+  { path: "/admin/assistant/sources", expected: 302 },
+  { path: "/admin/assistant/conversations", expected: 302 },
+  { path: "/admin/assistant/questions", expected: 302 },
+  { path: "/admin/assistant/prospects", expected: 302 },
   { path: "/formateur", expected: 302 },
   { path: "/profil", expected: 302 },
   { path: "/apprentissage", expected: 302 },

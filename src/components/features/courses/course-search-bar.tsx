@@ -13,12 +13,15 @@ interface CourseSearchBarProps {
   placeholder?: string;
   /** Si true, on submit vers /cours (recherche globale depuis la home) */
   redirectToCatalog?: boolean;
+  /** Présentation compacte du champ et du bouton dans une capsule unique. */
+  integrated?: boolean;
 }
 
 export function CourseSearchBar({
   className,
   placeholder = "Rechercher une formation, un sujet, un formateur…",
   redirectToCatalog = false,
+  integrated = false,
 }: CourseSearchBarProps) {
   const router = useRouter();
   const params = useSearchParams();
@@ -42,11 +45,20 @@ export function CourseSearchBar({
     <form
       role="search"
       onSubmit={handleSubmit}
-      className={cn("flex w-full items-center gap-2", className)}
+      className={cn(
+        "flex w-full items-center",
+        integrated
+          ? "max-w-3xl gap-0 rounded-full border border-slate-200 bg-white/95 p-1.5 shadow-[0_6px_20px_rgba(15,23,42,0.10)]"
+          : "gap-2",
+        className,
+      )}
     >
-      <div className="relative flex-1">
+      <div className="relative min-w-0 flex-1">
         <Search
-          className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
+          className={cn(
+            "pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground",
+            integrated ? "size-5 sm:left-4" : "size-4",
+          )}
           aria-hidden
         />
         <Input
@@ -55,11 +67,22 @@ export function CourseSearchBar({
           placeholder={placeholder}
           value={value}
           onChange={(event) => setValue(event.target.value)}
-          className="pl-10"
+          className={cn(
+            "pl-10",
+            integrated &&
+              "h-11 rounded-full border-0 bg-transparent pr-2 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0 sm:h-12 sm:pl-11",
+          )}
           aria-label="Rechercher des formations"
         />
       </div>
-      <Button type="submit" disabled={pending}>
+      <Button
+        type="submit"
+        disabled={pending}
+        className={cn(
+          integrated &&
+            "h-10 shrink-0 rounded-full bg-[color:var(--brand-secondary)] px-4 shadow-[0_3px_10px_rgba(37,99,235,0.20)] sm:h-11 sm:px-6",
+        )}
+      >
         {pending ? "Recherche…" : "Rechercher"}
       </Button>
     </form>

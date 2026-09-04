@@ -11,6 +11,10 @@ test("les surfaces publiques décrivent le mode centre de formation", () => {
     source("src/components/features/marketing/testimonials.tsx"),
     source("src/components/layout/site-footer.tsx"),
     source("src/app/aide/page.tsx"),
+    // Le contenu de la FAQ a été extrait vers @/lib/help-faq pour être partagé
+    // avec la base documentaire d'Aiduca-IA. La page le rend toujours ; c'est
+    // le fichier qui le porte qui a changé, pas la copie publique.
+    source("src/lib/help-faq.ts"),
     source("src/app/devenir-formateur/page.tsx"),
   ].join("\n");
 

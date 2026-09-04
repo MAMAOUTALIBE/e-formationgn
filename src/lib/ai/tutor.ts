@@ -1,29 +1,15 @@
 import "server-only";
 
-// AI tuteur — utilise Claude Opus 4.7 pour répondre aux questions des élèves
+// AI tuteur — utilise Claude Opus (voir MODEL_OPUS) pour répondre aux questions
 // dans le contexte d'une leçon. Utilise le prompt caching pour réduire le
 // coût quand les questions s'enchaînent sur la même leçon (le contexte
 // leçon est mis en cache 5 minutes).
 
-import Anthropic from "@anthropic-ai/sdk";
+import { getAnthropicClient, isAnthropicConfigured } from "@/lib/ai/client";
 import { MODEL_OPUS } from "@/lib/ai/models";
 
-let cachedClient: Anthropic | null = null;
-
-function getClient(): Anthropic {
-  if (cachedClient) return cachedClient;
-  const apiKey = process.env.ANTHROPIC_API_KEY;
-  if (!apiKey) {
-    throw new Error(
-      "AI tuteur non configuré. Renseignez ANTHROPIC_API_KEY dans .env.",
-    );
-  }
-  cachedClient = new Anthropic({ apiKey });
-  return cachedClient;
-}
-
 export function isTutorConfigured(): boolean {
-  return Boolean(process.env.ANTHROPIC_API_KEY);
+  return isAnthropicConfigured();
 }
 
 export interface TutorContext {
@@ -74,7 +60,7 @@ export async function askTutor(
   context: TutorContext,
   question: string,
 ): Promise<TutorAnswer> {
-  const client = getClient();
+  const client = getAnthropicClient("AI tuteur");
 
   // Prompt caching : le system prompt + le contexte de la leçon sont mis
   // en cache (5 min). Les questions successives sur la même leçon ne

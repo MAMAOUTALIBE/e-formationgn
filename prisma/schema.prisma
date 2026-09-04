@@ -194,6 +194,10 @@ model User {
   virtualClassResources        VirtualClassResource[]
   virtualClassReplaysPublished VirtualClassRecording[]            @relation("VirtualClassReplayPublisher")
   virtualClassNotifications    VirtualClassNotificationDelivery[]
+  // Aiduca-IA
+  assistantConversations       AssistantConversation[]
+  assistantDocumentsEdited     AssistantDocument[]                @relation("AssistantDocumentEditor")
+  assistantLeadsHandled        AssistantLead[]                    @relation("AssistantLeadHandler")
 
   // Rattachement à une société cliente (mode centre de formation).
   // `onDelete: Restrict` : on ne doit jamais perdre des élèves parce qu'une
@@ -393,6 +397,9 @@ model Course {
   /// Cette déclaration n'est pas cosmétique : sans elle, Prisma considère la
   /// colonne comme orpheline et tout `migrate dev` génère un `DROP COLUMN`
   /// silencieux qui casserait la recherche de cours.
+  /// Prospects Aiduca-IA rattachés à cette formation.
+  assistantLeads AssistantLead[]
+
   searchVector Unsupported("tsvector")?
 
   createdAt DateTime @default(now())
@@ -2048,4 +2055,191 @@ enum RegistrationStatus {
   SUSPENDED
   COMPLETED
   CANCELLED
+}
+
+// ===========================================================================
+// AIDUCA-IA — assistant conversationnel public
+// ===========================================================================
+
+/// Base documentaire administrable de l'assistant.
+///
+/// Le savoir d'Aiduca était jusqu'ici éclaté : catalogue en base, pages CMS,
+/// FAQ codées en dur dans les composants, constantes `BRAND`. Ce modèle est
+/// l'endroit unique où l'équipe ajoute ou corrige ce que l'assistant a le
+/// droit de dire. `scripts/seed-assistant-knowledge.ts` l'amorce depuis les
+/// sources existantes ; l'écran /admin/assistant/sources l'entretient ensuite.
+model AssistantDocument {
+  id       String @id @default(cuid())
+  slug     String @unique
+  title    String
+  /// Regroupement libre affiché dans l'admin ("Inscriptions", "Financement"…).
+  category String
+  body     String @db.Text
+
+  /// Provenance citable par l'assistant. `sourceUrl` doit rester une route
+  /// vivante du site : les routes neutralisées par src/proxy.ts renverraient
+  /// un lien mort à l'utilisateur.
+  sourceLabel String?
+  sourceUrl   String?
+
+  isPublished Boolean @default(true)
+  /// Ordre d'affichage dans l'admin ; sans effet sur la pertinence de recherche.
+  position    Int     @default(0)
+
+  updatedById String?
+  updatedBy   User?   @relation("AssistantDocumentEditor", fields: [updatedById], references: [id], onDelete: SetNull)
+
+  chunks AssistantChunk[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([isPublished])
+  @@index([category])
+}
+
+/// Fragment indexé d'un document — l'unité réellement recherchée.
+///
+/// Dérivé : régénéré intégralement à chaque sauvegarde du document parent par
+/// `reindexAssistantDocument()`. Ne jamais l'éditer à la main.
+///
+/// `searchVector` est peuplé par un trigger Postgres (migration
+/// `assistant_knowledge`), comme `Course.searchVector` : une colonne générée
+/// est impossible ici car `to_tsvector('french', …)` n'est pas IMMUTABLE. Le
+/// champ n'est déclaré que pour que `prisma migrate dev` ne le supprime pas.
+model AssistantChunk {
+  id         String            @id @default(cuid())
+  documentId String
+  document   AssistantDocument @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  position      Int
+  /// Titre du document parent, dénormalisé.
+  ///
+  /// Sans lui, un document dont le corps porte ses propres titres de section
+  /// n'a jamais son titre indexé : « Comment s'inscrire » ne remontait pas le
+  /// document qui s'appelle exactement comme ça. Dénormalisé sans risque de
+  /// dérive : les fragments sont régénérés en bloc à chaque sauvegarde.
+  documentTitle String
+  heading       String?
+  content       String  @db.Text
+
+  searchVector Unsupported("tsvector")?
+
+  createdAt DateTime @default(now())
+
+  @@index([documentId])
+  @@index([searchVector(ops: raw("tsvector_ops"))], type: Gin)
+}
+
+/// Fil de discussion avec Aiduca-IA.
+///
+/// Les visiteurs anonymes sont la cible principale (questions avant-vente),
+/// d'où `userId` optionnel : le fil est retrouvé par le cookie `publicId`.
+/// L'IP n'est stockée que hachée (`clientIpHash`), et la purge à 90 jours est
+/// faite par /api/cron/cleanup.
+model AssistantConversation {
+  id       String  @id @default(cuid())
+  publicId String  @unique
+  userId   String?
+  user     User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
+  ipHash   String?
+
+  messageCount Int     @default(0)
+  /// Vrai dès qu'un prospect a été créé depuis ce fil.
+  escalated    Boolean @default(false)
+
+  startedAt     DateTime @default(now())
+  lastMessageAt DateTime @default(now())
+
+  messages AssistantMessage[]
+  leads    AssistantLead[]
+
+  @@index([userId])
+  @@index([lastMessageAt])
+  @@index([escalated])
+}
+
+model AssistantMessage {
+  id             String                @id @default(cuid())
+  conversationId String
+  conversation   AssistantConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  role    AssistantMessageRole
+  content String               @db.Text
+
+  /// Renseignés uniquement sur les messages ASSISTANT.
+  certainty   AssistantCertainty?
+  /// Faux quand l'assistant n'a pas su répondre de façon certaine. C'est ce
+  /// qui alimente l'écran « questions sans réponse » de l'admin.
+  answered    Boolean             @default(true)
+  /// Identifiants des sources réellement citées, après validation serveur.
+  sources     Json?
+  /// Slugs de formations validés — ce sont eux qui produisent les boutons.
+  courseSlugs String[]
+
+  inputTokens     Int?
+  outputTokens    Int?
+  cacheReadTokens Int?
+  latencyMs       Int?
+
+  createdAt DateTime @default(now())
+
+  @@index([conversationId, createdAt])
+  @@index([answered])
+  @@index([createdAt])
+}
+
+/// Demande de rappel transmise à un conseiller.
+///
+/// Aiduca n'a pas de CRM externe : cette table EST le suivi commercial, et
+/// l'écran /admin/assistant/prospects sa vue.
+model AssistantLead {
+  id             String                 @id @default(cuid())
+  conversationId String?
+  conversation   AssistantConversation? @relation(fields: [conversationId], references: [id], onDelete: SetNull)
+
+  name    String
+  email   String
+  phone   String?
+  message String  @db.Text
+
+  /// Formation concernée quand la demande part d'une fiche précise.
+  courseId String?
+  course   Course? @relation(fields: [courseId], references: [id], onDelete: SetNull)
+
+  status       AssistantLeadStatus @default(NEW)
+  handledById  String?
+  handledBy    User?               @relation("AssistantLeadHandler", fields: [handledById], references: [id], onDelete: SetNull)
+  handledAt    DateTime?
+  /// Suivi interne, jamais exposé publiquement.
+  internalNote String?             @db.Text
+
+  ipHash String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([status])
+  @@index([createdAt])
+  @@index([courseId])
+}
+
+enum AssistantMessageRole {
+  USER
+  ASSISTANT
+}
+
+/// Degré de confiance revendiqué par l'assistant, re-validé côté serveur.
+/// Tout ce qui n'est pas `CERTAINE` déclenche la proposition de conseiller et
+/// marque le message comme sans réponse pour l'équipe.
+enum AssistantCertainty {
+  CERTAINE
+  PARTIELLE
+  INCONNUE
+}
+
+enum AssistantLeadStatus {
+  NEW
+  IN_PROGRESS
+  CLOSED
 }

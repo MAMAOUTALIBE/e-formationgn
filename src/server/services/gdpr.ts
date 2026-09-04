@@ -31,6 +31,10 @@ export interface UserDataExport {
   tentativesDeQuiz: unknown[];
   notifications: unknown[];
   demandesRgpd: unknown[];
+  /** Échanges avec Aiduca-IA rattachés au compte. */
+  conversationsAssistant: unknown[];
+  /** Demandes de rappel déposées depuis l'assistant. */
+  demandesDeRappel: unknown[];
 }
 
 /**
@@ -53,6 +57,7 @@ export async function buildUserDataExport(userId: string): Promise<UserDataExpor
     tentativesDeQuiz,
     notifications,
     demandesRgpd,
+    conversationsAssistant,
   ] = await Promise.all([
     prisma.user.findUniqueOrThrow({
       where: { id: userId },
@@ -139,7 +144,38 @@ export async function buildUserDataExport(userId: string): Promise<UserDataExpor
       where: { userId },
       select: { kind: true, status: true, requestedAt: true, completedAt: true },
     }),
+    // Aiduca-IA : les échanges rattachés au compte font partie des données de
+    // la personne. Un fil resté anonyme (jamais connecté) n'est pas rattachable
+    // et relève de la purge automatique à 90 jours, pas de l'export.
+    prisma.assistantConversation.findMany({
+      where: { userId },
+      select: {
+        startedAt: true,
+        lastMessageAt: true,
+        escalated: true,
+        messages: {
+          orderBy: { createdAt: "asc" },
+          select: { role: true, content: true, createdAt: true },
+        },
+      },
+    }),
   ]);
+
+  // Les prospects sont rattachés par e-mail : au moment de sa demande, la
+  // personne n'avait pas nécessairement de compte. C'est la seule clé qui la
+  // relie à ses demandes de rappel.
+  const demandesDeRappel = await prisma.assistantLead.findMany({
+    where: { email: compte.email },
+    select: {
+      name: true,
+      email: true,
+      phone: true,
+      message: true,
+      status: true,
+      createdAt: true,
+      course: { select: { title: true, slug: true } },
+    },
+  });
 
   const { company, ...reste } = compte;
   return {
@@ -155,6 +191,8 @@ export async function buildUserDataExport(userId: string): Promise<UserDataExpor
     tentativesDeQuiz,
     notifications,
     demandesRgpd,
+    conversationsAssistant,
+    demandesDeRappel,
   };
 }
 
@@ -220,6 +258,29 @@ export async function eraseUserData(userId: string): Promise<ErasureSummary> {
     data: { title: null, comment: null },
   });
   supprime["avis anonymisés"] = avis.count;
+
+  // Aiduca-IA : effacement sec. Contrairement aux questions publiques, un fil
+  // avec l'assistant n'a pas d'autre participant, donc rien à préserver pour
+  // autrui. Les messages partent en cascade avec la conversation.
+  //
+  // L'e-mail du compte est lu AVANT l'anonymisation qui suit : après, il vaut
+  // `efface-<id>@invalid` et ne retrouverait plus aucun prospect.
+  const compteAvantAnonymisation = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { email: true },
+  });
+
+  const conversations = await prisma.assistantConversation.deleteMany({
+    where: { userId },
+  });
+  supprime["conversations avec l'assistant"] = conversations.count;
+
+  const prospects = compteAvantAnonymisation
+    ? await prisma.assistantLead.deleteMany({
+        where: { email: compteAvantAnonymisation.email },
+      })
+    : { count: 0 };
+  supprime["demandes de rappel"] = prospects.count;
 
   // Le compte lui-même : anonymisation irréversible.
   //
