@@ -96,3 +96,32 @@ test("impose au moins une option au choix multiple", () => {
     false,
   );
 });
+
+test("valide un classement complet et refuse une cible inconnue", () => {
+  const dragQuestion = [{
+    id: "drag",
+    kind: "DRAG_DROP" as const,
+    interactionConfig: { targets: [{ id: "rebond", label: "Effet rebond" }, { id: "chauffage", label: "Chauffage" }] },
+    options: [{ id: "carte-1" }, { id: "carte-2" }],
+  }];
+  assert.deepEqual(validateQuizSubmission(dragQuestion, [{
+    questionId: "drag", optionIds: [], placements: [
+      { optionId: "carte-1", targetId: "rebond" },
+      { optionId: "carte-2", targetId: "chauffage" },
+    ],
+  }]), { valid: true });
+  assert.equal(validateQuizSubmission(dragQuestion, [{
+    questionId: "drag", optionIds: [], placements: [
+      { optionId: "carte-1", targetId: "inconnue" },
+      { optionId: "carte-2", targetId: "chauffage" },
+    ],
+  }]).valid, false);
+});
+
+test("valide un clic dans l'image et refuse une réponse absente", () => {
+  const hotspotQuestion = [{ id: "zone", kind: "HOTSPOT" as const, options: [] }];
+  assert.deepEqual(validateQuizSubmission(hotspotQuestion, [{
+    questionId: "zone", optionIds: [], point: { x: 42, y: 67 },
+  }]), { valid: true });
+  assert.equal(validateQuizSubmission(hotspotQuestion, [{ questionId: "zone", optionIds: [] }]).valid, false);
+});

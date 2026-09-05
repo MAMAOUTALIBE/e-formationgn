@@ -8,6 +8,7 @@ import { auth } from "@/auth";
 import { Prisma } from "@/generated/prisma/client";
 import { prisma } from "@/lib/prisma";
 import { validateQuizSubmission } from "@/lib/quiz-submission";
+import { getDragTargetLabels, isQuizAnswerCorrect } from "@/lib/quiz-scoring";
 import { markLessonCompleted } from "@/server/services/lesson-completion";
 import {
   quizAttemptSubmitSchema,
@@ -123,11 +124,18 @@ export async function addQuizQuestion(
       explanation: parsed.data.explanation ? parsed.data.explanation : null,
       kind: parsed.data.kind,
       points: parsed.data.points,
+      imageUrl: parsed.data.imageUrl || null,
+      imageAlt: parsed.data.imageAlt || null,
+      interactionConfig: parsed.data.interactionConfig ?? Prisma.JsonNull,
+      answerConfig: parsed.data.answerConfig ?? Prisma.JsonNull,
       displayOrder: (lastOrder._max.displayOrder ?? -1) + 1,
       options: {
         create: parsed.data.options.map((option, index) => ({
           label: option.label,
           isCorrect: option.isCorrect,
+          imageUrl: option.imageUrl || null,
+          imageAlt: option.imageAlt || null,
+          targetId: option.targetId || null,
           displayOrder: index,
         })),
       },
@@ -268,29 +276,14 @@ export async function submitQuizAttempt(
     return { ok: false, message: submissionValidation.message };
   }
 
-  // Index des options correctes (côté serveur uniquement)
-  const correctByQuestion = new Map<string, Set<string>>();
-  for (const question of quiz.questions) {
-    correctByQuestion.set(
-      question.id,
-      new Set(question.options.filter((o) => o.isCorrect).map((o) => o.id)),
-    );
-  }
-
   // Score
   let totalPoints = 0;
   let earnedPoints = 0;
   let correctCount = 0;
   for (const question of quiz.questions) {
     totalPoints += question.points;
-    const correctOptionIds = correctByQuestion.get(question.id) ?? new Set<string>();
-    const submitted =
-      parsed.data.answers.find((a) => a.questionId === question.id)?.optionIds ?? [];
-    const submittedSet = new Set(submitted);
-
-    const exactlyCorrect =
-      submittedSet.size === correctOptionIds.size &&
-      Array.from(correctOptionIds).every((id) => submittedSet.has(id));
+    const answer = parsed.data.answers.find((item) => item.questionId === question.id);
+    const exactlyCorrect = isQuizAnswerCorrect(question, answer);
 
     if (exactlyCorrect) {
       earnedPoints += question.points;
@@ -304,23 +297,25 @@ export async function submitQuizAttempt(
   // Correction par question, calculée systématiquement mais divulguée sous
   // condition (cf. `QuizAttemptResult.review`).
   const review: QuizQuestionReview[] = quiz.questions.map((question) => {
-    const correctOptionIds = correctByQuestion.get(question.id) ?? new Set<string>();
-    const submitted = new Set(
-      parsed.data.answers.find((a) => a.questionId === question.id)?.optionIds ?? [],
-    );
-    const isCorrect =
-      submitted.size === correctOptionIds.size &&
-      Array.from(correctOptionIds).every((id) => submitted.has(id));
+    const answer = parsed.data.answers.find((item) => item.questionId === question.id);
+    const submitted = new Set(answer?.optionIds ?? []);
+    const targets = getDragTargetLabels(question.interactionConfig);
+    const placements = new Map((answer?.placements ?? []).map((item) => [item.optionId, item.targetId]));
+    const isCorrect = isQuizAnswerCorrect(question, answer);
     return {
       questionId: question.id,
       prompt: question.prompt,
       correct: isCorrect,
-      chosenLabels: question.options
-        .filter((option) => submitted.has(option.id))
-        .map((option) => option.label),
-      correctLabels: question.options
-        .filter((option) => option.isCorrect)
-        .map((option) => option.label),
+      chosenLabels: question.kind === "DRAG_DROP"
+        ? question.options.map((option) => `${option.label} → ${targets.get(placements.get(option.id) ?? "") ?? "non classé"}`)
+        : question.kind === "HOTSPOT"
+          ? answer?.point ? [`Zone sélectionnée (${Math.round(answer.point.x)} %, ${Math.round(answer.point.y)} %)`] : []
+          : question.options.filter((option) => submitted.has(option.id)).map((option) => option.label),
+      correctLabels: question.kind === "DRAG_DROP"
+        ? question.options.map((option) => `${option.label} → ${targets.get(option.targetId ?? "") ?? "catégorie inconnue"}`)
+        : question.kind === "HOTSPOT"
+          ? ["La zone repérée par le formateur sur l’image"]
+          : question.options.filter((option) => option.isCorrect).map((option) => option.label),
       explanation: question.explanation,
     };
   });
@@ -331,7 +326,7 @@ export async function submitQuizAttempt(
   // un crash entre les deux laissait un attempt enregistré mais la leçon non
   // complétée (et le pourcentage de progression non recalculé du tout).
   const snapshot = {
-    schemaVersion: 1,
+    schemaVersion: 2,
     title: quiz.title,
     passingScore: quiz.passingScore,
     questions: quiz.questions.map((question) => ({
@@ -340,10 +335,17 @@ export async function submitQuizAttempt(
       explanation: question.explanation,
       kind: question.kind,
       points: question.points,
+      imageUrl: question.imageUrl,
+      imageAlt: question.imageAlt,
+      interactionConfig: question.interactionConfig,
+      answerConfig: question.answerConfig,
       options: question.options.map((option) => ({
         id: option.id,
         label: option.label,
         isCorrect: option.isCorrect,
+        imageUrl: option.imageUrl,
+        imageAlt: option.imageAlt,
+        targetId: option.targetId,
       })),
     })),
   } satisfies Prisma.InputJsonValue;
@@ -383,14 +385,27 @@ export async function submitQuizAttempt(
             },
           });
           for (const answer of parsed.data.answers) {
-            const correctSet = correctByQuestion.get(answer.questionId)!;
-            for (const optionId of answer.optionIds) {
+            const question = quiz.questions.find((item) => item.id === answer.questionId)!;
+            const answerCorrect = isQuizAnswerCorrect(question, answer);
+            const storedAnswers = question.kind === "DRAG_DROP"
+              ? (answer.placements ?? []).map((placement) => ({
+                  optionId: placement.optionId,
+                  textAnswer: placement.targetId,
+                  isCorrect: question.options.find((option) => option.id === placement.optionId)?.targetId === placement.targetId,
+                }))
+              : question.kind === "HOTSPOT"
+                ? [{ optionId: null, textAnswer: JSON.stringify(answer.point), isCorrect: answerCorrect }]
+                : answer.optionIds.map((optionId) => ({
+                    optionId,
+                    textAnswer: null,
+                    isCorrect: question.options.find((option) => option.id === optionId)?.isCorrect ?? false,
+                  }));
+            for (const storedAnswer of storedAnswers) {
               await tx.quizAnswer.create({
                 data: {
                   attemptId: created.id,
                   questionId: answer.questionId,
-                  optionId,
-                  isCorrect: correctSet.has(optionId),
+                  ...storedAnswer,
                 },
               });
             }

@@ -201,10 +201,24 @@ export async function getQuizForLearner(quizId: string, userId: string) {
     include: {
       questions: {
         orderBy: { displayOrder: "asc" },
-        include: {
+        select: {
+          id: true,
+          prompt: true,
+          kind: true,
+          imageUrl: true,
+          imageAlt: true,
+          interactionConfig: true,
+          displayOrder: true,
+          points: true,
           options: {
             orderBy: { displayOrder: "asc" },
-            select: { id: true, label: true, displayOrder: true },
+            select: {
+              id: true,
+              label: true,
+              imageUrl: true,
+              imageAlt: true,
+              displayOrder: true,
+            },
           },
         },
       },

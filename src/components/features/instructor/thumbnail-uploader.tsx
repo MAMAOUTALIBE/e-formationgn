@@ -313,7 +313,7 @@ export function ThumbnailUploader({
  * On utilise XHR plutôt que fetch car fetch n'expose pas la progression
  * d'upload dans tous les navigateurs.
  */
-function uploadWithProgress(
+export function uploadWithProgress(
   url: string,
   file: File,
   contentType: string,

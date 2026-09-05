@@ -12,7 +12,7 @@ const baseQuestion = {
   points: 1,
 };
 
-test("accepte les trois types de questions avec leurs réponses valides", () => {
+test("accepte les trois types de questions classiques avec leurs réponses valides", () => {
   assert.equal(
     quizQuestionSchema.safeParse({
       ...baseQuestion,
@@ -46,6 +46,51 @@ test("accepte les trois types de questions avec leurs réponses valides", () => 
     }).success,
     true,
   );
+});
+
+test("valide les questions visuelles et leurs configurations", () => {
+  assert.equal(quizQuestionSchema.safeParse({
+    ...baseQuestion,
+    kind: "IMAGE_CHOICE",
+    imageUrl: "/uploads/question.webp",
+    imageAlt: "Quatre détails constructifs",
+    options: [
+      { label: "Solution A", isCorrect: true, imageUrl: "/uploads/a.webp", imageAlt: "Solution A" },
+      { label: "Solution B", isCorrect: false, imageUrl: "/uploads/b.webp", imageAlt: "Solution B" },
+    ],
+  }).success, true);
+
+  assert.equal(quizQuestionSchema.safeParse({
+    ...baseQuestion,
+    kind: "DRAG_DROP",
+    interactionConfig: { targets: [{ id: "rebond", label: "Effet rebond" }, { id: "chauffage", label: "Lot chauffage" }] },
+    options: [
+      { label: "Température augmentée", isCorrect: false, targetId: "rebond" },
+      { label: "Régulation inchangée", isCorrect: false, targetId: "chauffage" },
+    ],
+  }).success, true);
+
+  assert.equal(quizQuestionSchema.safeParse({
+    ...baseQuestion,
+    kind: "HOTSPOT",
+    imageUrl: "/uploads/facade.webp",
+    imageAlt: "Façade avec désordre",
+    answerConfig: { x: 72, y: 34, radius: 9 },
+    options: [],
+  }).success, true);
+});
+
+test("refuse une question visuelle sans média, cible ou zone correcte", () => {
+  assert.equal(quizQuestionSchema.safeParse({ ...baseQuestion, kind: "IMAGE_CHOICE", options: [
+    { label: "A", isCorrect: true }, { label: "B", isCorrect: false },
+  ] }).success, false);
+  assert.equal(quizQuestionSchema.safeParse({ ...baseQuestion, kind: "DRAG_DROP", interactionConfig: { targets: [
+    { id: "a", label: "A" }, { id: "b", label: "B" },
+  ] }, options: [
+    { label: "Carte A", isCorrect: false, targetId: "inconnue" },
+    { label: "Carte B", isCorrect: false, targetId: "b" },
+  ] }).success, false);
+  assert.equal(quizQuestionSchema.safeParse({ ...baseQuestion, kind: "HOTSPOT", imageUrl: "/image.webp", options: [] }).success, false);
 });
 
 test("refuse plusieurs bonnes réponses pour choix unique et Vrai/Faux", () => {

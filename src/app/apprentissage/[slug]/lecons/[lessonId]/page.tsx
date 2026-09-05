@@ -324,7 +324,15 @@ export default async function LessonViewerPage({ params }: PageProps) {
                           id: q.id,
                           prompt: q.prompt,
                           kind: q.kind,
-                          options: q.options.map((o) => ({ id: o.id, label: o.label })),
+                          imageUrl: q.imageUrl,
+                          imageAlt: q.imageAlt,
+                          interactionConfig: q.interactionConfig,
+                          options: q.options.map((o) => ({
+                            id: o.id,
+                            label: o.label,
+                            imageUrl: o.imageUrl,
+                            imageAlt: o.imageAlt,
+                          })),
                         }))}
                       />
                     ) : (

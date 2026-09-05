@@ -508,6 +508,9 @@ enum QuestionKind {
   SINGLE_CHOICE
   MULTIPLE_CHOICE
   TRUE_FALSE
+  IMAGE_CHOICE
+  DRAG_DROP
+  HOTSPOT
 }
 
 model Quiz {
@@ -533,6 +536,10 @@ model QuizQuestion {
   kind         QuestionKind @default(SINGLE_CHOICE)
   displayOrder Int          @default(0)
   points       Int          @default(1)
+  imageUrl     String?      @db.Text
+  imageAlt     String?
+  interactionConfig Json?
+  answerConfig Json?
   options      QuizOption[]
   answers      QuizAnswer[]
 
@@ -546,6 +553,9 @@ model QuizOption {
   label        String       @db.Text
   isCorrect    Boolean      @default(false)
   displayOrder Int          @default(0)
+  imageUrl     String?      @db.Text
+  imageAlt     String?
+  targetId     String?
   answers      QuizAnswer[]
 
   @@index([questionId])
