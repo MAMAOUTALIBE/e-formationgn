@@ -10,6 +10,7 @@ import {
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { cn } from "@/lib/utils";
 import { submitQuizAttempt, type QuizQuestionReview } from "@/server/actions/quiz";
 
 interface QuizQuestion {
@@ -64,6 +65,7 @@ export function QuizAttempt({
   const [answers, setAnswers] = useState<Record<string, string[]>>({});
   const [placements, setPlacements] = useState<Record<string, Record<string, string>>>({});
   const [points, setPoints] = useState<Record<string, { x: number; y: number }>>({});
+  const [imageOrientations, setImageOrientations] = useState<Record<string, "portrait" | "landscape" | "panorama">>({});
   const [selectedCard, setSelectedCard] = useState<{ questionId: string; optionId: string } | null>(null);
   const [draggedCard, setDraggedCard] = useState<{ questionId: string; optionId: string } | null>(null);
   const [result, setResult] = useState<{
@@ -337,53 +339,78 @@ export function QuizAttempt({
         </Alert>
       ) : null}
 
-      {questions.map((question, index) => (
-        <Card key={question.id}>
-          <CardHeader>
-            <CardTitle className="text-base">
-              {index + 1}. {question.prompt}
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {question.imageUrl && question.kind !== "HOTSPOT" ? (
-              <div className="overflow-hidden rounded-lg border bg-muted">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={question.imageUrl} alt={question.imageAlt ?? "Illustration de la question"} className="max-h-[520px] w-full object-contain" />
+      {questions.map((question, index) => {
+        const orientation = imageOrientations[question.id];
+        const hasMainImage = Boolean(question.imageUrl);
+        return (
+        <Card key={question.id} className="overflow-hidden">
+          <div
+            data-question-media-layout={hasMainImage ? orientation ?? "loading" : "none"}
+            className={cn(
+              hasMainImage && orientation === "portrait" && "md:grid md:grid-cols-[minmax(220px,38%)_minmax(0,1fr)]",
+              hasMainImage && orientation === "landscape" && "xl:grid xl:grid-cols-[minmax(0,56%)_minmax(320px,44%)]",
+            )}
+          >
+            {question.imageUrl ? (
+              <div className={cn("flex min-h-0 items-center justify-center bg-muted/50", orientation === "panorama" ? "p-0" : "p-3 sm:p-4")}>
+                {question.kind === "HOTSPOT" ? (
+                  <div className="w-full space-y-2">
+                    <div
+                      className="relative mx-auto w-fit max-w-full cursor-crosshair overflow-hidden rounded-lg border bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                      role="button"
+                      tabIndex={0}
+                      aria-label="Cliquez sur la zone qui répond à la question"
+                      onPointerDown={(event) => {
+                        const rect = event.currentTarget.getBoundingClientRect();
+                        setPoints((current) => ({ ...current, [question.id]: {
+                          x: Math.max(0, Math.min(100, ((event.clientX - rect.left) / rect.width) * 100)),
+                          y: Math.max(0, Math.min(100, ((event.clientY - rect.top) / rect.height) * 100)),
+                        } }));
+                      }}
+                      onKeyDown={(event) => {
+                        if (!["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", "Enter", " "].includes(event.key)) return;
+                        event.preventDefault();
+                        const current = points[question.id] ?? { x: 50, y: 50 };
+                        setPoints((all) => ({ ...all, [question.id]: {
+                          x: Math.max(0, Math.min(100, current.x + (event.key === "ArrowRight" ? 2 : event.key === "ArrowLeft" ? -2 : 0))),
+                          y: Math.max(0, Math.min(100, current.y + (event.key === "ArrowDown" ? 2 : event.key === "ArrowUp" ? -2 : 0))),
+                        } }));
+                      }}
+                    >
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={question.imageUrl}
+                        alt={question.imageAlt ?? "Image interactive"}
+                        className="block h-auto max-h-[640px] max-w-full object-contain"
+                        draggable={false}
+                        onLoad={(event) => {
+                          const ratio = event.currentTarget.naturalWidth / event.currentTarget.naturalHeight;
+                          setImageOrientations((current) => ({ ...current, [question.id]: ratio < 0.9 ? "portrait" : ratio > 2.1 ? "panorama" : "landscape" }));
+                        }}
+                      />
+                      {points[question.id] ? <span className="pointer-events-none absolute h-6 w-6 -translate-x-1/2 -translate-y-1/2 rounded-full border-4 border-white bg-[color:var(--brand-secondary)] shadow-[0_0_0_3px_var(--brand-secondary)]" style={{ left: `${points[question.id]!.x}%`, top: `${points[question.id]!.y}%` }} /> : null}
+                    </div>
+                    <p className="text-xs text-muted-foreground">Cliquez sur l’image. Au clavier, utilisez Entrée puis les flèches.</p>
+                  </div>
+                ) : (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={question.imageUrl}
+                    alt={question.imageAlt ?? "Illustration de la question"}
+                    className={cn("block h-auto max-w-full object-contain", orientation === "portrait" ? "max-h-[640px]" : "max-h-[520px]")}
+                    onLoad={(event) => {
+                      const ratio = event.currentTarget.naturalWidth / event.currentTarget.naturalHeight;
+                      setImageOrientations((current) => ({ ...current, [question.id]: ratio < 0.9 ? "portrait" : ratio > 2.1 ? "panorama" : "landscape" }));
+                    }}
+                  />
+                )}
               </div>
             ) : null}
-
-            {question.kind === "HOTSPOT" && question.imageUrl ? (
-              <div className="space-y-2">
-                <div
-                  className="relative cursor-crosshair overflow-hidden rounded-lg border bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                  role="button"
-                  tabIndex={0}
-                  aria-label="Cliquez sur la zone qui répond à la question"
-                  onPointerDown={(event) => {
-                    const rect = event.currentTarget.getBoundingClientRect();
-                    setPoints((current) => ({ ...current, [question.id]: {
-                      x: Math.max(0, Math.min(100, ((event.clientX - rect.left) / rect.width) * 100)),
-                      y: Math.max(0, Math.min(100, ((event.clientY - rect.top) / rect.height) * 100)),
-                    } }));
-                  }}
-                  onKeyDown={(event) => {
-                    if (!["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", "Enter", " "].includes(event.key)) return;
-                    event.preventDefault();
-                    const current = points[question.id] ?? { x: 50, y: 50 };
-                    setPoints((all) => ({ ...all, [question.id]: {
-                      x: Math.max(0, Math.min(100, current.x + (event.key === "ArrowRight" ? 2 : event.key === "ArrowLeft" ? -2 : 0))),
-                      y: Math.max(0, Math.min(100, current.y + (event.key === "ArrowDown" ? 2 : event.key === "ArrowUp" ? -2 : 0))),
-                    } }));
-                  }}
-                >
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={question.imageUrl} alt={question.imageAlt ?? "Image interactive"} className="max-h-[560px] w-full object-contain" draggable={false} />
-                  {points[question.id] ? <span className="pointer-events-none absolute h-6 w-6 -translate-x-1/2 -translate-y-1/2 rounded-full border-4 border-white bg-[color:var(--brand-secondary)] shadow-[0_0_0_3px_var(--brand-secondary)]" style={{ left: `${points[question.id]!.x}%`, top: `${points[question.id]!.y}%` }} /> : null}
-                </div>
-                <p className="text-xs text-muted-foreground">Cliquez sur l’image. Au clavier, utilisez Entrée puis les flèches pour déplacer le repère.</p>
-              </div>
-            ) : null}
-
+            <div className="min-w-0 self-center">
+              <CardHeader>
+                <CardTitle className="text-base leading-relaxed">{index + 1}. {question.prompt}</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
             {question.kind === "DRAG_DROP" ? (
               <div className="space-y-4">
                 <p className="text-xs text-muted-foreground">Glissez chaque carte dans une catégorie, ou sélectionnez une carte puis cliquez sur sa catégorie.</p>
@@ -439,7 +466,7 @@ export function QuizAttempt({
                     <label className={question.kind === "IMAGE_CHOICE" ? "flex h-full cursor-pointer flex-col overflow-hidden rounded-md border border-border hover:bg-muted" : "flex cursor-pointer items-start gap-3 rounded-md border border-border p-3 hover:bg-muted"}>
                       {question.kind === "IMAGE_CHOICE" && option.imageUrl ? (
                         // eslint-disable-next-line @next/next/no-img-element
-                        <img src={option.imageUrl} alt={option.imageAlt ?? option.label} className="aspect-[4/3] w-full object-contain bg-muted" />
+                        <img src={option.imageUrl} alt={option.imageAlt ?? option.label} className="mx-auto block h-auto max-h-[360px] max-w-full object-contain bg-muted" />
                       ) : null}
                       <span className={question.kind === "IMAGE_CHOICE" ? "flex items-start gap-3 p-3" : "contents"}>
                       <input
@@ -463,9 +490,12 @@ export function QuizAttempt({
               })}
             </ul>
             ) : null}
-          </CardContent>
+              </CardContent>
+            </div>
+          </div>
         </Card>
-      ))}
+        );
+      })}
 
       <Button
         type="button"

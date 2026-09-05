@@ -68,6 +68,20 @@ test("le lecteur de leçon exploite progressivement les écrans jusqu'au 5K", ()
   assert.doesNotMatch(page, /max-w-\[1600px\] grid-cols/);
 });
 
+test("les images de quiz adaptent leur cadrage et placent le texte à côté", () => {
+  const quiz = readFileSync(
+    "src/components/features/learning/quiz-attempt.tsx",
+    "utf8",
+  );
+  assert.match(quiz, /naturalWidth \/ event\.currentTarget\.naturalHeight/);
+  assert.match(quiz, /ratio < 0\.9 \? "portrait" : ratio > 2\.1 \? "panorama" : "landscape"/);
+  assert.match(quiz, /md:grid-cols-\[minmax\(220px,38%\)_minmax\(0,1fr\)\]/);
+  assert.match(quiz, /xl:grid-cols-\[minmax\(0,56%\)_minmax\(320px,44%\)\]/);
+  assert.match(quiz, /data-question-media-layout/);
+  assert.match(quiz, /h-auto max-h-\[360px\] max-w-full object-contain/);
+  assert.doesNotMatch(quiz, /aspect-\[4\/3\]/);
+});
+
 test("la coquille de compte accepte une largeur dédiée sans élargir les autres espaces", () => {
   const accountShell = readFileSync(
     "src/components/features/workspace/account-shell.tsx",
