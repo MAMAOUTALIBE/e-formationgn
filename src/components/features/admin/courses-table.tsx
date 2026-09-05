@@ -17,8 +17,13 @@ import { StatusBadge } from "@/components/ui/status-badge";
 import type { CourseStatus } from "@/generated/prisma/enums";
 import type { AdminCourseRow, AdminCoursesSort } from "@/server/queries/admin-courses";
 import {
-  adminDeleteCourse, approveCourse, bulkPublish, bulkUnpublish,
-  duplicateCourse, unpublishCourse,
+  adminDeleteCourse,
+  approveCourse,
+  bulkPublish,
+  bulkRemoveCourses,
+  bulkUnpublish,
+  duplicateCourse,
+  unpublishCourse,
 } from "@/server/actions/admin-courses";
 
 type Params = Record<string, string | undefined>;
@@ -43,6 +48,7 @@ export function AdminCoursesTable({ rows, params, page, pageSize, total, totalPa
   const [pending, startTransition] = useTransition();
   const [message, setMessage] = useState<string | null>(null);
   const [toDelete, setToDelete] = useState<AdminCourseRow | null>(null);
+  const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
   const allSelected = rows.length > 0 && selected.size === rows.length;
 
   const href = (changes: Params) => {
@@ -61,6 +67,7 @@ export function AdminCoursesTable({ rows, params, page, pageSize, total, totalPa
       if (result.success) {
         setSelected(new Set());
         setToDelete(null);
+        setBulkDeleteOpen(false);
         router.refresh();
       }
     });
@@ -87,6 +94,15 @@ export function AdminCoursesTable({ rows, params, page, pageSize, total, totalPa
           </Button>
           <Button size="sm" variant="outline" disabled={pending} onClick={() => run(() => bulkUnpublish(selectedIds))}>
             <Archive className="h-3.5 w-3.5" /> Archiver
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            disabled={pending}
+            onClick={() => setBulkDeleteOpen(true)}
+            className="border-destructive/40 text-destructive hover:bg-destructive/10"
+          >
+            <Trash2 className="h-3.5 w-3.5" /> Supprimer
           </Button>
           <button type="button" className="ml-auto text-muted-foreground hover:text-foreground" onClick={() => setSelected(new Set())}>Annuler</button>
         </div>
@@ -146,6 +162,16 @@ export function AdminCoursesTable({ rows, params, page, pageSize, total, totalPa
       </footer>
 
       <ConfirmDialog open={Boolean(toDelete)} onClose={() => setToDelete(null)} title={`Supprimer « ${toDelete?.title ?? "cette formation"} » ?`} description="Cette action est définitive. Une formation liée à des commandes, inscriptions, certificats ou à un programme ne pourra pas être supprimée ; elle devra être archivée." confirmLabel="Supprimer définitivement" destructive pending={pending} onConfirm={() => { if (toDelete) run(() => adminDeleteCourse(toDelete.id)); }} />
+      <ConfirmDialog
+        open={bulkDeleteOpen}
+        onClose={() => setBulkDeleteOpen(false)}
+        title={`Retirer ${selected.size} formation${selected.size > 1 ? "s" : ""} ?`}
+        description="Les formations sans historique seront supprimées définitivement. Celles liées à des inscriptions, commandes, certificats ou programmes seront archivées et retirées du catalogue afin de préserver leurs données."
+        confirmLabel="Supprimer ou archiver"
+        destructive
+        pending={pending}
+        onConfirm={() => run(() => bulkRemoveCourses(selectedIds))}
+      />
     </section>
   );
 }

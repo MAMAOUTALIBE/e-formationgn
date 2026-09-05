@@ -271,6 +271,76 @@ export async function bulkUnpublish(courseIds: string[]): Promise<ActionResult> 
   };
 }
 
+export async function bulkRemoveCourses(courseIds: string[]): Promise<ActionResult> {
+  const admin = await requireAnyAdminRole("ADMIN");
+  if (
+    !Array.isArray(courseIds) ||
+    courseIds.some(
+      (courseId) =>
+        typeof courseId !== "string" || courseId.length === 0 || courseId.length > 64,
+    )
+  ) {
+    return { success: false, message: "Sélection de formations invalide." };
+  }
+
+  const uniqueCourseIds = [...new Set(courseIds)];
+  if (uniqueCourseIds.length === 0) {
+    return { success: false, message: "Aucune formation sélectionnée." };
+  }
+  if (uniqueCourseIds.length > 100) {
+    return { success: false, message: "La suppression est limitée à 100 formations à la fois." };
+  }
+
+  let deleted = 0;
+  let archived = 0;
+
+  for (const courseId of uniqueCourseIds) {
+    const outcome = await deleteCourseRecordIfUnused(courseId);
+    if (outcome.kind === "deleted") {
+      await cleanupDeletedCourseMedia(outcome.media);
+      await audit(admin.userId, "course.delete", courseId, {
+        title: outcome.title,
+        bulk: true,
+      });
+      deleted += 1;
+      continue;
+    }
+
+    if (outcome.kind === "blocked" || outcome.kind === "concurrent") {
+      const result = await prisma.course.updateMany({
+        where: { id: courseId, status: { not: "ARCHIVED" } },
+        data: { status: "ARCHIVED" },
+      });
+      if (result.count > 0) {
+        await audit(admin.userId, "course.bulk-unpublish", courseId, {
+          reason: "protected-history",
+        });
+        archived += 1;
+      }
+    }
+  }
+
+  if (deleted === 0 && archived === 0) {
+    return { success: false, message: "Aucune formation disponible n’a été modifiée." };
+  }
+
+  revalidatePath("/admin/cours");
+  invalidateCatalogCaches();
+
+  const summaries: string[] = [];
+  if (deleted > 0) {
+    summaries.push(
+      `${deleted} formation${deleted > 1 ? "s" : ""} supprimée${deleted > 1 ? "s" : ""} définitivement`,
+    );
+  }
+  if (archived > 0) {
+    summaries.push(
+      `${archived} formation${archived > 1 ? "s" : ""} archivée${archived > 1 ? "s" : ""} pour préserver leur historique`,
+    );
+  }
+  return { success: true, message: `${summaries.join(" ; ")}.` };
+}
+
 export async function bulkPublish(courseIds: string[]): Promise<ActionResult> {
   if (courseIds.length === 0) return { success: false, message: "Aucune formation sélectionnée." };
   for (const id of courseIds) {

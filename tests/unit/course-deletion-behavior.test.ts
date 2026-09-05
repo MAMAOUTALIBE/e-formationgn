@@ -52,3 +52,21 @@ test("la transaction bloque toutes les relations sensibles et collecte seulement
   assert.match(service, /heroBackgroundUrl/);
   assert.match(service, /lesson\.resources\.map/);
 });
+
+test("l’administration permet de retirer plusieurs formations sans détruire leur historique", () => {
+  const actions = readFileSync("src/server/actions/admin-courses.ts", "utf8");
+  const table = readFileSync("src/components/features/admin/courses-table.tsx", "utf8");
+
+  assert.match(actions, /export async function bulkRemoveCourses/);
+  assert.match(actions, /requireAnyAdminRole\("ADMIN"\)/);
+  assert.match(actions, /deleteCourseRecordIfUnused\(courseId\)/);
+  assert.match(actions, /outcome\.kind === "blocked" \|\| outcome\.kind === "concurrent"/);
+  assert.match(actions, /data: \{ status: "ARCHIVED" \}/);
+  assert.match(actions, /Array\.isArray\(courseIds\)/);
+  assert.match(actions, /uniqueCourseIds\.length > 100/);
+
+  assert.match(table, /bulkRemoveCourses\(selectedIds\)/);
+  assert.match(table, /> Supprimer/);
+  assert.match(table, /Supprimer ou archiver/);
+  assert.match(table, /afin de préserver leurs données/);
+});
