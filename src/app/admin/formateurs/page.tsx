@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { GraduationCap, Plus, Search, UsersRound } from "lucide-react";
-import { Avatar } from "@/components/ui/avatar";
+import { AdminInstructorsList } from "@/components/features/admin/instructors-list";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Input } from "@/components/ui/input";
@@ -26,7 +26,8 @@ export default async function AdminInstructorsPage({
 
   const where: Prisma.UserWhereInput = {
     isInstructor: true,
-    ...(status ? { status } : {}),
+    role: "INSTRUCTOR",
+    ...(status ? { status } : { status: { not: "DELETED" } }),
     ...(search
       ? {
           OR: [
@@ -141,37 +142,20 @@ export default async function AdminInstructorsPage({
           ) : null}
         </form>
         {instructors.length ? (
-          <ul className="divide-y divide-border">
-            {instructors.map((user) => {
-              const enrollments = user.coursesAuthored.reduce(
+          <AdminInstructorsList
+            rows={instructors.map((user) => ({
+              id: user.id,
+              name: user.name,
+              email: user.email,
+              image: user.image,
+              status: user.status,
+              coursesCount: user._count.coursesAuthored,
+              enrollmentsCount: user.coursesAuthored.reduce(
                 (sum, course) => sum + course.totalEnrollments,
                 0,
-              );
-              return (
-                <li key={user.id}>
-                  <Link
-                    href={`/admin/utilisateurs/${user.id}`}
-                    className="flex items-center gap-3 p-4 hover:bg-muted/35"
-                  >
-                <Avatar
-                  src={user.image}
-                  alt={user.name ?? user.email}
-                  fallback={user.name ?? user.email}
-                />
-                    <span className="min-w-0 flex-1">
-                      <strong className="block truncate">
-                        {user.name ?? user.email}
-                      </strong>
-                      <span className="block text-xs text-muted-foreground">
-                        {user._count.coursesAuthored} formation{user._count.coursesAuthored !== 1 ? "s" : ""} · {enrollments}{" "}
-                        inscriptions
-                      </span>
-                    </span>
-                  </Link>
-                </li>
-              );
-            })}
-          </ul>
+              ),
+            }))}
+          />
         ) : (
           <div className="p-5">
             <EmptyState

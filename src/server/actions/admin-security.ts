@@ -213,6 +213,103 @@ export async function setStaffAccountStatus(
   };
 }
 
+/**
+ * Retire des formateurs de l'espace actif sans effacer leurs formations ni
+ * les pièces d'historique qui doivent rester consultables.
+ *
+ * Le statut DELETED coupe l'authentification dans src/auth.ts. On conserve le
+ * rôle et le drapeau formateur afin que l'administration puisse retrouver ces
+ * comptes avec le filtre « Archivés » et, si nécessaire, les réactiver depuis
+ * leur fiche.
+ */
+export async function archiveInstructorAccounts(
+  requestedIds: string[],
+): Promise<ActionResult> {
+  const admin = await requireAdmin();
+  if (
+    !Array.isArray(requestedIds) ||
+    requestedIds.some((id) => typeof id !== "string" || id.length < 1 || id.length > 64)
+  ) {
+    return { success: false, message: "Sélection de formateurs invalide." };
+  }
+
+  const ids = [...new Set(requestedIds)];
+  if (ids.length === 0) {
+    return { success: false, message: "Aucun formateur sélectionné." };
+  }
+  if (ids.length > 100) {
+    return { success: false, message: "Sélectionnez au maximum 100 formateurs." };
+  }
+  if (ids.includes(admin.userId)) {
+    return { success: false, message: "Vous ne pouvez pas supprimer votre propre compte." };
+  }
+
+  const instructors = await prisma.user.findMany({
+    where: {
+      id: { in: ids },
+      role: "INSTRUCTOR",
+      isInstructor: true,
+    },
+    select: {
+      id: true,
+      email: true,
+      role: true,
+      status: true,
+      _count: { select: { coursesAuthored: true } },
+    },
+  });
+  if (instructors.length !== ids.length) {
+    return {
+      success: false,
+      message:
+        "La sélection contient un compte qui n’est pas formateur. Aucune suppression n’a été appliquée.",
+    };
+  }
+
+  const activeInstructors = instructors.filter((instructor) => instructor.status !== "DELETED");
+  if (activeInstructors.length === 0) {
+    return { success: false, message: "Ces formateurs sont déjà archivés." };
+  }
+  const activeIds = activeInstructors.map((instructor) => instructor.id);
+  const archivedAt = new Date();
+
+  await prisma.$transaction([
+    prisma.session.deleteMany({ where: { userId: { in: activeIds } } }),
+    prisma.user.updateMany({
+      where: { id: { in: activeIds } },
+      data: {
+        status: "DELETED",
+        passwordChangedAt: archivedAt,
+      },
+    }),
+  ]);
+
+  await Promise.all(
+    activeInstructors.map((instructor) =>
+      createAuditLog({
+        actorId: admin.userId,
+        action: "instructor.archive",
+        targetType: "User",
+        targetId: instructor.id,
+        metadata: {
+          email: instructor.email,
+          role: instructor.role,
+          coursesPreserved: instructor._count.coursesAuthored,
+        },
+      }),
+    ),
+  );
+
+  revalidatePath("/admin/formateurs");
+  revalidatePath("/admin/equipe");
+  for (const id of activeIds) revalidatePath(`/admin/utilisateurs/${id}`);
+
+  return {
+    success: true,
+    message: `${activeIds.length} formateur${activeIds.length > 1 ? "s" : ""} supprimé${activeIds.length > 1 ? "s" : ""} de la liste active.`,
+  };
+}
+
 export async function exportAuditLogCsv(): Promise<
   { csv: string; filename: string } | { error: string }
 > {
