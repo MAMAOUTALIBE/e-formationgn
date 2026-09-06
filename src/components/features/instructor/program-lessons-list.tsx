@@ -5,6 +5,7 @@ import {
   ChevronDown,
   Copy,
   FileText,
+  GalleryHorizontalEnd,
   FolderOpen,
   FolderPlus,
   HelpCircle,
@@ -37,6 +38,10 @@ interface ProgramLesson {
   muxPlaybackId: string | null;
   externalVideoUrl: string | null;
   videoDurationSeconds: number;
+  presentation: {
+    status: "UPLOADED" | "PROCESSING" | "READY" | "ERROR";
+    slideCount: number;
+  } | null;
   resources: ProgramLessonResource[];
 }
 
@@ -131,6 +136,19 @@ function ProgramLessonCard({
                 Vidéo manquante
               </span>
             )
+          ) : null}
+          {lesson.type === "PRESENTATION" ? (
+            <span className="inline-flex shrink-0 items-center rounded bg-[color:var(--brand-accent)]/10 px-1.5 py-0.5 text-[10px] font-medium text-[color:var(--brand-accent)]">
+              {lesson.presentation?.status === "READY"
+                ? `${lesson.presentation.slideCount} diapo${lesson.presentation.slideCount > 1 ? "s" : ""}`
+                : lesson.presentation?.status === "PROCESSING"
+                  ? "Conversion en cours"
+                  : lesson.presentation?.status === "ERROR"
+                    ? "Conversion échouée"
+                    : lesson.presentation
+                      ? "En attente de conversion"
+                      : "PowerPoint manquant"}
+            </span>
           ) : null}
         </span>
 
@@ -251,6 +269,8 @@ function LessonIcon({ type }: { type: LessonType }) {
       return <PlayCircle className={className} aria-hidden />;
     case "QUIZ":
       return <HelpCircle className={className} aria-hidden />;
+    case "PRESENTATION":
+      return <GalleryHorizontalEnd className={className} aria-hidden />;
     case "RESOURCE":
       return <Paperclip className={className} aria-hidden />;
     case "TEXT":

@@ -4,7 +4,13 @@ import { createWriteStream } from "node:fs";
 import { NextResponse } from "next/server";
 
 import { auth } from "@/auth";
-import { resolveLocalUploadPath, verifyUploadToken } from "@/lib/storage/local";
+import {
+  MAX_LOCAL_UPLOAD_BYTES,
+  resolveLocalUploadPath,
+  verifyUploadToken,
+} from "@/lib/storage/local";
+import type { LocalUploadScope } from "@/lib/storage/local-upload-token";
+import { resolvePrivateLocalUploadPath } from "@/lib/storage/private-local";
 
 // Réception d'un blob (image ou vidéo) et écriture sur disque local.
 // Utilisée uniquement quand R2 n'est pas configuré (fallback dev / single-host).
@@ -12,8 +18,6 @@ import { resolveLocalUploadPath, verifyUploadToken } from "@/lib/storage/local";
 // mémoire.
 
 export const runtime = "nodejs";
-
-const MAX_BYTES = 1024 * 1024 * 1024; // 1 GB (couvre images + vidéos)
 
 export async function PUT(request: Request) {
   // Authentification suffisante : la vraie autorisation est le token signé
@@ -26,9 +30,16 @@ export async function PUT(request: Request) {
 
   const { searchParams } = new URL(request.url);
   const key = searchParams.get("key");
+  const scope = searchParams.get("scope") as LocalUploadScope | null;
   const exp = Number(searchParams.get("exp"));
+  const maxSizeBytes = Number(searchParams.get("max"));
   const token = searchParams.get("token");
-  if (!key || !token || !verifyUploadToken(key, exp, token)) {
+  if (
+    !key ||
+    (scope !== "public" && scope !== "private") ||
+    !token ||
+    !verifyUploadToken(key, exp, token, maxSizeBytes, scope)
+  ) {
     return NextResponse.json(
       { error: "Lien d'upload invalide ou expiré." },
       { status: 403 },
@@ -36,9 +47,9 @@ export async function PUT(request: Request) {
   }
 
   const declaredLength = Number(request.headers.get("content-length") ?? "0");
-  if (declaredLength > MAX_BYTES) {
+  if (declaredLength > maxSizeBytes) {
     return NextResponse.json(
-      { error: `Fichier trop lourd (max ${MAX_BYTES / (1024 * 1024)} MB).` },
+      { error: `Fichier trop lourd (max ${Math.floor(maxSizeBytes / (1024 * 1024))} MB).` },
       { status: 413 },
     );
   }
@@ -49,7 +60,10 @@ export async function PUT(request: Request) {
 
   let dest: string;
   try {
-    dest = await resolveLocalUploadPath(key);
+    dest =
+      scope === "private"
+        ? await resolvePrivateLocalUploadPath(key)
+        : await resolveLocalUploadPath(key);
   } catch (error) {
     console.error("[upload/blob] préparation du stockage", { key, error });
     return NextResponse.json(
@@ -67,7 +81,7 @@ export async function PUT(request: Request) {
       if (done) break;
       if (!value) continue;
       total += value.byteLength;
-      if (total > MAX_BYTES) {
+      if (total > maxSizeBytes || total > MAX_LOCAL_UPLOAD_BYTES) {
         throw new Error("TOO_LARGE");
       }
       if (!ws.write(value)) {
@@ -84,7 +98,7 @@ export async function PUT(request: Request) {
     await unlink(dest).catch(() => {});
     if (err instanceof Error && err.message === "TOO_LARGE") {
       return NextResponse.json(
-        { error: `Fichier trop lourd (max ${MAX_BYTES / (1024 * 1024)} MB).` },
+        { error: `Fichier trop lourd (max ${Math.floor(maxSizeBytes / (1024 * 1024))} MB).` },
         { status: 413 },
       );
     }

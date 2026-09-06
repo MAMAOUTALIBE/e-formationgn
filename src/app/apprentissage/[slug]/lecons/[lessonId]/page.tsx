@@ -18,6 +18,7 @@ import { LessonBookmarkButton } from "@/components/features/learning/lesson-book
 import { LessonCompletionToggle } from "@/components/features/learning/lesson-completion-toggle";
 import { LessonNotes } from "@/components/features/learning/lesson-notes";
 import { LessonPlayer } from "@/components/features/learning/lesson-player";
+import { LessonPresentationPlayer } from "@/components/features/learning/lesson-presentation-player";
 import { MarkdownContent } from "@/components/features/learning/markdown-content";
 import { LessonReader } from "@/components/features/learning/lesson-reader";
 import { LearningActivityHeartbeat } from "@/components/features/learning/use-learning-heartbeat";
@@ -42,6 +43,7 @@ import {
   listCourseAnnouncements,
   listLessonQuestions,
 } from "@/server/queries/learning";
+import { getLearnerPresentationState } from "@/server/queries/presentation-learning";
 
 export const metadata: Metadata = {
   title: "Leçon",
@@ -95,6 +97,7 @@ export default async function LessonViewerPage({ params }: PageProps) {
     reviewsBundle,
     myReview,
     lessonQuestions,
+    presentationState,
   ] = await Promise.all([
     getLessonProgress(session.user.id, course.id),
     getLessonNotes(session.user.id, lessonId),
@@ -111,6 +114,9 @@ export default async function LessonViewerPage({ params }: PageProps) {
     getCourseReviewsForLearner(course.id, 20),
     getMyReviewForCourse(session.user.id, course.id),
     listLessonQuestions(session.user.id, course.id, lessonId),
+    lesson.type === "PRESENTATION"
+      ? getLearnerPresentationState(session.user.id, lessonId)
+      : Promise.resolve({ status: "MISSING" as const }),
   ]);
   const completedIds = new Set(
     progressList.filter((p) => p.isCompleted).map((p) => p.lessonId),
@@ -361,6 +367,38 @@ export default async function LessonViewerPage({ params }: PageProps) {
                   ) : (
                     <div className="flex min-h-[40vh] items-center justify-center bg-card p-6 text-sm text-muted-foreground">
                       Le formateur n&apos;a pas encore rédigé le contenu de cette leçon.
+                    </div>
+                  )
+                ) : null}
+
+                {lesson.type === "PRESENTATION" ? (
+                  presentationState.status === "READY" &&
+                  presentationState.slides.length > 0 ? (
+                    <LessonPresentationPlayer
+                      key={lesson.id}
+                      lessonId={lesson.id}
+                      lessonTitle={lesson.title}
+                      learnerIdentity={
+                        [data.enrollment.user.firstName, data.enrollment.user.lastName]
+                          .filter(Boolean)
+                          .join(" ") ||
+                        data.enrollment.user.name ||
+                        session.user.email
+                      }
+                      slides={presentationState.slides}
+                      initialProgress={presentationState.progress}
+                    />
+                  ) : (
+                    <div
+                      className="flex min-h-[40vh] items-center justify-center bg-slate-950 px-6 text-center text-sm text-slate-100"
+                      role={presentationState.status === "ERROR" ? "alert" : "status"}
+                    >
+                      {presentationState.status === "UPLOADED" ||
+                      presentationState.status === "PROCESSING"
+                        ? "Le diaporama est en cours de préparation. Revenez dans quelques instants."
+                        : presentationState.status === "ERROR"
+                          ? "Le diaporama ne peut pas être affiché pour le moment. Le formateur peut remplacer le fichier."
+                          : "Ce diaporama n’est pas encore disponible. Vous pouvez poursuivre avec la leçon suivante."}
                     </div>
                   )
                 ) : null}

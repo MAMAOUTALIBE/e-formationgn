@@ -42,6 +42,8 @@ function cleanupHarness(overrides: Partial<CourseMediaCleanupDependencies> = {})
     deleteMux: async (id) => { deleted.push(`mux:${id}`); return true; },
     deleteLocal: async (key) => { deleted.push(`local:${key}`); },
     deleteR2: async (key) => { deleted.push(`r2:${key}`); },
+    deletePrivate: async (key) => { deleted.push(`private:${key}`); },
+    deletePrivatePrefix: async (prefix) => { deleted.push(`private-prefix:${prefix}`); },
     warn: (message) => { warnings.push(message); },
     ...overrides,
   };
@@ -77,4 +79,23 @@ test("un refus best-effort Mux est journalisé sans bloquer les autres nettoyage
   await runCourseMediaCleanup({ ownerId: owner, muxAssetIds: ["mux-1"], storedUrls: [`/uploads/${resourceKey}`] }, deps);
   assert.deepEqual(deleted, [`local:${resourceKey}`]);
   assert.deepEqual(warnings, ["Asset Mux non supprimé"]);
+});
+
+test("les sources et rendus privés d'un cours sont nettoyés", async () => {
+  const { deps, deleted } = cleanupHarness();
+  await runCourseMediaCleanup(
+    {
+      ownerId: owner,
+      muxAssetIds: [],
+      storedUrls: [],
+      privateKeys: ["presentations/source/u/l/source.pptx", "rendered/slide.png"],
+      privatePrefixes: ["presentations/rendered/p/token"],
+    },
+    deps,
+  );
+  assert.deepEqual(deleted, [
+    "private:presentations/source/u/l/source.pptx",
+    "private:rendered/slide.png",
+    "private-prefix:presentations/rendered/p/token",
+  ]);
 });

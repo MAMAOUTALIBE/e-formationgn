@@ -14,11 +14,16 @@ import "server-only";
 // d'écrire hors du préfixe qui lui est attribué) — la key est décidée côté
 // serveur et signée.
 
-import { createHmac, timingSafeEqual } from "node:crypto";
 import { mkdir } from "node:fs/promises";
 import path from "node:path";
 
 import type { PresignedUploadResult } from "@/lib/storage/r2";
+import {
+  MAX_LOCAL_UPLOAD_BYTES,
+  createLocalUploadToken,
+} from "@/lib/storage/local-upload-token";
+
+export { MAX_LOCAL_UPLOAD_BYTES, verifyUploadToken } from "@/lib/storage/local-upload-token";
 
 const UPLOAD_ROOT = path.join(process.cwd(), "public", "uploads");
 
@@ -43,17 +48,6 @@ export function resolveLocalStoredFilePath(segments: string[]): string | null {
   return resolved.startsWith(UPLOAD_ROOT + path.sep) ? resolved : null;
 }
 
-function secret(): string {
-  // NEXTAUTH_SECRET est toujours posé (auth obligatoire) ; fallback dev.
-  return process.env.NEXTAUTH_SECRET ?? "dev-insecure-upload-secret";
-}
-
-function sign(key: string, expiresAt: number): string {
-  return createHmac("sha256", secret())
-    .update(`${key}:${expiresAt}`)
-    .digest("hex");
-}
-
 /** Toujours disponible : on peut écrire sur le disque local. */
 export function isLocalStorageEnabled(): boolean {
   return true;
@@ -68,6 +62,7 @@ export function createLocalUpload(params: {
   prefix: string;
   filename: string;
   expiresInSeconds?: number;
+  maxSizeBytes?: number;
 }): PresignedUploadResult {
   const safeName = params.filename
     .replace(/[^a-zA-Z0-9._-]/g, "_")
@@ -78,28 +73,23 @@ export function createLocalUpload(params: {
 
   const expiresIn = params.expiresInSeconds ?? 600;
   const expiresAt = timestamp + expiresIn * 1000;
-  const token = sign(key, expiresAt);
+  const maxSizeBytes = params.maxSizeBytes ?? MAX_LOCAL_UPLOAD_BYTES;
+  if (
+    !Number.isSafeInteger(maxSizeBytes) ||
+    maxSizeBytes <= 0 ||
+    maxSizeBytes > MAX_LOCAL_UPLOAD_BYTES
+  ) {
+    throw new Error("Limite d'upload local invalide.");
+  }
+  const token = createLocalUploadToken(key, expiresAt, maxSizeBytes, "public");
 
-  const uploadUrl = `/api/upload/blob?key=${encodeURIComponent(key)}&exp=${expiresAt}&token=${token}`;
+  const uploadUrl = `/api/upload/blob?scope=public&key=${encodeURIComponent(key)}&exp=${expiresAt}&max=${maxSizeBytes}&token=${token}`;
   const publicUrl = `/uploads/${key}`;
 
   return { uploadUrl, publicUrl, key, expiresInSeconds: expiresIn };
 }
 
 /** Vérifie le token signé (HMAC + expiration), en temps constant. */
-export function verifyUploadToken(
-  key: string,
-  expiresAt: number,
-  token: string,
-): boolean {
-  if (!Number.isFinite(expiresAt) || expiresAt < Date.now()) return false;
-  const expected = sign(key, expiresAt);
-  const a = Buffer.from(expected, "utf8");
-  const b = Buffer.from(token, "utf8");
-  if (a.length !== b.length) return false;
-  return timingSafeEqual(a, b);
-}
-
 /**
  * Résout le chemin disque absolu pour une `key`, avec garde anti
  * path-traversal, et crée les dossiers parents. Lève si la key sort de

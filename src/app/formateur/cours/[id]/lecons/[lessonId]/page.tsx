@@ -6,6 +6,7 @@ import { auth } from "@/auth";
 import { ConfirmAction } from "@/components/features/instructor/confirm-action";
 import { LessonAiTools } from "@/components/features/instructor/lesson-ai-tools";
 import { LessonEditForm } from "@/components/features/instructor/lesson-edit-form";
+import { LessonPresentationManager } from "@/components/features/instructor/lesson-presentation-manager";
 import { LessonResourcesManager } from "@/components/features/instructor/lesson-resources-manager";
 import { LessonVideoSource } from "@/components/features/instructor/lesson-video-source";
 import { QuizEditor } from "@/components/features/instructor/quiz-editor";
@@ -124,6 +125,24 @@ export default async function LessonEditPage({ params }: PageProps) {
               lessonTitle={lesson.title}
               returnHref={`/formateur/cours/${id}/programme`}
               quiz={lesson.quiz}
+            />
+          </CardContent>
+        </Card>
+      ) : null}
+
+      {lesson.type === "PRESENTATION" ? (
+        <Card>
+          <CardHeader>
+            <CardTitle>Diaporama PowerPoint</CardTitle>
+            <CardDescription>
+              Téléversez le fichier source privé et suivez son état de préparation.
+              Le fichier original ne sera pas proposé au téléchargement.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <LessonPresentationManager
+              lessonId={lesson.id}
+              presentation={lesson.presentation}
             />
           </CardContent>
         </Card>

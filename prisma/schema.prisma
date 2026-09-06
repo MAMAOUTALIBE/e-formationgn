@@ -167,6 +167,7 @@ model User {
   certificates                 Certificate[]
   quizAttempts                 QuizAttempt[]
   lessonProgress               LessonProgress[]
+  presentationProgress         PresentationProgress[]
   learningSessions             LearningSession[]
   affiliateClicks              AffiliateClick[]
   payouts                      Payout[]
@@ -293,7 +294,20 @@ enum LessonType {
   VIDEO
   TEXT
   QUIZ
+  PRESENTATION
   RESOURCE
+}
+
+enum PresentationStatus {
+  UPLOADED
+  PROCESSING
+  READY
+  ERROR
+}
+
+enum PresentationHotspotKind {
+  EXTERNAL_URL
+  INTERNAL_SLIDE
 }
 
 model Category {
@@ -475,6 +489,7 @@ model Lesson {
   aiSummaryUpdatedAt DateTime?
 
   resources        LessonResource[]
+  presentation     Presentation?
   quiz             Quiz?
   progress         LessonProgress[]
   notes            LessonNote[]
@@ -498,6 +513,86 @@ model LessonResource {
   createdAt     DateTime @default(now())
 
   @@index([lessonId])
+}
+
+/// Source PowerPoint privée et résultat de sa conversion. Le fichier original
+/// est identifié par une clé de stockage interne, jamais par une URL publique.
+model Presentation {
+  id                  String                 @id @default(cuid())
+  lessonId            String                 @unique
+  lesson              Lesson                 @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  sourceKey           String
+  originalFileName    String
+  sourceContentType   String
+  sourceSizeBytes     Int
+  status              PresentationStatus     @default(UPLOADED)
+  slideCount          Int                    @default(0)
+  compatibilityReport Json?
+  errorMessage        String?                @db.Text
+  processingToken     String?                @unique
+  processingStartedAt DateTime?
+  slides              PresentationSlide[]
+  progress            PresentationProgress[]
+  createdAt           DateTime               @default(now())
+  updatedAt           DateTime               @updatedAt
+
+  @@index([status, updatedAt])
+}
+
+/// Une diapositive convertie. `imageKey` reste une clé privée qui sera servie
+/// plus tard par une route contrôlant l'inscription de l'apprenant.
+model PresentationSlide {
+  id             String                @id @default(cuid())
+  presentationId String
+  presentation   Presentation          @relation(fields: [presentationId], references: [id], onDelete: Cascade)
+  displayOrder   Int
+  imageKey       String
+  width          Int
+  height         Int
+  extractedText  String?               @db.Text
+  hotspots       PresentationHotspot[]
+  createdAt      DateTime              @default(now())
+
+  @@unique([presentationId, displayOrder])
+  @@index([presentationId])
+}
+
+/// Zone interactive normalisée dans le rectangle de la diapositive. Les
+/// contraintes SQL de la migration garantissent des coordonnées entre 0 et 1
+/// et une destination cohérente avec le type de hotspot.
+model PresentationHotspot {
+  id               String                  @id @default(cuid())
+  slideId          String
+  slide            PresentationSlide       @relation(fields: [slideId], references: [id], onDelete: Cascade)
+  kind             PresentationHotspotKind
+  x                Float
+  y                Float
+  width            Float
+  height           Float
+  externalUrl      String?
+  targetSlideOrder Int?
+  ariaLabel        String?
+  createdAt        DateTime                @default(now())
+
+  @@index([slideId])
+}
+
+/// Reprise fine du diaporama, distincte de la complétion globale de la leçon.
+/// Les positions sont des index zéro-based pour correspondre à displayOrder.
+model PresentationProgress {
+  id                String       @id @default(cuid())
+  presentationId    String
+  presentation      Presentation @relation(fields: [presentationId], references: [id], onDelete: Cascade)
+  userId            String
+  user              User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  lastSlideOrder    Int          @default(0)
+  viewedSlideOrders Int[]        @default([])
+  startedAt         DateTime     @default(now())
+  lastViewedAt      DateTime     @default(now())
+  completedAt       DateTime?
+
+  @@unique([presentationId, userId])
+  @@index([userId, lastViewedAt])
 }
 
 // ===========================================================================

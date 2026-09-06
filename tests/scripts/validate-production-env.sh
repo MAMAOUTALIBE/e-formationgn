@@ -92,6 +92,56 @@ if PRODUCTION_ENV_FILE="${fixture}" EXPECTED_PLATFORM_MODE=centre_formation \
 fi
 
 write_valid_fixture
+printf '%s\n' \
+  'R2_ACCOUNT_ID=account-test' \
+  'R2_ACCESS_KEY_ID=access-test' \
+  'R2_SECRET_ACCESS_KEY=secret-test' \
+  'R2_BUCKET=aiduca-public' >> "${fixture}"
+if PRODUCTION_ENV_FILE="${fixture}" EXPECTED_PLATFORM_MODE=centre_formation \
+  "${validator}" >/dev/null 2>&1; then
+  echo "Une configuration R2 sans bucket privé aurait dû échouer." >&2
+  exit 1
+fi
+
+write_valid_fixture
+printf '%s\n' 'PRIVATE_UPLOAD_ROOT=relative/private-uploads' >> "${fixture}"
+if PRODUCTION_ENV_FILE="${fixture}" EXPECTED_PLATFORM_MODE=centre_formation \
+  "${validator}" >/dev/null 2>&1; then
+  echo "Un chemin de stockage privé relatif aurait dû échouer." >&2
+  exit 1
+fi
+
+write_valid_fixture
+printf '%s\n' 'PRIVATE_UPLOAD_ROOT=/app/public/private-uploads' >> "${fixture}"
+if PRODUCTION_ENV_FILE="${fixture}" EXPECTED_PLATFORM_MODE=centre_formation \
+  "${validator}" >/dev/null 2>&1; then
+  echo "Un stockage privé sous public aurait dû échouer." >&2
+  exit 1
+fi
+
+write_valid_fixture
+printf '%s\n' 'PRIVATE_UPLOAD_ROOT=/app/private-uploads' >> "${fixture}"
+PRODUCTION_ENV_FILE="${fixture}" EXPECTED_PLATFORM_MODE=centre_formation \
+  "${validator}" >/dev/null
+
+write_valid_fixture
+printf '%s\n' \
+  'R2_ACCOUNT_ID=account-test' \
+  'R2_ACCESS_KEY_ID=access-test' \
+  'R2_SECRET_ACCESS_KEY=secret-test' \
+  'R2_BUCKET=aiduca-public' \
+  'R2_PRIVATE_BUCKET=aiduca-private' >> "${fixture}"
+PRODUCTION_ENV_FILE="${fixture}" EXPECTED_PLATFORM_MODE=centre_formation \
+  "${validator}" >/dev/null
+
+sed -i.bak 's/^R2_PRIVATE_BUCKET=.*/R2_PRIVATE_BUCKET=aiduca-public/' "${fixture}"
+if PRODUCTION_ENV_FILE="${fixture}" EXPECTED_PLATFORM_MODE=centre_formation \
+  "${validator}" >/dev/null 2>&1; then
+  echo "Un bucket R2 privé identique au bucket public aurait dû échouer." >&2
+  exit 1
+fi
+
+write_valid_fixture
 sed -i.bak '/LIVEKIT_WEBHOOK_SECRET/d' "${fixture}"
 if PRODUCTION_ENV_FILE="${fixture}" EXPECTED_PLATFORM_MODE=centre_formation \
   "${validator}" >/dev/null 2>&1; then

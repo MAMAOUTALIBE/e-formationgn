@@ -12,6 +12,7 @@ export const dynamic = "force-dynamic";
 
 /** Préfixe de stockage des pièces jointes de leçon — cf. la route de presign. */
 const RESOURCE_PREFIX = "resources";
+const PRESENTATION_PREFIX = "presentations";
 
 const OTHER_CONTENT_TYPES: Readonly<Record<string, string>> = {
   avif: "image/avif",
@@ -47,7 +48,10 @@ async function serve(
   // s'obtiennent que par `/api/lecons/…`, qui vérifie l'inscription. Les
   // refuser ICI est ce qui ferme la porte — la route protégée lit le disque
   // directement et ne repasse pas par ce chemin.
-  if (segments[0] === RESOURCE_PREFIX) {
+  if (
+    segments[0] === RESOURCE_PREFIX ||
+    segments[0] === PRESENTATION_PREFIX
+  ) {
     return new Response("Introuvable", { status: 404 });
   }
 

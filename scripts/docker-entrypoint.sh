@@ -7,9 +7,9 @@ set -e
 # appartient à nextjs. Prépare le volume persistant puis redémarre immédiatement
 # l'entrypoint avec l'utilisateur non privilégié de l'application.
 if [ "$(id -u)" = "0" ]; then
-  mkdir -p /app/public/uploads
-  chown -R nextjs:nodejs /app/public/uploads
-  chmod -R u+rwX /app/public/uploads
+  mkdir -p /app/public/uploads /app/private-uploads
+  chown -R nextjs:nodejs /app/public/uploads /app/private-uploads
+  chmod -R u+rwX /app/public/uploads /app/private-uploads
   exec su-exec nextjs:nodejs "$0" "$@"
 fi
 

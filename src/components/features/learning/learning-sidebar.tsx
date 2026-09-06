@@ -18,6 +18,7 @@ import {
   Circle,
   Download,
   FileText,
+  GalleryHorizontalEnd,
   HelpCircle,
   Paperclip,
   PlayCircle,
@@ -248,6 +249,7 @@ export function LearningSidebar({
 const LESSON_TYPE_LABEL: Record<LessonType, string> = {
   VIDEO: "vidéo",
   QUIZ: "quiz",
+  PRESENTATION: "diaporama",
   TEXT: "lecture",
   RESOURCE: "ressource",
 };
@@ -259,6 +261,8 @@ function LessonIcon({ type }: { type: LessonType }) {
       return <PlayCircle className={className} aria-hidden />;
     case "QUIZ":
       return <HelpCircle className={className} aria-hidden />;
+    case "PRESENTATION":
+      return <GalleryHorizontalEnd className={className} aria-hidden />;
     case "RESOURCE":
       return <Paperclip className={className} aria-hidden />;
     case "TEXT":

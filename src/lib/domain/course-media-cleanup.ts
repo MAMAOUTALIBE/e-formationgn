@@ -7,6 +7,8 @@ export interface CourseMediaCleanupDependencies {
   deleteMux: (assetId: string) => Promise<boolean>;
   deleteLocal: (key: string) => Promise<void>;
   deleteR2: (key: string) => Promise<void>;
+  deletePrivate: (key: string) => Promise<void>;
+  deletePrivatePrefix: (prefix: string) => Promise<void>;
   warn: (message: string, context: Record<string, unknown>) => void;
 }
 
@@ -16,6 +18,23 @@ export async function runCourseMediaCleanup(media: CourseDeletionMedia, deps: Co
       if (!(await deps.deleteMux(assetId))) deps.warn("Asset Mux non supprimé", { assetId });
     } catch (error) {
       deps.warn("Asset Mux non supprimé", { assetId, error: String(error) });
+    }
+  }
+  for (const key of new Set(media.privateKeys ?? [])) {
+    try {
+      await deps.deletePrivate(key);
+    } catch (error) {
+      deps.warn("Objet pédagogique privé non supprimé", { key, error: String(error) });
+    }
+  }
+  for (const prefix of new Set(media.privatePrefixes ?? [])) {
+    try {
+      await deps.deletePrivatePrefix(prefix);
+    } catch (error) {
+      deps.warn("Artefacts pédagogiques privés non supprimés", {
+        prefix,
+        error: String(error),
+      });
     }
   }
   const storedUrls = [...new Set(media.storedUrls)];

@@ -14,7 +14,7 @@ import {
   isInstructorOrAdmin,
   type AdminRole,
 } from "@/lib/constants";
-import type { UserRole } from "@/generated/prisma/enums";
+import type { LessonType, UserRole } from "@/generated/prisma/enums";
 
 export class AuthorizationError extends Error {
   readonly code: "UNAUTHENTICATED" | "FORBIDDEN" | "NOT_FOUND";
@@ -182,7 +182,12 @@ export async function requireSectionOwnership(
 }
 
 export interface LessonOwnershipResult {
-  lesson: { id: string; sectionId: string; muxAssetId: string | null };
+  lesson: {
+    id: string;
+    sectionId: string;
+    type: LessonType;
+    muxAssetId: string | null;
+  };
   courseId: string;
   userId: string;
   isAdmin: boolean;
@@ -197,6 +202,7 @@ export async function requireLessonOwnership(
     select: {
       id: true,
       sectionId: true,
+      type: true,
       muxAssetId: true,
       section: {
         select: {
@@ -216,7 +222,12 @@ export async function requireLessonOwnership(
     );
   }
   return {
-    lesson: { id: lesson.id, sectionId: lesson.sectionId, muxAssetId: lesson.muxAssetId },
+    lesson: {
+      id: lesson.id,
+      sectionId: lesson.sectionId,
+      type: lesson.type,
+      muxAssetId: lesson.muxAssetId,
+    },
     courseId: lesson.section.courseId,
     userId: ctx.userId,
     isAdmin: ctx.isAdmin,

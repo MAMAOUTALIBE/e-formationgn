@@ -85,14 +85,20 @@ RUN npx next build --webpack
 FROM node:20-alpine AS runner
 WORKDIR /app
 
-RUN apk add --no-cache openssl curl tini su-exec \
+RUN apk add --no-cache \
+    openssl curl tini su-exec \
+    libreoffice poppler-utils \
+    font-dejavu font-liberation font-noto \
   && addgroup --system --gid 1001 nodejs \
-  && adduser --system --uid 1001 nextjs
+  && adduser --system --uid 1001 nextjs \
+  && mkdir -p /app/private-uploads \
+  && chown nextjs:nodejs /app/private-uploads
 
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV PORT=3000
 ENV HOSTNAME=0.0.0.0
+ENV PRIVATE_UPLOAD_ROOT=/app/private-uploads
 
 # Sortie standalone : server.js + node_modules curatés pour le runtime
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./

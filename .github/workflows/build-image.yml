@@ -131,8 +131,8 @@ jobs:
             echo '- `bahm2062/e-formationgn:latest`'
             echo '- `bahm2062/e-formationgn:${{ steps.meta.outputs.sha }}`'
             echo ""
-            echo "Pour déployer, sur le VPS :"
+            echo "Pour synchroniser le Compose versionné et redéployer app + cron :"
             echo '```'
-            echo "cd /docker/e-formationgn && docker compose pull app && docker compose up -d app"
+            echo "SKIP_BUILD=1 VPS_SSH=root@213.130.144.215 npm run deploy"
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"

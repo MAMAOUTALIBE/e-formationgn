@@ -21,6 +21,14 @@ export async function deleteCourseRecordIfUnused(courseId: string): Promise<Cour
             externalVideoUrl: true,
             resourceUrl: true,
             resources: { select: { url: true } },
+            presentation: {
+              select: {
+                id: true,
+                sourceKey: true,
+                processingToken: true,
+                slides: { select: { imageKey: true } },
+              },
+            },
           } } } },
         },
       });
@@ -43,6 +51,17 @@ export async function deleteCourseRecordIfUnused(courseId: string): Promise<Cour
             ...lesson.resources.map((resource) => resource.url),
           ]),
         ].filter((url): url is string => Boolean(url)),
+        privateKeys: lessons.flatMap((lesson) => [
+          ...(lesson.presentation ? [lesson.presentation.sourceKey] : []),
+          ...(lesson.presentation?.slides.map((slide) => slide.imageKey) ?? []),
+        ]),
+        privatePrefixes: lessons.flatMap((lesson) =>
+          lesson.presentation?.processingToken
+            ? [
+                `presentations/rendered/${lesson.presentation.id}/${lesson.presentation.processingToken}`,
+              ]
+            : [],
+        ),
       };
       await tx.course.delete({ where: { id: courseId } });
       return { kind: "deleted" as const, title: course.title, media };

@@ -65,7 +65,19 @@ const serverSchema = z.object({
   R2_ACCESS_KEY_ID: z.string().optional(),
   R2_SECRET_ACCESS_KEY: z.string().optional(),
   R2_BUCKET: z.string().optional(),
+  R2_PRIVATE_BUCKET: z.string().optional(),
   R2_PUBLIC_URL: z.string().url().optional(),
+  PRIVATE_UPLOAD_ROOT: z
+    .string()
+    .refine(
+      (value) => value === "" || value.startsWith("/"),
+      "PRIVATE_UPLOAD_ROOT doit être un chemin absolu",
+    )
+    .refine(
+      (value) => value === "" || !/(^|\/)public(?:\/|$)/.test(value),
+      "PRIVATE_UPLOAD_ROOT doit être situé hors d'un dossier public",
+    )
+    .optional(),
 
   // Sentry (monitoring)
   SENTRY_DSN: z.string().url().optional(),
@@ -83,6 +95,27 @@ const serverSchema = z.object({
   PLATFORM_DEFAULT_CURRENCY: z.enum(["EUR", "USD", "GNF", "XOF"]).default("EUR"),
   PLATFORM_COMMISSION_INSTRUCTOR_BPS: z.coerce.number().default(1500),
   PLATFORM_COMMISSION_PLATFORM_BPS: z.coerce.number().default(3000),
+}).superRefine((value, ctx) => {
+  const r2CredentialFields = [
+    "R2_ACCOUNT_ID",
+    "R2_ACCESS_KEY_ID",
+    "R2_SECRET_ACCESS_KEY",
+  ] as const;
+  const r2Fields = [
+    ...r2CredentialFields,
+    "R2_BUCKET",
+    "R2_PRIVATE_BUCKET",
+  ] as const;
+  if (!r2CredentialFields.some((field) => Boolean(value[field]))) return;
+  for (const field of r2Fields) {
+    if (!value[field]) {
+      ctx.addIssue({
+        code: "custom",
+        path: [field],
+        message: `${field} requis quand Cloudflare R2 est configuré`,
+      });
+    }
+  }
 });
 
 const clientSchema = z.object({

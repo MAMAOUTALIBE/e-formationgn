@@ -76,7 +76,7 @@ test("le programme permet de gérer les ressources sur chaque carte de leçon", 
 
   // Le programme doit recevoir les ressources réelles, pas un compteur
   // reconstruit côté client qui deviendrait faux après un téléversement.
-  assert.match(query, /include: \{ resources: \{ orderBy: \{ createdAt: "asc" \} \} \}/);
+  assert.match(query, /resources: \{ orderBy: \{ createdAt: "asc" \} \}/);
   assert.match(programme, /<ProgramLessonsList/);
   assert.match(programme, /lesson\.resources\.map/);
   assert.match(programme, /sectionResourceCount/);

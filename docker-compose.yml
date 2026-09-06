@@ -46,6 +46,8 @@ services:
     # vont alors sur R2), mais sert de filet de sécurité.
     volumes:
       - app_uploads:/app/public/uploads
+      # Sources PPTX privées : volume séparé, entièrement hors de public/.
+      - app_private_uploads:/app/private-uploads
     depends_on:
       db:
         condition: service_healthy
@@ -66,6 +68,7 @@ services:
   #   - reconcile-orders (15 min) : réconcilie les commandes PENDING (webhook
   #     perdu/tardif → l'élève a payé mais n'a pas accès → corrigé ici)
   #   - cleanup (3h du matin) : purge des données expirées
+  # Tous modes : convert-presentation (1 min) traite un PPTX à la fois.
   cron:
     image: alpine:3.20
     restart: unless-stopped
@@ -82,6 +85,7 @@ services:
           fi;
           echo '0 3 * * * curl -fsS -H \"Authorization: Bearer $$CRON_SECRET\" http://app:3000/api/cron/cleanup >/proc/1/fd/1 2>/proc/1/fd/2';
           echo '*/5 * * * * curl -fsS -H \"Authorization: Bearer $$CRON_SECRET\" http://app:3000/api/cron/virtual-class-reminders >/proc/1/fd/1 2>/proc/1/fd/2';
+          echo '* * * * * curl -fsS -H \"Authorization: Bearer $$CRON_SECRET\" http://app:3000/api/cron/convert-presentation >/proc/1/fd/1 2>/proc/1/fd/2';
         } > /etc/crontabs/root;
         exec /sbin/tini -- crond -f -d 8
       "
@@ -94,6 +98,7 @@ services:
 volumes:
   db_data:
   app_uploads:
+  app_private_uploads:
 
 networks:
   internal:

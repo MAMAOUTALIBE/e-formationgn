@@ -382,6 +382,7 @@ function lessonTypeLabel(type: AdminCourse["sections"][number]["lessons"][number
   switch (type) {
     case "VIDEO": return "Vidéo";
     case "QUIZ": return "Quiz";
+    case "PRESENTATION": return "Diaporama";
     case "RESOURCE": return "Ressource";
     case "TEXT": return "Texte";
   }

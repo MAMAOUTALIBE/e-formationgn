@@ -4,6 +4,11 @@
 
 import { z } from "zod";
 
+import {
+  MAX_PRESENTATION_BYTES,
+  isAllowedPresentationFile,
+} from "@/lib/presentation-file";
+
 import { COURSE_LEVELS } from "./courses";
 import { PLACEHOLDER_DESCRIPTION } from "./course-publish";
 
@@ -184,7 +189,7 @@ export const lessonSchema = z
       .trim()
       .min(2, "Donnez un titre à la leçon.")
       .max(160, "Titre trop long."),
-    type: z.enum(["VIDEO", "TEXT", "QUIZ", "RESOURCE"]),
+    type: z.enum(["VIDEO", "TEXT", "QUIZ", "PRESENTATION", "RESOURCE"]),
     description: z
       .string()
       .trim()
@@ -203,6 +208,24 @@ export const lessonSchema = z
   })
   .strict();
 export type LessonInput = z.infer<typeof lessonSchema>;
+
+export const presentationSourceSchema = z
+  .object({
+    sourceKey: z.string().trim().min(1).max(500),
+    originalFileName: z
+      .string()
+      .trim()
+      .min(1, "Nom de fichier manquant.")
+      .max(160, "Nom de fichier trop long.")
+      .refine(isAllowedPresentationFile, "Seuls les fichiers .pptx sont acceptés."),
+    sourceSizeBytes: z.coerce
+      .number()
+      .int()
+      .positive("Le fichier est vide.")
+      .max(MAX_PRESENTATION_BYTES, "Fichier trop lourd (100 Mo maximum)."),
+  })
+  .strict();
+export type PresentationSourceInput = z.infer<typeof presentationSourceSchema>;
 
 // URL vidéo externe (lien direct .mp4/.webm/.mov ou hébergement tiers servant
 // un fichier lisible par la balise <video>). Validée http/https + longueur.

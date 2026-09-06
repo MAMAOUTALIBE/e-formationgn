@@ -122,6 +122,12 @@ const nextConfig: NextConfig = {
   // sur un poste presque plein sans dupliquer tout le runtime dans .next.
   output: process.env.NEXT_DISABLE_STANDALONE === "1" ? undefined : "standalone",
 
+  // PDF.js est chargé uniquement par le worker Node de conversion. Le garder
+  // externe évite d'embarquer ses workers et assets navigateur dans les
+  // bundles de Route Handlers ; le node_modules runtime complet est copié par
+  // le Dockerfile.
+  serverExternalPackages: ["pdfjs-dist"],
+
   // Les vignettes peuvent venir de n'importe quelle URL fournie par les
   // formateurs (Mux, Cloudinary, R2, Supabase, etc.). On désactive
   // l'optimisation Next/Image plutôt que de maintenir une whitelist

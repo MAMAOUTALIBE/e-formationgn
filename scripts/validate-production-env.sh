@@ -156,6 +156,43 @@ if { [ -n "${redis_url}" ] && [ -z "${redis_token}" ]; } ||
   exit 1
 fi
 
+r2_account_id="$(env_value R2_ACCOUNT_ID)"
+r2_access_key_id="$(env_value R2_ACCESS_KEY_ID)"
+r2_secret_access_key="$(env_value R2_SECRET_ACCESS_KEY)"
+r2_bucket="$(env_value R2_BUCKET)"
+r2_private_bucket="$(env_value R2_PRIVATE_BUCKET)"
+r2_credentials_count=0
+for r2_value in "${r2_account_id}" "${r2_access_key_id}" "${r2_secret_access_key}"; do
+  [ -n "${r2_value}" ] && r2_credentials_count=$((r2_credentials_count + 1))
+done
+if [ "${r2_credentials_count}" -ne 0 ] && [ "${r2_credentials_count}" -ne 3 ]; then
+  echo "❌ R2 doit être configuré avec compte, clés, bucket public et bucket privé." >&2
+  exit 1
+fi
+if [ "${r2_credentials_count}" -eq 3 ] && \
+  { [ -z "${r2_bucket}" ] || [ -z "${r2_private_bucket}" ]; }; then
+  echo "❌ R2_BUCKET et R2_PRIVATE_BUCKET sont requis quand R2 est configuré." >&2
+  exit 1
+fi
+if [ "${r2_credentials_count}" -eq 3 ] && [ "${r2_bucket}" = "${r2_private_bucket}" ]; then
+  echo "❌ R2_PRIVATE_BUCKET doit être distinct de R2_BUCKET." >&2
+  exit 1
+fi
+
+private_upload_root="$(env_value PRIVATE_UPLOAD_ROOT)"
+if [ -n "${private_upload_root}" ]; then
+  case "${private_upload_root}" in
+    /*) ;;
+    *) echo "❌ PRIVATE_UPLOAD_ROOT doit être un chemin absolu." >&2; exit 1 ;;
+  esac
+  case "${private_upload_root}" in
+    */public|*/public/*)
+      echo "❌ PRIVATE_UPLOAD_ROOT doit être situé hors d'un dossier public." >&2
+      exit 1
+      ;;
+  esac
+fi
+
 mux_signed="$(env_value MUX_SIGNED_PLAYBACK)"
 case "${mux_signed:-0}" in
   0) ;;

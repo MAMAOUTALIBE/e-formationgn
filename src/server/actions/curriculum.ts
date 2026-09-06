@@ -22,9 +22,22 @@ import { prisma } from "@/lib/prisma";
 import { safeDeleteMuxAsset } from "@/server/services/mux-service";
 import { normalizeLessonVideoUrl } from "@/lib/youtube";
 import {
+  MAX_PRESENTATION_BYTES,
+  presentationSourceKeyBelongsTo,
+  presentationUploadContentType,
+} from "@/lib/presentation-file";
+import { validatePresentationSourceBytes } from "@/lib/presentation-source-validation";
+import {
+  deletePrivateObject,
+  deletePrivateObjectPrefix,
+  getPrivateObjectBytes,
+  getPrivateObjectSize,
+} from "@/lib/storage/private-object";
+import {
   lessonResourceSchema,
   lessonSchema,
   lessonVideoUrlSchema,
+  presentationSourceSchema,
   reorderItemsSchema,
   sectionSchema,
 } from "@/lib/validators/courses-instructor";
@@ -296,6 +309,15 @@ export async function updateLesson(
 
 export async function deleteLesson(lessonId: string): Promise<ActionResult> {
   const { lesson } = await requireLessonOwnership(lessonId);
+  const presentation = await prisma.presentation.findUnique({
+    where: { lessonId },
+    select: {
+      id: true,
+      sourceKey: true,
+      processingToken: true,
+      slides: { select: { imageKey: true } },
+    },
+  });
 
   // Supprime l'asset Mux associé (best-effort, retry borné via service).
   if (lesson.muxAssetId) {
@@ -306,6 +328,21 @@ export async function deleteLesson(lessonId: string): Promise<ActionResult> {
 
   const courseId = lesson.section.course.id;
   await prisma.lesson.delete({ where: { id: lessonId } });
+  if (presentation) {
+    await Promise.allSettled([
+      deletePrivateObject(presentation.sourceKey),
+      ...presentation.slides.map((slide) =>
+        deletePrivateObject(slide.imageKey),
+      ),
+      ...(presentation.processingToken
+        ? [
+            deletePrivateObjectPrefix(
+              `presentations/rendered/${presentation.id}/${presentation.processingToken}`,
+            ),
+          ]
+        : []),
+    ]);
+  }
   await recomputeCourseDuration(courseId);
 
   revalidatePath(`/formateur/cours/${courseId}/programme`);
@@ -577,6 +614,194 @@ export async function deleteLessonResource(resourceId: string): Promise<ActionRe
   revalidatePath(`/formateur/cours/${courseId}/lecons/${resource.lessonId}`);
   revalidatePath(`/formateur/cours/${courseId}/programme`);
   return { success: true, message: "Ressource supprimée." };
+}
+
+// ---------------------------------------------------------------------------
+// Source privée d'une leçon diaporama
+// ---------------------------------------------------------------------------
+
+export async function attachPresentationSource(
+  lessonId: string,
+  input: {
+    sourceKey: string;
+    originalFileName: string;
+    sourceSizeBytes: number;
+  },
+): Promise<ActionResult> {
+  let lesson;
+  let userId;
+  try {
+    ({ lesson, userId } = await requireLessonOwnership(lessonId));
+  } catch (error) {
+    return toActionResult(error);
+  }
+  if (lesson.type !== "PRESENTATION") {
+    return {
+      success: false,
+      message: "Cette source ne peut être attachée qu'à une leçon diaporama.",
+    };
+  }
+
+  const parsed = presentationSourceSchema.safeParse(input);
+  if (!parsed.success) {
+    const fields = parsed.error.flatten().fieldErrors;
+    return {
+      success: false,
+      message:
+        fields.originalFileName?.[0] ??
+        fields.sourceSizeBytes?.[0] ??
+        fields.sourceKey?.[0] ??
+        "Fichier PowerPoint invalide.",
+    };
+  }
+  if (!presentationSourceKeyBelongsTo(parsed.data.sourceKey, userId, lessonId)) {
+    return { success: false, message: "Clé de stockage non autorisée." };
+  }
+
+  // Ne jamais faire confiance à la taille annoncée par le navigateur : le PUT
+  // doit exister et sa taille réelle doit correspondre avant l'enregistrement.
+  const storedSize = await getPrivateObjectSize(parsed.data.sourceKey);
+  if (storedSize === null || storedSize !== parsed.data.sourceSizeBytes) {
+    return {
+      success: false,
+      message: "Le téléversement n'est pas complet. Réessayez.",
+    };
+  }
+
+  const storedBytes = await getPrivateObjectBytes(
+    parsed.data.sourceKey,
+    MAX_PRESENTATION_BYTES,
+  );
+  if (!storedBytes) {
+    return {
+      success: false,
+      message: "Le contenu du fichier n'a pas pu être vérifié. Réessayez.",
+    };
+  }
+  const validation = validatePresentationSourceBytes(
+    parsed.data.originalFileName,
+    storedBytes,
+  );
+  if (!validation.valid) {
+    await deletePrivateObject(parsed.data.sourceKey).catch((error) => {
+      console.warn("[presentation/source] fichier invalide non supprimé", {
+        lessonId,
+        error,
+      });
+    });
+    return { success: false, message: validation.message };
+  }
+
+  const previous = await prisma.presentation.findUnique({
+    where: { lessonId },
+    select: {
+      id: true,
+      sourceKey: true,
+      processingToken: true,
+      slides: { select: { imageKey: true } },
+    },
+  });
+  await prisma.presentation.upsert({
+    where: { lessonId },
+    create: {
+      lessonId,
+      sourceKey: parsed.data.sourceKey,
+      originalFileName: parsed.data.originalFileName,
+      sourceContentType: presentationUploadContentType(
+        parsed.data.originalFileName,
+      ),
+      sourceSizeBytes: storedSize,
+      status: "UPLOADED",
+    },
+    update: {
+      sourceKey: parsed.data.sourceKey,
+      originalFileName: parsed.data.originalFileName,
+      sourceContentType: presentationUploadContentType(
+        parsed.data.originalFileName,
+      ),
+      sourceSizeBytes: storedSize,
+      status: "UPLOADED",
+      slideCount: 0,
+      compatibilityReport: Prisma.JsonNull,
+      errorMessage: null,
+      processingToken: null,
+      processingStartedAt: null,
+      slides: { deleteMany: {} },
+      progress: { deleteMany: {} },
+    },
+  });
+
+  if (previous?.sourceKey && previous.sourceKey !== parsed.data.sourceKey) {
+    await deletePrivateObject(previous.sourceKey).catch((error) => {
+      console.warn("[presentation/source] ancien objet non supprimé", {
+        lessonId,
+        error,
+      });
+    });
+  }
+  await Promise.allSettled(
+    (previous?.slides ?? []).map((slide) =>
+      deletePrivateObject(slide.imageKey),
+    ),
+  );
+  if (previous?.processingToken) {
+    await deletePrivateObjectPrefix(
+      `presentations/rendered/${previous.id}/${previous.processingToken}`,
+    ).catch(() => {});
+  }
+
+  const courseId = lesson.section.course.id;
+  revalidatePath(`/formateur/cours/${courseId}/lecons/${lessonId}`);
+  revalidatePath(`/formateur/cours/${courseId}/programme`);
+  return {
+    success: true,
+    message: "PowerPoint reçu. Il est en attente de conversion.",
+  };
+}
+
+export async function deletePresentationSource(
+  lessonId: string,
+): Promise<ActionResult> {
+  let lesson;
+  try {
+    ({ lesson } = await requireLessonOwnership(lessonId));
+  } catch (error) {
+    return toActionResult(error);
+  }
+
+  const presentation = await prisma.presentation.findUnique({
+    where: { lessonId },
+    select: {
+      id: true,
+      sourceKey: true,
+      processingToken: true,
+      slides: { select: { imageKey: true } },
+    },
+  });
+  if (!presentation) {
+    return { success: true, message: "Aucun PowerPoint à retirer." };
+  }
+
+  await prisma.presentation.delete({ where: { lessonId } });
+  await deletePrivateObject(presentation.sourceKey).catch((error) => {
+    console.warn("[presentation/source] objet orphelin à nettoyer", {
+      lessonId,
+      error,
+    });
+  });
+  await Promise.allSettled(
+    presentation.slides.map((slide) => deletePrivateObject(slide.imageKey)),
+  );
+  if (presentation.processingToken) {
+    await deletePrivateObjectPrefix(
+      `presentations/rendered/${presentation.id}/${presentation.processingToken}`,
+    ).catch(() => {});
+  }
+
+  const courseId = lesson.section.course.id;
+  revalidatePath(`/formateur/cours/${courseId}/lecons/${lessonId}`);
+  revalidatePath(`/formateur/cours/${courseId}/programme`);
+  return { success: true, message: "PowerPoint retiré." };
 }
 
 // ---------------------------------------------------------------------------

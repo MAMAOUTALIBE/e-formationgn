@@ -38,7 +38,7 @@ export function LessonEditForm({ lessonId, returnHref, defaults }: LessonEditFor
   const [type, setType] = useState<LessonType>(defaults.type);
 
   useEffect(() => {
-    if (!state.success || type === "QUIZ") return;
+    if (!state.success || type === "QUIZ" || type === "PRESENTATION") return;
 
     const timeout = window.setTimeout(() => router.push(returnHref), 900);
     return () => window.clearTimeout(timeout);
@@ -84,6 +84,7 @@ export function LessonEditForm({ lessonId, returnHref, defaults }: LessonEditFor
           <option value="VIDEO">Vidéo</option>
           <option value="TEXT">Texte</option>
           <option value="QUIZ">Quiz</option>
+          <option value="PRESENTATION">Diaporama PowerPoint</option>
           {defaults.type === "RESOURCE" ? (
             <option value="RESOURCE">Ressource (ancien format)</option>
           ) : null}

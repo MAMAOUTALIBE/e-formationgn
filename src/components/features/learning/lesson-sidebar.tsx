@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Check, Circle, FileText, HelpCircle, Paperclip, PlayCircle } from "lucide-react";
+import { Check, Circle, FileText, GalleryHorizontalEnd, HelpCircle, Paperclip, PlayCircle } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import { formatLessonDuration } from "@/lib/format/duration";
@@ -85,6 +85,8 @@ function LessonIcon({ type }: { type: LessonType }) {
       return <PlayCircle className={className} aria-hidden />;
     case "QUIZ":
       return <HelpCircle className={className} aria-hidden />;
+    case "PRESENTATION":
+      return <GalleryHorizontalEnd className={className} aria-hidden />;
     case "RESOURCE":
       return <Paperclip className={className} aria-hidden />;
     case "TEXT":

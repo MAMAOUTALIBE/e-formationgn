@@ -139,6 +139,7 @@ export default async function CourseProgramPage({ params }: PageProps) {
                             muxPlaybackId: lesson.muxPlaybackId,
                             externalVideoUrl: lesson.externalVideoUrl,
                             videoDurationSeconds: lesson.videoDurationSeconds,
+                            presentation: lesson.presentation,
                             resources: lesson.resources.map((resource) => ({
                               id: resource.id,
                               title: resource.title,

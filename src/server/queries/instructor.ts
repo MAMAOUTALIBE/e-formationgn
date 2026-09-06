@@ -44,7 +44,12 @@ const INSTRUCTOR_COURSE_DETAIL_INCLUDE = {
     include: {
       lessons: {
         orderBy: { displayOrder: "asc" },
-        include: { resources: { orderBy: { createdAt: "asc" } } },
+        include: {
+          resources: { orderBy: { createdAt: "asc" } },
+          presentation: {
+            select: { status: true, slideCount: true },
+          },
+        },
       },
     },
   },
@@ -646,6 +651,15 @@ export async function getLessonForInstructor(
         },
       },
       resources: { orderBy: { createdAt: "asc" } },
+      presentation: {
+        select: {
+          originalFileName: true,
+          sourceSizeBytes: true,
+          status: true,
+          slideCount: true,
+          errorMessage: true,
+        },
+      },
       section: {
         include: { course: { select: { id: true, instructorId: true, slug: true } } },
       },

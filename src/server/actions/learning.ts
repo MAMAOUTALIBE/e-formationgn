@@ -14,8 +14,58 @@ import {
   lessonProgressSchema,
 } from "@/lib/validators/learning";
 import { computeHeartbeatCredit } from "@/lib/learning-tracking";
+import { z } from "zod";
+import {
+  PresentationLearningError,
+  recordPresentationSlideViewForUser,
+} from "@/server/services/presentation-learning";
 
 import type { ActionResult } from "./auth";
+
+const presentationViewSchema = z.object({
+  lessonId: z.string().min(1).max(100),
+  slideId: z.string().min(1).max(100),
+});
+
+export type PresentationProgressActionResult = ActionResult & {
+  progress?: {
+    lastSlideOrder: number;
+    viewedSlideOrders: number[];
+    completed: boolean;
+  };
+  progressPercent?: number;
+};
+
+export async function recordPresentationSlideView(
+  input: unknown,
+): Promise<PresentationProgressActionResult> {
+  const session = await auth();
+  if (!session?.user) return { success: false, message: "Vous devez être connecté." };
+  const parsed = presentationViewSchema.safeParse(input);
+  if (!parsed.success) return { success: false, message: "Données invalides." };
+
+  try {
+    const result = await recordPresentationSlideViewForUser({
+      userId: session.user.id,
+      ...parsed.data,
+    });
+    return {
+      success: true,
+      progress: {
+        lastSlideOrder: result.lastSlideOrder,
+        viewedSlideOrders: result.viewedSlideOrders,
+        completed: result.completed,
+      },
+      progressPercent: result.progressPercent,
+    };
+  } catch (error) {
+    if (error instanceof PresentationLearningError) {
+      return { success: false, message: error.message };
+    }
+    console.error("recordPresentationSlideView failed", error);
+    return { success: false, message: "La progression n’a pas pu être enregistrée." };
+  }
+}
 
 async function requireLessonAccess(userId: string, lessonId: string) {
   const lesson = await prisma.lesson.findUnique({

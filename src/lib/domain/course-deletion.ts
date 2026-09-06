@@ -1,7 +1,13 @@
 export const COURSE_NOT_DELETABLE_MESSAGE =
   "Cette formation possède des commandes, inscriptions, certificats ou appartient à un programme. Pour préserver cet historique, elle ne peut pas être supprimée définitivement. Archivez-la à la place.";
 
-export interface CourseDeletionMedia { ownerId: string; muxAssetIds: string[]; storedUrls: string[] }
+export interface CourseDeletionMedia {
+  ownerId: string;
+  muxAssetIds: string[];
+  storedUrls: string[];
+  privateKeys?: string[];
+  privatePrefixes?: string[];
+}
 export type CourseDeletionOutcome =
   | { kind: "deleted"; title: string; media: CourseDeletionMedia }
   | { kind: "blocked" }

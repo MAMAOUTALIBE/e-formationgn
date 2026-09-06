@@ -6,6 +6,10 @@ import { logWarning } from "@/lib/logger";
 import { runCourseMediaCleanup } from "@/lib/domain/course-media-cleanup";
 import { resolveLocalStoredFilePath } from "@/lib/storage/local";
 import { deleteR2Object } from "@/lib/storage/r2";
+import {
+  deletePrivateObject,
+  deletePrivateObjectPrefix,
+} from "@/lib/storage/private-object";
 import { findPersistedMediaUrlReferences } from "@/server/queries/persistent-media-references";
 import { safeDeleteMuxAsset } from "@/server/services/mux-service";
 import type { CourseDeletionMedia } from "@/lib/domain/course-deletion";
@@ -28,6 +32,8 @@ export async function cleanupDeletedCourseMedia(media: CourseDeletionMedia): Pro
       });
     },
     deleteR2: deleteR2Object,
+    deletePrivate: deletePrivateObject,
+    deletePrivatePrefix: deletePrivateObjectPrefix,
     warn: (message, context) => logWarning("storage", message, context),
   });
 }

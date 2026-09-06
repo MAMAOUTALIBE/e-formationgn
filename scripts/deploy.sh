@@ -236,9 +236,21 @@ echo
 
 if [ -n "${VPS_SSH:-}" ]; then
   echo "▶ Redéploiement distant sur ${VPS_SSH} ..."
-  ssh "${VPS_SSH}" 'sh -s' <<'REMOTE_DEPLOY'
+  compose_candidate_name="docker-compose.yml.candidate.${TAG}"
+  compose_candidate_path="/docker/e-formationgn/${compose_candidate_name}"
+  echo "▶ Synchronisation du Docker Compose versionné vers un candidat distant…"
+  scp -- docker-compose.yml "${VPS_SSH}:${compose_candidate_path}"
+  ssh "${VPS_SSH}" sh -s -- "${compose_candidate_name}" <<'REMOTE_DEPLOY'
 set -eu
-cd /docker/e-formationgn
+
+deploy_dir=/docker/e-formationgn
+candidate_name="${1:-}"
+case "${candidate_name}" in
+  docker-compose.yml.candidate.*) ;;
+  *) echo "❌ Nom de candidat Compose invalide." >&2; exit 1 ;;
+esac
+compose_candidate="${deploy_dir}/${candidate_name}"
+cd "${deploy_dir}"
 
 current_container="$(docker compose ps -q app)"
 previous_image_id=""
@@ -250,6 +262,7 @@ deployment_failed() {
   echo "❌ Le nouveau conteneur n'a pas passé les contrôles de production." >&2
   docker compose ps >&2 || true
   docker compose logs --tail=120 app >&2 || true
+  docker compose logs --tail=120 cron >&2 || true
   if [ -n "${previous_image_id}" ]; then
     echo "   Image précédente encore identifiable : ${previous_image_id}" >&2
   fi
@@ -259,8 +272,25 @@ deployment_failed() {
   exit 1
 }
 
+if [ ! -f "${compose_candidate}" ]; then
+  echo "❌ Candidat Docker Compose absent : ${compose_candidate}" >&2
+  deployment_failed
+fi
+echo "▶ Validation du candidat Docker Compose…"
+if ! docker compose -f "${compose_candidate}" config --quiet; then
+  rm -f "${compose_candidate}"
+  deployment_failed
+fi
+
+# Le candidat est dans le même dossier : mv publie le fichier validé de façon
+# atomique. Le backup précédent permet une comparaison/intervention manuelle.
+if [ -f docker-compose.yml ]; then
+  cp -p docker-compose.yml docker-compose.yml.backup || deployment_failed
+fi
+mv -f "${compose_candidate}" docker-compose.yml || deployment_failed
+
 docker compose pull app || deployment_failed
-docker compose up -d app || deployment_failed
+docker compose up -d app cron || deployment_failed
 
 container_id="$(docker compose ps -q app)"
 [ -n "${container_id}" ] || deployment_failed
@@ -276,6 +306,11 @@ while [ "${attempt}" -lt 60 ]; do
   sleep 3
 done
 [ "${health_status:-}" = "healthy" ] || deployment_failed
+
+cron_container_id="$(docker compose ps -q cron)"
+[ -n "${cron_container_id}" ] || deployment_failed
+cron_status="$(docker inspect --format '{{.State.Status}}' "${cron_container_id}" 2>/dev/null || true)"
+[ "${cron_status}" = "running" ] || deployment_failed
 
 echo "▶ Smoke tests locaux via nginx upstream…"
 curl -fsS --max-time 10 http://127.0.0.1:3300/api/health >/dev/null || deployment_failed
@@ -298,14 +333,20 @@ for chemin in "/" "/cours" "/connexion" "/mentions-legales"; do
   fi
 done
 
-docker compose ps app
-echo "✅ Healthcheck et smoke tests réussis."
+docker compose ps app cron
+echo "✅ Healthcheck applicatif, cron et smoke tests réussis."
 REMOTE_DEPLOY
   echo
   echo "✅ Redéployé et validé localement sur le VPS. Vérifie : https://gandal.org"
 else
-  echo "Étape suivante — sur le VPS (Terminal Hostinger) :"
-  echo "    cd /docker/e-formationgn && docker compose pull app && docker compose up -d app"
+  echo "Étape suivante — synchroniser et valider le Compose, puis recréer app + cron :"
+  echo "    scp docker-compose.yml root@VPS:/docker/e-formationgn/docker-compose.yml.candidate"
+  echo "    ssh root@VPS"
+  echo "    cd /docker/e-formationgn"
+  echo "    docker compose -f docker-compose.yml.candidate config --quiet"
+  echo "    cp -p docker-compose.yml docker-compose.yml.backup && mv docker-compose.yml.candidate docker-compose.yml"
+  echo "    docker compose pull app && docker compose up -d app cron"
+  echo "    docker compose ps app cron"
   echo
   echo "Astuce : pour enchaîner automatiquement le redéploiement du VPS, configure"
   echo "un accès SSH par clé puis exporte la variable avant de relancer ce script :"

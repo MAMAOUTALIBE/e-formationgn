@@ -27,12 +27,15 @@ test("la création d’une leçon ouvre immédiatement sa page d’édition", as
   );
 });
 
-test("l’édition revient au programme sauf pendant la configuration d’un quiz", async () => {
+test("l’édition revient au programme sauf pendant une configuration dédiée", async () => {
   const form = await source(
     "src/components/features/instructor/lesson-edit-form.tsx",
   );
 
-  assert.match(form, /if \(!state\.success \|\| type === "QUIZ"\) return/);
+  assert.match(
+    form,
+    /if \(!state\.success \|\| type === "QUIZ" \|\| type === "PRESENTATION"\) return/,
+  );
   assert.match(form, /router\.push\(returnHref\)/);
   assert.match(form, /<Alert variant="success">/);
 });
